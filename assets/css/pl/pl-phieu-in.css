@@ -1,0 +1,1763 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+/* =============================================================================
+   BASE STYLES (from home.css)
+   Các style cơ bản cho trang
+================================================================================ */
+
+/* Search Phiếu In Styles */
+.phieu-search-container {
+  position: relative;
+  display: inline-block;
+}
+
+.phieu-search-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 350px;
+  max-height: 300px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  display: none;
+  margin-top: 4px;
+}
+
+.phieu-search-dropdown.show {
+  display: block;
+}
+
+.phieu-search-item {
+  padding: 10px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.2s;
+}
+
+.phieu-search-item:hover {
+  background-color: #f8f9fa;
+}
+
+.phieu-search-item:last-child {
+  border-bottom: none;
+}
+
+.phieu-search-item .phieu-so-phieu {
+  font-weight: 600;
+  color: #0d47a1;
+}
+
+.phieu-search-item .phieu-info {
+  font-size: 12px;
+  color: #666;
+  margin-top: 2px;
+}
+
+.phieu-search-item.selected {
+  background-color: #e3f2fd;
+}
+
+.phieu-search-status {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 350px;
+  padding: 10px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: 999;
+  display: none;
+  margin-top: 4px;
+  font-size: 13px;
+}
+
+.phieu-search-status.show {
+  display: block;
+}
+
+.phieu-search-status.error {
+  color: #dc3545;
+  background-color: #f8d7da;
+  border-color: #f5c6cb;
+}
+
+.phieu-search-status.no-results {
+  color: #856404;
+  background-color: #fff3cd;
+  border-color: #ffeeba;
+}
+
+.phieu-search-loading {
+  color: #0d47a1;
+}
+
+#btnClearPhieuSearch {
+  display: none;
+}
+
+#btnClearPhieuSearch.show {
+  display: inline-block;
+}
+
+#phieuSearchInput.phieu-selected {
+  border-color: #198754;
+  background-color: #f8fff9;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Montserrat', sans-serif;
+  overflow-x: auto;
+  overflow-y: auto;
+}
+
+
+dl,
+ol,
+ul {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+ol,
+ul {
+  padding-left: 0;
+}
+
+header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 20px;
+  z-index: 1000;
+  background: #2a2b56;
+  gap: 40px;
+  backdrop-filter: blur(10px);
+}
+
+
+.logo {
+  font-size: 24px;
+  font-weight: bold;
+  color: #fff;
+  letter-spacing: 3px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.logo a {
+  color: #fff;
+  text-decoration: none;
+}
+
+.logo:hover {
+  color: #00d9ff;
+  text-shadow: 0 0 20px rgba(0, 217, 255, 0.5);
+}
+
+.logo:hover a {
+  color: #00d9ff;
+}
+
+/* Hamburger Menu */
+.hamburger {
+  display: none;
+  flex-direction: column;
+  cursor: pointer;
+  gap: 5px;
+  padding: 5px;
+  z-index: 1001;
+}
+
+.hamburger span {
+  display: block;
+  width: 25px;
+  height: 3px;
+  background-color: #fff;
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+
+.hamburger.active span:nth-child(1) {
+  transform: rotate(45deg) translate(5px, 5px);
+}
+
+.hamburger.active span:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger.active span:nth-child(3) {
+  transform: rotate(-45deg) translate(5px, -5px);
+}
+
+nav ul {
+  display: flex;
+  list-style: none;
+  gap: 40px;
+}
+
+nav a {
+  color: #fff;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+nav a::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #00d9ff, #00ff88);
+  transition: width 0.3s ease;
+}
+
+nav a:hover {
+  color: #00d9ff;
+}
+
+nav a:hover::after {
+  width: 100%;
+}
+
+/* Dropdown */
+.dropdown {
+  position: relative;
+}
+
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: rgba(15, 52, 96, 0.95);
+  min-width: 150px;
+  list-style: none;
+  padding: 10px 0;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 217, 255, 0.2);
+}
+
+/* Desktop: hover */
+@media (min-width: 769px) {
+  .dropdown:hover>.dropdown-menu {
+    display: block;
+    animation: fadeIn 0.3s ease;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Mobile: click to show dropdown */
+.dropdown.active .dropdown-menu {
+  display: block;
+}
+
+.dropdown:hover>a {
+  color: #00d9ff;
+}
+
+.dropdown-menu li {
+  padding: 0;
+}
+
+.dropdown-menu a {
+  display: block;
+  padding: 10px 20px;
+  font-size: 13px;
+  white-space: nowrap;
+  transition: all 0.3s ease;
+}
+
+.dropdown-menu a:hover {
+  background: linear-gradient(90deg, rgba(0, 217, 255, 0.2), rgba(0, 255, 136, 0.1));
+  color: #00d9ff;
+  padding-left: 25px;
+}
+
+/* Dropdown submenu */
+.dropdown-submenu {
+  position: relative;
+}
+
+.dropdown-submenu>.dropdown-menu {
+  display: none;
+  position: absolute;
+  left: 100%;
+  top: 0;
+  margin-top: 0;
+  margin-left: 0;
+}
+
+/* Only show submenu on hover over the submenu item itself */
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+  animation: fadeIn 0.3s ease;
+}
+
+/* Remove triangle arrow for dropdown submenu */
+.dropdown-submenu>a::after {
+  display: none;
+}
+
+/* User Info */
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.user-info small {
+  color: #aaa;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
+
+.user-info strong {
+  color: #00d9ff;
+}
+
+html[data-bs-theme="dark"] .text-muted,
+[data-bs-theme="dark"] .text-muted {
+  color: #ffffff !important;
+}
+
+html[data-bs-theme="light"] .text-muted,
+[data-bs-theme="light"] .text-muted {
+  color: #000000 !important;
+}
+
+.btn-logout {
+  background: transparent;
+  border: 1px solid #e74c3c;
+  color: #e74c3c;
+  padding: 5px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  letter-spacing: 0.5px;
+}
+
+.btn-logout:hover {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+}
+
+/* Main Content */
+.main-content {
+  margin-top: 45px;
+  padding: 20px;
+}
+
+/* =============================================================================
+   RESPONSIVE STYLES (from home.css)
+================================================================================ */
+
+/* Tablet */
+@media (max-width: 992px) {
+  header {
+    padding: 10px 15px;
+    gap: 20px;
+  }
+
+  .logo {
+    font-size: 20px;
+  }
+
+  nav ul {
+    gap: 25px;
+  }
+
+  nav a {
+    font-size: 13px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  header {
+    padding: 10px 15px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .logo {
+    font-size: 18px;
+    letter-spacing: 2px;
+  }
+
+  /* Hamburger menu visible on mobile */
+  .hamburger {
+    display: flex;
+  }
+
+  /* Navigation menu - hidden by default on mobile */
+  nav {
+    display: none;
+    width: 100%;
+    order: 3;
+  }
+
+  nav.active {
+    display: block;
+  }
+
+  nav ul {
+    flex-direction: column;
+    gap: 0;
+    width: 100%;
+    padding: 10px 0;
+    background: rgba(0, 0, 0, 0.9);
+    border-radius: 8px;
+    margin-top: 10px;
+  }
+
+  nav ul li {
+    width: 100%;
+  }
+
+  nav a {
+    display: block;
+    padding: 12px 20px;
+    font-size: 14px;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  nav a:hover {
+    background: rgba(255, 193, 7, 0.1);
+    color: #ffc107;
+  }
+
+  /* Dropdown menu on mobile */
+  .dropdown-menu {
+    position: static;
+    background: rgba(0, 0, 0, 0.5);
+    box-shadow: none;
+    border-radius: 0;
+  }
+
+  .dropdown-menu a {
+    padding-left: 40px;
+    font-size: 13px;
+  }
+
+  /* User info */
+  .user-info {
+    gap: 10px;
+  }
+
+  .user-info small {
+    font-size: 11px;
+  }
+
+  .btn-logout {
+    padding: 4px 10px;
+    font-size: 11px;
+  }
+}
+
+/* Small Mobile */
+@media (max-width: 480px) {
+  header {
+    padding: 8px 10px;
+  }
+
+  .logo {
+    font-size: 16px;
+  }
+
+  .hamburger span {
+    width: 22px;
+    height: 2px;
+  }
+}
+
+/* =============================================================================
+   CUSTOM DROPDOWN WITH SEARCH - For Mặt hàng selection
+================================================================================ */
+
+/* Dropdown Container */
+.custom-dropdown {
+  position: relative;
+  width: 100%;
+}
+
+/* Dropdown Input (display area) */
+.custom-dropdown-input {
+  width: 100%;
+  padding: 8px 35px 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  background-color: #fff;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.custom-dropdown-input:focus {
+  outline: none;
+  border-color: #86b7fe;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.custom-dropdown-input.disabled {
+  background-color: #e9ecef;
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+/* Dropdown Arrow */
+.custom-dropdown-arrow {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: #6c757d;
+  transition: transform 0.2s ease;
+}
+
+.custom-dropdown.open .custom-dropdown-arrow {
+  transform: translateY(-50%) rotate(180deg);
+}
+
+/* Dropdown Menu */
+.custom-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 1050;
+  display: none;
+  max-height: 250px;
+  overflow-y: auto;
+  background-color: #fff;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin-top: 4px;
+}
+
+.custom-dropdown.open .custom-dropdown-menu {
+  display: block;
+}
+
+/* Search Input in Dropdown */
+.custom-dropdown-search {
+  padding: 8px;
+  border-bottom: 1px solid #e9ecef;
+  position: sticky;
+  top: 0;
+  background-color: #fff;
+  z-index: 1;
+}
+
+.custom-dropdown-search input {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.custom-dropdown-search input:focus {
+  outline: none;
+  border-color: #86b7fe;
+}
+
+/* Dropdown Actions (Add button) */
+.custom-dropdown-actions {
+  padding: 8px;
+  border-top: 1px solid #e9ecef;
+  background-color: #f8f9fa;
+}
+
+/* Dropdown Items */
+.custom-dropdown-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.15s ease;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #f8f9fa;
+}
+
+.custom-dropdown-item:hover {
+  background-color: #f0f7ff;
+}
+
+.custom-dropdown-item .item-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.custom-dropdown-item .item-name {
+  font-weight: 500;
+  color: #333;
+}
+
+.custom-dropdown-item .item-code {
+  font-size: 11px;
+  color: #0d6efd;
+  background-color: #e7f1ff;
+  padding: 1px 4px;
+  border-radius: 3px;
+  width: fit-content;
+  margin-top: 2px;
+}
+
+.custom-dropdown-item .item-unit {
+  font-size: 11px;
+  color: #6c757d;
+  background-color: #f1f3f5;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.custom-dropdown-item.selected {
+  background-color: #e7f1ff;
+  color: #0d6efd;
+  font-weight: 500;
+}
+
+.custom-dropdown-item.no-results {
+  color: #6c757d;
+  font-style: italic;
+  cursor: default;
+  justify-content: center;
+  padding: 15px;
+}
+
+/* Add New Item Button */
+.btn-add-new-item {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: #0d6efd;
+  background-color: transparent;
+  border: 1px dashed #0d6efd;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-add-new-item:hover {
+  background-color: #e7f1ff;
+}
+
+/* Add New Item Input Container */
+.add-item-container {
+  display: none;
+  padding: 8px;
+  background-color: #f8f9fa;
+  border-top: 1px solid #e9ecef;
+}
+
+.add-item-container.show {
+  display: block;
+}
+
+.add-item-input-group {
+  display: flex;
+  gap: 6px;
+}
+
+.add-item-input-group input {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.add-item-input-group input:focus {
+  outline: none;
+  border-color: #86b7fe;
+}
+
+.btn-add-item-confirm {
+  padding: 6px 12px;
+  font-size: 13px;
+  background-color: #198754;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-add-item-confirm:hover {
+  background-color: #157347;
+}
+
+.btn-add-item-cancel {
+  padding: 6px 10px;
+  font-size: 13px;
+  background-color: #6c757d;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-add-item-cancel:hover {
+  background-color: #5c636a;
+}
+
+/* Hidden input for form submission */
+.custom-dropdown-hidden {
+  display: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .custom-dropdown-menu {
+    max-height: 200px;
+  }
+
+  .custom-dropdown-item {
+    padding: 10px 12px;
+    font-size: 15px;
+  }
+
+  .custom-dropdown-search input {
+    font-size: 14px;
+  }
+}
+
+/* Animation for dropdown open */
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.custom-dropdown.open .custom-dropdown-menu {
+  animation: dropdownFadeIn 0.15s ease-out;
+}
+
+/* Scrollbar styling for dropdown menu */
+.custom-dropdown-menu::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-dropdown-menu::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.custom-dropdown-menu::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.custom-dropdown-menu::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* =============================================================================
+   CUSTOM STYLES FOR PHIẾU IN PAGE
+================================================================================ */
+
+/* Form Container */
+.form-container {
+  max-width: 800px;
+  margin: 20px auto;
+  padding: 20px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.form-title {
+  text-align: center;
+  color: #0d47a1;
+  font-weight: bold;
+  margin-bottom: 20px;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-label {
+  font-weight: 600;
+}
+
+.btn-primary {
+  background-color: #0d47a1;
+  border-color: #0d47a1;
+}
+
+.btn-primary:hover {
+  background-color: #1565c0;
+  border-color: #1565c0;
+}
+
+.success-message {
+  display: none;
+  padding: 15px;
+  margin-top: 15px;
+  border-radius: 5px;
+}
+
+.success-message.show {
+  display: block;
+}
+
+.error-message {
+  display: none;
+  padding: 15px;
+  margin-top: 15px;
+  border-radius: 5px;
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+.error-message.show {
+  display: block;
+}
+
+.hang-hoa-row {
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.hang-hoa-row:last-child {
+  border-bottom: none;
+}
+
+.btn-remove-row {
+  display: none;
+}
+
+.btn-remove-row.visible {
+  display: block;
+}
+
+/* Table Container */
+.table-responsive {
+  height: calc(106vh - 200px);
+  overflow-y: auto;
+  overflow-x: auto;
+  -ms-overflow-style: auto;
+  scrollbar-width: auto;
+  cursor: auto;
+}
+
+/* Scrollbar */
+.table-responsive::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 6px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.22);
+  border-radius: 6px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.32);
+}
+
+/* Data Table */
+#dataTable {
+  --table-bg: #1e2235;
+  --table-hover-bg: #2d334d;
+  --table-header-bg: #23283c;
+  --table-header-text: #ffffff;
+  --table-text: #e2e8f0;
+  --table-border: rgba(255, 255, 255, 0.12);
+  --table-cell-hover-bg: rgba(99, 102, 241, 0.2);
+
+  font-size: 0.7rem;
+  table-layout: fixed;
+  width: 100%;
+  margin: 0 auto;
+  background-color: var(--table-bg) !important;
+  color: var(--table-text) !important;
+}
+
+[data-bs-theme="light"] #dataTable {
+  --table-bg: #ffffff;
+  --table-hover-bg: #e0e7ff;
+  --table-header-bg: #f1f5f9;
+  --table-header-text: #0f172a;
+  --table-text: #334155;
+  --table-border: rgba(0, 0, 0, 0.08);
+  --table-cell-hover-bg: rgba(99, 102, 241, 0.08);
+}
+
+/* Sticky Table Header - Fixed header when scrolling */
+#dataTable th {
+  background-color: var(--table-header-bg) !important;
+  color: var(--table-header-text) !important;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  text-align: center;
+  vertical-align: middle;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  font-size: 0.75rem;
+  padding: 0.5rem 0.4rem;
+  line-height: 1.2;
+  font-weight: 700;
+  border-bottom: 2px solid var(--table-border) !important;
+}
+
+#dataTable thead th {
+  position: sticky;
+  z-index: 10;
+  white-space: normal;
+  user-select: none;
+  text-align: center !important;
+}
+
+#dataTable thead th:first-child {
+  text-align: center !important;
+}
+
+#dataTable td {
+  background-color: var(--table-bg) !important;
+  color: var(--table-text) !important;
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0.35rem 0.4rem;
+  border: 1px solid var(--table-border) !important;
+  font-size: 0.75rem;
+}
+
+#dataTable tbody tr:hover td {
+  background-color: var(--table-hover-bg) !important;
+  color: var(--table-header-text) !important;
+}
+
+/* Hover effect on cells */
+#dataTable tbody td:hover {
+  background-color: rgba(0, 123, 255, 0.08);
+}
+
+#dataTable .btn {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+/* Filters */
+.filters {
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+/* =============================================================================
+   ACTION BUTTONS
+   Style cho các nút thêm, sửa, xóa dữ liệu (giống xg-nhap.css)
+================================================================================ */
+
+/* Base button style */
+.add-row-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Button hover effect - shimmer */
+.add-row-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.add-row-btn:hover::before {
+  left: 100%;
+}
+
+/* Add Data Button - Blue (like import cards) */
+#btnAddData {
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+}
+
+#btnAddData:hover {
+  background: linear-gradient(135deg, #2980b9, #1a5276);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+  color: #fff;
+}
+
+/* Edit Data Button - Cyan/Teal (like filter buttons) */
+#btnEditData {
+  background: linear-gradient(135deg, #00d9ff, #00b4d8);
+  color: #1a1a2e;
+  box-shadow: 0 4px 15px rgba(0, 217, 255, 0.3);
+}
+
+#btnEditData:hover {
+  background: linear-gradient(135deg, #00b4d8, #0096c7);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 217, 255, 0.4);
+  color: #1a1a2e;
+}
+
+/* Delete Data Button - Red (like export cards) */
+#btnDeleteData {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+}
+
+#btnDeleteData:hover {
+  background: linear-gradient(135deg, #c0392b, #922b21);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
+  color: #fff;
+}
+
+/* Create Phieu Button - Purple/Info (like special action) */
+#btnCreatePhieu {
+  background: linear-gradient(135deg, #9b59b6, #8e44ad);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(155, 89, 182, 0.3);
+}
+
+#btnCreatePhieu:hover {
+  background: linear-gradient(135deg, #8e44ad, #6c3483);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(155, 89, 182, 0.4);
+  color: #fff;
+}
+
+/* Disabled button styles */
+.add-row-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+#btnAddData:disabled {
+  background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+}
+
+#btnEditData:disabled {
+  background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+  color: #fff;
+}
+
+#btnDeleteData:disabled {
+  background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+}
+
+#btnCreatePhieu:disabled {
+  background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+}
+
+/* =============================================================================
+   FILTER & PAGINATION BUTTONS
+   Style cho nút phân trang và lọc
+================================================================================ */
+
+/* Pagination buttons - keep original style */
+#prevPage,
+#nextPage {
+  font-size: 0.8rem;
+  padding: 4px 8px;
+}
+
+/* Page select */
+#pageSelect {
+  border-radius: 8px;
+  border: 1px solid #ced4da;
+  padding: 4px 36px 4px 8px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+#pageSelect:focus {
+  border-color: #3498db;
+  box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+}
+
+/* Page info */
+#pageInfo {
+  font-size: 0.8rem;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+/* Add Data Modal */
+.add-hang-hoa-row {
+  padding: 5px 0;
+}
+
+.add-hang-hoa-row input {
+  font-size: 14px;
+}
+
+/* Custom scrollbar for modal */
+#addDataModal .modal-body {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+#addDataModal .modal-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+#addDataModal .modal-body::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+#addDataModal .modal-body::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+#addDataModal .modal-body::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Read-only field styles */
+.read-only-field {
+  background-color: #e9ecef !important;
+  cursor: not-allowed !important;
+  color: #495057;
+}
+
+.read-only-field:focus {
+  background-color: #e9ecef !important;
+  border-color: #ced4da;
+  box-shadow: none;
+}
+
+/* Custom Dropdown Actions & Sync Styles */
+.custom-dropdown-actions {
+  padding: 10px;
+  border-top: 1px solid #eee;
+  display: flex;
+  gap: 8px;
+  background-color: #f8f9fa;
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+}
+
+.btn-add-new-item {
+  flex: 1;
+  background: white;
+  border: 1px dashed #0d6efd;
+  color: #0d6efd;
+  padding: 6px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-add-new-item:hover {
+  background: #e7f1ff;
+  border-style: solid;
+}
+
+.btn-refresh-mat-hang {
+  background: white;
+  border: 1px solid #6c757d;
+  color: #6c757d;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-refresh-mat-hang:hover {
+  background: #f8f9fa;
+  border-color: #495057;
+  color: #495057;
+}
+
+.btn-refresh-mat-hang.spinning {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinning i,
+.spinning svg {
+  display: inline-block;
+  animation: spin 0.8s linear infinite;
+}
+
+/* =============================================================================
+   THEME STYLES (DARK MODE & LIGHT MODE)
+   - Chế độ nền tối: Màu chữ là màu trắng (#ffffff)
+   - Chế độ nền sáng: Màu chữ là màu đen (#000000)
+================================================================================ */
+
+/* Default Table Variable Setup */
+#dataTable {
+  --table-bg: #1e2235;
+  --table-hover-bg: #2d334d;
+  --table-header-bg: #0d6efd;
+  --table-header-text: #ffffff;
+  --table-text: #ffffff;
+  --table-border: rgba(255, 255, 255, 0.15);
+  background-color: var(--table-bg) !important;
+  color: var(--table-text) !important;
+}
+
+/* -----------------------------------------------------------------------------
+   1. DARK MODE (Nền tối -> Chữ màu trắng #ffffff)
+----------------------------------------------------------------------------- */
+html[data-bs-theme="dark"],
+html[data-bs-theme="dark"] body,
+[data-bs-theme="dark"] body {
+  background-color: #121420;
+  color: #ffffff !important;
+}
+
+/* Titles & Headings in Dark Mode */
+html[data-bs-theme="dark"] h1,
+html[data-bs-theme="dark"] h2,
+html[data-bs-theme="dark"] h3,
+html[data-bs-theme="dark"] h4,
+html[data-bs-theme="dark"] h5,
+html[data-bs-theme="dark"] h6,
+[data-bs-theme="dark"] h1,
+[data-bs-theme="dark"] h2,
+[data-bs-theme="dark"] h3,
+[data-bs-theme="dark"] h4,
+[data-bs-theme="dark"] h5,
+[data-bs-theme="dark"] h6,
+html[data-bs-theme="dark"] .text-primary,
+[data-bs-theme="dark"] .text-primary,
+html[data-bs-theme="dark"] .form-title,
+[data-bs-theme="dark"] .form-title {
+  color: #ffffff !important;
+}
+
+/* Text Muted & Page Info in Dark Mode */
+html[data-bs-theme="dark"] .text-muted,
+[data-bs-theme="dark"] .text-muted,
+html[data-bs-theme="dark"] #pageInfo,
+[data-bs-theme="dark"] #pageInfo {
+  color: #ffffff !important;
+}
+
+/* Form Labels & Text in Dark Mode */
+html[data-bs-theme="dark"] .form-label,
+[data-bs-theme="dark"] .form-label,
+html[data-bs-theme="dark"] label,
+[data-bs-theme="dark"] label {
+  color: #ffffff !important;
+}
+
+/* Main Data Table in Dark Mode */
+html[data-bs-theme="dark"] #dataTable,
+[data-bs-theme="dark"] #dataTable {
+  --table-bg: #1e2235;
+  --table-hover-bg: #2d334d;
+  --table-header-bg: #0d6efd;
+  --table-header-text: #ffffff;
+  --table-text: #ffffff;
+  --table-border: rgba(255, 255, 255, 0.15);
+  color: #ffffff !important;
+}
+
+html[data-bs-theme="dark"] #dataTable th,
+[data-bs-theme="dark"] #dataTable th {
+  background-color: #0d6efd !important;
+  color: #ffffff !important;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+html[data-bs-theme="dark"] #dataTable td,
+[data-bs-theme="dark"] #dataTable td {
+  background-color: transparent !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+html[data-bs-theme="dark"] #dataTable tbody tr:hover td,
+[data-bs-theme="dark"] #dataTable tbody tr:hover td {
+  background-color: #2d334d !important;
+  color: #ffffff !important;
+}
+
+/* Search Phiếu In Dropdown in Dark Mode */
+html[data-bs-theme="dark"] .phieu-search-dropdown,
+[data-bs-theme="dark"] .phieu-search-dropdown,
+html[data-bs-theme="dark"] .phieu-search-status,
+[data-bs-theme="dark"] .phieu-search-status {
+  background-color: #1e2235;
+  border-color: #333852;
+  color: #ffffff !important;
+}
+
+html[data-bs-theme="dark"] .phieu-search-item,
+[data-bs-theme="dark"] .phieu-search-item {
+  border-bottom-color: #2d334d;
+  color: #ffffff !important;
+}
+
+html[data-bs-theme="dark"] .phieu-search-item .phieu-so-phieu,
+[data-bs-theme="dark"] .phieu-search-item .phieu-so-phieu {
+  color: #ffffff !important;
+}
+
+html[data-bs-theme="dark"] .phieu-search-item .phieu-info,
+[data-bs-theme="dark"] .phieu-search-item .phieu-info {
+  color: #cbd5e1 !important;
+}
+
+html[data-bs-theme="dark"] .phieu-search-item:hover,
+[data-bs-theme="dark"] .phieu-search-item:hover {
+  background-color: #2d334d;
+}
+
+html[data-bs-theme="dark"] .phieu-search-item.selected,
+[data-bs-theme="dark"] .phieu-search-item.selected {
+  background-color: #1e3a8a;
+}
+
+/* Modals & Containers in Dark Mode */
+html[data-bs-theme="dark"] .modal-content,
+[data-bs-theme="dark"] .modal-content {
+  background-color: #1e2235;
+  color: #ffffff !important;
+  border-color: #333852;
+}
+
+html[data-bs-theme="dark"] .modal-header,
+[data-bs-theme="dark"] .modal-header,
+html[data-bs-theme="dark"] .modal-footer,
+[data-bs-theme="dark"] .modal-footer {
+  border-color: #333852;
+  color: #ffffff !important;
+}
+
+html[data-bs-theme="dark"] .modal-title,
+[data-bs-theme="dark"] .modal-title {
+  color: #ffffff !important;
+}
+
+html[data-bs-theme="dark"] .form-container,
+[data-bs-theme="dark"] .form-container {
+  background-color: #1e2235;
+  color: #ffffff !important;
+}
+
+html[data-bs-theme="dark"] .card,
+[data-bs-theme="dark"] .card {
+  background-color: #161927;
+  border-color: #333852;
+  color: #ffffff !important;
+}
+
+html[data-bs-theme="dark"] .card-body,
+[data-bs-theme="dark"] .card-body {
+  color: #ffffff !important;
+}
+
+/* Form Controls & Inputs in Dark Mode */
+html[data-bs-theme="dark"] .form-control,
+[data-bs-theme="dark"] .form-control,
+html[data-bs-theme="dark"] .form-select,
+[data-bs-theme="dark"] .form-select {
+  background-color: #161927;
+  color: #ffffff !important;
+  border-color: #333852;
+}
+
+html[data-bs-theme="dark"] .form-control::placeholder,
+[data-bs-theme="dark"] .form-control::placeholder {
+  color: #94a3b8;
+}
+
+html[data-bs-theme="dark"] .read-only-field,
+[data-bs-theme="dark"] .read-only-field {
+  background-color: #2d334d !important;
+  color: #ffffff !important;
+}
+
+/* Custom Dropdown in Dark Mode */
+html[data-bs-theme="dark"] .custom-dropdown-input,
+[data-bs-theme="dark"] .custom-dropdown-input,
+html[data-bs-theme="dark"] .custom-dropdown-menu,
+[data-bs-theme="dark"] .custom-dropdown-menu,
+html[data-bs-theme="dark"] .custom-dropdown-search,
+[data-bs-theme="dark"] .custom-dropdown-search,
+html[data-bs-theme="dark"] .custom-dropdown-actions,
+[data-bs-theme="dark"] .custom-dropdown-actions {
+  background-color: #1e2235;
+  border-color: #333852;
+  color: #ffffff !important;
+}
+
+html[data-bs-theme="dark"] .custom-dropdown-item,
+[data-bs-theme="dark"] .custom-dropdown-item {
+  color: #ffffff !important;
+  border-bottom-color: #2d334d;
+}
+
+html[data-bs-theme="dark"] .custom-dropdown-item .item-name,
+[data-bs-theme="dark"] .custom-dropdown-item .item-name {
+  color: #ffffff !important;
+}
+
+html[data-bs-theme="dark"] .custom-dropdown-item .item-unit,
+[data-bs-theme="dark"] .custom-dropdown-item .item-unit {
+  color: #cbd5e1 !important;
+  background-color: #2d334d;
+}
+
+html[data-bs-theme="dark"] .custom-dropdown-item:hover,
+[data-bs-theme="dark"] .custom-dropdown-item:hover {
+  background-color: #2d334d;
+}
+
+/* Modal Goods Table (#hangHoaTable) in Dark Mode */
+html[data-bs-theme="dark"] #hangHoaTable,
+[data-bs-theme="dark"] #hangHoaTable,
+html[data-bs-theme="dark"] #hangHoaTable th,
+[data-bs-theme="dark"] #hangHoaTable th,
+html[data-bs-theme="dark"] #hangHoaTable td,
+[data-bs-theme="dark"] #hangHoaTable td {
+  color: #ffffff !important;
+  border-color: #333852;
+}
+
+html[data-bs-theme="dark"] #hangHoaTable thead th,
+[data-bs-theme="dark"] #hangHoaTable thead th {
+  background-color: #2d334d !important;
+  color: #ffffff !important;
+}
+
+html[data-bs-theme="dark"] #hangHoaTable tfoot tr,
+[data-bs-theme="dark"] #hangHoaTable tfoot tr,
+html[data-bs-theme="dark"] #hangHoaTable tfoot td,
+[data-bs-theme="dark"] #hangHoaTable tfoot td {
+  background-color: #2d334d !important;
+  color: #ffffff !important;
+}
+
+
+/* -----------------------------------------------------------------------------
+   2. LIGHT MODE (Nền sáng -> Chữ màu đen #000000)
+----------------------------------------------------------------------------- */
+html[data-bs-theme="light"],
+html[data-bs-theme="light"] body,
+[data-bs-theme="light"] body {
+  background-color: #f8fafc;
+  color: #000000 !important;
+}
+
+/* Titles & Headings in Light Mode */
+html[data-bs-theme="light"] h1,
+html[data-bs-theme="light"] h2,
+html[data-bs-theme="light"] h3,
+html[data-bs-theme="light"] h4,
+html[data-bs-theme="light"] h5,
+html[data-bs-theme="light"] h6,
+[data-bs-theme="light"] h1,
+[data-bs-theme="light"] h2,
+[data-bs-theme="light"] h3,
+[data-bs-theme="light"] h4,
+[data-bs-theme="light"] h5,
+[data-bs-theme="light"] h6,
+html[data-bs-theme="light"] .text-primary,
+[data-bs-theme="light"] .text-primary,
+html[data-bs-theme="light"] .form-title,
+[data-bs-theme="light"] .form-title {
+  color: #000000 !important;
+}
+
+/* Text Muted & Page Info in Light Mode */
+html[data-bs-theme="light"] .text-muted,
+[data-bs-theme="light"] .text-muted,
+html[data-bs-theme="light"] #pageInfo,
+[data-bs-theme="light"] #pageInfo {
+  color: #000000 !important;
+}
+
+/* Form Labels & Text in Light Mode */
+html[data-bs-theme="light"] .form-label,
+[data-bs-theme="light"] .form-label,
+html[data-bs-theme="light"] label,
+[data-bs-theme="light"] label {
+  color: #000000 !important;
+}
+
+/* Main Data Table in Light Mode */
+html[data-bs-theme="light"] #dataTable,
+[data-bs-theme="light"] #dataTable {
+  --table-bg: #ffffff;
+  --table-hover-bg: #e0e7ff;
+  --table-header-bg: #f1f5f9;
+  --table-header-text: #000000;
+  --table-text: #000000;
+  --table-border: rgba(0, 0, 0, 0.12);
+  color: #000000 !important;
+}
+
+html[data-bs-theme="light"] #dataTable th,
+[data-bs-theme="light"] #dataTable th {
+  background-color: #f1f5f9 !important;
+  color: #000000 !important;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.15) !important;
+}
+
+html[data-bs-theme="light"] #dataTable tbody tr:nth-of-type(odd) td,
+[data-bs-theme="light"] #dataTable tbody tr:nth-of-type(odd) td,
+html:not([data-bs-theme="dark"]) #dataTable tbody tr:nth-of-type(odd) td {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+}
+
+html[data-bs-theme="light"] #dataTable tbody tr:nth-of-type(even) td,
+[data-bs-theme="light"] #dataTable tbody tr:nth-of-type(even) td,
+html:not([data-bs-theme="dark"]) #dataTable tbody tr:nth-of-type(even) td {
+  background-color: #e2e8f0 !important;
+  color: #000000 !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+}
+
+html[data-bs-theme="light"] #dataTable tbody tr:hover td,
+[data-bs-theme="light"] #dataTable tbody tr:hover td,
+html:not([data-bs-theme="dark"]) #dataTable tbody tr:hover td {
+  background-color: #c7d2fe !important;
+  color: #000000 !important;
+}
+
+/* Search Phiếu In Dropdown in Light Mode */
+html[data-bs-theme="light"] .phieu-search-dropdown,
+[data-bs-theme="light"] .phieu-search-dropdown,
+html[data-bs-theme="light"] .phieu-search-status,
+[data-bs-theme="light"] .phieu-search-status {
+  background-color: #ffffff;
+  border-color: #ced4da;
+  color: #000000 !important;
+}
+
+html[data-bs-theme="light"] .phieu-search-item,
+[data-bs-theme="light"] .phieu-search-item {
+  border-bottom-color: #f0f0f0;
+  color: #000000 !important;
+}
+
+html[data-bs-theme="light"] .phieu-search-item .phieu-so-phieu,
+[data-bs-theme="light"] .phieu-search-item .phieu-so-phieu {
+  color: #000000 !important;
+}
+
+html[data-bs-theme="light"] .phieu-search-item .phieu-info,
+[data-bs-theme="light"] .phieu-search-item .phieu-info {
+  color: #475569 !important;
+}
+
+html[data-bs-theme="light"] .phieu-search-item:hover,
+[data-bs-theme="light"] .phieu-search-item:hover {
+  background-color: #f8f9fa;
+}
+
+html[data-bs-theme="light"] .phieu-search-item.selected,
+[data-bs-theme="light"] .phieu-search-item.selected {
+  background-color: #e3f2fd;
+}
+
+/* Modals & Containers in Light Mode */
+html[data-bs-theme="light"] .modal-content,
+[data-bs-theme="light"] .modal-content {
+  background-color: #ffffff;
+  color: #000000 !important;
+  border-color: #ced4da;
+}
+
+html[data-bs-theme="light"] .modal-header,
+[data-bs-theme="light"] .modal-header,
+html[data-bs-theme="light"] .modal-footer,
+[data-bs-theme="light"] .modal-footer {
+  border-color: #e9ecef;
+  color: #000000 !important;
+}
+
+html[data-bs-theme="light"] .modal-title,
+[data-bs-theme="light"] .modal-title {
+  color: #000000 !important;
+}
+
+html[data-bs-theme="light"] .form-container,
+[data-bs-theme="light"] .form-container {
+  background-color: #ffffff;
+  color: #000000 !important;
+}
+
+html[data-bs-theme="light"] .card,
+[data-bs-theme="light"] .card {
+  background-color: #ffffff;
+  border-color: #ced4da;
+  color: #000000 !important;
+}
+
+html[data-bs-theme="light"] .card-body,
+[data-bs-theme="light"] .card-body {
+  color: #000000 !important;
+}
+
+/* Form Controls & Inputs in Light Mode */
+html[data-bs-theme="light"] .form-control,
+[data-bs-theme="light"] .form-control,
+html[data-bs-theme="light"] .form-select,
+[data-bs-theme="light"] .form-select {
+  background-color: #ffffff;
+  color: #000000 !important;
+  border-color: #ced4da;
+}
+
+html[data-bs-theme="light"] .form-control::placeholder,
+[data-bs-theme="light"] .form-control::placeholder {
+  color: #64748b;
+}
+
+html[data-bs-theme="light"] .read-only-field,
+[data-bs-theme="light"] .read-only-field {
+  background-color: #e9ecef !important;
+  color: #000000 !important;
+}
+
+/* Custom Dropdown in Light Mode */
+html[data-bs-theme="light"] .custom-dropdown-input,
+[data-bs-theme="light"] .custom-dropdown-input,
+html[data-bs-theme="light"] .custom-dropdown-menu,
+[data-bs-theme="light"] .custom-dropdown-menu,
+html[data-bs-theme="light"] .custom-dropdown-search,
+[data-bs-theme="light"] .custom-dropdown-search,
+html[data-bs-theme="light"] .custom-dropdown-actions,
+[data-bs-theme="light"] .custom-dropdown-actions {
+  background-color: #ffffff;
+  border-color: #ced4da;
+  color: #000000 !important;
+}
+
+html[data-bs-theme="light"] .custom-dropdown-item,
+[data-bs-theme="light"] .custom-dropdown-item {
+  color: #000000 !important;
+  border-bottom-color: #f8f9fa;
+}
+
+html[data-bs-theme="light"] .custom-dropdown-item .item-name,
+[data-bs-theme="light"] .custom-dropdown-item .item-name {
+  color: #000000 !important;
+}
+
+html[data-bs-theme="light"] .custom-dropdown-item .item-unit,
+[data-bs-theme="light"] .custom-dropdown-item .item-unit {
+  color: #6c757d !important;
+  background-color: #f1f3f5;
+}
+
+html[data-bs-theme="light"] .custom-dropdown-item:hover,
+[data-bs-theme="light"] .custom-dropdown-item:hover {
+  background-color: #f0f7ff;
+}
+
+/* Modal Goods Table (#hangHoaTable) in Light Mode */
+html[data-bs-theme="light"] #hangHoaTable,
+[data-bs-theme="light"] #hangHoaTable,
+html[data-bs-theme="light"] #hangHoaTable th,
+[data-bs-theme="light"] #hangHoaTable th,
+html[data-bs-theme="light"] #hangHoaTable td,
+[data-bs-theme="light"] #hangHoaTable td {
+  color: #000000 !important;
+  border-color: #dee2e6;
+}
+
+html[data-bs-theme="light"] #hangHoaTable thead th,
+[data-bs-theme="light"] #hangHoaTable thead th {
+  background-color: #f8f9fa !important;
+  color: #000000 !important;
+}
+
+html[data-bs-theme="light"] #hangHoaTable tfoot tr,
+[data-bs-theme="light"] #hangHoaTable tfoot tr,
+html[data-bs-theme="light"] #hangHoaTable tfoot td,
+[data-bs-theme="light"] #hangHoaTable tfoot td {
+  background-color: #fff3cd !important;
+  color: #000000 !important;
+}

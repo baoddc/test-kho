@@ -1,0 +1,775 @@
+/* Font: Times New Roman (system font) */
+/* --- CSS STYLING --- */
+* {
+    box-sizing: border-box;
+    font-family: 'Times New Roman', Times, serif;
+    /* Font chữ văn phòng phổ biến */
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: #f0f0f0;
+    padding: 0px;
+}
+
+.page {
+    width: 1100px;
+    /* Độ rộng tối ưu cho khổ A4 ngang */
+    margin: 0 auto;
+    background-color: #fff;
+    padding: 0px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    margin-left: 0px;
+    margin-right: 0px;
+}
+
+/* Header Section */
+.header-container {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 0px;
+    border-left: 1px solid #000;
+    border-right: 1px solid #000;
+    border-top: 1px solid #000;
+}
+
+.logo-box {
+    flex: 0 0 100%;
+    text-align: center;
+}
+
+.logo-box img {
+    margin-top: 10px;
+    width: 98%;
+    height: 100px;
+}
+
+.company-info {
+    flex: 1;
+    padding-left: 20px;
+}
+
+.company-info h2 {
+    color: #e31b23;
+    font-size: 19px;
+    margin-bottom: 6px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.info-line {
+    display: flex;
+    align-items: center;
+    font-size: 13px;
+    margin-bottom: 3px;
+}
+
+.icon-circle {
+    color: #e31b23;
+    font-size: 10px;
+    margin-right: 8px;
+}
+
+.contact-group {
+    display: flex;
+    gap: 25px;
+    margin-top: 5px;
+}
+
+.red-divider {
+    height: 3px;
+    background-color: #e31b23;
+    width: 100%;
+    margin-top: 5px;
+    margin-bottom: 15px;
+}
+
+/* Title Section */
+.form-title-block {
+    text-align: center;
+    margin-bottom: 0px;
+    border-left: 1px solid #000;
+    border-right: 1px solid #000;
+}
+
+.title-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+.form-title-block h1 {
+    font-size: 26px;
+    margin: 5px 0;
+    font-weight: bold;
+}
+
+.title-main {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
+
+.title-main span {
+    position: absolute;
+    right: 0;
+    padding-right: 61px;
+}
+
+.date-label {
+    font-weight: bold;
+    font-size: 13px;
+}
+
+/* Tables Common */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 0px;
+}
+
+table,
+th,
+td {
+    border: 1px solid #000;
+}
+
+th,
+td {
+    padding: 0px;
+    text-align: center;
+    font-size: 12px;
+}
+
+.bold {
+    font-weight: bold;
+}
+
+.text-left {
+    text-align: left;
+}
+
+/* Project Table */
+.project-table td {
+    height: 35px;
+    font-weight: bold;
+
+}
+
+/* Main Product Table */
+.product-table thead th {
+    font-size: 11px;
+    background-color: #fff;
+}
+
+.product-table thead th:first-child {
+    border-top: 0;
+    text-align: center;
+    padding-left: 10px;
+}
+
+/* Column widths for product table */
+.col-stt {
+    width: 40px;
+}
+
+.col-mathang {
+    width: 300px;
+}
+
+.col-mavt {
+    width: 70px;
+}
+
+.col-dvt {
+    width: 70px;
+}
+
+.col-trongluongxe {
+    width: 90px;
+}
+
+.col-trongluonghang {
+    width: 90px;
+}
+
+.col-trongluongxe-hang {
+    width: 90px;
+}
+
+.col-thucnhan {
+    width: 125px;
+}
+
+.col-ghichu {
+    width: 125px;
+}
+
+/* Column widths for project table */
+.project-table .col-ma {
+    width: 25%;
+}
+
+.project-table .col-ten {
+    width: 25%;
+}
+
+.project-table .col-ben-nhan {
+    width: 25%;
+}
+
+.project-table .col-loai-xuat {
+    width: 25%;
+}
+
+/* Bên giao row */
+.project-table .col-ben-giao {
+    font-weight: bold;
+    text-align: left;
+    padding-left: 180px;
+    border-bottom: 0px;
+}
+
+.product-table tbody td {
+    height: 28px;
+
+}
+
+/* Center all table headers */
+.product-table thead th {
+    text-align: center;
+    font-weight: bold;
+}
+
+/* Left align mặt hàng column (data cells only) */
+.product-table tbody td:nth-child(2) {
+    text-align: left;
+    padding-left: 10px;
+}
+
+.total-row td {
+    height: 30px;
+    font-weight: bold;
+    text-align: center;
+}
+
+.total-row .total-label {
+    text-align: center;
+    padding-left: 0px;
+    font-weight: bold;
+}
+
+.total-row .total-value {
+    font-weight: bold;
+    text-align: center;
+}
+
+.note-text {
+    font-size: 13px;
+    margin: 0px 0;
+    border-left: 1px solid #000;
+    border-right: 1px solid #000;
+    height: 20px;
+    align-content: center;
+    page-break-after: avoid;
+    /* Encourage signature table to stay with note */
+}
+
+/* Signature Table */
+.signature-table td {
+    width: 18%;
+}
+
+.signature-table .label-col {
+    width: 10%;
+    font-weight: normal;
+}
+
+.sig-height {
+    height: 70px;
+}
+
+.name-height {
+    height: 35px;
+    font-weight: bold;
+
+}
+
+
+.date-height {
+    height: 25px;
+    font-weight: bold;
+}
+
+/* =============================================================================
+   PRINT STYLES - A4 Landscape with 0.4 inch margins
+   ============================================================================= */
+
+@media print {
+
+    /* Page setup for A4 landscape */
+    @page {
+        size: A4 landscape;
+        margin: 0.4in;
+    }
+
+    /* Reset body and page for printing */
+    body {
+        background-color: #fff;
+        padding: 0;
+        margin: 0;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .page {
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+        background-color: #fff;
+        height: auto;
+        /* Allow natural height */
+    }
+
+    /* Ensure all content fits within print area */
+    .header-container,
+    .form-title-block,
+    .project-table,
+    .note-text,
+    .signature-table {
+        width: 100%;
+        page-break-inside: avoid;
+    }
+
+    .product-table {
+        width: 100%;
+        page-break-inside: auto;
+        /* Allow table to break across pages */
+    }
+
+    /* Repeat table headers on every page */
+    .product-table thead {
+        display: table-header-group;
+    }
+
+    /* Prevent table rows from being split across pages */
+    .product-table tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+    }
+
+    /* Prevent page breaks within small tables only */
+    .project-table,
+    .signature-table {
+        page-break-inside: avoid;
+    }
+
+    /* Ensure images print correctly */
+    .logo-box img {
+        max-width: 100%;
+        height: auto;
+    }
+
+    /* Hide non-printable elements if any */
+    .no-print {
+        display: none !important;
+    }
+
+    /* Ensure borders print correctly */
+    * {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    /* Optimize font sizes for print */
+    .form-title-block h1 {
+        font-size: 24px;
+    }
+
+    .title-row,
+    .date-label {
+        font-size: 12px;
+    }
+
+    th,
+    td {
+        font-size: 11px;
+    }
+
+    .product-table thead th {
+        font-size: 10px;
+    }
+
+    /* Adjust column widths for A4 landscape print */
+    .col-stt {
+        width: 35px;
+    }
+
+    .col-mathang {
+        width: 25%;
+    }
+
+    .col-mavt {
+        width: 60px;
+    }
+
+    .col-dvt {
+        width: 60px;
+    }
+
+    .col-trongluongxe {
+        width: 80px;
+    }
+
+    .col-trongluonghang {
+        width: 80px;
+    }
+
+    .col-trongluongxe-hang {
+        width: 80px;
+    }
+
+    .col-thucnhan {
+        width: 100px;
+    }
+
+    .col-ghichu {
+        width: 100px;
+    }
+
+    /* Ensure signature table fits */
+    .signature-table td {
+        width: 18%;
+    }
+
+    .signature-table .label-col {
+        width: 10%;
+    }
+
+    /* Adjust heights for print */
+    .sig-height {
+        height: 60px;
+    }
+
+    .name-height {
+        height: 30px;
+    }
+
+    .date-height {
+        height: 22px;
+    }
+
+    .product-table tbody td {
+        height: 25px;
+    }
+
+    .project-table td {
+        height: 30px;
+    }
+
+    /* Ensure note text is visible */
+    .note-text {
+        height: 18px;
+        font-size: 12px;
+    }
+}
+
+/* =============================================================================
+   RESPONSIVE DESIGN FOR WEB INTERFACE
+   ============================================================================= */
+
+/* Large screens (desktops) */
+@media screen and (min-width: 1200px) {
+    .page {
+        width: 1100px;
+    }
+}
+
+/* Medium screens (tablets) */
+@media screen and (max-width: 1199px) and (min-width: 768px) {
+    .page {
+        width: 95%;
+        padding: 10px;
+    }
+
+    .col-mathang {
+        width: 25%;
+    }
+
+    .col-stt {
+        width: 35px;
+    }
+
+    .col-mavt {
+        width: 60px;
+    }
+
+    .col-dvt {
+        width: 60px;
+    }
+
+    .col-trongluongxe {
+        width: 75px;
+    }
+
+    .col-trongluonghang {
+        width: 75px;
+    }
+
+    .col-trongluongxe-hang {
+        width: 75px;
+    }
+
+    .col-thucnhan {
+        width: 90px;
+    }
+
+    .col-ghichu {
+        width: 90px;
+    }
+
+    .form-title-block h1 {
+        font-size: 22px;
+    }
+
+    th,
+    td {
+        font-size: 11px;
+    }
+
+    .product-table thead th {
+        font-size: 10px;
+    }
+}
+
+/* Small screens (mobile phones) */
+@media screen and (max-width: 767px) {
+    .page {
+        width: 100%;
+        padding: 5px;
+        box-shadow: none;
+    }
+
+    .header-container {
+        flex-direction: column;
+    }
+
+    .logo-box img {
+        width: 100%;
+        height: auto;
+    }
+
+    .form-title-block h1 {
+        font-size: 18px;
+    }
+
+    .title-row {
+        flex-direction: column;
+        gap: 5px;
+        font-size: 11px;
+    }
+
+    .title-main {
+        flex-direction: column;
+    }
+
+    .title-main span {
+        position: static;
+        padding-right: 0;
+        margin-top: 5px;
+    }
+
+    /* Make tables scrollable on mobile */
+    .project-table,
+    .product-table,
+    .signature-table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+    table {
+        min-width: 800px;
+    }
+
+    th,
+    td {
+        font-size: 10px;
+        padding: 2px;
+    }
+
+    .product-table thead th {
+        font-size: 9px;
+    }
+
+    .col-stt {
+        width: 30px;
+    }
+
+    .col-mathang {
+        width: 150px;
+    }
+
+    .col-mavt {
+        width: 50px;
+    }
+
+    .col-dvt {
+        width: 50px;
+    }
+
+    .col-trongluongxe {
+        width: 60px;
+    }
+
+    .col-trongluonghang {
+        width: 60px;
+    }
+
+    .col-trongluongxe-hang {
+        width: 60px;
+    }
+
+    .col-thucnhan {
+        width: 70px;
+    }
+
+    .col-ghichu {
+        width: 70px;
+    }
+
+    .project-table .col-ben-giao {
+        padding-left: 10px;
+        text-align: left;
+    }
+
+    .sig-height {
+        height: 50px;
+    }
+
+    .name-height {
+        height: 28px;
+    }
+
+    .date-height {
+        height: 20px;
+    }
+
+    .product-table tbody td {
+        height: 22px;
+    }
+
+    .project-table td {
+        height: 28px;
+    }
+
+    .note-text {
+        height: 16px;
+        font-size: 11px;
+    }
+
+    .signature-table td {
+        width: auto;
+        min-width: 60px;
+    }
+
+    .signature-table .label-col {
+        width: auto;
+        min-width: 50px;
+    }
+}
+
+/* Extra small screens (very small phones) */
+@media screen and (max-width: 480px) {
+    .form-title-block h1 {
+        font-size: 16px;
+    }
+
+    .title-row {
+        font-size: 10px;
+    }
+
+    th,
+    td {
+        font-size: 9px;
+        padding: 1px;
+    }
+
+    .product-table thead th {
+        font-size: 8px;
+    }
+
+    table {
+        min-width: 600px;
+    }
+
+    .col-stt {
+        width: 25px;
+    }
+
+    .col-mathang {
+        width: 120px;
+    }
+
+    .col-mavt {
+        width: 40px;
+    }
+
+    .col-dvt {
+        width: 40px;
+    }
+
+    .col-trongluongxe {
+        width: 50px;
+    }
+
+    .col-trongluonghang {
+        width: 50px;
+    }
+
+    .col-trongluongxe-hang {
+        width: 50px;
+    }
+
+    .col-thucnhan {
+        width: 55px;
+    }
+
+    .col-ghichu {
+        width: 55px;
+    }
+
+    .logo-box img {
+        height: 60px;
+    }
+
+    .sig-height {
+        height: 40px;
+    }
+
+    .name-height {
+        height: 25px;
+    }
+
+    .date-height {
+        height: 18px;
+    }
+
+    .product-table tbody td {
+        height: 20px;
+    }
+
+    .project-table td {
+        height: 25px;
+    }
+}
+
+#total-value {
+    text-align: center;
+    padding-right: 15px;
+}

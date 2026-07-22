@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Agent / Tooling / IDE directories
+.superpowers/
+.gemini/
+.agents/
+.vscode/
+Agent Skill/
+
+# Logs & Environment
+*.log
+.env
+.env.*
+
+# OS Files
+.DS_Store
+Thumbs.db

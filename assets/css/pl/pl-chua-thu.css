@@ -1,0 +1,1495 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+/* =============================================================================
+   BASE STYLES
+   Các style cơ bản cho trang
+================================================================================ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Montserrat', sans-serif;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+
+dl,
+ol,
+ul {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+ol,
+ul {
+  padding-left: 0;
+}
+
+header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 20px;
+  z-index: 1000;
+  background: #2a2b56;
+  gap: 40px;
+  backdrop-filter: blur(10px);
+}
+
+.logo {
+  font-size: 24px;
+  font-weight: bold;
+  color: #fff;
+  letter-spacing: 3px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.logo:hover {
+  color: #00d9ff;
+  text-shadow: 0 0 20px rgba(0, 217, 255, 0.5);
+}
+
+/* Hamburger Menu */
+.hamburger {
+  display: none;
+  flex-direction: column;
+  cursor: pointer;
+  gap: 5px;
+  padding: 5px;
+  z-index: 1001;
+}
+
+.hamburger span {
+  display: block;
+  width: 25px;
+  height: 3px;
+  background-color: #fff;
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+
+.hamburger.active span:nth-child(1) {
+  transform: rotate(45deg) translate(5px, 5px);
+}
+
+.hamburger.active span:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger.active span:nth-child(3) {
+  transform: rotate(-45deg) translate(5px, -5px);
+}
+
+nav ul {
+  display: flex;
+  list-style: none;
+  gap: 40px;
+}
+
+nav a {
+  color: #fff;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+nav a::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #00d9ff, #00ff88);
+  transition: width 0.3s ease;
+}
+
+nav a:hover {
+  color: #00d9ff;
+}
+
+nav a:hover::after {
+  width: 100%;
+}
+
+/* Dropdown */
+.dropdown {
+  position: relative;
+}
+
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: rgba(15, 52, 96, 0.95);
+  min-width: 150px;
+  list-style: none;
+  padding: 10px 0;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 217, 255, 0.2);
+}
+
+/* Desktop: hover */
+@media (min-width: 769px) {
+  .dropdown:hover>.dropdown-menu {
+    display: block;
+    animation: fadeIn 0.3s ease;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Mobile: click to show dropdown */
+.dropdown.active .dropdown-menu {
+  display: block;
+}
+
+.dropdown:hover>a {
+  color: #00d9ff;
+}
+
+.dropdown-menu li {
+  padding: 0;
+}
+
+.dropdown-menu a {
+  display: block;
+  padding: 10px 20px;
+  font-size: 13px;
+  white-space: nowrap;
+  transition: all 0.3s ease;
+}
+
+.dropdown-menu a:hover {
+  background: linear-gradient(90deg, rgba(0, 217, 255, 0.2), rgba(0, 255, 136, 0.1));
+  color: #00d9ff;
+  padding-left: 25px;
+}
+
+/* Dropdown submenu */
+.dropdown-submenu {
+  position: relative;
+}
+
+.dropdown-submenu>.dropdown-menu {
+  display: none;
+  position: absolute;
+  left: 100%;
+  top: 0;
+  margin-top: 0;
+  margin-left: 0;
+}
+
+/* Only show submenu on hover over the submenu item itself */
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+  animation: fadeIn 0.3s ease;
+}
+
+/* Remove triangle arrow for dropdown submenu */
+.dropdown-submenu>a::after {
+  display: none;
+}
+
+/* User Info */
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.user-info small {
+  color: #aaa;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
+
+.user-info strong {
+  color: #00d9ff;
+}
+
+.text-muted {
+  color: rgb(255 255 255 / 100%) !important;
+}
+
+.btn-logout {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  border: none;
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  letter-spacing: 0.5px;
+  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Shimmer effect */
+.btn-logout::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.btn-logout:hover::before {
+  left: 100%;
+}
+
+.btn-logout:hover {
+  background: linear-gradient(135deg, #c0392b, #922b21);
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
+  transform: translateY(-2px);
+}
+
+/* Desktop: hover */
+@media (min-width: 769px) {
+  .dropdown:hover>.dropdown-menu {
+    display: block;
+    animation: fadeIn 0.3s ease;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Mobile: click to show dropdown */
+.dropdown.active .dropdown-menu {
+  display: block;
+}
+
+.dropdown:hover>a {
+  color: #00d9ff;
+}
+
+.dropdown-menu li {
+  padding: 0;
+}
+
+.dropdown-menu a {
+  display: block;
+  padding: 10px 20px;
+  font-size: 13px;
+  white-space: nowrap;
+  transition: all 0.3s ease;
+  color: #fff;
+}
+
+.dropdown-menu a:hover {
+  background: linear-gradient(90deg, rgba(0, 217, 255, 0.2), rgba(0, 255, 136, 0.1));
+  color: #00d9ff;
+  padding-left: 25px;
+}
+
+/* Dropdown submenu */
+.dropdown-submenu {
+  position: relative;
+}
+
+.dropdown-submenu>.dropdown-menu {
+  display: none;
+  position: absolute;
+  left: 100%;
+  top: 0;
+  margin-top: 0;
+  margin-left: 0;
+}
+
+/* Only show submenu on hover over the submenu item itself */
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+  animation: fadeIn 0.3s ease;
+}
+
+/* Remove triangle arrow for dropdown submenu */
+.dropdown-submenu>a::after {
+  display: none;
+}
+
+/* =============================================================================
+   FILTER & EXPORT BUTTONS
+   Style cho nút Reset và Tải file Excel
+================================================================================ */
+
+/* Base style for filter and export buttons */
+#btnResetFilter,
+#btnExport {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Shimmer effect */
+#btnResetFilter::before,
+#btnExport::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+#btnResetFilter:hover::before,
+#btnExport:hover::before {
+  left: 100%;
+}
+
+/* Reset Button - Orange/Yellow (like warning) */
+#btnResetFilter {
+  background: linear-gradient(135deg, #f39c12, #e67e22);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(243, 156, 18, 0.3);
+}
+
+#btnResetFilter:hover {
+  background: linear-gradient(135deg, #e67e22, #d35400);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(243, 156, 18, 0.4);
+  color: #fff;
+}
+
+#btnResetFilter:disabled {
+  background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Export Excel Button - Green (success) */
+#btnExport {
+  background: linear-gradient(135deg, #27ae60, #1e8449);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
+}
+
+#btnExport:hover {
+  background: linear-gradient(135deg, #1e8449, #196f3d);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(39, 174, 96, 0.4);
+  color: #fff;
+}
+
+#btnExport:disabled {
+  background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* =============================================================================
+   ACTION BUTTONS
+   Style cho các nút thêm, sửa, xóa dữ liệu
+================================================================================ */
+
+/* Base button style */
+.add-row-btn {
+  padding: 8px 16px !important;
+  border-radius: 8px;
+  font-size: 0.8rem !important;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Button hover effect - shimmer */
+.add-row-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.add-row-btn:hover::before {
+  left: 100%;
+}
+
+/* Add Data Button - Blue */
+#btnAddData {
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+}
+
+#btnAddData:hover {
+  background: linear-gradient(135deg, #2980b9, #1a5276);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+  color: #fff;
+}
+
+/* Edit Data Button - Cyan/Teal */
+#btnEditData {
+  background: linear-gradient(135deg, #00d9ff, #00b4d8);
+  color: #1a1a2e;
+  box-shadow: 0 4px 15px rgba(0, 217, 255, 0.3);
+}
+
+#btnEditData:hover {
+  background: linear-gradient(135deg, #00b4d8, #0096c7);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 217, 255, 0.4);
+  color: #1a1a2e;
+}
+
+/* Delete Data Button - Red */
+#btnDeleteData {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+}
+
+#btnDeleteData:hover {
+  background: linear-gradient(135deg, #c0392b, #922b21);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
+  color: #fff;
+}
+
+/* Summary Button - Purple/Indigo */
+#btnSummary {
+  background: linear-gradient(135deg, #8e44ad, #732d91);
+  color: #fff !important;
+  box-shadow: 0 4px 15px rgba(142, 68, 173, 0.3);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#btnSummary:hover {
+  background: linear-gradient(135deg, #732d91, #5b2174);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(142, 68, 173, 0.4);
+  color: #fff !important;
+}
+
+/* Disabled button styles */
+.add-row-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+#btnAddData:disabled {
+  background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+}
+
+#btnEditData:disabled {
+  background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+  color: #fff;
+}
+
+#btnDeleteData:disabled {
+  background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+}
+
+/* ==================== Filters ==================== */
+.filters {
+  position: sticky;
+  top: 20px;
+  background: transparent;
+}
+
+.filters .form-label {
+  font-size: 0.85rem;
+}
+
+#voucherFilterMenu {
+  background: #ffffff;
+}
+
+/* Filter dropdown styling */
+#xuongFilterMenu {
+  background: #ffffff;
+  border: 1px solid #dee2e6;
+  border-radius: 0.375rem;
+}
+
+#xuongFilterMenu .form-check {
+  padding-left: 1.5rem;
+}
+
+#xuongFilterMenu .form-check-input {
+  margin-left: -1.5rem;
+}
+
+/* Dropdown toggle button styling */
+#xuongFilterBtn {
+  background-color: #fff;
+  border-color: #6c757d;
+}
+
+#xuongFilterBtn:hover {
+  background-color: #f8f9fa;
+  border-color: #6c757d;
+}
+
+#xuongFilterBtn:focus {
+  box-shadow: 0 0 0 0.25rem rgba(108, 117, 125, 0.25);
+}
+
+#loading {
+  color: #666;
+  font-style: italic;
+}
+
+/* ==================== Main Content ==================== */
+.main-content {
+  margin-top: 50px;
+  padding: 10px;
+  padding-bottom: 10px;
+}
+
+.container {
+  max-width: 1400px;
+}
+
+.container h2 {
+  font-size: 1.1rem;
+  margin-bottom: 0.75rem;
+}
+
+/* ==================== Page Title Styles ==================== */
+.filters h5 {
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.98rem;
+  color: #0d6efd;
+  margin-bottom: 0.5rem;
+}
+
+/* Table header title styling */
+.table-responsive::before {
+  content: '';
+  display: block;
+}
+
+/* ==================== Table Styles ==================== */
+.table-responsive {
+  height: calc(106vh - 200px);
+  overflow-y: auto;
+  overflow-x: auto;
+  -ms-overflow-style: auto;
+  scrollbar-width: auto;
+  cursor: auto;
+}
+
+/* Scrollbar */
+.table-responsive::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 6px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.22);
+  border-radius: 6px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.32);
+}
+
+#dataTable {
+  --table-bg: #1e2235;
+  --table-hover-bg: #2d334d;
+  --table-header-bg: #23283c;
+  --table-header-text: #ffffff;
+  --table-text: #e2e8f0;
+  --table-border: rgba(255, 255, 255, 0.12);
+  --table-cell-hover-bg: rgba(99, 102, 241, 0.2);
+
+  font-size: 0.7rem;
+  table-layout: fixed;
+  width: 100%;
+  margin: 0 auto;
+  background-color: var(--table-bg) !important;
+  color: var(--table-text) !important;
+}
+
+[data-bs-theme="light"] #dataTable {
+  --table-bg: #ffffff;
+  --table-hover-bg: #f8fafc;
+  --table-header-bg: #f1f5f9;
+  --table-header-text: #0f172a;
+  --table-text: #334155;
+  --table-border: rgba(0, 0, 0, 0.08);
+  --table-cell-hover-bg: rgba(99, 102, 241, 0.08);
+}
+
+#dataTable th {
+  background-color: var(--table-header-bg) !important;
+  color: var(--table-header-text) !important;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  text-align: center;
+  vertical-align: middle;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  font-size: 0.75rem;
+  padding: 0.5rem 0.4rem;
+  line-height: 1.2;
+  font-weight: 700;
+  border-bottom: 2px solid var(--table-border) !important;
+}
+
+#dataTable thead th {
+  position: sticky;
+  z-index: 10;
+}
+
+#dataTable thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+#dataTable td {
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0.35rem 0.4rem;
+  border: 1px solid var(--table-border) !important;
+}
+
+/* Light mode & default odd/even row formatting and hover color */
+html[data-bs-theme="light"] #dataTable tbody tr:nth-of-type(odd) td,
+[data-bs-theme="light"] #dataTable tbody tr:nth-of-type(odd) td,
+html:not([data-bs-theme="dark"]) #dataTable tbody tr:nth-of-type(odd) td {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+}
+
+html[data-bs-theme="light"] #dataTable tbody tr:nth-of-type(even) td,
+[data-bs-theme="light"] #dataTable tbody tr:nth-of-type(even) td,
+html:not([data-bs-theme="dark"]) #dataTable tbody tr:nth-of-type(even) td {
+  background-color: #e2e8f0 !important;
+  color: #000000 !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+}
+
+html[data-bs-theme="light"] #dataTable tbody tr:hover td,
+[data-bs-theme="light"] #dataTable tbody tr:hover td,
+html:not([data-bs-theme="dark"]) #dataTable tbody tr:hover td {
+  background-color: #c7d2fe !important;
+  color: #000000 !important;
+}
+
+/* Dark mode odd/even row formatting and hover color */
+html[data-bs-theme="dark"] #dataTable tbody tr:nth-of-type(odd) td,
+[data-bs-theme="dark"] #dataTable tbody tr:nth-of-type(odd) td {
+  background-color: #2f3655 !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+html[data-bs-theme="dark"] #dataTable tbody tr:nth-of-type(even) td,
+[data-bs-theme="dark"] #dataTable tbody tr:nth-of-type(even) td {
+  background-color: #2e3657 !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+html[data-bs-theme="dark"] #dataTable tbody tr:hover td,
+[data-bs-theme="dark"] #dataTable tbody tr:hover td {
+  background-color: #2d334d !important;
+  color: #ffffff !important;
+}
+
+/* ==================== Table Column Widths ==================== */
+#dataTable th:nth-child(1),
+#dataTable td:nth-child(1) {
+  width: 50px;
+  min-width: 50px;
+  max-width: 50px;
+}
+
+#dataTable th:nth-child(2),
+#dataTable td:nth-child(2) {
+  width: 80px;
+  min-width: 80px;
+}
+
+#dataTable th:nth-child(3),
+#dataTable td:nth-child(3) {
+  width: 120px;
+  min-width: 100px;
+}
+
+#dataTable th:nth-child(4),
+#dataTable td:nth-child(4) {
+  width: 200px;
+  min-width: 150px;
+}
+
+#dataTable th:nth-child(5),
+#dataTable td:nth-child(5) {
+  width: 200px;
+  min-width: 150px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+#dataTable th:nth-child(6),
+#dataTable td:nth-child(6) {
+  width: 150px;
+  min-width: 100px;
+  text-align: left;
+}
+
+#dataTable th:nth-child(7),
+#dataTable td:nth-child(7) {
+  width: 200px;
+  min-width: 150px;
+  text-align: right;
+  padding-right: 40px;
+  vertical-align: middle;
+}
+
+#dataTable th:nth-child(8),
+#dataTable td:nth-child(8) {
+  width: 200px;
+  min-width: 150px;
+  text-align: left;
+}
+
+
+/* Number alignment for quantity column */
+#dataTable td:nth-child(5) {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Column header styling */
+#dataTable thead th {
+  white-space: normal;
+  user-select: none;
+  text-align: center !important;
+}
+
+/* Ensure checkbox column header is also centered */
+#dataTable thead th:first-child {
+  text-align: center !important;
+}
+
+/* Cell content styling */
+#dataTable td {
+  font-size: 0.75rem;
+}
+
+/* Hover effect on cells */
+#dataTable tbody td:hover {
+  background-color: rgba(0, 123, 255, 0.08);
+}
+
+/* ==================== Pagination ==================== */
+.d-flex.align-items-center.justify-content-end {
+  margin-top: 15px;
+}
+
+/* ==================== Modal Styles ==================== */
+.modal-body {
+  max-height: 60vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: auto;
+  scrollbar-color: rgba(0, 0, 0, 0.2) rgba(0, 0, 0, 0.05);
+}
+
+.modal-body::-webkit-scrollbar,
+.modal-dialog-scrollable .modal-body::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.modal-body::-webkit-scrollbar-track,
+.modal-dialog-scrollable .modal-body::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+}
+
+.modal-body::-webkit-scrollbar-thumb,
+.modal-dialog-scrollable .modal-body::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover,
+.modal-dialog-scrollable .modal-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.modal-dialog.modal-xl {
+  max-width: 90vw;
+  max-height: 90vh;
+}
+
+.modal-dialog.modal-lg {
+  max-width: 80vw;
+  max-height: 90vh;
+}
+
+.modal-content {
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  flex-shrink: 0;
+  background: #1e3a5f;
+  color: white;
+}
+
+.modal-header .btn-close {
+  filter: invert(1);
+}
+
+.modal-footer {
+  flex-shrink: 0;
+}
+
+.modal-title {
+  font-weight: 600;
+}
+
+.card-header h6 {
+  margin: 0;
+  font-size: 14px;
+}
+
+/* ==================== Loại Table Styles ==================== */
+#loaiTable,
+#editLoaiTable {
+  font-size: 13px;
+}
+
+#loaiTable th,
+#editLoaiTable th {
+  background: #f8f9fa;
+  font-weight: 600;
+}
+
+#loaiTableBody tr:hover,
+#editLoaiTableBody tr:hover {
+  background: #f1f5f9;
+}
+
+.loai-stt {
+  text-align: center;
+  width: 50px;
+}
+
+.loai-input {
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.loai-input:focus {
+  border-color: #0d6efd;
+  outline: none;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.kg-input {
+  width: 120px;
+  text-align: right;
+}
+
+.btn-remove-loai {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+/* ==================== Form Styles ==================== */
+.form-label {
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.form-control {
+  font-size: 13px;
+}
+
+.form-control-sm {
+  font-size: 12px;
+}
+
+/* ==================== Badge Styles ==================== */
+.badge {
+  font-size: 11px;
+}
+
+/* Tablet */
+@media (max-width: 992px) {
+  header {
+    padding: 10px 15px;
+    gap: 20px;
+  }
+
+  .logo {
+    font-size: 20px;
+  }
+
+  nav ul {
+    gap: 25px;
+  }
+
+  nav a {
+    font-size: 13px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  header {
+    padding: 10px 15px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .logo {
+    font-size: 18px;
+    letter-spacing: 2px;
+  }
+
+  /* Hamburger menu visible on mobile */
+  .hamburger {
+    display: flex;
+  }
+
+  /* Navigation menu - hidden by default on mobile */
+  nav {
+    display: none;
+    width: 100%;
+    order: 3;
+  }
+
+  nav.active {
+    display: block;
+  }
+
+  nav ul {
+    flex-direction: column;
+    gap: 0;
+    width: 100%;
+    padding: 10px 0;
+    background: rgba(0, 0, 0, 0.9);
+    border-radius: 8px;
+    margin-top: 10px;
+  }
+
+  nav ul li {
+    width: 100%;
+  }
+
+  nav a {
+    display: block;
+    padding: 12px 20px;
+    font-size: 14px;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  nav a:hover {
+    background: rgba(255, 193, 7, 0.1);
+    color: #ffc107;
+  }
+
+  /* Dropdown menu on mobile */
+  .dropdown-menu {
+    position: static;
+    background: rgba(0, 0, 0, 0.5);
+    box-shadow: none;
+    border-radius: 0;
+  }
+
+  .dropdown-menu a {
+    padding-left: 40px;
+    font-size: 13px;
+  }
+
+  /* User info */
+  .user-info {
+    gap: 10px;
+  }
+
+  .user-info small {
+    font-size: 11px;
+  }
+
+  .btn-logout {
+    padding: 4px 10px;
+    font-size: 11px;
+  }
+
+  /* Filters */
+  .filters {
+    position: static;
+    top: auto;
+    margin-bottom: 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 15px;
+  }
+
+  .filters h5 {
+    font-size: 1rem;
+    margin-bottom: 10px;
+    text-align: center;
+    font-weight: 700;
+  }
+
+  /* Main content */
+  .main-content {
+    margin-top: 60px;
+    padding: 10px 5px;
+  }
+
+  /* Table - allow horizontal scroll */
+  .table-responsive {
+    height: auto;
+    min-height: 300px;
+    overflow-x: auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    font-size: 0.65rem;
+  }
+
+  th,
+  td {
+    padding: 0.25rem 0.2rem;
+    white-space: nowrap;
+  }
+
+  /* Table columns - reduce widths on mobile */
+  #dataTable th:nth-child(1),
+  #dataTable td:nth-child(1) {
+    width: 40px;
+    min-width: 40px;
+    max-width: 40px;
+  }
+
+  #dataTable th:nth-child(2),
+  #dataTable td:nth-child(2) {
+    width: 70px;
+    min-width: 70px;
+  }
+
+  #dataTable th:nth-child(3),
+  #dataTable td:nth-child(3) {
+    width: 90px;
+    min-width: 80px;
+  }
+
+  #dataTable th:nth-child(4),
+  #dataTable td:nth-child(4) {
+    width: 140px;
+    min-width: 120px;
+  }
+
+  #dataTable th:nth-child(5),
+  #dataTable td:nth-child(5) {
+    width: 140px;
+    min-width: 120px;
+    text-align: center;
+    vertical-align: middle;
+  }
+
+  #dataTable th:nth-child(6),
+  #dataTable td:nth-child(6) {
+    width: 100px;
+    min-width: 80px;
+  }
+
+  #dataTable th:nth-child(7),
+  #dataTable td:nth-child(7) {
+    width: 150px;
+    min-width: 120px;
+    text-align: right;
+
+  }
+
+  /* Action buttons */
+  .d-flex.gap-2.mb-2 {
+    flex-wrap: wrap;
+  }
+
+  .d-flex.gap-2.mb-2 .btn {
+    flex: 1 1 auto;
+    min-width: 100px;
+  }
+
+  /* Pagination */
+  .d-flex.align-items-center.justify-content-end {
+    justify-content: center !important;
+    gap: 10px;
+  }
+
+  .d-flex.align-items-center.justify-content-end .ms-3 {
+    margin-left: 0 !important;
+    width: 100%;
+    text-align: center;
+  }
+}
+
+/* Small Mobile */
+@media (max-width: 480px) {
+  header {
+    padding: 8px 10px;
+  }
+
+  .logo {
+    font-size: 16px;
+  }
+
+  .hamburger span {
+    width: 22px;
+    height: 2px;
+  }
+
+  .filters {
+    padding: 10px;
+  }
+
+  .filters h5 {
+    font-size: 0.9rem;
+  }
+
+  .btn-sm {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+  }
+}
+
+/* ==================== Dropdown filter ==================== */
+/* Only apply scrollbar to filter dropdowns, not header navigation dropdowns */
+header+.container .dropdown-menu,
+.filters .dropdown-menu,
+#xuongFilterMenu {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.dropdown-item-check {
+  margin-right: 8px;
+}
+
+/* ==================== Table Footer ==================== */
+.table tfoot tr.table-info td,
+.table tfoot tr.table-warning td {
+  font-size: 13px;
+}
+
+/* ==================== Button Styles ==================== */
+.btn-sm {
+  font-size: 12px;
+  padding: 4px 8px;
+}
+
+/* ==================== Scrollbar ==================== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+.container,
+.container-md,
+.container-sm {
+  max-width: 100%;
+}
+
+/* ==================== Loại Phế Liệu Dropdown ==================== */
+/* Custom searchable dropdown for Loại phế liệu field */
+.loai-dropdown-container {
+  --dropdown-bg: #272c42;
+  --dropdown-border: #3f4769;
+  --dropdown-text: #ffffff;
+  --dropdown-hover-bg: #3f4769;
+  --dropdown-search-bg: #1e2235;
+  --dropdown-search-border: #3f4769;
+  --dropdown-selected-bg: #1f2335;
+  --dropdown-selected-border: #3f4769;
+  --dropdown-selected-text: #ffffff;
+
+  position: relative;
+  width: 100%;
+}
+
+[data-bs-theme="light"] .loai-dropdown-container {
+  --dropdown-bg: #ffffff;
+  --dropdown-border: #ced4da;
+  --dropdown-text: #212529;
+  --dropdown-hover-bg: #e9ecef;
+  --dropdown-search-bg: #ffffff;
+  --dropdown-search-border: #ced4da;
+  --dropdown-selected-bg: #ffffff;
+  --dropdown-selected-border: #ced4da;
+  --dropdown-selected-text: #212529;
+}
+
+.loai-dropdown-selected {
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid var(--dropdown-selected-border);
+  border-radius: 4px;
+  font-size: 13px;
+  background-color: var(--dropdown-selected-bg);
+  color: var(--dropdown-selected-text);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 32px;
+}
+
+.loai-dropdown-selected:hover {
+  border-color: #0d6efd;
+}
+
+.loai-dropdown-selected:focus {
+  border-color: #0d6efd;
+  outline: none;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.loai-dropdown-selected.placeholder {
+  color: #6c757d;
+}
+
+.loai-dropdown-arrow {
+  font-size: 10px;
+  transition: transform 0.2s;
+}
+
+.loai-dropdown-container.open .loai-dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+.loai-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: var(--dropdown-bg);
+  border: 1px solid var(--dropdown-border);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1050;
+  max-height: 250px;
+  display: none;
+  flex-direction: column;
+  margin-top: 2px;
+  color: var(--dropdown-text);
+}
+
+.loai-dropdown-container.open .loai-dropdown-menu {
+  display: flex;
+}
+
+.loai-dropdown-search {
+  padding: 8px;
+  border-bottom: 1px solid var(--dropdown-border);
+  position: sticky;
+  top: 0;
+  background-color: var(--dropdown-bg);
+  z-index: 1;
+}
+
+.loai-dropdown-search input {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--dropdown-search-border);
+  border-radius: 4px;
+  font-size: 12px;
+  background-color: var(--dropdown-search-bg);
+  color: var(--dropdown-text);
+}
+
+.loai-dropdown-search input:focus {
+  border-color: #0d6efd;
+  outline: none;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.loai-dropdown-options {
+  overflow-y: auto;
+  max-height: 200px;
+  background-color: var(--dropdown-bg);
+}
+
+.loai-dropdown-option {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  white-space: normal;
+  word-wrap: break-word;
+  transition: background-color 0.15s;
+  background-color: var(--dropdown-bg);
+  color: var(--dropdown-text);
+}
+
+.loai-dropdown-option:hover {
+  background-color: var(--dropdown-hover-bg);
+  color: var(--dropdown-text);
+}
+
+.loai-dropdown-option.selected {
+  background-color: #0d6efd;
+  color: #fff;
+}
+
+.loai-dropdown-option.highlighted {
+  background-color: var(--dropdown-hover-bg);
+  color: var(--dropdown-text);
+}
+
+.loai-dropdown-empty {
+  padding: 12px;
+  text-align: center;
+  color: #6c757d;
+  font-size: 13px;
+  font-style: italic;
+  background-color: var(--dropdown-bg);
+}
+
+.loai-dropdown-error {
+  padding: 12px;
+  text-align: center;
+  color: #dc3545;
+  font-size: 12px;
+  background-color: var(--dropdown-bg);
+}
+
+.loai-dropdown-error button {
+  margin-top: 8px;
+  padding: 4px 12px;
+  font-size: 11px;
+}
+
+/* Loading state for dropdown */
+.loai-dropdown-loading {
+  padding: 12px;
+  text-align: center;
+  color: #6c757d;
+  font-size: 13px;
+  background-color: var(--dropdown-bg);
+}
+
+.loai-dropdown-loading::after {
+  content: '';
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-left: 8px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #0d6efd;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+#kiDoFilterMenu {
+  background: rgba(255, 255, 255, 0.95);
+}

@@ -1,0 +1,424 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+/* =============================================================================
+   VOICE ASSISTANT WIDGET CSS
+   Midnight Neo Theme - Modern Glassmorphism & Micro-animations
+================================================================================ */
+
+:root {
+  --va-bg-primary: rgba(15, 23, 42, 0.95);
+  --va-bg-card: rgba(30, 41, 59, 0.7);
+  --va-border: rgba(255, 255, 255, 0.1);
+  --va-accent-glow: rgba(16, 185, 129, 0.3);
+  --va-accent: #10b981; /* Emerald */
+  --va-accent-secondary: #3b82f6; /* Blue */
+  --va-text-main: #f8fafc;
+  --va-text-muted: #94a3b8;
+  --va-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.7);
+}
+
+/* Floating Action Button (FAB) */
+.va-fab-container {
+  position: fixed;
+  bottom: 25px;
+  right: 25px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.va-mic-btn {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10b981, #059669);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+}
+
+.va-mic-btn:hover {
+  transform: scale(1.08) translateY(-3px);
+  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.6);
+}
+
+.va-mic-btn svg {
+  width: 24px;
+  height: 24px;
+  transition: transform 0.3s ease;
+}
+
+.va-mic-btn:active svg {
+  transform: scale(0.9);
+}
+
+/* Glowing Pulse Waves when listening */
+.va-mic-btn.listening::after,
+.va-mic-btn.listening::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  right: -5px;
+  bottom: -5px;
+  border-radius: 50%;
+  border: 2px solid var(--va-accent);
+  opacity: 0;
+  animation: va-pulse 1.8s infinite cubic-bezier(0.1, 0.8, 0.3, 1);
+}
+
+.va-mic-btn.listening::before {
+  animation-delay: 0.6s;
+}
+
+@keyframes va-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+/* Tooltip */
+.va-tooltip {
+  position: absolute;
+  right: 75px;
+  background: #1e293b;
+  color: #f8fafc;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  white-space: nowrap;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(15px);
+  transition: all 0.3s ease;
+}
+
+.va-fab-container:hover .va-tooltip {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Assistant Chat Panel */
+.va-panel {
+  position: fixed;
+  bottom: 95px;
+  right: 25px;
+  width: 380px;
+  height: 480px;
+  background: var(--va-bg-primary);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--va-border);
+  border-radius: 20px;
+  box-shadow: var(--va-shadow);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 9998;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(30px) scale(0.95);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.va-panel.active {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+}
+
+/* Panel Header */
+.va-header {
+  padding: 16px 20px;
+  background: rgba(30, 41, 59, 0.5);
+  border-bottom: 1px solid var(--va-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.va-header-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.va-avatar {
+  width: 38px;
+  height: 38px;
+  background: linear-gradient(135deg, var(--va-accent-secondary), var(--va-accent));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+}
+
+.va-avatar svg {
+  width: 20px;
+  height: 20px;
+  color: white;
+}
+
+.va-title-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.va-title {
+  color: var(--va-text-main);
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.va-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--va-text-muted);
+}
+
+.va-status-dot {
+  width: 7px;
+  height: 7px;
+  background-color: var(--va-accent);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--va-accent);
+}
+
+.va-status-dot.idle {
+  background-color: #3b82f6;
+  box-shadow: 0 0 8px #3b82f6;
+}
+
+.va-status-dot.listening {
+  background-color: #ef4444;
+  box-shadow: 0 0 8px #ef4444;
+  animation: va-dot-blink 1s infinite alternate;
+}
+
+@keyframes va-dot-blink {
+  from { opacity: 0.4; }
+  to { opacity: 1; }
+}
+
+.va-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--va-text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+}
+
+.va-close-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--va-text-main);
+}
+
+/* Chat History Body */
+.va-body {
+  flex-grow: 1;
+  padding: 16px 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  scroll-behavior: smooth;
+}
+
+.va-body::-webkit-scrollbar {
+  width: 5px;
+}
+.va-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+.va-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+/* Chat Bubbles */
+.va-msg {
+  max-width: 82%;
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+}
+
+.va-msg > span {
+  white-space: pre-wrap;
+}
+
+.va-msg.bot {
+  align-self: flex-start;
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: var(--va-text-main);
+  border-top-left-radius: 2px;
+}
+
+.va-msg.user {
+  align-self: flex-end;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  border-top-right-radius: 2px;
+  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);
+}
+
+.va-msg-time {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 4px;
+  align-self: flex-end;
+}
+
+.va-msg.bot .va-msg-time {
+  color: var(--va-text-muted);
+}
+
+/* Suggestion Chips */
+.va-suggestions {
+  padding: 10px 20px 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.4);
+  border-top: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.va-chip {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: #cbd5e1;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.va-chip:hover {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #34d399;
+  transform: translateY(-1px);
+}
+
+/* Sound Waveform Visualization */
+.va-wave-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: 24px;
+  padding: 0 10px;
+}
+
+.va-wave-bar {
+  width: 3px;
+  height: 4px;
+  background-color: var(--va-accent);
+  border-radius: 3px;
+  transition: height 0.15s ease;
+}
+
+.va-wave-container.active .va-wave-bar {
+  animation: va-wave-dance 1s infinite alternate;
+}
+
+.va-wave-container.active .va-wave-bar:nth-child(1) { animation-delay: 0.1s; height: 18px; }
+.va-wave-container.active .va-wave-bar:nth-child(2) { animation-delay: 0.2s; height: 10px; }
+.va-wave-container.active .va-wave-bar:nth-child(3) { animation-delay: 0.4s; height: 22px; }
+.va-wave-container.active .va-wave-bar:nth-child(4) { animation-delay: 0.3s; height: 14px; }
+.va-wave-container.active .va-wave-bar:nth-child(5) { animation-delay: 0.5s; height: 18px; }
+
+@keyframes va-wave-dance {
+  0% { transform: scaleY(0.3); }
+  100% { transform: scaleY(1.2); }
+}
+
+/* Specific styling for showing query data cleanly */
+.va-data-box {
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-top: 6px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.75rem;
+  color: #34d399;
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 250px;
+}
+
+/* Custom scrollbar for data box */
+.va-data-box::-webkit-scrollbar {
+  height: 6px;
+}
+.va-data-box::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+.va-data-box::-webkit-scrollbar-thumb {
+  background: rgba(16, 185, 129, 0.5);
+  border-radius: 4px;
+}
+.va-data-box::-webkit-scrollbar-thumb:hover {
+  background: rgba(16, 185, 129, 0.8);
+}
+
+.va-data-box table.va-table {
+  width: auto;
+  min-width: 100%;
+  border-collapse: collapse;
+  margin-top: 4px;
+}
+.va-data-box table.va-table th, .va-data-box table.va-table td {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 8px 10px; /* Increased padding for more spacing between rows */
+  text-align: left;
+}
+.va-data-box table.va-table th {
+  background: rgba(255, 255, 255, 0.05);
+  font-weight: bold;
+  color: #f8fafc;
+}
+.va-data-box table.va-table td {
+  color: #34d399;
+  white-space: nowrap;
+}
+
+/* Responsive adjustment */
+@media (max-width: 480px) {
+  .va-panel {
+    width: calc(100% - 30px);
+    right: 15px;
+    bottom: 90px;
+    height: 420px;
+  }
+}

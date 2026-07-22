@@ -1,0 +1,21 @@
+{
+  "name": "web-supabase",
+  "version": "1.0.0",
+  "description": "Hệ thống quản lý kho & bán hàng kết nối Supabase",
+  "main": "scripts/server.js",
+  "scripts": {
+    "start": "node scripts/server.js",
+    "dev": "node scripts/server.js"
+  },
+  "keywords": [
+    "supabase",
+    "inventory",
+    "management"
+  ],
+  "author": "BaoDDC",
+  "license": "MIT",
+  "dependencies": {
+    "xlsx": "^0.18.5"
+  }
+}
+
