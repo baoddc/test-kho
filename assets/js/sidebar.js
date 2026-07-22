@@ -78,9 +78,9 @@
       label: '5S',
       icon: `<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>`,
       children: [
-        { label: 'Sơ đồ kho Phôi cuộn', href: '/pages/5s/5s-so-do-phoi-cuon.html' },
-        { label: 'Sơ đồ kho Phế liệu', href: '/pages/5s/5s-so-do-phe-lieu.html' },
-        { label: 'HSE', href: '/pages/5s/hse.html' },
+        { label: 'Sơ đồ kho Phôi cuộn', href: '5s-so-do-phoi-cuon.html' },
+        { label: 'Sơ đồ kho Phế liệu', href: '5s-so-do-phe-lieu.html' },
+        { label: 'HSE', href: 'hse.html' },
       ]
     },
     {
@@ -88,10 +88,10 @@
       label: 'XÀ GỒ',
       icon: `<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`,
       children: [
-        { label: 'Nhập - XG', href: '/pages/xg/xg-nhap.html' },
-        { label: 'Xuất - XG', href: '/pages/xg/xg-xuat.html' },
-        { label: 'Tồn - XG', href: '/pages/xg/xg-ton.html' },
-        { label: 'Biểu đồ - XG', href: '/pages/xg/xg-bieu-do.html' },
+        { label: 'Nhập - XG', href: 'xg-nhap.html' },
+        { label: 'Xuất - XG', href: 'xg-xuat.html' },
+        { label: 'Tồn - XG', href: 'xg-ton.html' },
+        { label: 'Biểu đồ - XG', href: 'xg-bieu-do.html' },
       ]
     },
     {
@@ -99,10 +99,10 @@
       label: 'TOLE',
       icon: `<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>`,
       children: [
-        { label: 'Nhập - Tole', href: '/pages/tole/tole-nhap.html' },
-        { label: 'Xuất - Tole', href: '/pages/tole/tole-xuat.html' },
-        { label: 'Tồn - Tole', href: '/pages/tole/tole-ton.html' },
-        { label: 'Biểu đồ - Tole', href: '/pages/tole/tole-bieu-do.html' },
+        { label: 'Nhập - Tole', href: 'tole-nhap.html' },
+        { label: 'Xuất - Tole', href: 'tole-xuat.html' },
+        { label: 'Tồn - Tole', href: 'tole-ton.html' },
+        { label: 'Biểu đồ - Tole', href: 'tole-bieu-do.html' },
       ]
     },
     {
@@ -120,18 +120,18 @@
           label: 'Nhận từ xưởng',
           id: 'nav-pl-nhanTuXuong',
           children: [
-            { label: 'PL - Cần thu', href: '/pages/pl/pl-can-thu.html' },
-            { label: 'PL - Đã thu', href: '/pages/pl/pl-da-thu.html' },
-            { label: 'PL - Chưa thu', href: '/pages/pl/pl-chua-thu.html' },
+            { label: 'PL - Cần thu', href: 'pl-can-thu.html' },
+            { label: 'PL - Đã thu', href: 'pl-da-thu.html' },
+            { label: 'PL - Chưa thu', href: 'pl-chua-thu.html' },
           ]
         },
-        { label: 'Xuất bán/Xuất trả', href: '/pages/pl/pl-phieu-in.html' },
+        { label: 'Xuất bán/Xuất trả', href: 'pl-phieu-in.html' },
       ]
     },
     {
       id: 'nav-about',
       label: 'GIỚI THIỆU',
-      href: '/pages/about.html',
+      href: 'about.html',
       icon: `<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`,
     },
   ];
@@ -291,7 +291,7 @@
     // Header (logo)
     const header = document.createElement('a');
     header.className = 'sidebar-header';
-    header.href = '/pages/home.html';
+    header.href = 'home.html';
     header.setAttribute('title', 'Trang chủ');
     header.innerHTML = `
       <div class="sidebar-logo-icon">K</div>
@@ -655,10 +655,10 @@
   }
 
   function openTab(url, title) {
-    const normalizedUrl = url.startsWith('/') ? url : '/' + url;
+    const normalizedUrl = url;
 
     let existingTab = tabs.find(t => {
-      const normTUrl = t.url.startsWith('/') ? t.url : '/' + t.url;
+      const normTUrl = t.url;
       return normTUrl.split('?')[0] === normalizedUrl.split('?')[0];
     });
 
@@ -773,7 +773,7 @@
           return;
         }
 
-        if (href.includes('/pages/') && !href.endsWith('index.html')) {
+        if (href.endsWith('.html') && !href.endsWith('index.html')) {
           e.preventDefault();
 
           let title = link.querySelector('span') ? link.querySelector('span').textContent : link.textContent;

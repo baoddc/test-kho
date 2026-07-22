@@ -4,10 +4,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Biểu đồ Xà gồ - Dashboard</title>
+  <title>Biểu đồ Tole - Dashboard</title>
 
   <!-- Logo hiển thị trên tab -->
-  <link rel="icon" type="image/png" href="/assets/img/Logo-DDC.png">
+  <link rel="icon" type="image/png" href="assets/img/Logo-DDC.png">
 
   <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -17,9 +17,9 @@
 
   <!-- Custom CSS -->
   <!-- Sidebar CSS -->
-  <link rel="stylesheet" href="/assets/css/sidebar.css">
-  <link rel="stylesheet" href="/assets/css/home.css">
-  <link rel="stylesheet" href="/assets/css/xg/xg-bieu-do.css">
+  <link rel="stylesheet" href="assets/css/sidebar.css">
+  <link rel="stylesheet" href="assets/css/home.css">
+  <link rel="stylesheet" href="assets/css/tole/tole-bieu-do.css">
 </head>
 
 <body>
@@ -30,7 +30,7 @@
     <!-- Page Title -->
     <div class="row mb-4">
       <div class="col-12">
-        <h4 class="page-title">BIỂU ĐỒ TỔNG QUAN XÀ GỒ</h4>
+        <h4 class="page-title">BIỂU ĐỒ TỔNG QUAN TOLE</h4>
       </div>
     </div>
 
@@ -361,21 +361,22 @@
 
   <!-- ==================== SCRIPTS ==================== -->
 
+  <!-- Supabase JS CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+
   <!-- SheetJS (xlsx) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
   <!-- Custom JavaScript -->
   <!-- Sidebar JS (auto-injects sidebar + topbar) -->
-  <script src="/assets/js/sidebar.js"></script>
-  <script src="/assets/js/home.js"></script>
+  <script src="assets/js/sidebar.js"></script>
+  <script src="assets/js/home.js"></script>
 
-  <!-- Supabase JS CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <!-- Supabase config -->
+  <script src="assets/js/supabase-config.js"></script>
 
-  <!-- Supabase config (URL + anon key) -->
-  <script src="/assets/js/supabase-config.js"></script>
-
-  <script src="/assets/js/xg/xg-bieu-do.js"></script>
+  <!-- Chart JS -->
+  <script src="assets/js/tole/tole-bieu-do.js"></script>
 
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

@@ -19,7 +19,7 @@ const MIME_TYPES = {
 const server = http.createServer((req, res) => {
   let safeUrl = decodeURIComponent(req.url.split('?')[0]);
   if (safeUrl === '/') {
-    safeUrl = '/pages/home.html';
+    safeUrl = '/index.html';
   }
   
   const filePath = path.join(PUBLIC_DIR, safeUrl);
