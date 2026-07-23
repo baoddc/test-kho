@@ -2671,9 +2671,24 @@ function setupModalPermissions(modalEl) {
    Chức năng sửa dữ liệu
 ================================================================================ */
 
+// Kiểm tra dữ liệu có quá 24 giờ không
+function isOlderThan24Hours(createdAt) {
+  if (!createdAt) return false;
+  const created = new Date(createdAt);
+  const now = new Date();
+  return (now - created) > 24 * 60 * 60 * 1000;
+}
+
 function openEditDataModal() {
   if (selectedRowIndex < 0 || selectedRowIndex >= tableData.length) {
     alert('Vui lòng chọn một dòng để sửa');
+    return;
+  }
+
+  // Kiểm tra 24 giờ
+  const rawRow = rawSupabaseData && rawSupabaseData[selectedRowIndex - 1];
+  if (rawRow && isOlderThan24Hours(rawRow.created_at)) {
+    alert('Không thể sửa: Dữ liệu này đã được nhập vào hệ thống quá 24 giờ.');
     return;
   }
 
@@ -2863,6 +2878,17 @@ function updateEditHangHoaNumbers() {
 function openDeleteDataModal() {
   if (selectedRowIndexes.length === 0 && selectedRowIndex < 0) {
     alert('Vui lòng chọn ít nhất một dòng để xóa');
+    return;
+  }
+
+  // Kiểm tra 24 giờ
+  const rowsToCheck = selectedRowIndexes.length > 0 ? selectedRowIndexes : [selectedRowIndex];
+  const hasOldRows = rowsToCheck.some(idx => {
+    const raw = rawSupabaseData && rawSupabaseData[idx - 1];
+    return raw && isOlderThan24Hours(raw.created_at);
+  });
+  if (hasOldRows) {
+    alert('Không thể xóa: Một hoặc nhiều dòng đã được nhập vào hệ thống quá 24 giờ.');
     return;
   }
 

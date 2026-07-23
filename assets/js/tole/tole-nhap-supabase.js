@@ -510,6 +510,18 @@ window.addEventListener('resize', () => updateCellTitles(document.getElementById
 
 
 /* =============================================================================
+   24-GIỜ RESTRICTION
+================================================================================ */
+
+function isOlderThan24Hours(createdAt) {
+  if (!createdAt) return false;
+  const created = new Date(createdAt);
+  const now = new Date();
+  return (now - created) > 24 * 60 * 60 * 1000;
+}
+
+
+/* =============================================================================
    COLUMN RESIZE
 ================================================================================ */
 
@@ -956,6 +968,14 @@ function openEditDataModal() {
     return;
   }
 
+  // Kiểm tra 24 giờ
+  const editRowId = tableData[selectedRowIndex]?.[0];
+  const editRawRow = (window._rawSupabaseData || []).find(r => String(r.id) === String(editRowId));
+  if (editRawRow && isOlderThan24Hours(editRawRow.created_at)) {
+    alert('Không thể sửa: Dữ liệu này đã được nhập vào hệ thống quá 24 giờ.');
+    return;
+  }
+
   const modalEl = document.getElementById('editDataModal');
   if (!modalEl) return;
   setupModalPermissions(modalEl);
@@ -1032,6 +1052,17 @@ function openDeleteDataModal() {
 
   if (selectedRowIndexes.length === 0) {
     alert('Vui lòng chọn ít nhất một dòng để xóa');
+    return;
+  }
+
+  // Kiểm tra 24 giờ
+  const hasOldRows = selectedRowIndexes.some(idx => {
+    const rowId = tableData[idx]?.[0];
+    const rawRow = (window._rawSupabaseData || []).find(r => String(r.id) === String(rowId));
+    return rawRow && isOlderThan24Hours(rawRow.created_at);
+  });
+  if (hasOldRows) {
+    alert('Không thể xóa: Một hoặc nhiều dòng đã được nhập vào hệ thống quá 24 giờ.');
     return;
   }
 

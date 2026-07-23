@@ -311,6 +311,7 @@ async function fetchSheetData() {
     tableData = (data || []).map((row, index) => {
       return {
         id: row.id,
+        created_at: row.created_at,
         stt: index + 1,
         ngay: row['Ngày'] ? formatDate(row['Ngày']) : '',
         kido: row['Kì đổ'] || '',
@@ -347,6 +348,14 @@ async function fetchSheetData() {
       loadingEl.style.display = 'none';
     }
   }
+}
+
+// Kiểm tra dữ liệu có quá 24 giờ không
+function isOlderThan24Hours(createdAt) {
+  if (!createdAt) return false;
+  const created = new Date(createdAt);
+  const now = new Date();
+  return (now - created) > 24 * 60 * 60 * 1000;
 }
 
 // Lấy danh sách Loại phế liệu duy nhất từ tableData để làm gợi ý dropdown
@@ -1001,6 +1010,13 @@ function showAddDataModal() {
 function showEditDataModal() {
   if (selectedRowIndex < 0) return;
 
+  // Kiểm tra 24 giờ
+  const editRow = tableData.find(r => r.id === selectedRowIndex);
+  if (editRow && isOlderThan24Hours(editRow.created_at)) {
+    alert('Không thể sửa: Dữ liệu này đã được nhập vào hệ thống quá 24 giờ.');
+    return;
+  }
+
   // Lưu vị trí scroll và trạng thái lọc trước khi mở modal
   window._savedScrollPosition = saveScrollPosition();
   window._savedFilterState = saveFilterState();
@@ -1595,6 +1611,16 @@ async function handleEditSubmit(e) {
 // Handle delete
 async function handleDelete() {
   if (selectedRowIndexes.length === 0) return;
+
+  // Kiểm tra 24 giờ
+  const hasOldRows = selectedRowIndexes.some(id => {
+    const row = tableData.find(r => r.id === id);
+    return row && isOlderThan24Hours(row.created_at);
+  });
+  if (hasOldRows) {
+    alert('Không thể xóa: Một hoặc nhiều dòng đã được nhập vào hệ thống quá 24 giờ.');
+    return;
+  }
 
   // Lưu vị trí scroll và trạng thái lọc trước khi mở modal
   window._savedScrollPosition = saveScrollPosition();
