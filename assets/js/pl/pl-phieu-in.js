@@ -2614,26 +2614,19 @@ function updateSelectedRows() {
     return typeof isRecordLocked === 'function' && isRecordLocked(record);
   });
 
-  // Enable/disable buttons based on selection
+  // Enable/disable buttons based on selection count
   const btnEdit = document.getElementById('btnEditData');
   const btnDelete = document.getElementById('btnDeleteData');
 
   if (selectedRowIndexes.length > 0) {
-    btnDelete.disabled = isAnySelectedLocked;
-    btnDelete.textContent = `Xóa đã chọn (${selectedRowIndexes.length})`;
-    if (isAnySelectedLocked && btnDelete) {
-      btnDelete.title = 'Có dữ liệu đã nhập quá 24 giờ, không thể xóa';
-    } else if (btnDelete) {
+    if (btnDelete) {
+      btnDelete.disabled = false;
+      btnDelete.textContent = `Xóa đã chọn (${selectedRowIndexes.length})`;
       btnDelete.removeAttribute('title');
     }
-    // Edit only enabled for single selection and not locked
     if (btnEdit) {
-      btnEdit.disabled = selectedRowIndexes.length !== 1 || isAnySelectedLocked;
-      if (isAnySelectedLocked) {
-        btnEdit.title = 'Dữ liệu đã nhập quá 24 giờ, không thể sửa';
-      } else {
-        btnEdit.removeAttribute('title');
-      }
+      btnEdit.disabled = selectedRowIndexes.length !== 1;
+      btnEdit.removeAttribute('title');
     }
   } else {
     if (btnEdit) {

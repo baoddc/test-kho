@@ -771,23 +771,18 @@ function updateButtonStates() {
   selectedRowIndexes = Array.from(checked).map(cb => parseInt(cb.dataset.id, 10));
   selectedRowIndex = count === 1 ? selectedRowIndexes[0] : -1;
 
-  const selectedRows = selectedRowIndexes.map(id => tableData.find(r => r.id === id)).filter(Boolean);
-  const isAnySelectedLocked = selectedRows.some(r => typeof isRecordLocked === 'function' && isRecordLocked(r._raw || r));
-
   if (editBtn) {
-    editBtn.disabled = count !== 1 || isAnySelectedLocked;
-    if (isAnySelectedLocked) editBtn.title = 'Dữ liệu đã nhập quá 24 giờ, không thể sửa';
-    else editBtn.removeAttribute('title');
+    editBtn.disabled = count !== 1;
+    editBtn.removeAttribute('title');
   }
   if (deleteBtn) {
-    deleteBtn.disabled = count === 0 || isAnySelectedLocked;
+    deleteBtn.disabled = count === 0;
     if (count > 0) {
       deleteBtn.textContent = `Xóa đã chọn (${count})`;
     } else {
       deleteBtn.textContent = 'Xóa dữ liệu';
     }
-    if (isAnySelectedLocked) deleteBtn.title = 'Có dữ liệu đã nhập quá 24 giờ, không thể xóa';
-    else deleteBtn.removeAttribute('title');
+    deleteBtn.removeAttribute('title');
   }
 }
 

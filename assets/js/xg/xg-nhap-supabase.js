@@ -492,22 +492,15 @@ function updateSelectedRows() {
   const btnEdit = document.getElementById('btnEditData');
   const btnDelete = document.getElementById('btnDeleteData');
 
-  const isAnySelectedLocked = selectedRowIndexes.some(idx => {
-    const raw = window._rawSupabaseData && window._rawSupabaseData[idx - 1];
-    return typeof isRecordLocked === 'function' && isRecordLocked(raw);
-  });
-
   if (selectedRowIndexes.length > 0) {
     if (btnDelete) {
-      btnDelete.disabled = isAnySelectedLocked;
+      btnDelete.disabled = false;
       btnDelete.textContent = `Xóa đã chọn (${selectedRowIndexes.length})`;
-      if (isAnySelectedLocked) btnDelete.title = 'Có dữ liệu đã nhập quá 24 giờ, không thể xóa';
-      else btnDelete.removeAttribute('title');
+      btnDelete.removeAttribute('title');
     }
     if (btnEdit) {
-      btnEdit.disabled = selectedRowIndexes.length !== 1 || isAnySelectedLocked;
-      if (isAnySelectedLocked) btnEdit.title = 'Dữ liệu đã nhập quá 24 giờ, không thể sửa';
-      else btnEdit.removeAttribute('title');
+      btnEdit.disabled = selectedRowIndexes.length !== 1;
+      btnEdit.removeAttribute('title');
     }
   } else {
     if (btnEdit) {
