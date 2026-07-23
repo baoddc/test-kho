@@ -311,7 +311,6 @@ async function fetchSheetData() {
     tableData = (data || []).map((row, index) => {
       return {
         id: row.id,
-        created_at: row.created_at,
         stt: index + 1,
         ngay: row['Ngày'] ? formatDate(row['Ngày']) : '',
         kido: row['Kì đổ'] || '',
@@ -324,6 +323,8 @@ async function fetchSheetData() {
             : null),
         ghichu: row['Ghi chú'] || '',
         column8: row['Cột 8 (Kì đổ_Xưởng_Loại phế liệu)'] || '',
+        created_at: row.created_at || row.createdAt || row.created_Time,
+        _raw: row,
         _rowIndex: row.id // Dùng id làm _rowIndex để chỉnh sửa/xóa
       };
     });
@@ -352,14 +353,6 @@ async function fetchSheetData() {
       loadingEl.style.display = 'none';
     }
   }
-}
-
-// Kiểm tra dữ liệu có quá 24 giờ không
-function isOlderThan24Hours(createdAt) {
-  if (!createdAt) return false;
-  const created = new Date(createdAt);
-  const now = new Date();
-  return (now - created) > 24 * 60 * 60 * 1000;
 }
 
 // Lấy danh sách Loại phế liệu duy nhất từ tableData để làm gợi ý dropdown
@@ -779,18 +772,27 @@ function updateButtonStates() {
   const editBtn = document.getElementById('btnEditData');
   const deleteBtn = document.getElementById('btnDeleteData');
 
-  if (editBtn) editBtn.disabled = count !== 1;
+  selectedRowIndexes = Array.from(checked).map(cb => parseInt(cb.dataset.id, 10));
+  selectedRowIndex = count === 1 ? selectedRowIndexes[0] : -1;
+
+  const selectedRows = selectedRowIndexes.map(id => tableData.find(r => r.id === id)).filter(Boolean);
+  const isAnySelectedLocked = selectedRows.some(r => typeof isRecordLocked === 'function' && isRecordLocked(r._raw || r));
+
+  if (editBtn) {
+    editBtn.disabled = count !== 1 || isAnySelectedLocked;
+    if (isAnySelectedLocked) editBtn.title = 'Dữ liệu đã nhập quá 24 giờ, không thể sửa';
+    else editBtn.removeAttribute('title');
+  }
   if (deleteBtn) {
-    deleteBtn.disabled = count === 0;
+    deleteBtn.disabled = count === 0 || isAnySelectedLocked;
     if (count > 0) {
       deleteBtn.textContent = `Xóa đã chọn (${count})`;
     } else {
       deleteBtn.textContent = 'Xóa dữ liệu';
     }
+    if (isAnySelectedLocked) deleteBtn.title = 'Có dữ liệu đã nhập quá 24 giờ, không thể xóa';
+    else deleteBtn.removeAttribute('title');
   }
-
-  selectedRowIndexes = Array.from(checked).map(cb => parseInt(cb.dataset.id, 10));
-  selectedRowIndex = count === 1 ? selectedRowIndexes[0] : -1;
 }
 
 /* =============================================================================
@@ -1014,10 +1016,9 @@ function showAddDataModal() {
 function showEditDataModal() {
   if (selectedRowIndex < 0) return;
 
-  // Kiểm tra 24 giờ
-  const editRow = tableData.find(r => r.id === selectedRowIndex);
-  if (editRow && isOlderThan24Hours(editRow.created_at)) {
-    alert('Không thể sửa: Dữ liệu này đã được nhập vào hệ thống quá 24 giờ.');
+  const rowToEdit = tableData.find(r => r.id === selectedRowIndex);
+  if (rowToEdit && typeof isRecordLocked === 'function' && isRecordLocked(rowToEdit._raw || rowToEdit)) {
+    alert('Dữ liệu này đã được nhập quá 24 giờ. Hệ thống không cho phép chỉnh sửa.');
     return;
   }
 
@@ -1032,7 +1033,7 @@ function showEditDataModal() {
   setupModalPermissions(modalEl);
 
   const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-  const row = tableData.find(r => r.id === selectedRowIndex);
+  const row = rowToEdit;
   if (!row) return;
 
   // Populate common fields (ngay, xuong)
@@ -1531,6 +1532,11 @@ async function handleEditSubmit(e) {
   const originalRow = tableData.find(r => r.id === selectedRowIndex);
   if (!originalRow) return;
 
+  if (typeof isRecordLocked === 'function' && isRecordLocked(originalRow._raw || originalRow)) {
+    alert('Dữ liệu này đã được nhập quá 24 giờ. Hệ thống không cho phép chỉnh sửa.');
+    return;
+  }
+
   const xuongInput = document.querySelector('#editDataForm select[name="xuong"]');
   const ngayInput = document.querySelector('#editDataForm input[name="ngay"]');
   const kidoInput = document.querySelector('#editDataForm select[name="kido"]');
@@ -1618,13 +1624,12 @@ async function handleEditSubmit(e) {
 async function handleDelete() {
   if (selectedRowIndexes.length === 0) return;
 
-  // Kiểm tra 24 giờ
-  const hasOldRows = selectedRowIndexes.some(id => {
-    const row = tableData.find(r => r.id === id);
-    return row && isOlderThan24Hours(row.created_at);
+  const isAnyLocked = selectedRowIndexes.some(id => {
+    const r = tableData.find(row => row.id === id);
+    return typeof isRecordLocked === 'function' && isRecordLocked(r?._raw || r);
   });
-  if (hasOldRows) {
-    alert('Không thể xóa: Một hoặc nhiều dòng đã được nhập vào hệ thống quá 24 giờ.');
+  if (isAnyLocked) {
+    alert('Trong số các dòng được chọn, có dữ liệu đã nhập quá 24 giờ. Hệ thống không cho phép xóa.');
     return;
   }
 
@@ -1654,6 +1659,15 @@ async function handleDelete() {
 
 // Handle confirm delete from modal
 async function handleConfirmDelete() {
+  const isAnyLocked = selectedRowIndexes.some(id => {
+    const r = tableData.find(row => row.id === id);
+    return typeof isRecordLocked === 'function' && isRecordLocked(r?._raw || r);
+  });
+  if (isAnyLocked) {
+    alert('Dữ liệu đã nhập quá 24 giờ. Hệ thống không cho phép xóa.');
+    return;
+  }
+
   // Show loading overlay
   showLoadingOverlay('Đang xóa dữ liệu trên Supabase...');
 
