@@ -1338,8 +1338,8 @@ document.addEventListener('submit', async (e) => {
 
       const rawToEdit = window._rawSupabaseData && window._rawSupabaseData[selectedRowIndex - 1];
       if (typeof isRecordLocked === 'function' && isRecordLocked(rawToEdit)) {
-        const idVal = rawToEdit && rawToEdit.id ? ` (ID: ${rawToEdit.id})` : '';
-        (window.showWarningModal || alert)(`Dữ liệu ở STT ${selectedRowIndex}${idVal} đã được nhập quá 24 giờ. Hệ thống không cho phép cập nhật.`);
+        const rowId = rawToEdit?.id || (tableData[selectedRowIndex] ? tableData[selectedRowIndex][0] : selectedRowIndex);
+        (window.showWarningModal || alert)(`Dữ liệu (ID: ${rowId}) đã được nhập quá 24 giờ. Hệ thống không cho phép cập nhật.`);
         return;
       }
 
@@ -1433,14 +1433,14 @@ document.addEventListener('click', async (e) => {
     selectedRowIndexes.forEach(idx => {
       const raw = window._rawSupabaseData && window._rawSupabaseData[idx - 1];
       if (typeof isRecordLocked === 'function' && isRecordLocked(raw)) {
-        const idVal = raw && raw.id ? ` (ID: ${raw.id})` : '';
-        lockedItems.push(`STT ${idx}${idVal}`);
+        const rowId = raw?.id || (tableData[idx] ? tableData[idx][0] : idx);
+        lockedItems.push(`ID: ${rowId}`);
       }
     });
 
     if (lockedItems.length > 0) {
       const msg = lockedItems.length === 1
-        ? `Dữ liệu ở ${lockedItems[0]} đã nhập quá 24 giờ. Hệ thống không cho phép xóa.`
+        ? `Dữ liệu (${lockedItems[0]}) đã nhập quá 24 giờ. Hệ thống không cho phép xóa.`
         : `Không thể xóa. Các dòng dữ liệu sau đã nhập quá 24 giờ:\n• ${lockedItems.join('\n• ')}`;
       (window.showWarningModal || alert)(msg);
       return;
