@@ -455,7 +455,7 @@ function parseRowDate(raw) {
 function parseVietnameseFloat(value) {
   if (value === null || value === undefined || value === '') return 0;
   if (typeof value === 'number') return value;
-  
+
   let text = value.toString().trim().replace(/\s+/g, '');
   const hasComma = text.includes(',');
   const hasDot = text.includes('.');
@@ -1915,7 +1915,7 @@ async function submitAddData() {
       return {
         'Số phiếu': getVal(['số phiếu', 'sophieu']),
         'Ngày': toISODate(getVal(['ngày', 'date'])),
-        'Bên nhận/ Xưởng/Đội': benNhanVal,
+        'Bên nhận/Xưởng/Đội': benNhanVal,
         'Bên nhận/Xưởng/Đội': benNhanVal,
         'Loại xuất': getVal(['loại xuất', 'loaixuat']),
         'Mặt hàng': getVal(['mặt hàng', 'mathang']),
@@ -2034,7 +2034,7 @@ async function loadGoogleSheet() {
     const headers = [
       'Số phiếu',
       'Ngày',
-      'Bên nhận/ Xưởng/Đội',
+      'Bên nhận/Xưởng/Đội',
       'Loại xuất',
       'Mặt hàng',
       'ĐVT',
@@ -2055,7 +2055,7 @@ async function loadGoogleSheet() {
     };
 
     (allData || []).forEach(row => {
-      const benNhanVal = row['Bên nhận/ Xưởng/Đội'] ?? row['Bên nhận/Xưởng/Đội'] ?? row['Bên nhận/ Xưởng/ Đội'] ?? row['Bên nhận / Xưởng / Đội'] ?? row['Bên nhận'] ?? row['ben_nhan'] ?? row['benNhan'] ?? row['Xưởng'] ?? '';
+      const benNhanVal = row['Bên nhận/Xưởng/Đội'] ?? row['Bên nhận/Xưởng/Đội'] ?? row['Bên nhận/ Xưởng/ Đội'] ?? row['Bên nhận / Xưởng / Đội'] ?? row['Bên nhận'] ?? row['ben_nhan'] ?? row['benNhan'] ?? row['Xưởng'] ?? '';
 
       tableData.push([
         row['Số phiếu'] || '',
@@ -2609,19 +2609,42 @@ function updateSelectedRows() {
     }
   });
 
+  const isAnySelectedLocked = selectedRowIndexes.some(idx => {
+    const record = rawSupabaseData && rawSupabaseData[idx - 1];
+    return typeof isRecordLocked === 'function' && isRecordLocked(record);
+  });
+
   // Enable/disable buttons based on selection
   const btnEdit = document.getElementById('btnEditData');
   const btnDelete = document.getElementById('btnDeleteData');
 
   if (selectedRowIndexes.length > 0) {
-    btnDelete.disabled = false;
+    btnDelete.disabled = isAnySelectedLocked;
     btnDelete.textContent = `Xóa đã chọn (${selectedRowIndexes.length})`;
-    // Edit only enabled for single selection
-    btnEdit.disabled = selectedRowIndexes.length !== 1;
+    if (isAnySelectedLocked && btnDelete) {
+      btnDelete.title = 'Có dữ liệu đã nhập quá 24 giờ, không thể xóa';
+    } else if (btnDelete) {
+      btnDelete.removeAttribute('title');
+    }
+    // Edit only enabled for single selection and not locked
+    if (btnEdit) {
+      btnEdit.disabled = selectedRowIndexes.length !== 1 || isAnySelectedLocked;
+      if (isAnySelectedLocked) {
+        btnEdit.title = 'Dữ liệu đã nhập quá 24 giờ, không thể sửa';
+      } else {
+        btnEdit.removeAttribute('title');
+      }
+    }
   } else {
-    btnEdit.disabled = true;
-    btnDelete.disabled = true;
-    btnDelete.textContent = 'Xóa dữ liệu';
+    if (btnEdit) {
+      btnEdit.disabled = true;
+      btnEdit.removeAttribute('title');
+    }
+    if (btnDelete) {
+      btnDelete.disabled = true;
+      btnDelete.textContent = 'Xóa dữ liệu';
+      btnDelete.removeAttribute('title');
+    }
   }
 
   // Update selectedRowIndex for single selection
@@ -2671,24 +2694,15 @@ function setupModalPermissions(modalEl) {
    Chức năng sửa dữ liệu
 ================================================================================ */
 
-// Kiểm tra dữ liệu có quá 24 giờ không
-function isOlderThan24Hours(createdAt) {
-  if (!createdAt) return false;
-  const created = new Date(createdAt);
-  const now = new Date();
-  return (now - created) > 24 * 60 * 60 * 1000;
-}
-
 function openEditDataModal() {
   if (selectedRowIndex < 0 || selectedRowIndex >= tableData.length) {
     alert('Vui lòng chọn một dòng để sửa');
     return;
   }
 
-  // Kiểm tra 24 giờ
-  const rawRow = rawSupabaseData && rawSupabaseData[selectedRowIndex - 1];
-  if (rawRow && isOlderThan24Hours(rawRow.created_at)) {
-    alert('Không thể sửa: Dữ liệu này đã được nhập vào hệ thống quá 24 giờ.');
+  const recordToEdit = rawSupabaseData && rawSupabaseData[selectedRowIndex - 1];
+  if (typeof isRecordLocked === 'function' && isRecordLocked(recordToEdit)) {
+    alert('Dữ liệu này đã được nhập quá 24 giờ. Hệ thống không cho phép chỉnh sửa.');
     return;
   }
 
@@ -2881,14 +2895,13 @@ function openDeleteDataModal() {
     return;
   }
 
-  // Kiểm tra 24 giờ
   const rowsToCheck = selectedRowIndexes.length > 0 ? selectedRowIndexes : [selectedRowIndex];
-  const hasOldRows = rowsToCheck.some(idx => {
-    const raw = rawSupabaseData && rawSupabaseData[idx - 1];
-    return raw && isOlderThan24Hours(raw.created_at);
+  const isAnyLocked = rowsToCheck.some(idx => {
+    const record = rawSupabaseData && rawSupabaseData[idx - 1];
+    return typeof isRecordLocked === 'function' && isRecordLocked(record);
   });
-  if (hasOldRows) {
-    alert('Không thể xóa: Một hoặc nhiều dòng đã được nhập vào hệ thống quá 24 giờ.');
+  if (isAnyLocked) {
+    alert('Trong số các dòng được chọn, có dữ liệu đã nhập quá 24 giờ. Hệ thống không cho phép xóa.');
     return;
   }
 
@@ -2914,6 +2927,15 @@ async function confirmDelete() {
 
   if (rowsToDelete.length === 0) {
     alert('Không có dòng nào được chọn để xóa');
+    return;
+  }
+
+  const isAnyLocked = rowsToDelete.some(idx => {
+    const record = rawSupabaseData && rawSupabaseData[idx - 1];
+    return typeof isRecordLocked === 'function' && isRecordLocked(record);
+  });
+  if (isAnyLocked) {
+    alert('Dữ liệu đã nhập quá 24 giờ. Hệ thống không cho phép xóa.');
     return;
   }
 
@@ -2979,6 +3001,12 @@ async function handleEditFormSubmit(e) {
     return;
   }
 
+  const recordToEdit = rawSupabaseData && rawSupabaseData[selectedRowIndex - 1];
+  if (typeof isRecordLocked === 'function' && isRecordLocked(recordToEdit)) {
+    alert('Dữ liệu này đã được nhập quá 24 giờ. Hệ thống không cho phép chỉnh sửa.');
+    return;
+  }
+
   const form = e.target;
   const headers = tableData[0] || [];
   const rowData = tableData[selectedRowIndex];
@@ -2995,7 +3023,7 @@ async function handleEditFormSubmit(e) {
   // 1. Check main fields
   for (let i = 0; i < headers.length; i++) {
     if (i === matHangIdx || i === dvtIdx || i === trongLuongIdx || i === soXeIdx || i === maCongTrinhIdx || i === tenCongTrinhIdx) continue;
-    
+
     const input = form.querySelector(`[name="col_${i}"]`);
     const headerName = String(headers[i] || '').toLowerCase();
     const isOptional = headerName.includes('loại xuất') || headerName.includes('mã công trình') || headerName.includes('tên công trình');
@@ -3125,7 +3153,7 @@ async function handleEditFormSubmit(e) {
     const updatePayload = {
       'Số phiếu': rowData[0] || '',
       'Ngày': toISODate(rowData[1]),
-      'Bên nhận/ Xưởng/Đội': benNhanVal,
+      'Bên nhận/Xưởng/Đội': benNhanVal,
       'Bên nhận/Xưởng/Đội': benNhanVal,
       'Loại xuất': rowData[3] || '',
       'Mặt hàng': rowData[4] || '',
