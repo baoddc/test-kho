@@ -28,6 +28,27 @@
     }
   }
 
+  function ensurePWATags() {
+    if (!document.querySelector('link[rel="manifest"]')) {
+      const manifestLink = document.createElement('link');
+      manifestLink.rel = 'manifest';
+      manifestLink.href = '/manifest.json';
+      document.head.appendChild(manifestLink);
+    }
+    if (!document.querySelector('meta[name="theme-color"]')) {
+      const meta = document.createElement('meta');
+      meta.name = 'theme-color';
+      meta.content = '#1e293b';
+      document.head.appendChild(meta);
+    }
+    if (!document.querySelector('script[src*="pwa-register.js"]')) {
+      const script = document.createElement('script');
+      script.src = '/assets/js/pwa-register.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    }
+  }
+
   function initTableSpaceSaver() {
     const isCollapsedSaved = localStorage.getItem('ddc_table_tools_collapsed') === 'true';
 
@@ -376,6 +397,10 @@
         </button>
       </div>
       <div class="sidebar-footer-bottom">
+        <button id="pwa-install-btn" class="sidebar-logout-btn pwa-install-btn" style="display:none; margin-bottom: 0.5rem; background: #2563eb; color: #ffffff; border-color: #2563eb;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span>📲 Cài đặt App</span>
+        </button>
         <button id="btnLogout" class="sidebar-logout-btn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
           <span>Đăng xuất</span>
@@ -922,6 +947,7 @@
 
   function init() {
     ensureMobileCSS();
+    ensurePWATags();
     initTableSpaceSaver();
     injectSidebar();
     injectTopbar();
