@@ -1,0 +1,185 @@
+/* =============================================================================
+   MOBILE RESPONSIVE & TOUCH OPTIMIZATIONS
+   Thiết lập tối ưu hóa cho màn hình điện thoại di động và máy tính bảng
+   ============================================================================= */
+
+/* -----------------------------------------------------------------------------
+   1. TOUCH & ANTI-ZOOM FOR INPUTS
+   ----------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  /* Ngăn ngừa tự động zoom trên iOS Safari khi tap vào input/select */
+  input[type="text"],
+  input[type="password"],
+  input[type="number"],
+  input[type="date"],
+  input[type="datetime-local"],
+  input[type="search"],
+  select,
+  textarea {
+    font-size: 16px !important;
+    min-height: 42px;
+    border-radius: 8px;
+  }
+
+  button,
+  .btn,
+  .login__button {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* -----------------------------------------------------------------------------
+   2. DATA TABLES HORIZONTAL SCROLLING & MOBILE VIEW
+   ----------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  .table-responsive,
+  .data-table-container,
+  .table-wrapper,
+  .table-container {
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 1rem;
+    border-radius: 8px;
+  }
+
+  table.table,
+  .data-table {
+    min-width: 600px; /* Cho phép cuộn ngang mượt mà trên điện thoại */
+  }
+
+  table th,
+  table td {
+    padding: 8px 10px !important;
+    font-size: 0.85rem !important;
+    white-space: nowrap;
+  }
+
+  /* Nút thao tác trong bảng */
+  table .btn-sm,
+  table .action-btn {
+    padding: 6px 10px !important;
+    font-size: 0.8rem !important;
+    min-height: 36px;
+  }
+}
+
+/* -----------------------------------------------------------------------------
+   3. RESPONSIVE TOOLBARS & FILTER BARS
+   ----------------------------------------------------------------------------- */
+@media (max-width: 640px) {
+  .filter-bar,
+  .toolbar,
+  .search-container,
+  .action-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+
+  .filter-group,
+  .search-box,
+  .btn-group {
+    width: 100% !important;
+  }
+
+  .filter-group input,
+  .filter-group select,
+  .search-box input {
+    width: 100% !important;
+  }
+
+  .action-buttons,
+  .button-group {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 8px !important;
+  }
+
+  .action-buttons button,
+  .button-group button {
+    width: 100% !important;
+  }
+}
+
+/* -----------------------------------------------------------------------------
+   4. MODALS & POPUPS MOBILE OPTIMIZATION
+   ----------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  .modal-dialog {
+    margin: 10px auto !important;
+    max-width: 95vw !important;
+  }
+
+  .modal-content {
+    border-radius: 12px !important;
+    padding: 12px !important;
+  }
+
+  .modal-header {
+    padding: 12px 16px !important;
+  }
+
+  .modal-body {
+    padding: 12px 16px !important;
+    max-height: 75vh;
+    overflow-y: auto;
+  }
+
+  .modal-footer {
+    padding: 12px 16px !important;
+    flex-direction: column-reverse !important;
+    gap: 8px;
+  }
+
+  .modal-footer button {
+    width: 100% !important;
+    margin: 0 !important;
+  }
+}
+
+/* -----------------------------------------------------------------------------
+   5. VOICE ASSISTANT MOBILE WIDGET
+   ----------------------------------------------------------------------------- */
+@media (max-width: 576px) {
+  .va-widget {
+    bottom: 16px !important;
+    right: 16px !important;
+  }
+
+  .va-trigger-btn {
+    width: 50px !important;
+    height: 50px !important;
+  }
+
+  .va-panel {
+    width: calc(100vw - 32px) !important;
+    right: 16px !important;
+    left: 16px !important;
+    bottom: 76px !important;
+    max-height: 60vh !important;
+  }
+}
+
+/* -----------------------------------------------------------------------------
+   6. SMALL MOBILE SCREENS (< 380px)
+   ----------------------------------------------------------------------------- */
+@media (max-width: 380px) {
+  body {
+    font-size: 14px;
+  }
+
+  h1, .h1 { font-size: 1.4rem !important; }
+  h2, .h2 { font-size: 1.25rem !important; }
+  h3, .h3 { font-size: 1.1rem !important; }
+
+  .main-content {
+    padding: 8px !important;
+  }
+}

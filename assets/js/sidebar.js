@@ -19,11 +19,22 @@
 
   const isIframe = window.self !== window.top;
 
+  function ensureMobileCSS() {
+    if (!document.querySelector('link[href*="mobile-responsive.css"]')) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = '/assets/css/mobile-responsive.css';
+      document.head.appendChild(link);
+    }
+  }
+
   if (isIframe) {
     document.body.classList.add('in-iframe');
+    ensureMobileCSS();
 
     // Hide old horizontal header if it exists
     document.addEventListener('DOMContentLoaded', () => {
+      ensureMobileCSS();
       const header = document.querySelector('header');
       if (header) header.style.display = 'none';
 
@@ -872,6 +883,7 @@
   // ============================================================
 
   function init() {
+    ensureMobileCSS();
     injectSidebar();
     injectTopbar();
     wrapContent();
