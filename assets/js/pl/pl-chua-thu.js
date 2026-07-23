@@ -1011,12 +1011,6 @@ function showAddDataModal() {
 function showEditDataModal() {
   if (selectedRowIndex < 0) return;
 
-  const rowToEdit = tableData.find(r => r.id === selectedRowIndex);
-  if (rowToEdit && typeof isRecordLocked === 'function' && isRecordLocked(rowToEdit._raw || rowToEdit)) {
-    alert('Dữ liệu này đã được nhập quá 24 giờ. Hệ thống không cho phép chỉnh sửa.');
-    return;
-  }
-
   // Lưu vị trí scroll và trạng thái lọc trước khi mở modal
   window._savedScrollPosition = saveScrollPosition();
   window._savedFilterState = saveFilterState();
@@ -1618,15 +1612,6 @@ async function handleEditSubmit(e) {
 // Handle delete
 async function handleDelete() {
   if (selectedRowIndexes.length === 0) return;
-
-  const isAnyLocked = selectedRowIndexes.some(id => {
-    const r = tableData.find(row => row.id === id);
-    return typeof isRecordLocked === 'function' && isRecordLocked(r?._raw || r);
-  });
-  if (isAnyLocked) {
-    alert('Trong số các dòng được chọn, có dữ liệu đã nhập quá 24 giờ. Hệ thống không cho phép xóa.');
-    return;
-  }
 
   // Lưu vị trí scroll và trạng thái lọc trước khi mở modal
   window._savedScrollPosition = saveScrollPosition();

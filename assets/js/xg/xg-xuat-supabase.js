@@ -890,12 +890,6 @@ function openEditDataModal() {
     return;
   }
 
-  const rawToEdit = window._rawSupabaseData && window._rawSupabaseData[selectedRowIndex - 1];
-  if (typeof isRecordLocked === 'function' && isRecordLocked(rawToEdit)) {
-    alert('Dữ liệu này đã được nhập quá 24 giờ. Hệ thống không cho phép chỉnh sửa.');
-    return;
-  }
-
   const modalEl = document.getElementById('editDataModal');
   if (!modalEl) return;
   setupModalPermissions(modalEl);
@@ -969,15 +963,6 @@ function openDeleteDataModal() {
   updateSelectedRows();
 
   if (selectedRowIndexes.length === 0) { alert('Vui lòng chọn ít nhất một dòng để xóa'); return; }
-
-  const isAnyLocked = selectedRowIndexes.some(idx => {
-    const raw = window._rawSupabaseData && window._rawSupabaseData[idx - 1];
-    return typeof isRecordLocked === 'function' && isRecordLocked(raw);
-  });
-  if (isAnyLocked) {
-    alert('Trong số các dòng được chọn, có dữ liệu đã nhập quá 24 giờ. Hệ thống không cho phép xóa.');
-    return;
-  }
 
   const modalBody = document.querySelector('#deleteDataModal .modal-body p');
   if (modalBody) {
@@ -1350,6 +1335,13 @@ document.addEventListener('submit', async (e) => {
       const form = e.target;
       const submitBtn = form.querySelector('button[type="submit"]');
       const originalText = submitBtn ? submitBtn.textContent : 'Cập nhật';
+
+      const rawToEdit = window._rawSupabaseData && window._rawSupabaseData[selectedRowIndex - 1];
+      if (typeof isRecordLocked === 'function' && isRecordLocked(rawToEdit)) {
+        alert('Dữ liệu này đã được nhập quá 24 giờ. Hệ thống không cho phép cập nhật.');
+        return;
+      }
+
       if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Đang cập nhật...'; }
       showLoadingOverlay('Đang cập nhật dữ liệu...');
 

@@ -2693,12 +2693,6 @@ function openEditDataModal() {
     return;
   }
 
-  const recordToEdit = rawSupabaseData && rawSupabaseData[selectedRowIndex - 1];
-  if (typeof isRecordLocked === 'function' && isRecordLocked(recordToEdit)) {
-    alert('Dữ liệu này đã được nhập quá 24 giờ. Hệ thống không cho phép chỉnh sửa.');
-    return;
-  }
-
   const modalEl = document.getElementById('editDataModal');
   if (!modalEl) return;
 
@@ -2885,16 +2879,6 @@ function updateEditHangHoaNumbers() {
 function openDeleteDataModal() {
   if (selectedRowIndexes.length === 0 && selectedRowIndex < 0) {
     alert('Vui lòng chọn ít nhất một dòng để xóa');
-    return;
-  }
-
-  const rowsToCheck = selectedRowIndexes.length > 0 ? selectedRowIndexes : [selectedRowIndex];
-  const isAnyLocked = rowsToCheck.some(idx => {
-    const record = rawSupabaseData && rawSupabaseData[idx - 1];
-    return typeof isRecordLocked === 'function' && isRecordLocked(record);
-  });
-  if (isAnyLocked) {
-    alert('Trong số các dòng được chọn, có dữ liệu đã nhập quá 24 giờ. Hệ thống không cho phép xóa.');
     return;
   }
 
