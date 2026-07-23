@@ -144,13 +144,10 @@
     const buttons = document.querySelectorAll('#pwa-install-btn, .pwa-install-btn');
     
     buttons.forEach(btn => {
-      const container = btn.closest('.sidebar-pwa-container');
       if (isStandalone) {
         btn.style.display = 'none';
-        if (container) container.style.display = 'none';
       } else {
         btn.style.display = 'inline-flex';
-        if (container) container.style.display = 'block';
         btn.onclick = window.installPWA;
       }
     });

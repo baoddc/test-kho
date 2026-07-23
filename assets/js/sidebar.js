@@ -381,13 +381,29 @@
     const themeTitle = savedTheme === 'light' ? 'Chế độ tối' : 'Chế độ sáng';
 
     footer.innerHTML = `
-      <div class="sidebar-exe-download-container" style="padding: 0 0.25rem 0.5rem 0.25rem;">
-        <a href="/assets/downloads/DDC-Kho-Setup-1.0.0.exe" download="DDC-Kho-Setup-1.0.0.exe" id="btnDownloadExe" class="sidebar-exe-btn" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; padding: 0.65rem 0.75rem; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; text-decoration: none; font-size: 0.85rem; font-weight: 600; border-radius: 0.5rem; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.35); transition: all 0.2s ease;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          <span>💻 Tải App Windows (.exe)</span>
-        </a>
-      </div>
       <div class="sidebar-footer-divider"></div>
+      <div class="sidebar-pwa-box" style="padding: 0.5rem 0.25rem 0.75rem 0.25rem;">
+        <button id="pwa-install-btn" class="sidebar-install-btn pwa-install-btn" style="
+          width: 100%;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.5rem;
+          background: linear-gradient(135deg, #2563eb, #1d4ed8);
+          color: #ffffff;
+          border: 1px solid #3b82f6;
+          border-radius: 0.6rem;
+          padding: 0.65rem 0.75rem;
+          font-weight: 600;
+          font-size: 0.88rem;
+          cursor: pointer;
+          box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+          transition: all 0.2s ease;
+        ">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span>📲 Cài đặt App DDC Kho</span>
+        </button>
+      </div>
       <div class="sidebar-footer-top">
         <div class="sidebar-user-badge">
           <div class="sidebar-user-avatar">
