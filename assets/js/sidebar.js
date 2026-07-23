@@ -397,7 +397,7 @@
         </button>
       </div>
       <div class="sidebar-footer-bottom">
-        <button id="pwa-install-btn" class="sidebar-logout-btn pwa-install-btn" style="display:none; margin-bottom: 0.5rem; background: #2563eb; color: #ffffff; border-color: #2563eb;">
+        <button id="pwa-install-btn" class="sidebar-logout-btn pwa-install-btn" style="display: inline-flex; margin-bottom: 0.5rem; background: #2563eb; color: #ffffff; border-color: #2563eb;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           <span>📲 Cài đặt App</span>
         </button>
