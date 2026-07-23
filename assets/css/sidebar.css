@@ -1330,3 +1330,17 @@ html[data-bs-theme="dark"] tbody tr.group-summary-row:hover td {
   border: none !important;
   cursor: pointer;
 }
+
+/* =============================================================================
+   SIDEBAR EXE DOWNLOAD BUTTON
+   ============================================================================= */
+
+.sidebar-exe-btn:hover {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.45) !important;
+}
+
+.sidebar-exe-btn:active {
+  transform: translateY(0);
+}
