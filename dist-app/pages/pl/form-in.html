@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phiếu Xuất Kho Phế Liệu</title>
+
+    <!-- Logo hiển thị trên tab -->
+    <link rel="icon" type="image/png" href="/assets/img/Logo-DDC.png">
+
+    <link rel="stylesheet" href="/assets/css/pl/form-in.css">
+</head>
+
+<body>
+
+    <div class="page">
+        <header class="header-container">
+            <div class="logo-box">
+                <img src="/assets/img/logo-tieu-de.png" alt="DAIDUNG LOGO">
+            </div>
+        </header>
+        <div class="form-title-block">
+            <div class="title-row">
+                <span style="padding-left: 5px">Số Phiếu: <span id="soPhieu"></span></span>
+                <span>Phiếu cân số: <span id="phieuCanSo"></span></span>
+                <span class="date-label" style="padding-right: 60px">Số xe: <span id="soXe"></span></span>
+            </div>
+            <div class="title-main">
+                <h1>PHIẾU XUẤT KHO</h1>
+                <span class="date-label" style="padding-right: 120px">Ngày: <span id="ngay"></span></span>
+            </div>
+        </div>
+
+        <table class="project-table">
+            <tr>
+                <td class="col-ma">Mã công trình</td>
+                <td class="col-ten">Tên công trình</td>
+                <td class="col-ben-nhan">Bên nhận/ Xưởng/ Đội</td>
+                <td class="col-loai-xuat">Loại xuất</td>
+            </tr>
+            <tr>
+                <td id="maCongTrinh"></td>
+                <td id="tenCongTrinh"></td>
+                <td id="benNhan"></td>
+                <td id="loaiXuat"></td>
+            </tr>
+            <tr>
+                <td colspan="4" class="col-ben-giao">BÊN GIAO <span id="benGiao"></span></td>
+            </tr>
+        </table>
+
+        <table class="product-table">
+            <thead>
+                <tr>
+                    <th class="col-stt">STT</th>
+                    <th class="col-mathang">Mặt hàng</th>
+                    <th class="col-mavt">Mã Vật tư</th>
+                    <th class="col-dvt">ĐVT</th>
+                    <th class="col-trongluongxe">Trọng lượng xe (Kg)</th>
+                    <th class="col-trongluonghang">Trọng lượng hàng (Kg / cái)</th>
+                    <th class="col-trongluongxe-hang">Trọng lượng xe và hàng (Kg)</th>
+                    <th class="col-thucnhan">Thực nhận</th>
+                    <th class="col-ghichu">Ghi chú</th>
+                </tr>
+            </thead>
+            <tbody id="hangHoaBody">
+                <tr data-row="1">
+                    <td>1</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+
+                <tr class="total-row">
+                    <td colspan="5" class="total-label">TỔNG SL</td>
+                    <td id="total-value"></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <p class="note-text" style="padding-left: 5px">Ghi chú : </p>
+
+        <table class="signature-table">
+            <tr class="bold">
+                <td class="label-col" style="border: none;"></td>
+                <td>Nhân viên xuất kho</td>
+                <td>Tài xế</td>
+                <td>Kho kiểm tra</td>
+                <td>Bảo vệ</td>
+                <td>Bên nhận</td>
+            </tr>
+            <tr class="sig-height">
+                <td class="label-col">Chữ ký</td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+            </tr>
+            <tr class="name-height">
+                <td class="label-col">Họ và Tên</td>
+                <td>LÊ THÁI BÃO</td>
+                <td></td>
+                <td>BÙI HOÀNG HIỆP</td>
+                <td></td>
+                <td></td>
+            </tr>
+            <tr class="date-height">
+                <td class="label-col">Ngày</td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+            </tr>
+        </table>
+    </div>
+
+    <script>
+        // =============================================================================
+        // Function to receive and populate data from parent window
+        // =============================================================================
+
+        // Listen for messages from the opener window
+        window.addEventListener('message', function (event) {
+            // Validate the origin if needed
+            // For now, accept messages from any origin
+
+            const data = event.data;
+            if (data && data.type === 'phieuInData') {
+                populateFormIn(data.payload);
+            }
+        });
+
+        // Function to populate form-in with data
+        function populateFormIn(formData) {
+            // 1. Populate header fields (Số phiếu, Số xe, Ngày)
+            // These go to the adjacent cells in the header row - append data after existing
+            if (formData.soPhieu) {
+                const soPhieuEl = document.getElementById('soPhieu');
+                soPhieuEl.textContent = soPhieuEl.textContent ? soPhieuEl.textContent + ' ' + formData.soPhieu : formData.soPhieu;
+            }
+
+            if (formData.soXe) {
+                const soXeEl = document.getElementById('soXe');
+                soXeEl.textContent = soXeEl.textContent ? soXeEl.textContent + ' ' + formData.soXe : formData.soXe;
+            }
+
+            if (formData.ngay) {
+                // Helper to format date to dd/mm/yyyy
+                function formatToDisplayDate(dateValue) {
+                    if (!dateValue) return '';
+
+                    // If already in dd/mm/yyyy format, return as is
+                    if (typeof dateValue === 'string' && /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateValue)) {
+                        return dateValue;
+                    }
+
+                    let date = null;
+                    if (dateValue instanceof Date) {
+                        date = dateValue;
+                    } else if (typeof dateValue === 'number') {
+                        // Excel serial date or timestamp
+                        if (dateValue > 0 && dateValue < 100000) {
+                            date = new Date((dateValue - 25569) * 86400 * 1000);
+                        } else {
+                            date = new Date(dateValue);
+                        }
+                    } else if (typeof dateValue === 'string') {
+                        // Try ISO yyyy-mm-dd
+                        const isoMatch = dateValue.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+                        if (isoMatch) {
+                            date = new Date(parseInt(isoMatch[1], 10), parseInt(isoMatch[2], 10) - 1, parseInt(isoMatch[3], 10));
+                        } else {
+                            // Try dd-mm-yyyy
+                            const dmyMatch = dateValue.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+                            if (dmyMatch) {
+                                date = new Date(parseInt(dmyMatch[3], 10), parseInt(dmyMatch[2], 10) - 1, parseInt(dmyMatch[1], 10));
+                            } else {
+                                date = new Date(dateValue);
+                            }
+                        }
+                    }
+
+                    if (!date || isNaN(date.getTime())) return String(dateValue);
+
+                    const day = String(date.getDate()).padStart(2, '0');
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const year = date.getFullYear();
+                    return `${day}/${month}/${year}`;
+                }
+
+                const formattedDate = formatToDisplayDate(formData.ngay);
+                const ngayEl = document.getElementById('ngay');
+                ngayEl.textContent = ngayEl.textContent ? ngayEl.textContent + ' ' + formattedDate : formattedDate;
+
+                // Also populate date in date-height row
+                const dateHeightRow = document.querySelector('.date-height');
+                if (dateHeightRow) {
+                    const dateCells = dateHeightRow.querySelectorAll('td:not(.label-col)');
+                    dateCells.forEach(cell => {
+                        cell.textContent = formattedDate;
+                    });
+                }
+            }
+
+            // 2. Populate Mã công trình, Tên công trình, Bên nhận/ Xưởng/ Đội, Loại xuất, and Bên giao
+            if (formData.maCongTrinh) {
+                document.getElementById('maCongTrinh').textContent = formData.maCongTrinh;
+            }
+
+            if (formData.tenCongTrinh) {
+                document.getElementById('tenCongTrinh').textContent = formData.tenCongTrinh;
+            }
+
+            if (formData.benNhan) {
+                document.getElementById('benNhan').textContent = formData.benNhan;
+            }
+
+            if (formData.loaiXuat) {
+                document.getElementById('loaiXuat').textContent = formData.loaiXuat;
+            }
+
+            if (formData.benGiao) {
+                document.getElementById('benGiao').textContent = formData.benGiao;
+            }
+
+            // 3. Populate hàng hóa (Mặt hàng, ĐVT, Trọng lượng)
+            // If not enough rows, create new rows automatically
+            const hangHoaBody = document.getElementById('hangHoaBody');
+            if (hangHoaBody && formData.hangHoa && formData.hangHoa.length > 0) {
+                // Get existing rows (excluding total row)
+                const existingRows = hangHoaBody.querySelectorAll('tr:not(.total-row)');
+                let rowIndex = 0;
+
+                // Fill existing rows first
+                formData.hangHoa.forEach((item, index) => {
+                    let row;
+
+                    if (rowIndex < existingRows.length) {
+                        // Use existing row
+                        row = existingRows[rowIndex];
+                    } else {
+                        // Create new row
+                        row = document.createElement('tr');
+                        row.setAttribute('data-row', rowIndex + 1);
+                        row.innerHTML = '<td>' + (rowIndex + 1) + '</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                        // Insert before total row
+                        const totalRow = hangHoaBody.querySelector('.total-row');
+                        if (totalRow) {
+                            hangHoaBody.insertBefore(row, totalRow);
+                        } else {
+                            hangHoaBody.appendChild(row);
+                        }
+                    }
+
+                    // Populate the row with data
+                    // Columns: STT(0), Mặt hàng(1), Mã VT(2), ĐVT(3), Trọng lượng xe(4), Trọng lượng hàng(5), Trọng lượng xe+hàng(6), Thực nhận(7), Ghi chú(8)
+                    const cells = row.querySelectorAll('td');
+                    if (cells[1]) cells[1].textContent = item.matHang || '';
+                    if (cells[2]) cells[2].textContent = item.maVT || '';
+                    if (cells[3]) cells[3].textContent = item.dvt || '';
+                    if (cells[4]) {
+                        const parsedValue = parseVietnameseFloat(item.trongLuongXe);
+                        cells[4].textContent = parsedValue > 0 ? parsedValue.toLocaleString('vi-VN', { minimumFractionDigits: 0, maximumFractionDigits: 3 }) : (item.trongLuongXe || '');
+                    }
+                    if (cells[5]) {
+                        const parsedValue = parseVietnameseFloat(item.trongLuong);
+                        cells[5].textContent = parsedValue > 0 ? parsedValue.toLocaleString('vi-VN', { minimumFractionDigits: 0, maximumFractionDigits: 3 }) : (item.trongLuong || '');
+                    }
+                    if (cells[6]) {
+                        const parsedValue = parseVietnameseFloat(item.trongLuongXeHang);
+                        cells[6].textContent = parsedValue > 0 ? parsedValue.toLocaleString('vi-VN', { minimumFractionDigits: 0, maximumFractionDigits: 3 }) : (item.trongLuongXeHang || '');
+                    }
+                    if (cells[7]) {
+                        const parsedValue = parseVietnameseFloat(item.thucNhan);
+                        cells[7].textContent = parsedValue > 0 ? parsedValue.toLocaleString('vi-VN', { minimumFractionDigits: 0, maximumFractionDigits: 3 }) : (item.thucNhan || '');
+                    }
+                    if (cells[8]) cells[8].textContent = item.ghiChu || '';
+
+                    rowIndex++;
+                });
+
+                // Update STT for all rows
+                const allRows = hangHoaBody.querySelectorAll('tr:not(.total-row)');
+                allRows.forEach((row, idx) => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells[0]) cells[0].textContent = idx + 1;
+                    row.setAttribute('data-row', idx + 1);
+                });
+
+                // Helper to parse Vietnamese formatted float strings
+                function parseVietnameseFloat(val) {
+                    if (val === null || val === undefined || val === '') return 0;
+                    let text = val.toString().trim().replace(/\s+/g, '');
+                    const hasComma = text.includes(',');
+                    const hasDot = text.includes('.');
+                    if (hasComma && hasDot) {
+                        if (text.lastIndexOf(',') > text.lastIndexOf('.')) {
+                            text = text.replace(/\./g, '').replace(',', '.');
+                        } else {
+                            text = text.replace(/,/g, '');
+                        }
+                    } else if (hasComma) {
+                        const parts = text.split(',');
+                        if (parts.length === 2) {
+                            text = `${parts[0]}.${parts[1]}`;
+                        } else {
+                            text = text.replace(/,/g, '');
+                        }
+                    }
+                    const num = parseFloat(text);
+                    return isNaN(num) ? 0 : num;
+                }
+
+                // Calculate and display total for Trọng lượng hàng column (col-trongluonghang)
+                let totalTrongLuongHang = 0;
+                formData.hangHoa.forEach((item) => {
+                    totalTrongLuongHang += parseVietnameseFloat(item.trongLuong);
+                });
+
+                // Update total row with the sum
+                const totalRow = hangHoaBody.querySelector('.total-row');
+                if (totalRow) {
+                    const totalCells = totalRow.querySelectorAll('td');
+                    // totalCells[0] = colspan=5 (covers columns 0-4), totalCells[1] = column 5, etc.
+                    if (totalCells[1]) {
+                        totalCells[1].textContent = totalTrongLuongHang > 0 ? totalTrongLuongHang.toLocaleString('vi-VN', { minimumFractionDigits: 0, maximumFractionDigits: 3 }) : '';
+                    }
+                }
+            }
+
+            console.log('Form-in populated with data:', formData);
+        }
+
+        // Function to print the form
+        function printFormIn() {
+            window.print();
+        }
+
+        // Auto-print when the page loads with data
+        window.addEventListener('load', function () {
+            // Check if there's a print parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('autoPrint') === 'true') {
+                setTimeout(function () {
+                    printFormIn();
+                }, 500);
+            }
+        });
+    </script>
+
+</body>
+
+</html>

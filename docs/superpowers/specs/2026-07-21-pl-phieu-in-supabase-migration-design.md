@@ -11,7 +11,7 @@ Table name: `pl-phieu-in`
 | `id` | bigint / serial | Primary key |
 | `Ngày` | text | Date of receipt (ISO format YYYY-MM-DD or display format) |
 | `Số phiếu` | text | Ticket / Voucher number |
-| `Bên nhận/ Xưởng/Đội` | text | Recipient / Workshop / Team |
+| `Bên nhận/Xưởng/Đội` | text | Recipient / Workshop / Team |
 | `Loại xuất` | text | Export category |
 | `Mặt hàng` | text | Item name |
 | `ĐVT` | text | Unit of measure |
@@ -29,7 +29,7 @@ Table name: `pl-phieu-in`
 ### 2. `assets/js/pl/pl-phieu-in.js`
 - Replace Google Sheets fetching logic with direct Supabase calls (`supabase.from('pl-phieu-in').select('*')`).
 - Update CRUD operations (Insert, Update, Delete) to map all 10 fields to/from Supabase.
-- Update ticket search (`searchPhieuIn`) to group items by `Số phiếu` and search across `Số phiếu`, `Số xe`, `Bên nhận/ Xưởng/Đội`, `Mã công trình`, and `Tên công trình`.
+- Update ticket search (`searchPhieuIn`) to group items by `Số phiếu` and search across `Số phiếu`, `Số xe`, `Bên nhận/Xưởng/Đội`, `Mã công trình`, and `Tên công trình`.
 - Update `printSelectedPhieu()` and form submit handlers to send complete ticket payload (`soPhieu`, `soXe`, `ngay`, `benNhan`, `loaiXuat`, `maCongTrinh`, `tenCongTrinh`, `hangHoa`) to `form-in.html` via `window.postMessage`.
 
 ### 3. `pages/pl/form-in.html`

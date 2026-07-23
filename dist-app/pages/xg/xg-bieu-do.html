@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Biểu đồ Xà gồ - Dashboard</title>
+
+  <!-- Logo hiển thị trên tab -->
+  <link rel="icon" type="image/png" href="/assets/img/Logo-DDC.png">
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Custom CSS -->
+  <!-- Sidebar CSS -->
+  <link rel="stylesheet" href="/assets/css/sidebar.css">
+  <link rel="stylesheet" href="/assets/css/home.css">
+  <link rel="stylesheet" href="/assets/css/xg/xg-bieu-do.css">
+</head>
+
+<body>
+
+  <!-- ==================== MAIN CONTENT ==================== -->
+  <div class="container-fluid main-content">
+
+    <!-- Page Title -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <h4 class="page-title">BIỂU ĐỒ TỔNG QUAN XÀ GỒ</h4>
+      </div>
+    </div>
+
+    <!-- Date Filters -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="filter-card">
+          <div class="filter-header">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+              <path
+                d="M6 1v3H1V1h5zM1 0a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1V1a1 1 0 0 0-1-1H1zm14 12v3h-5v-3h5zm-5-1a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1h-5zM6 8v7H1V8h5zM1 7a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1H1zm14-6v7h-5V1h5zm-5-1a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1V1a1 1 0 0 0-1-1h-5z" />
+            </svg>
+            <span>LỌC DỮ LIỆU THEO NGÀY</span>
+          </div>
+          <div class="filter-body">
+            <div class="filter-group">
+              <label for="fromDate" class="filter-label">Từ ngày</label>
+              <input type="date" id="fromDate" class="form-control">
+            </div>
+            <div class="filter-separator">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path fill-rule="evenodd" d="M4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8z" />
+              </svg>
+            </div>
+            <div class="filter-group">
+              <label for="toDate" class="filter-label">Đến ngày</label>
+              <input type="date" id="toDate" class="form-control">
+            </div>
+            <div class="filter-actions">
+              <button id="btnApplyFilter" class="btn btn-filter btn-filter-apply">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                  <path
+                    d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z" />
+                </svg>
+                Lọc
+              </button>
+              <button id="btnResetFilter" class="btn btn-filter btn-filter-reset">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                  <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z" />
+                  <path
+                    d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z" />
+                </svg>
+                Reset
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+      <!-- Card: Đầu kì -->
+      <div class="col-12 col-md-4">
+        <div class="summary-card card-inventory">
+          <div class="card-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z" />
+              <path
+                d="M4.285 9.567a.5.5 0 0 1 .683.183A3.498 3.498 0 0 0 8 11.5a3.498 3.498 0 0 0 3.032-1.75.5.5 0 1 1 .866.5A4.498 4.498 0 0 1 8 12.5a4.498 4.498 0 0 1-3.898-2.25.5.5 0 0 1 .183-.683zM7 6.5C7 7.328 6.552 8 6 8s-1-.672-1-1.5S5.448 5 6 5s1 .672 1 1.5zm4 0c0 .828-.448 1.5-1 1.5s-1-.672-1-1.5S9.448 5 10 5s1 .672 1 1.5z" />
+            </svg>
+          </div>
+          <div class="card-content">
+            <h6>ĐẦU KÌ</h6>
+            <div class="card-value" id="inventoryBegin">0</div>
+            <div class="card-unit">kg</div>
+          </div>
+        </div>
+        <!-- Child Cards: KPIs -->
+        <div class="row mt-2">
+          <div class="col-12 col-md-6">
+            <div class="summary-card card-import-type card-kpi-turnover"
+              style="background: rgba(155, 89, 182, 0.1); border-left: 4px solid #9b59b6; min-height: 85px;">
+              <div class="card-content">
+                <h6>VÒNG QUAY TỒN KHO</h6>
+                <div class="card-value" id="inventoryTurnover" style="font-size: 1.3rem;">0</div>
+                <div class="card-unit">vòng</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-12 col-md-6">
+            <div class="summary-card card-import-type card-kpi-dsi"
+              style="background: rgba(26, 188, 156, 0.1); border-left: 4px solid #1abc9c; min-height: 85px;">
+              <div class="card-content">
+                <h6>NGÀY LƯU KHO TB (KỲ XUẤT)</h6>
+                <div class="card-value" id="inventoryDSI" style="font-size: 1.3rem;">0</div>
+                <div class="card-unit">ngày</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Card: Số ngày lưu kho trung bình của Tồn kho -->
+        <div class="row mt-2">
+          <div class="col-12">
+            <div class="summary-card card-import-type card-kpi-stockage"
+              style="background: rgba(52, 152, 219, 0.1); border-left: 4px solid #3498db; min-height: 85px;">
+              <div class="card-content">
+                <h6>SỐ NGÀY LƯU KHO TB CỦA TỒN KHO</h6>
+                <div class="card-value" id="averageStockAge" style="font-size: 1.3rem;">0</div>
+                <div class="card-unit">ngày</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-md-4">
+        <!-- Parent Card: Tổng nhập -->
+        <div class="summary-card card-import">
+          <div class="card-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 16 16">
+              <path fill-rule="evenodd"
+                d="M8 1a.5.5 0 0 1 .5.5v11.793l3.146-3.147a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 .708-.708L7.5 13.293V1.5A.5.5 0 0 1 8 1z" />
+            </svg>
+          </div>
+          <div class="card-content">
+            <h6>TỔNG NHẬP</h6>
+            <div class="card-value" id="totalImport">0</div>
+            <div class="card-unit">kg</div>
+          </div>
+        </div>
+
+        <!-- Child Cards: Import Types (below Tổng nhập) -->
+        <div class="row mt-2">
+          <div class="col-12 col-md-6">
+            <div class="summary-card card-import-type card-import-ncc">
+              <div class="card-content">
+                <h6>NHÀ CUNG CẤP</h6>
+                <div class="card-value" id="importNCC">0</div>
+                <div class="card-unit">kg</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-12 col-md-6">
+            <div class="summary-card card-import-type card-import-xuong">
+              <div class="card-content">
+                <h6>XƯỞNG SX</h6>
+                <div class="card-value" id="importXuong">0</div>
+                <div class="card-unit">kg</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row mt-2">
+          <div class="col-12 col-md-6">
+            <div class="summary-card card-import-type card-import-gia-cong">
+              <div class="card-content">
+                <h6>GIA CÔNG NGOÀI</h6>
+                <div class="card-value" id="importGiaCong">0</div>
+                <div class="card-unit">kg</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-12 col-md-6">
+            <div class="summary-card card-import-type card-import-cong-trinh">
+              <div class="card-content">
+                <h6>CÔNG TRÌNH</h6>
+                <div class="card-value" id="importCongTrinh">0</div>
+                <div class="card-unit">kg</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-md-4">
+        <!-- Parent Card: Tổng xuất -->
+        <div class="summary-card card-export">
+          <div class="card-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 16 16">
+              <path fill-rule="evenodd"
+                d="M8 15a.5.5 0 0 0 .5-.5V2.707l3.146 3.147a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 0 0 .708.708L7.5 2.707V14.5a.5.5 0 0 0 .5.5z" />
+            </svg>
+          </div>
+          <div class="card-content">
+            <h6>TỔNG XUẤT</h6>
+            <div class="card-value" id="totalExport">0</div>
+            <div class="card-unit">kg</div>
+          </div>
+        </div>
+
+        <!-- Child Cards: Export Types (below Tổng xuất) -->
+        <div class="row mt-2">
+          <div class="col-12 col-md-6">
+            <div class="summary-card card-export-type card-export-xuong">
+              <div class="card-content">
+                <h6>XƯỞNG SX</h6>
+                <div class="card-value" id="exportXuong">0</div>
+                <div class="card-unit">kg</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-12 col-md-6">
+            <div class="summary-card card-export-type card-export-dieu-chuyen">
+              <div class="card-content">
+                <h6>ĐIỀU CHUYỂN</h6>
+                <div class="card-value" id="exportDieuChuyen">0</div>
+                <div class="card-unit">kg</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row mt-2">
+          <div class="col-12 col-md-6">
+            <div class="summary-card card-export-type card-export-gia-cong">
+              <div class="card-content">
+                <h6>GIA CÔNG NGOÀI</h6>
+                <div class="card-value" id="exportGiaCong">0</div>
+                <div class="card-unit">kg</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-12 col-md-6">
+            <div class="summary-card card-export-type card-export-cong-trinh">
+              <div class="card-content">
+                <h6>CÔNG TRÌNH</h6>
+                <div class="card-value" id="exportCongTrinh">0</div>
+                <div class="card-unit">kg</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts Row 1 -->
+    <div class="row mb-4">
+      <!-- Bar Chart - Import vs Export by Month -->
+      <div class="col-12 col-lg-8">
+        <div class="chart-card">
+          <div class="chart-header">
+            <h5>NHẬP XUẤT THEO THÁNG</h5>
+            <div class="chart-legend">
+              <span class="legend-item"><span class="legend-color" style="background: #3498db;"></span> Nhập</span>
+              <span class="legend-item"><span class="legend-color" style="background: #e74c3c;"></span> Xuất</span>
+            </div>
+          </div>
+          <div class="chart-body">
+            <canvas id="barChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pie Chart - Ratio -->
+      <div class="col-12 col-lg-4">
+        <div class="chart-card">
+          <div class="chart-header d-flex justify-content-between align-items-center">
+            <h5 id="pieChartTitle" class="mb-0">CƠ CẤU NHẬP KHO</h5>
+            <select id="pieChartSelect" class="form-select form-select-sm"
+              style="width: auto; background-color: #1e3a5f; color: white; border: 1px solid rgba(0, 217, 255, 0.3);">
+              <option value="import">Cơ cấu Nhập</option>
+              <option value="export">Cơ cấu Xuất</option>
+            </select>
+          </div>
+          <div class="chart-body">
+            <canvas id="pieChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts Row 2 -->
+    <div class="row">
+      <!-- Line Chart - Trend -->
+      <div class="col-12">
+        <div class="chart-card">
+          <div class="chart-header">
+            <h5>BIẾN ĐỘNG TỒN KHO CUỐI KÌ THEO THÁNG</h5>
+            <div class="chart-legend">
+              <span class="legend-item"><span class="legend-color" style="background: #2ecc71;"></span> Tồn kho cuối
+                kì</span>
+            </div>
+          </div>
+          <div class="chart-body">
+            <canvas id="lineChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts Row 3 -->
+    <div class="row mt-4 mb-4">
+      <!-- Import Material Chart -->
+      <div class="col-12 col-lg-6">
+        <div class="chart-card">
+          <div class="chart-header">
+            <h5>TOP 10 VẬT TƯ NHẬP KHO NHIỀU NHẤT</h5>
+          </div>
+          <div class="chart-body" style="height: 350px; position: relative;">
+            <canvas id="importMaterialChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Export Material Chart -->
+      <div class="col-12 col-lg-6">
+        <div class="chart-card">
+          <div class="chart-header">
+            <h5>TOP 10 VẬT TƯ XUẤT KHO NHIỀU NHẤT</h5>
+          </div>
+          <div class="chart-body" style="height: 350px; position: relative;">
+            <canvas id="exportMaterialChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts Row 4 -->
+    <div class="row mt-4 mb-4 justify-content-center">
+      <!-- Workshop Chart -->
+      <div class="col-12 col-lg-6">
+        <div class="chart-card">
+          <div class="chart-header">
+            <h5>PHÂN BỔ XUẤT KHO THEO CÔNG TRÌNH</h5>
+          </div>
+          <div class="chart-body" style="height: 350px; overflow-y: auto; position: relative;">
+            <div id="workshopChartContainer" style="height: 350px; position: relative;">
+              <canvas id="workshopChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div id="loading">Đang tải dữ liệu biểu đồ...</div>
+
+  </div>
+
+  <!-- ==================== SCRIPTS ==================== -->
+
+  <!-- SheetJS (xlsx) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <!-- Custom JavaScript -->
+  <!-- Sidebar JS (auto-injects sidebar + topbar) -->
+  <script src="/assets/js/sidebar.js"></script>
+  <script src="/assets/js/home.js"></script>
+
+  <!-- Supabase JS CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+
+  <!-- Supabase config (URL + anon key) -->
+  <script src="/assets/js/supabase-config.js"></script>
+
+  <script src="/assets/js/xg/xg-bieu-do.js"></script>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+
+</html>

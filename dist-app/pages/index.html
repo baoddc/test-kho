@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+   <!-- Remix Icons -->
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/3.5.0/remixicon.css" crossorigin="">
+
+   <!-- CSS -->
+   <link rel="stylesheet" href="/assets/css/dang_nhap.css">
+   <link rel="stylesheet" href="/assets/css/mobile-responsive.css">
+
+   <!-- PWA Manifest & Icons -->
+   <link rel="manifest" href="/manifest.json">
+   <meta name="theme-color" content="#1e293b">
+   <link rel="apple-touch-icon" href="/assets/images/apple-touch-icon.png">
+   <script src="/assets/js/pwa-register.js" defer></script>
+
+   <title>Kho Phôi cuộn - DDC</title>
+
+   <!-- Logo hiển thị trên tab -->
+   <link rel="icon" type="image/png" href="/assets/img/Logo-DDC.png">
+
+</head>
+
+<body>
+   <div class="login">
+      <img src="/assets/img/login-bg.png" alt="background" class="login__bg">
+
+      <form id="loginForm" class="login__form">
+         <h1 class="login__title">Login</h1>
+
+         <div class="login__inputs">
+            <div class="login__box">
+               <input type="text" name="username" placeholder="Username" required class="login__input"
+                  autocomplete="username">
+               <i class="ri-user-fill"></i>
+            </div>
+
+            <div class="login__box">
+               <input type="password" name="password" placeholder="Password" required class="login__input"
+                  autocomplete="current-password">
+               <i class="ri-lock-2-fill"></i>
+            </div>
+         </div>
+
+         <div class="login__check">
+            <div class="login__check-group">
+               <div class="login__check-box">
+                  <input type="checkbox" class="login__check-input" id="user-check" name="remember">
+                  <label for="user-check" class="login__check-label">Remember me</label>
+               </div>
+            </div>
+         </div>
+
+         <!-- Thông báo lỗi -->
+         <div class="login__error" id="errorMessage"></div>
+
+         <button type="submit" class="login__button">Login</button>
+      </form>
+   </div>
+
+   <!-- JavaScript -->
+   <script src="/assets/js/dang_nhap.js"></script>
+</body>
+
+</html>

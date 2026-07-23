@@ -1,51 +1,21 @@
 {
-  "name": "ddc-kho-app",
+  "name": "test-kho",
   "version": "1.0.0",
   "description": "Hệ thống Quản lý Kho Phôi Cuộn - DDC",
-  "main": "main.js",
+  "main": "pages/index.html",
   "scripts": {
     "start": "npx serve .",
-    "dev": "npx serve .",
-    "electron": "electron .",
-    "package": "node scripts/create-exe-package.js"
+    "dev": "npx serve ."
   },
   "keywords": [
     "kho",
     "ddc",
     "supabase",
-    "phoi-cuon",
-    "electron",
-    "pwa"
+    "phoi-cuon"
   ],
   "author": "DDC",
   "license": "ISC",
   "dependencies": {
     "xlsx": "^0.18.5"
-  },
-  "build": {
-    "appId": "com.ddc.khophoicuon",
-    "productName": "Hệ thống Quản lý Kho Phôi Cuộn - DDC",
-    "directories": {
-      "output": "dist"
-    },
-    "files": [
-      "**/*",
-      "!dist/**/*",
-      "!.git/**/*"
-    ],
-    "win": {
-      "target": [
-        "nsis",
-        "portable"
-      ],
-      "icon": "assets/images/icon-512.png"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "Kho Phôi DDC"
-    }
   }
 }

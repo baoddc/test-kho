@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Migrate `pl-phieu-in` page from Google Sheets to Supabase with 10 structured fields (`Ngày`, `Số phiếu`, `Bên nhận/ Xưởng/Đội`, `Loại xuất`, `Mặt hàng`, `ĐVT`, `Trọng lượng hàng`, `Số xe`, `Mã công trình`, `Tên công trình`), and seamlessly populate and print `form-in.html`.
+**Goal:** Migrate `pl-phieu-in` page from Google Sheets to Supabase with 10 structured fields (`Ngày`, `Số phiếu`, `Bên nhận/Xưởng/Đội`, `Loại xuất`, `Mặt hàng`, `ĐVT`, `Trọng lượng hàng`, `Số xe`, `Mã công trình`, `Tên công trình`), and seamlessly populate and print `form-in.html`.
 
 **Architecture:** Fetch, search, filter, and modify `pl-phieu-in` records directly from/to Supabase table `pl-phieu-in`. Transmit complete ticket payload containing header info and `hangHoa` items to `pages/pl/form-in.html` via `window.postMessage`.
 
@@ -10,7 +10,7 @@
 
 ## Global Constraints
 - Target table: `pl-phieu-in` in Supabase
-- 10 fields: `Ngày`, `Số phiếu`, `Bên nhận/ Xưởng/Đội`, `Loại xuất`, `Mặt hàng`, `ĐVT`, `Trọng lượng hàng`, `Số xe`, `Mã công trình`, `Tên công trình`
+- 10 fields: `Ngày`, `Số phiếu`, `Bên nhận/Xưởng/Đội`, `Loại xuất`, `Mặt hàng`, `ĐVT`, `Trọng lượng hàng`, `Số xe`, `Mã công trình`, `Tên công trình`
 - Target print template: `pages/pl/form-in.html`
 
 ---
@@ -80,7 +80,7 @@ git commit -m "feat(pl-phieu-in): add maCongTrinh and tenCongTrinh fields to pl-
 
 - [ ] **Step 1: Update `loadGoogleSheet` / `loadSupabaseData` to query `pl-phieu-in` from Supabase**
 
-Ensure `loadGoogleSheet` (renamed/aliased for compatibility or direct call) fetches `pl-phieu-in` records with all 10 columns (`Số phiếu`, `Số xe`, `Ngày`, `Bên nhận/ Xưởng/Đội`, `Loại xuất`, `Mặt hàng`, `ĐVT`, `Trọng lượng hàng`, `Mã công trình`, `Tên công trình`).
+Ensure `loadGoogleSheet` (renamed/aliased for compatibility or direct call) fetches `pl-phieu-in` records with all 10 columns (`Số phiếu`, `Số xe`, `Ngày`, `Bên nhận/Xưởng/Đội`, `Loại xuất`, `Mặt hàng`, `ĐVT`, `Trọng lượng hàng`, `Mã công trình`, `Tên công trình`).
 
 - [ ] **Step 2: Update Insert & Update functions in `pl-phieu-in.js`**
 

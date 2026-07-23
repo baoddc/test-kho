@@ -67,16 +67,16 @@
           const toggleBtn = document.createElement('button');
           toggleBtn.className = 'btn-space-toggle ms-auto';
           toggleBtn.type = 'button';
-          toggleBtn.innerHTML = isCollapsedSaved 
-            ? '<span>🛠️ Hiện công cụ</span>' 
+          toggleBtn.innerHTML = isCollapsedSaved
+            ? '<span>🛠️ Hiện công cụ</span>'
             : '<span>👁️ Ẩn công cụ</span>';
 
           toggleBtn.addEventListener('click', (e) => {
             e.preventDefault();
             const nowCollapsed = bar.classList.toggle('is-collapsed');
             localStorage.setItem('ddc_table_tools_collapsed', nowCollapsed ? 'true' : 'false');
-            toggleBtn.innerHTML = nowCollapsed 
-              ? '<span>🛠️ Hiện công cụ</span>' 
+            toggleBtn.innerHTML = nowCollapsed
+              ? '<span>🛠️ Hiện công cụ</span>'
               : '<span>👁️ Ẩn công cụ</span>';
           });
 
@@ -365,7 +365,7 @@
     header.setAttribute('title', 'Trang chủ');
     header.innerHTML = `
       <img src="/assets/img/Logo-DDC.png" alt="DDC Logo" class="sidebar-logo-img" style="height: 36px; width: auto; object-fit: contain; margin-right: 8px;">
-      <span class="sidebar-logo-text">DDC Kho</span>
+      <span class="sidebar-logo-text">Tổng kho</span>
     `;
     sidebar.appendChild(header);
 
@@ -826,7 +826,7 @@
             iframe.contentWindow.document.write('');
             iframe.contentWindow.close();
           }
-        } catch (e) {}
+        } catch (e) { }
       }
       tab.paneEl.remove();
     }

@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS public."pl-phieu-in" (
     id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     "Ngày" date,
     "Số phiếu" text,
-    "Bên nhận/ Xưởng/Đội" text,
+    "Bên nhận/Xưởng/Đội" text,
     "Loại xuất" text,
     "Mặt hàng" text,
     "ĐVT" text,
