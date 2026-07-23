@@ -1359,26 +1359,16 @@ window.addEventListener('load', () => {
         }
       }
 
-      const searchVal = searchInput.value.trim();
-      if (searchVal) {
-        const searchLower = searchVal.toLowerCase();
-        const finalChecked = new Set();
-        uniqueValues.forEach(val => {
-          const displayVal = val === '' ? '(Trống)' : val;
-          if (displayVal.toLowerCase().includes(searchLower)) {
-            if (tempCheckedSet.has(val)) {
-              finalChecked.add(val);
-            }
-          }
-        });
-        ddcFilterState.columnFilters[colKeyOrIdx] = finalChecked;
+      // Use tempCheckedSet directly — it correctly tracks the check state for ALL values,
+      // including those not currently visible due to the search filter in the dropdown.
+      if (tempCheckedSet.size === domainUniqueValues.length) {
+        // All items checked = no filter needed
+        delete ddcFilterState.columnFilters[colKeyOrIdx];
+      } else if (tempCheckedSet.size === 0) {
+        // Nothing checked = show nothing (keep an empty set as filter)
+        ddcFilterState.columnFilters[colKeyOrIdx] = new Set();
       } else {
-        if (tempCheckedSet.size === domainUniqueValues.length) {
-          // All checked, remove filter
-          delete ddcFilterState.columnFilters[colKeyOrIdx];
-        } else {
-          ddcFilterState.columnFilters[colKeyOrIdx] = new Set(tempCheckedSet);
-        }
+        ddcFilterState.columnFilters[colKeyOrIdx] = new Set(tempCheckedSet);
       }
       
       ddcCloseDropdowns();
