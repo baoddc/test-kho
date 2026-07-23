@@ -1517,8 +1517,9 @@ async function handleEditSubmit(e) {
   if (!originalRow) return;
 
   if (typeof isRecordLocked === 'function' && isRecordLocked(originalRow._raw || originalRow)) {
-    const label = originalRow.column8 ? ` (${originalRow.column8})` : (originalRow.xuong && originalRow.loai ? ` (${originalRow.xuong} - ${originalRow.loai})` : '');
-    (window.showWarningModal || alert)(`Dữ liệu${label} đã được nhập quá 24 giờ. Hệ thống không cho phép cập nhật.`);
+    const sttVal = originalRow.stt || selectedRowIndex;
+    const idVal = originalRow.id ? ` (ID: ${originalRow.id})` : '';
+    (window.showWarningModal || alert)(`Dữ liệu ở STT ${sttVal}${idVal} đã được nhập quá 24 giờ. Hệ thống không cho phép cập nhật.`);
     return;
   }
 
@@ -1638,14 +1639,15 @@ async function handleConfirmDelete() {
   selectedRowIndexes.forEach(id => {
     const r = tableData.find(row => row.id === id);
     if (typeof isRecordLocked === 'function' && isRecordLocked(r?._raw || r)) {
-      const label = r && r.column8 ? r.column8 : (r && r.xuong && r.loai ? `${r.xuong} - ${r.loai}` : `ID: ${id}`);
-      lockedItems.push(label);
+      const sttVal = r?.stt || id;
+      const idVal = r?.id ? ` (ID: ${r.id})` : '';
+      lockedItems.push(`STT ${sttVal}${idVal}`);
     }
   });
 
   if (lockedItems.length > 0) {
     const msg = lockedItems.length === 1
-      ? `Dữ liệu (${lockedItems[0]}) đã nhập quá 24 giờ. Hệ thống không cho phép xóa.`
+      ? `Dữ liệu ở ${lockedItems[0]} đã nhập quá 24 giờ. Hệ thống không cho phép xóa.`
       : `Không thể xóa. Các dòng dữ liệu sau đã nhập quá 24 giờ:\n• ${lockedItems.join('\n• ')}`;
     (window.showWarningModal || alert)(msg);
     return;
