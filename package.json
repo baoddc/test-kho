@@ -1,0 +1,21 @@
+{
+  "name": "test-kho",
+  "version": "1.0.0",
+  "description": "Hệ thống Quản lý Kho Phôi Cuộn - DDC",
+  "main": "pages/index.html",
+  "scripts": {
+    "start": "npx serve .",
+    "dev": "npx serve ."
+  },
+  "keywords": [
+    "kho",
+    "ddc",
+    "supabase",
+    "phoi-cuon"
+  ],
+  "author": "DDC",
+  "license": "ISC",
+  "dependencies": {
+    "xlsx": "^0.18.5"
+  }
+}

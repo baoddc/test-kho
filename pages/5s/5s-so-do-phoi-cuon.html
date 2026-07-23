@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sơ đồ kho phôi cuộn</title>
+
+  <!-- Logo hiển thị trên tab -->
+  <link rel="icon" type="image/png" href="assets/img/Logo-DDC.png">
+
+  <!-- Import Tailwind CSS qua CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Import Lucide Icons qua CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Import PapaParse để đọc file CSV từ Google Sheets -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <!-- Sidebar CSS -->
+  <link rel="stylesheet" href="/assets/css/sidebar.css">
+  <!-- Link tới file CSS tùy chỉnh -->
+  <link rel="stylesheet" href="/assets/css/5s/5s-so-do-phoi-cuon.css">
+</head>
+
+<body class="bg-[#f8f9fa] font-sans overflow-x-hidden min-h-screen">
+  <div id="app"
+    class="w-full max-w-5xl bg-white p-4 sm:p-6 md:p-10 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-gray-100 relative">
+    <!-- Nội dung sẽ được render bằng JavaScript -->
+  </div>
+  <!-- Sidebar JS (auto-injects sidebar + topbar) -->
+  <script src="/assets/js/sidebar.js"></script>
+  <script src="/assets/js/home.js"></script>
+  <!-- Link tới file JavaScript -->
+  <script type="module" src="/assets/js/5s/5s-so-do-phoi-cuon.js"></script>
+</body>
+
+</html>

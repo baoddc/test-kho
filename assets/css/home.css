@@ -1,0 +1,929 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+/* =============================================================================
+   BASE STYLES
+   Các style cơ bản cho trang
+================================================================================ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+
+
+body {
+  font-family: 'Montserrat', sans-serif;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+
+dl, ol, ul {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+ol, ul {
+    padding-left: 0;
+}
+
+/* NOTE: header/nav styles are now handled by sidebar.css
+   Old header is hidden by sidebar.css rule: body > header { display: none !important }
+   Keeping these rules for backwards compat only */
+header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 20px;
+  z-index: 1000;
+  background: #2a2b56;
+  gap: 40px;
+  backdrop-filter: blur(10px);
+}
+
+.logo {
+  font-size: 24px;
+  font-weight: bold;
+  color: #fff;
+  letter-spacing: 3px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.logo:hover {
+  color: #00d9ff;
+  text-shadow: 0 0 20px rgba(0, 217, 255, 0.5);
+}
+
+/* Hamburger Menu */
+.hamburger {
+  display: none;
+  flex-direction: column;
+  cursor: pointer;
+  gap: 5px;
+  padding: 5px;
+  z-index: 1001;
+}
+
+.hamburger span {
+  display: block;
+  width: 25px;
+  height: 3px;
+  background-color: #fff;
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+
+.hamburger.active span:nth-child(1) {
+  transform: rotate(45deg) translate(5px, 5px);
+}
+
+.hamburger.active span:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger.active span:nth-child(3) {
+  transform: rotate(-45deg) translate(5px, -5px);
+}
+
+nav ul {
+  display: flex;
+  list-style: none;
+  gap: 40px;
+}
+
+nav a {
+  color: #fff;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+nav a::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #00d9ff, #00ff88);
+  transition: width 0.3s ease;
+}
+
+nav a:hover {
+  color: #00d9ff;
+}
+
+nav a:hover::after {
+  width: 100%;
+}
+
+/* Dropdown */
+.dropdown {
+  position: relative;
+}
+
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: rgba(15, 52, 96, 0.95);
+  min-width: 150px;
+  list-style: none;
+  padding: 10px 0;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 217, 255, 0.2);
+}
+
+/* Desktop: hover - only show first level dropdown */
+@media (min-width: 769px) {
+  .dropdown:hover > .dropdown-menu {
+    display: block;
+    animation: fadeIn 0.3s ease;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Mobile: click to show dropdown */
+.dropdown.active .dropdown-menu {
+  display: block;
+}
+
+.dropdown:hover > a {
+  color: #00d9ff;
+}
+
+.dropdown-menu li {
+  padding: 0;
+}
+
+.dropdown-menu a {
+  display: block;
+  padding: 10px 20px;
+  font-size: 13px;
+  white-space: nowrap;
+  transition: all 0.3s ease;
+}
+
+.dropdown-menu a:hover {
+  background: linear-gradient(90deg, rgba(0, 217, 255, 0.2), rgba(0, 255, 136, 0.1));
+  color: #00d9ff;
+  padding-left: 25px;
+}
+
+/* Dropdown submenu */
+.dropdown-submenu {
+  position: relative;
+}
+
+.dropdown-submenu > .dropdown-menu {
+  display: none;
+  position: absolute;
+  left: 100%;
+  top: 0;
+  margin-top: 0;
+  margin-left: 0;
+}
+
+/* Only show submenu on hover over the submenu item itself */
+.dropdown-submenu:hover > .dropdown-menu {
+  display: block;
+  animation: fadeIn 0.3s ease;
+}
+
+/* Remove triangle arrow for dropdown submenu */
+.dropdown-submenu > a::after {
+  display: none;
+}
+
+/* =============================================================================
+   DROPDOWN HIGHLIGHT FEATURE
+   Highlight parent level 1 when hovering over level 2/3 items
+   ================================================================================ */
+
+/* Level 1 highlight style - Applied when hovering on any descendant */
+.dropdown.highlighted > a,
+.dropdown.highlighted > .dropdown-toggle {
+  color: #00ff88 !important;
+  background: rgba(0, 217, 255, 0.15);
+  border-radius: 4px;
+  text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+}
+
+/* CSS-only solution using :has() selector (modern browsers) */
+/* Highlight level 1 parent when hovering level 2 items */
+.dropdown:has(.dropdown-menu li:hover) > a,
+.dropdown:has(.dropdown-menu li:hover) > .dropdown-toggle {
+  color: #00ff88;
+  background: rgba(0, 217, 255, 0.15);
+  border-radius: 4px;
+  text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+}
+
+/* Highlight level 1 parent when hovering level 3 items (nested submenu) */
+.dropdown:has(.dropdown-submenu .dropdown-menu li:hover) > a,
+.dropdown:has(.dropdown-submenu .dropdown-menu li:hover) > .dropdown-toggle {
+  color: #00ff88;
+  background: rgba(0, 217, 255, 0.15);
+  border-radius: 4px;
+  text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+}
+
+/* Also highlight the level 2 parent (dropdown-submenu) when hovering level 3 */
+.dropdown-submenu.highlighted > a,
+.dropdown-submenu:has(.dropdown-menu li:hover) > a {
+  color: #00ff88 !important;
+  background: rgba(0, 217, 255, 0.2);
+  border-left: 3px solid #00ff88;
+  padding-left: 17px !important;
+}
+
+/* Smooth transition for highlight effect */
+.dropdown > a,
+.dropdown > .dropdown-toggle,
+.dropdown-submenu > a {
+  transition: all 0.25s ease;
+}
+
+/* Prevent flicker - maintain highlight when moving between sibling items */
+.dropdown-menu,
+.dropdown-submenu > .dropdown-menu {
+  transition: visibility 0.2s ease;
+}
+
+/* Accessibility: Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .dropdown > a,
+  .dropdown > .dropdown-toggle,
+  .dropdown-submenu > a,
+  .dropdown-menu,
+  .dropdown-submenu > .dropdown-menu {
+    transition: none;
+  }
+}
+
+/* User Info */
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.user-info small {
+  color: #aaa;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
+
+.user-info strong {
+  color: #00d9ff;
+}
+
+.text-muted {
+    color: rgb(255 255 255 / 100%) !important;
+}
+
+.btn-logout {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  border: none;
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  letter-spacing: 0.5px;
+  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Shimmer effect */
+.btn-logout::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.btn-logout:hover::before {
+  left: 100%;
+}
+
+.btn-logout:hover {
+  background: linear-gradient(135deg, #c0392b, #922b21);
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
+  transform: translateY(-2px);
+}
+
+/* ==================== HERO SECTION ==================== */
+.hero {
+  position: relative;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at center, #1b1b2f 0%, #16213e 50%, #0f3460 100%);
+  z-index: -1;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 10;
+  animation: fadeInUp 1s ease-out;
+}
+
+.hero h1 {
+  font-size: 80px;
+  font-weight: 300;
+  color: #fff;
+  margin-bottom: 20px;
+  letter-spacing: 3px;
+  line-height: 1.2;
+}
+
+.hero p {
+  font-size: 16px;
+  color: #ccc;
+  letter-spacing: 2px;
+  font-weight: 300;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==================== RESPONSIVE ==================== */
+
+/* Tablet */
+@media (max-width: 992px) {
+  header {
+    padding: 10px 15px;
+    gap: 20px;
+  }
+
+  .logo {
+    font-size: 20px;
+  }
+
+  nav ul {
+    gap: 25px;
+  }
+
+  nav a {
+    font-size: 13px;
+  }
+
+  .hero h1 {
+    font-size: 60px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  header {
+    padding: 10px 15px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .logo {
+    font-size: 18px;
+    letter-spacing: 2px;
+  }
+
+  /* Hamburger menu visible on mobile */
+  .hamburger {
+    display: flex;
+  }
+
+  /* Navigation menu - hidden by default on mobile */
+  nav {
+    display: none;
+    width: 100%;
+    order: 3;
+  }
+
+  nav.active {
+    display: block;
+  }
+
+  nav ul {
+    flex-direction: column;
+    gap: 0;
+    width: 100%;
+    padding: 10px 0;
+    background: rgba(0, 0, 0, 0.9);
+    border-radius: 8px;
+    margin-top: 10px;
+  }
+
+  nav ul li {
+    width: 100%;
+  }
+
+  nav a {
+    display: block;
+    padding: 12px 20px;
+    font-size: 14px;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  nav a:hover {
+    background: rgba(255, 193, 7, 0.1);
+    color: #ffc107;
+  }
+
+  /* Dropdown menu on mobile */
+  .dropdown-menu {
+    position: static;
+    background: rgba(0, 0, 0, 0.5);
+    box-shadow: none;
+    border-radius: 0;
+  }
+
+  .dropdown-menu a {
+    padding-left: 40px;
+    font-size: 13px;
+  }
+
+  /* Submenu on mobile */
+  .dropdown-submenu > .dropdown-menu {
+    display: none;
+    position: static;
+    background: rgba(0, 0, 0, 0.3);
+    box-shadow: none;
+    border-radius: 0;
+    border: none;
+    padding: 5px 0;
+  }
+
+  .dropdown-submenu.active > .dropdown-menu {
+    display: block !important;
+  }
+
+  .dropdown-submenu .dropdown-menu a {
+    padding-left: 60px;
+    font-size: 12.5px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  /* Show caret for submenu on mobile and handle rotation */
+  .dropdown-submenu > a.dropdown-toggle::after {
+    display: inline-block !important;
+    margin-left: 8px;
+    vertical-align: 0.15em;
+    transition: transform 0.2s ease;
+  }
+
+  .dropdown-submenu.active > a.dropdown-toggle::after {
+    transform: rotate(180deg);
+  }
+
+  /* User info */
+  .user-info {
+    gap: 10px;
+  }
+
+  .user-info small {
+    font-size: 11px;
+  }
+
+  .btn-logout {
+    padding: 4px 10px;
+    font-size: 11px;
+  }
+
+  /* Hero section */
+  .hero h1 {
+    font-size: 42px;
+    letter-spacing: 2px;
+  }
+
+  .hero p {
+    font-size: 14px;
+    letter-spacing: 1px;
+  }
+}
+
+/* Small Mobile */
+@media (max-width: 480px) {
+  header {
+    padding: 8px 10px;
+  }
+
+  .logo {
+    font-size: 16px;
+  }
+
+  .hamburger span {
+    width: 22px;
+    height: 2px;
+  }
+
+  .hero h1 {
+    font-size: 32px;
+  }
+
+  .hero p {
+    font-size: 12px;
+  }
+}
+
+/* Fireworks Canvas */
+#fireworksCanvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* =============================================================================
+   TABLE COLUMN FILTER SYSTEM (Google Sheets Style)
+   ================================================================================ */
+
+.ddc-th-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  position: relative;
+  padding-right: 18px; /* space for button */
+  box-sizing: border-box;
+}
+
+.ddc-filter-btn {
+  position: absolute;
+  right: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: 1px solid transparent;
+  padding: 3px;
+  margin: 0;
+  cursor: pointer;
+  color: #64748b;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ddc-filter-btn:hover {
+  color: #2563eb;
+  background-color: rgba(37, 99, 235, 0.08);
+}
+
+.ddc-filter-btn.active {
+  color: #2563eb !important;
+  background-color: rgba(37, 99, 235, 0.15) !important;
+  border-color: rgba(37, 99, 235, 0.3) !important;
+}
+
+.ddc-filter-btn svg {
+  display: block;
+  pointer-events: none;
+}
+
+.ddc-table-filter-dropdown {
+  position: absolute;
+  background: rgba(30, 41, 59, 0.98);
+  border: 1px solid rgba(0, 217, 255, 0.25);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(15px);
+  width: 250px;
+  max-height: 500px;
+  z-index: 10000;
+  font-family: 'Montserrat', sans-serif;
+  color: #f8fafc;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-sizing: border-box;
+  animation: ddcFadeIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes ddcFadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.ddc-filter-sort-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  cursor: pointer;
+  border-radius: 8px;
+  font-size: 13px;
+  transition: background 0.2s, color 0.2s;
+  user-select: none;
+}
+
+.ddc-filter-sort-option:hover {
+  background: rgba(0, 217, 255, 0.15);
+  color: #00d9ff;
+}
+
+.ddc-filter-sort-option svg {
+  color: #94a3b8;
+}
+
+.ddc-filter-sort-option:hover svg {
+  color: #00d9ff;
+}
+
+.ddc-filter-divider {
+  border: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 4px 0;
+}
+
+.ddc-filter-search-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.ddc-filter-search-input {
+  width: 100%;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: #fff;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.ddc-filter-search-input:focus {
+  border-color: #00d9ff;
+}
+
+.ddc-filter-actions {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.ddc-filter-action-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: #00d9ff;
+  font-weight: 500;
+  transition: opacity 0.2s;
+}
+
+.ddc-filter-action-btn:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
+.ddc-filter-action-btn.clear-btn {
+  color: #ef4444;
+}
+
+.ddc-filter-list-container {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 4px;
+}
+
+/* Scrollbar styling */
+.ddc-filter-list-container::-webkit-scrollbar {
+  width: 6px;
+}
+.ddc-filter-list-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+.ddc-filter-list-container::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+.ddc-filter-list-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.ddc-filter-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.ddc-filter-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.ddc-filter-item input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: #00ff88;
+  width: 14px;
+  height: 14px;
+}
+
+.ddc-filter-item-label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ddc-filter-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.ddc-filter-footer button {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.ddc-btn-cancel {
+  background: rgba(255, 255, 255, 0.05);
+  color: #cbd5e1;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.ddc-btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.ddc-btn-ok {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.2);
+}
+
+.ddc-btn-ok:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);
+}
+
+/* Ensure header TH positioning and alignment are correct */
+#dataTable thead th {
+  position: relative;
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
+/* Toggle visibility of column filter buttons */
+#dataTable.filters-hidden .ddc-filter-btn {
+  display: none !important;
+}
+
+#dataTable.filters-hidden .ddc-th-wrapper {
+  padding-right: 0 !important;
+}
+
+/* Custom premium styling for filter toggle button */
+.btn-toggle-filters {
+  background: linear-gradient(135deg, #6366f1, #4f46e5) !important; /* Indigo gradient */
+  color: #fff !important;
+  border: none !important;
+  font-weight: 600 !important;
+  box-shadow: 0 4px 10px rgba(99, 102, 241, 0.25) !important;
+  transition: all 0.2s ease !important;
+  margin-left: auto !important;
+}
+
+.btn-toggle-filters:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 15px rgba(99, 102, 241, 0.35) !important;
+}
+
+.btn-toggle-filters:active {
+  transform: translateY(0) !important;
+}
+
+.btn-toggle-filters.filters-hidden {
+  background: #64748b !important; /* Slate grey when hidden */
+  box-shadow: none !important;
+}
+
+/* Invert native date picker calendar icon to make it white on dark backgrounds */
+.ddc-filter-date-input::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+}
+
+/* Wider width specifically for date range filter dropdowns to fit inputs side-by-side */
+.ddc-table-filter-dropdown.ddc-date-dropdown {
+  width: 320px !important;
+}
+
+/* =============================================================================
+   COLUMN RESIZER
+   Style cho chức năng thay đổi độ rộng cột
+================================================================================ */
+
+.col-resizer {
+  position: absolute;
+  top: 0;
+  right: -4px;
+  width: 12px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 2000;
+  opacity: 0;
+  transition: opacity 120ms linear, background 120ms linear;
+  background: transparent;
+}
+
+.col-resizer:hover {
+  background: rgba(0,0,0,0.08);
+}
+
+thead th:hover .col-resizer {
+  opacity: 1;
+}
+
+/* =============================================================================
+   FIXED VIEWPORT LAYOUT - handled by sidebar.css
+   Kept here for backward compatibility only
+   ================================================================================ */
+
+body.fixed-viewport {
+  height: 100vh !important;
+  overflow: hidden !important;
+}
+
+@media (max-width: 768px) {
+  body.fixed-viewport .main-content {
+    padding: 8px !important;
+  }
+}
