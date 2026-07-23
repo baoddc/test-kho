@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mất kết nối - Kho DDC</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      background-color: #f8f9fa;
+      color: #333;
+      text-align: center;
+      padding: 20px;
+    }
+    .icon { font-size: 64px; margin-bottom: 20px; }
+    h1 { color: #0d6efd; margin-bottom: 10px; }
+    p { color: #6c757d; max-width: 400px; line-height: 1.5; }
+    button {
+      margin-top: 20px;
+      padding: 10px 24px;
+      background-color: #0d6efd;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    button:hover { background-color: #0b5ed7; }
+  </style>
+</head>
+<body>
+  <div class="icon">📶❌</div>
+  <h1>Không có kết nối Internet</h1>
+  <p>Hệ thống Quản lý Kho DDC hiện đang không có kết nối mạng. Vui lòng kiểm tra lại đường truyền WiFi/4G của bạn.</p>
+  <button onclick="window.location.reload()">Thử lại</button>
+</body>
+</html>
