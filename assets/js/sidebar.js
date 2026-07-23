@@ -28,6 +28,43 @@
     }
   }
 
+  function initTableSpaceSaver() {
+    const isCollapsedSaved = localStorage.getItem('ddc_table_tools_collapsed') === 'true';
+
+    const actionBars = document.querySelectorAll('.d-flex.align-items-center.gap-2.mb-2, .action-buttons, .button-group');
+
+    actionBars.forEach(bar => {
+      const btnCount = bar.querySelectorAll('.btn, button, a.btn').length;
+      if (btnCount >= 2 && !bar.classList.contains('table-space-saver')) {
+        bar.classList.add('table-space-saver');
+        if (isCollapsedSaved) {
+          bar.classList.add('is-collapsed');
+        }
+
+        const titleRow = document.querySelector('.d-flex.align-items-center.mb-2, h5.text-primary') || bar.parentElement;
+        if (titleRow && !titleRow.querySelector('.btn-space-toggle')) {
+          const toggleBtn = document.createElement('button');
+          toggleBtn.className = 'btn-space-toggle ms-auto';
+          toggleBtn.type = 'button';
+          toggleBtn.innerHTML = isCollapsedSaved 
+            ? '<span>🛠️ Hiện công cụ</span>' 
+            : '<span>👁️ Ẩn công cụ</span>';
+
+          toggleBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const nowCollapsed = bar.classList.toggle('is-collapsed');
+            localStorage.setItem('ddc_table_tools_collapsed', nowCollapsed ? 'true' : 'false');
+            toggleBtn.innerHTML = nowCollapsed 
+              ? '<span>🛠️ Hiện công cụ</span>' 
+              : '<span>👁️ Ẩn công cụ</span>';
+          });
+
+          titleRow.appendChild(toggleBtn);
+        }
+      }
+    });
+  }
+
   if (isIframe) {
     document.body.classList.add('in-iframe');
     ensureMobileCSS();
@@ -35,6 +72,7 @@
     // Hide old horizontal header if it exists
     document.addEventListener('DOMContentLoaded', () => {
       ensureMobileCSS();
+      initTableSpaceSaver();
       const header = document.querySelector('header');
       if (header) header.style.display = 'none';
 
@@ -884,6 +922,7 @@
 
   function init() {
     ensureMobileCSS();
+    initTableSpaceSaver();
     injectSidebar();
     injectTopbar();
     wrapContent();

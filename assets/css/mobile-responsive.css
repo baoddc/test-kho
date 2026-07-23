@@ -183,3 +183,71 @@
     padding: 8px !important;
   }
 }
+
+/* -----------------------------------------------------------------------------
+   7. SPACE-SAVING TABLE TOOLBAR & COLLAPSIBLE BUTTONS
+   ----------------------------------------------------------------------------- */
+.table-toolbar-compact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 8px;
+}
+
+.table-space-saver {
+  transition: all 0.25s ease-in-out;
+}
+
+.table-space-saver.is-collapsed {
+  display: none !important;
+}
+
+.btn-space-toggle {
+  font-size: 0.78rem !important;
+  padding: 3px 10px !important;
+  border-radius: 6px;
+  background: rgba(13, 110, 253, 0.15);
+  border: 1px solid rgba(13, 110, 253, 0.3);
+  color: #0d6efd;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+[data-bs-theme="dark"] .btn-space-toggle {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #60a5fa;
+}
+
+.btn-space-toggle:hover {
+  background: rgba(13, 110, 253, 0.25);
+  transform: translateY(-1px);
+}
+
+/* Compact button layout on small screens */
+@media (max-width: 768px) {
+  .compact-action-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+  
+  .compact-action-bar .btn {
+    flex: 1 1 auto;
+    min-width: 70px;
+    padding: 6px 8px;
+    font-size: 0.78rem;
+  }
+}
+
