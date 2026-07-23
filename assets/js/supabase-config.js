@@ -58,7 +58,7 @@ function showWarningModal(message, title = 'Cảnh báo hệ thống') {
             </h5>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
-          <div class="modal-body text-center py-4 px-4 fs-6 text-white" id="globalWarningModalBody" style="line-height: 1.6; color: #ffffff !important; font-weight: 500;">
+          <div class="modal-body py-4 px-4 fs-6 text-white" id="globalWarningModalBody" style="line-height: 1.6; color: #ffffff !important; font-weight: 500; white-space: pre-wrap; text-align: left; max-height: 350px; overflow-y: auto;">
           </div>
           <div class="modal-footer border-0 justify-content-center pt-0 pb-3">
             <button type="button" class="btn btn-warning px-4 py-2 fw-bold rounded-3 text-dark shadow-sm" data-bs-dismiss="modal">
