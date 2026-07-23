@@ -1,8 +1,8 @@
 {
   "id": "/index.html",
-  "name": "Hệ thống Quản lý Kho Phôi Cuộn - DDC",
-  "short_name": "Kho Phôi DDC",
-  "description": "Ứng dụng quản lý kho phôi cuộn và lập phiếu xuất nhập DDC",
+  "name": "Hệ thống Quản lý Kho Phôi Cuộn",
+  "short_name": "Kho Phôi cuộn",
+  "description": "Ứng dụng quản lý kho Phôi cuộn DDC",
   "start_url": "/index.html",
   "scope": "/",
   "display": "standalone",
