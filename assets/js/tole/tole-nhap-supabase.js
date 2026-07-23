@@ -493,32 +493,39 @@ function updateSelectedRows() {
   const btnEdit = document.getElementById('btnEditData');
   const btnDelete = document.getElementById('btnDeleteData');
 
+  const isAnySelectedLocked = selectedRowIndexes.some(idx => {
+    const raw = window._rawSupabaseData && window._rawSupabaseData[idx - 1];
+    return typeof isRecordLocked === 'function' && isRecordLocked(raw);
+  });
+
   if (selectedRowIndexes.length > 0) {
-    btnDelete.disabled = false;
-    btnDelete.textContent = `Xóa đã chọn (${selectedRowIndexes.length})`;
-    btnEdit.disabled = selectedRowIndexes.length !== 1;
+    if (btnDelete) {
+      btnDelete.disabled = isAnySelectedLocked;
+      btnDelete.textContent = `Xóa đã chọn (${selectedRowIndexes.length})`;
+      if (isAnySelectedLocked) btnDelete.title = 'Có dữ liệu đã nhập quá 24 giờ, không thể xóa';
+      else btnDelete.removeAttribute('title');
+    }
+    if (btnEdit) {
+      btnEdit.disabled = selectedRowIndexes.length !== 1 || isAnySelectedLocked;
+      if (isAnySelectedLocked) btnEdit.title = 'Dữ liệu đã nhập quá 24 giờ, không thể sửa';
+      else btnEdit.removeAttribute('title');
+    }
   } else {
-    btnEdit.disabled = true;
-    btnDelete.disabled = true;
-    btnDelete.textContent = 'Xóa dữ liệu';
+    if (btnEdit) {
+      btnEdit.disabled = true;
+      btnEdit.removeAttribute('title');
+    }
+    if (btnDelete) {
+      btnDelete.disabled = true;
+      btnDelete.textContent = 'Xóa dữ liệu';
+      btnDelete.removeAttribute('title');
+    }
   }
 
   selectedRowIndex = selectedRowIndexes.length === 1 ? selectedRowIndexes[0] : -1;
 }
 
 window.addEventListener('resize', () => updateCellTitles(document.getElementById('dataTable')));
-
-
-/* =============================================================================
-   24-GIỜ RESTRICTION
-================================================================================ */
-
-function isOlderThan24Hours(createdAt) {
-  if (!createdAt) return false;
-  const created = new Date(createdAt);
-  const now = new Date();
-  return (now - created) > 24 * 60 * 60 * 1000;
-}
 
 
 /* =============================================================================
@@ -968,11 +975,9 @@ function openEditDataModal() {
     return;
   }
 
-  // Kiểm tra 24 giờ
-  const editRowId = tableData[selectedRowIndex]?.[0];
-  const editRawRow = (window._rawSupabaseData || []).find(r => String(r.id) === String(editRowId));
-  if (editRawRow && isOlderThan24Hours(editRawRow.created_at)) {
-    alert('Không thể sửa: Dữ liệu này đã được nhập vào hệ thống quá 24 giờ.');
+  const rawToEdit = window._rawSupabaseData && window._rawSupabaseData[selectedRowIndex - 1];
+  if (typeof isRecordLocked === 'function' && isRecordLocked(rawToEdit)) {
+    alert('Dữ liệu này đã được nhập quá 24 giờ. Hệ thống không cho phép chỉnh sửa.');
     return;
   }
 
@@ -1055,14 +1060,12 @@ function openDeleteDataModal() {
     return;
   }
 
-  // Kiểm tra 24 giờ
-  const hasOldRows = selectedRowIndexes.some(idx => {
-    const rowId = tableData[idx]?.[0];
-    const rawRow = (window._rawSupabaseData || []).find(r => String(r.id) === String(rowId));
-    return rawRow && isOlderThan24Hours(rawRow.created_at);
+  const isAnyLocked = selectedRowIndexes.some(idx => {
+    const raw = window._rawSupabaseData && window._rawSupabaseData[idx - 1];
+    return typeof isRecordLocked === 'function' && isRecordLocked(raw);
   });
-  if (hasOldRows) {
-    alert('Không thể xóa: Một hoặc nhiều dòng đã được nhập vào hệ thống quá 24 giờ.');
+  if (isAnyLocked) {
+    alert('Trong số các dòng được chọn, có dữ liệu đã nhập quá 24 giờ. Hệ thống không cho phép xóa.');
     return;
   }
 
@@ -1446,6 +1449,15 @@ document.addEventListener('click', async (e) => {
 
     updateSelectedRows();
     if (selectedRowIndexes.length === 0) { alert('Không có dòng nào được chọn'); return; }
+
+    const isAnyLocked = selectedRowIndexes.some(idx => {
+      const raw = window._rawSupabaseData && window._rawSupabaseData[idx - 1];
+      return typeof isRecordLocked === 'function' && isRecordLocked(raw);
+    });
+    if (isAnyLocked) {
+      alert('Dữ liệu đã nhập quá 24 giờ. Hệ thống không cho phép xóa.');
+      return;
+    }
 
     const btnConfirm = document.getElementById('btnConfirmDelete');
     const originalText = btnConfirm.textContent;
