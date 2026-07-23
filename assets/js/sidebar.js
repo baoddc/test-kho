@@ -381,13 +381,13 @@
     const themeTitle = savedTheme === 'light' ? 'Chế độ tối' : 'Chế độ sáng';
 
     footer.innerHTML = `
-      <div class="sidebar-footer-install" style="padding: 0 0.5rem 0.75rem 0.5rem;">
-        <button id="pwa-install-btn" class="sidebar-logout-btn pwa-install-btn" style="display: inline-flex; width: 100%; justify-content: center; align-items: center; gap: 0.5rem; background: #2563eb; color: #ffffff; border-color: #2563eb; padding: 0.6rem 0.75rem; border-radius: 0.5rem; font-weight: 600;">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          <span>📲 Cài đặt App</span>
+      <div class="sidebar-footer-divider"></div>
+      <div class="sidebar-pwa-container" style="padding: 0 12px 10px 12px;">
+        <button id="pwa-install-btn" class="pwa-install-btn" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #ffffff; border: 1px solid #3b82f6; padding: 8px 12px; border-radius: 8px; font-weight: 600; font-size: 12px; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span>Cài đặt App DDC Kho</span>
         </button>
       </div>
-      <div class="sidebar-footer-divider"></div>
       <div class="sidebar-footer-top">
         <div class="sidebar-user-badge">
           <div class="sidebar-user-avatar">
