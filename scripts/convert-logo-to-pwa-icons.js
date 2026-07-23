@@ -87,12 +87,12 @@ function parsePNG(buffer) {
 function renderIcon(srcImg, targetSize) {
   const targetBuf = Buffer.alloc(targetSize * targetSize * 4);
 
-  // Fill background with #0f172a (15, 23, 42, 255)
+  // Fill background with #ffffff (255, 255, 255, 255)
   for (let i = 0; i < targetSize * targetSize; i++) {
     const idx = i * 4;
-    targetBuf[idx] = 15;
-    targetBuf[idx + 1] = 23;
-    targetBuf[idx + 2] = 42;
+    targetBuf[idx] = 255;
+    targetBuf[idx + 1] = 255;
+    targetBuf[idx + 2] = 255;
     targetBuf[idx + 3] = 255;
   }
 
