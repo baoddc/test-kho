@@ -364,7 +364,7 @@
     header.href = '/pages/home.html';
     header.setAttribute('title', 'Trang chủ');
     header.innerHTML = `
-      <div class="sidebar-logo-icon">K</div>
+      <img src="/assets/img/Logo-DDC.png" alt="DDC Logo" class="sidebar-logo-img" style="height: 36px; width: auto; object-fit: contain; margin-right: 8px;">
       <span class="sidebar-logo-text">DDC Kho</span>
     `;
     sidebar.appendChild(header);

@@ -83,21 +83,12 @@ function parsePNG(buffer) {
   return { width, height, data: rawRGBA };
 }
 
-// Create canvas and composite source image centered with dark background #0f172a
+// Create canvas and composite source image centered with crisp transparent background
 function renderIcon(srcImg, targetSize) {
-  const targetBuf = Buffer.alloc(targetSize * targetSize * 4);
+  const targetBuf = Buffer.alloc(targetSize * targetSize * 4); // default transparent 0
 
-  // Fill background with #ffffff (255, 255, 255, 255)
-  for (let i = 0; i < targetSize * targetSize; i++) {
-    const idx = i * 4;
-    targetBuf[idx] = 255;
-    targetBuf[idx + 1] = 255;
-    targetBuf[idx + 2] = 255;
-    targetBuf[idx + 3] = 255;
-  }
-
-  // Scale srcImg to fit inside targetSize with padding (80% of targetSize)
-  const maxDim = Math.floor(targetSize * 0.75);
+  // Scale srcImg to fit cleanly inside targetSize with minimal padding (90% size)
+  const maxDim = Math.floor(targetSize * 0.9);
   const scale = Math.min(maxDim / srcImg.width, maxDim / srcImg.height);
   const scaledW = Math.floor(srcImg.width * scale);
   const scaledH = Math.floor(srcImg.height * scale);
@@ -105,7 +96,6 @@ function renderIcon(srcImg, targetSize) {
   const startX = Math.floor((targetSize - scaledW) / 2);
   const startY = Math.floor((targetSize - scaledH) / 2);
 
-  // Nearest-neighbor scaling & alpha blending
   for (let y = 0; y < scaledH; y++) {
     const srcY = Math.floor(y / scale);
     for (let x = 0; x < scaledW; x++) {
@@ -114,12 +104,12 @@ function renderIcon(srcImg, targetSize) {
       const srcIdx = (srcY * srcImg.width + srcX) * 4;
       const tgtIdx = ((startY + y) * targetSize + (startX + x)) * 4;
 
-      const sa = srcImg.data[srcIdx + 3] / 255;
+      const sa = srcImg.data[srcIdx + 3];
       if (sa > 0) {
-        targetBuf[tgtIdx] = Math.round(srcImg.data[srcIdx] * sa + targetBuf[tgtIdx] * (1 - sa));
-        targetBuf[tgtIdx + 1] = Math.round(srcImg.data[srcIdx + 1] * sa + targetBuf[tgtIdx + 1] * (1 - sa));
-        targetBuf[tgtIdx + 2] = Math.round(srcImg.data[srcIdx + 2] * sa + targetBuf[tgtIdx + 2] * (1 - sa));
-        targetBuf[tgtIdx + 3] = 255;
+        targetBuf[tgtIdx] = srcImg.data[srcIdx];
+        targetBuf[tgtIdx + 1] = srcImg.data[srcIdx + 1];
+        targetBuf[tgtIdx + 2] = srcImg.data[srcIdx + 2];
+        targetBuf[tgtIdx + 3] = sa;
       }
     }
   }
@@ -186,4 +176,4 @@ fs.writeFileSync(path.join(imagesDir, 'icon-192.png'), renderIcon(srcImg, 192));
 fs.writeFileSync(path.join(imagesDir, 'icon-512.png'), renderIcon(srcImg, 512));
 fs.writeFileSync(path.join(imagesDir, 'apple-touch-icon.png'), renderIcon(srcImg, 180));
 
-console.log('Successfully generated PWA icon PNGs from Logo-DDC.png!');
+console.log('Successfully generated transparent PWA icons from Logo-DDC.png!');

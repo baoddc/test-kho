@@ -99,7 +99,7 @@
           ">&times;</button>
           
           <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
-            <div style="width: 44px; height: 44px; background: #2563eb; border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem;">K</div>
+            <img src="/assets/img/Logo-DDC.png" alt="DDC Logo" style="height: 44px; width: auto; object-fit: contain;">
             <div>
               <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700;">Cài đặt App DDC Kho</h3>
               <p style="margin: 0; font-size: 0.85rem; color: #94a3b8;">Hệ thống Quản lý Kho Phôi Cuộn</p>
