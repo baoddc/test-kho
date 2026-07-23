@@ -1,11 +1,31 @@
 {
-  "name": "test-kho",
+  "name": "ddc-kho",
   "version": "1.0.0",
   "description": "Hệ thống Quản lý Kho Phôi Cuộn - DDC",
-  "main": "pages/index.html",
+  "main": "main.js",
   "scripts": {
     "start": "npx serve .",
-    "dev": "npx serve ."
+    "dev": "npx serve .",
+    "electron": "electron .",
+    "dist": "electron-builder --win nsis"
+  },
+  "build": {
+    "appId": "com.ddc.khophoi",
+    "productName": "DDC Kho",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "assets/images/icon-512.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "DDC Kho"
+    }
   },
   "keywords": [
     "kho",
