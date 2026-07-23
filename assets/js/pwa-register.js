@@ -1,68 +1,80 @@
-// Service Worker Registration & PWA Install Prompt
-(function () {
-  // 1. Register Service Worker
+(function() {
+  'use strict';
+
+  let deferredPrompt = null;
+
+  // Check if running as standalone app
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+                       window.navigator.standalone === true ||
+                       document.referrer.includes('android-app://');
+
+  // Register Service Worker
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker
-        .register('/sw.js')
-        .then((reg) => {
-          console.log('[PWA] Service Worker registered successfully:', reg.scope);
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('/sw.js')
+        .then(function(registration) {
+          console.log('[PWA] ServiceWorker registered with scope:', registration.scope);
         })
-        .catch((err) => {
-          console.error('[PWA] Service Worker registration failed:', err);
+        .catch(function(error) {
+          console.warn('[PWA] ServiceWorker registration failed:', error);
         });
     });
   }
 
-  // 2. Handle PWA Install Prompt
-  let deferredPrompt = null;
-
-  window.addEventListener('beforeinstallprompt', (e) => {
+  // Handle PWA Install Prompt
+  window.addEventListener('beforeinstallprompt', function(e) {
+    // Prevent default browser install banner
     e.preventDefault();
     deferredPrompt = e;
-    showInstallPromotion();
+    console.log('[PWA] beforeinstallprompt event captured');
+
+    // Show Install UI element if available
+    updateInstallButtonVisibility(true);
   });
 
-  function showInstallPromotion() {
-    if (document.getElementById('pwa-install-banner')) return;
+  // Handle App Installed Event
+  window.addEventListener('appinstalled', function() {
+    console.log('[PWA] App installed successfully');
+    deferredPrompt = null;
+    updateInstallButtonVisibility(false);
+  });
 
-    const banner = document.createElement('div');
-    banner.id = 'pwa-install-banner';
-    banner.style.cssText = `
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background: #0d6efd;
-      color: white;
-      padding: 12px 20px;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      z-index: 99999;
-      font-family: inherit;
-    `;
-    banner.innerHTML = `
-      <span>📲 Cài đặt Ứng dụng Kho DDC</span>
-      <button id="pwa-install-btn" style="background:white; color:#0d6efd; border:none; padding:6px 14px; border-radius:4px; font-weight:bold; cursor:pointer;">Cài đặt</button>
-      <button id="pwa-close-btn" style="background:transparent; color:white; border:none; font-size:16px; cursor:pointer;">✕</button>
-    `;
+  // Global function to trigger PWA installation
+  window.installPWA = async function() {
+    if (!deferredPrompt) {
+      alert('Ứng dụng đã được cài đặt hoặc trình duyệt chưa sẵn sàng hỗ trợ cài đặt.');
+      return;
+    }
+    deferredPrompt.prompt();
+    const choiceResult = await deferredPrompt.userChoice;
+    console.log('[PWA] User response to install prompt:', choiceResult.outcome);
+    if (choiceResult.outcome === 'accepted') {
+      deferredPrompt = null;
+      updateInstallButtonVisibility(false);
+    }
+  };
 
-    document.body.appendChild(banner);
+  function updateInstallButtonVisibility(show) {
+    if (isStandalone) {
+      // Hide button if already installed and running as app
+      const buttons = document.querySelectorAll('#pwa-install-btn, .pwa-install-btn');
+      buttons.forEach(btn => btn.style.display = 'none');
+      return;
+    }
 
-    document.getElementById('pwa-install-btn').addEventListener('click', async () => {
-      banner.style.display = 'none';
-      if (deferredPrompt) {
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        console.log('[PWA] User choice outcome:', outcome);
-        deferredPrompt = null;
+    const buttons = document.querySelectorAll('#pwa-install-btn, .pwa-install-btn');
+    buttons.forEach(btn => {
+      if (show) {
+        btn.style.display = 'inline-flex';
+        btn.onclick = window.installPWA;
+      } else {
+        btn.style.display = 'none';
       }
     });
-
-    document.getElementById('pwa-close-btn').addEventListener('click', () => {
-      banner.style.display = 'none';
-    });
   }
+
+  // Initialize visibility check on DOM load
+  document.addEventListener('DOMContentLoaded', function() {
+    updateInstallButtonVisibility(deferredPrompt !== null);
+  });
 })();
