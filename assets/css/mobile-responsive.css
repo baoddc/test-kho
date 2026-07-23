@@ -34,7 +34,7 @@
 }
 
 /* -----------------------------------------------------------------------------
-   2. DATA TABLES HORIZONTAL SCROLLING & MOBILE VIEW
+   2. DATA TABLES HORIZONTAL SCROLLING & FULL COLUMN WIDTH ON MOBILE
    ----------------------------------------------------------------------------- */
 @media (max-width: 768px) {
   .table-responsive,
@@ -43,29 +43,40 @@
   .table-container {
     width: 100% !important;
     overflow-x: auto !important;
+    overflow-y: visible !important;
     -webkit-overflow-scrolling: touch;
     margin-bottom: 1rem;
     border-radius: 8px;
   }
 
+  /* Bắt buộc bảng mở rộng chiều rộng tự nhiên của các cột, không bị ép co hẹp */
   table.table,
-  .data-table {
-    min-width: 600px; /* Cho phép cuộn ngang mượt mà trên điện thoại */
+  .data-table,
+  #dataTable {
+    width: max-content !important;
+    min-width: 100% !important;
+    table-layout: auto !important;
   }
 
+  /* Hiển thị đầy đủ chữ và số trên 1 dòng, không bị cắt hay xuống dòng ép cột */
   table th,
-  table td {
-    padding: 8px 10px !important;
+  table td,
+  #dataTable th,
+  #dataTable td {
+    white-space: nowrap !important;
+    padding: 10px 14px !important;
     font-size: 0.85rem !important;
-    white-space: nowrap;
+    max-width: none !important;
+    width: auto !important;
   }
 
   /* Nút thao tác trong bảng */
   table .btn-sm,
   table .action-btn {
-    padding: 6px 10px !important;
-    font-size: 0.8rem !important;
-    min-height: 36px;
+    padding: 5px 10px !important;
+    font-size: 0.78rem !important;
+    min-height: 32px;
+    white-space: nowrap !important;
   }
 }
 
