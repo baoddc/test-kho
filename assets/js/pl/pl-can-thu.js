@@ -1521,7 +1521,7 @@ async function handleEditSubmit(e) {
   if (!originalRow) return;
 
   if (typeof isRecordLocked === 'function' && isRecordLocked(originalRow._raw || originalRow)) {
-    alert('Dữ liệu này đã được nhập quá 24 giờ. Hệ thống không cho phép chỉnh sửa.');
+    (window.showWarningModal || alert)('Dữ liệu này đã được nhập quá 24 giờ. Hệ thống không cho phép cập nhật.');
     return;
   }
 
@@ -1642,7 +1642,7 @@ async function handleConfirmDelete() {
     return typeof isRecordLocked === 'function' && isRecordLocked(r?._raw || r);
   });
   if (isAnyLocked) {
-    alert('Dữ liệu đã nhập quá 24 giờ. Hệ thống không cho phép xóa.');
+    (window.showWarningModal || alert)('Trong số các dòng được chọn, có dữ liệu đã nhập quá 24 giờ. Hệ thống không cho phép xóa.');
     return;
   }
 

@@ -2912,7 +2912,7 @@ async function confirmDelete() {
     return typeof isRecordLocked === 'function' && isRecordLocked(record);
   });
   if (isAnyLocked) {
-    alert('Dữ liệu đã nhập quá 24 giờ. Hệ thống không cho phép xóa.');
+    (window.showWarningModal || alert)('Dữ liệu đã nhập quá 24 giờ. Hệ thống không cho phép xóa.');
     return;
   }
 
@@ -2980,7 +2980,7 @@ async function handleEditFormSubmit(e) {
 
   const recordToEdit = rawSupabaseData && rawSupabaseData[selectedRowIndex - 1];
   if (typeof isRecordLocked === 'function' && isRecordLocked(recordToEdit)) {
-    alert('Dữ liệu này đã được nhập quá 24 giờ. Hệ thống không cho phép chỉnh sửa.');
+    (window.showWarningModal || alert)('Dữ liệu này đã được nhập quá 24 giờ. Hệ thống không cho phép cập nhật.');
     return;
   }
 

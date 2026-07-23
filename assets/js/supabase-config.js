@@ -35,3 +35,55 @@ if (typeof window !== 'undefined') {
   window.isRecordLocked = isRecordLocked;
 }
 
+/**
+ * Displays a centered warning modal popup on screen.
+ * @param {string} message - Warning message content.
+ * @param {string} [title='Cảnh báo hệ thống'] - Modal title.
+ */
+function showWarningModal(message, title = 'Cảnh báo hệ thống') {
+  let modalEl = document.getElementById('globalWarningModal');
+  if (!modalEl) {
+    modalEl = document.createElement('div');
+    modalEl.id = 'globalWarningModal';
+    modalEl.className = 'modal fade';
+    modalEl.tabIndex = -1;
+    modalEl.setAttribute('aria-hidden', 'true');
+    modalEl.style.zIndex = '10070';
+    modalEl.innerHTML = `
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0" style="border-radius: 16px; overflow: hidden; background: #ffffff;">
+          <div class="modal-header border-0 bg-warning text-dark py-3">
+            <h5 class="modal-title fw-bold d-flex align-items-center gap-2 mb-0">
+              <span style="font-size: 1.3rem;">⚠️</span> ${title}
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body text-center py-4 px-4 fs-6 text-dark" id="globalWarningModalBody" style="line-height: 1.6;">
+          </div>
+          <div class="modal-footer border-0 justify-content-center pt-0 pb-3">
+            <button type="button" class="btn btn-warning px-4 py-2 fw-semibold rounded-3 text-dark shadow-sm" data-bs-dismiss="modal">
+              Đã hiểu
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modalEl);
+  }
+
+  const bodyEl = modalEl.querySelector('#globalWarningModalBody');
+  if (bodyEl) bodyEl.textContent = message;
+
+  if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+    const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    bsModal.show();
+  } else {
+    alert(message);
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.showWarningModal = showWarningModal;
+}
+
+

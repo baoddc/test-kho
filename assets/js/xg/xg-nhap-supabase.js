@@ -1297,7 +1297,7 @@ document.addEventListener('submit', async (e) => {
 
       const rawToEdit = window._rawSupabaseData && window._rawSupabaseData[selectedRowIndex - 1];
       if (typeof isRecordLocked === 'function' && isRecordLocked(rawToEdit)) {
-        alert('Dữ liệu này đã được nhập quá 24 giờ. Hệ thống không cho phép cập nhật.');
+        (window.showWarningModal || alert)('Dữ liệu này đã được nhập quá 24 giờ. Hệ thống không cho phép cập nhật.');
         return;
       }
 
@@ -1402,7 +1402,7 @@ document.addEventListener('click', async (e) => {
       return typeof isRecordLocked === 'function' && isRecordLocked(raw);
     });
     if (isAnyLocked) {
-      alert('Dữ liệu đã nhập quá 24 giờ. Hệ thống không cho phép xóa.');
+      (window.showWarningModal || alert)('Trong số các dòng được chọn, có dữ liệu đã nhập quá 24 giờ. Hệ thống không cho phép xóa.');
       return;
     }
 
