@@ -3,7 +3,7 @@
    ============================================================================= */
 
 class BPlusBlockCache {
-  constructor(maxCapacity = 50, ttlMs = 300000) {
+  constructor(maxCapacity = 100, ttlMs = 600000) { // 100 pages, 10 min TTL
     this.cache = new Map();
     this.maxCapacity = maxCapacity;
     this.ttlMs = ttlMs;
@@ -20,7 +20,7 @@ class BPlusBlockCache {
       this.cache.delete(key);
       return null;
     }
-    // Refresh position for LRU
+    // Refresh LRU order
     this.cache.delete(key);
     this.cache.set(key, entry);
     return entry;
@@ -51,6 +51,7 @@ class BPlusBlockCache {
 class SupabaseDataEngine {
   constructor() {
     this.blockCache = new BPlusBlockCache();
+    this.tableTotalCounts = new Map(); // Cache total counts per table:filterHash to eliminate count: 'exact' DB scans
   }
 
   computeFilterHash(filters = {}) {
@@ -68,21 +69,27 @@ class SupabaseDataEngine {
     const filterHash = this.computeFilterHash(filters);
     const cacheKey = this.blockCache.generateKey(tableName, filterHash, page);
 
-    // 1. Check cache
+    // 1. Check cache (Instant 0ms return if present)
     const cached = this.blockCache.get(cacheKey);
     if (cached) {
-      // Trigger background prefetch for page + 1
-      this.prefetchNextPage(tableName, page, rowsPerPage, filters, orderBy, ascending);
+      // Immediate non-blocking prefetch of page N+1
+      setTimeout(() => {
+        this.prefetchNextPage(tableName, page, rowsPerPage, filters, orderBy, ascending);
+      }, 10);
       return { ...cached, fromCache: true };
     }
 
-    // 2. Fetch page range from Supabase
+    // 2. Optimize DB count query: Skip count: 'exact' full table scan if count is already known
+    const countKey = `${tableName}:${filterHash}`;
+    const hasCachedCount = this.tableTotalCounts.has(countKey);
+    const selectOptions = hasCachedCount ? undefined : { count: 'exact' };
+
     const from = (page - 1) * rowsPerPage;
     const to = from + rowsPerPage - 1;
 
     let query = supabase
       .from(tableName)
-      .select('*', { count: 'exact' });
+      .select('*', selectOptions);
 
     // Apply date range filters if present
     if (filters.fromDate && filters.dateColumn) {
@@ -118,7 +125,14 @@ class SupabaseDataEngine {
     const { data, count, error } = await query;
     if (error) throw error;
 
-    const totalCount = count || 0;
+    let totalCount;
+    if (count !== null && count !== undefined) {
+      totalCount = count;
+      this.tableTotalCounts.set(countKey, count);
+    } else {
+      totalCount = this.tableTotalCounts.get(countKey) || (data ? data.length : 0);
+    }
+
     const totalPages = Math.max(1, Math.ceil(totalCount / rowsPerPage));
 
     const result = {
@@ -131,8 +145,10 @@ class SupabaseDataEngine {
     // Store in cache
     this.blockCache.set(cacheKey, result);
 
-    // 3. Background prefetch page + 1
-    this.prefetchNextPage(tableName, page, rowsPerPage, filters, orderBy, ascending);
+    // 3. Immediately prefetch page N+1 in background
+    setTimeout(() => {
+      this.prefetchNextPage(tableName, page, rowsPerPage, filters, orderBy, ascending);
+    }, 10);
 
     return { ...result, fromCache: false };
   }
@@ -144,54 +160,51 @@ class SupabaseDataEngine {
 
     if (this.blockCache.get(cacheKey)) return;
 
-    // Use requestIdleCallback or setTimeout for non-blocking prefetch
-    const prefetchTask = async () => {
-      try {
-        const from = (nextPage - 1) * rowsPerPage;
-        const to = from + rowsPerPage - 1;
+    try {
+      const from = (nextPage - 1) * rowsPerPage;
+      const to = from + rowsPerPage - 1;
 
-        let query = supabase
-          .from(tableName)
-          .select('*', { count: 'exact' });
+      let query = supabase
+        .from(tableName)
+        .select('*');
 
-        if (filters.fromDate && filters.dateColumn) query = query.gte(filters.dateColumn, filters.fromDate);
-        if (filters.toDate && filters.dateColumn) query = query.lte(filters.dateColumn, filters.toDate);
-        if (filters.searchTerm && filters.searchColumns && filters.searchColumns.length > 0) {
-          const ilikeConditions = filters.searchColumns.map(col => `${col}.ilike.%${filters.searchTerm}%`).join(',');
-          query = query.or(ilikeConditions);
-        }
-        if (filters.equals && typeof filters.equals === 'object') {
-          for (const [col, val] of Object.entries(filters.equals)) {
-            if (val !== undefined && val !== null && val !== '') {
-              if (Array.isArray(val) && val.length > 0) query = query.in(col, val);
-              else if (typeof val === 'string') query = query.eq(col, val);
-            }
-          }
-        }
-
-        query = query.order(orderBy, { ascending }).range(from, to);
-        const { data, count, error } = await query;
-        if (!error && data) {
-          const totalCount = count || 0;
-          const totalPages = Math.max(1, Math.ceil(totalCount / rowsPerPage));
-          if (nextPage <= totalPages) {
-            this.blockCache.set(cacheKey, { data: data || [], count: totalCount, totalPages, page: nextPage });
-          }
-        }
-      } catch (e) {
-        // Silent catch for background prefetch
+      if (filters.fromDate && filters.dateColumn) query = query.gte(filters.dateColumn, filters.fromDate);
+      if (filters.toDate && filters.dateColumn) query = query.lte(filters.dateColumn, filters.toDate);
+      if (filters.searchTerm && filters.searchColumns && filters.searchColumns.length > 0) {
+        const ilikeConditions = filters.searchColumns.map(col => `${col}.ilike.%${filters.searchTerm}%`).join(',');
+        query = query.or(ilikeConditions);
       }
-    };
+      if (filters.equals && typeof filters.equals === 'object') {
+        for (const [col, val] of Object.entries(filters.equals)) {
+          if (val !== undefined && val !== null && val !== '') {
+            if (Array.isArray(val) && val.length > 0) query = query.in(col, val);
+            else if (typeof val === 'string') query = query.eq(col, val);
+          }
+        }
+      }
 
-    if (typeof window.requestIdleCallback === 'function') {
-      window.requestIdleCallback(prefetchTask, { timeout: 2000 });
-    } else {
-      setTimeout(prefetchTask, 200);
+      query = query.order(orderBy, { ascending }).range(from, to);
+      const { data, error } = await query;
+      if (!error && data) {
+        const countKey = `${tableName}:${filterHash}`;
+        const totalCount = this.tableTotalCounts.get(countKey) || data.length;
+        const totalPages = Math.max(1, Math.ceil(totalCount / rowsPerPage));
+        if (nextPage <= totalPages) {
+          this.blockCache.set(cacheKey, { data: data || [], count: totalCount, totalPages, page: nextPage });
+        }
+      }
+    } catch (e) {
+      // Silent catch for background prefetch
     }
   }
 
   invalidateCache(tableName) {
     this.blockCache.invalidate(tableName);
+    for (const key of this.tableTotalCounts.keys()) {
+      if (key.startsWith(`${tableName}:`)) {
+        this.tableTotalCounts.delete(key);
+      }
+    }
   }
 }
 
