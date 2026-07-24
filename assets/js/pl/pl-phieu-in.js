@@ -2003,31 +2003,16 @@ async function submitAddData() {
 
 async function loadGoogleSheet() {
   try {
-    let allData = [];
-    let from = 0;
-    const batchSize = 1000;
-    let hasMore = true;
-
-    while (hasMore) {
-      const { data, error } = await supabase
-        .from('pl-phieu-in')
-        .select('*')
-        .order('id', { ascending: true })
-        .range(from, from + batchSize - 1);
-
+    let result;
+    if (window.supabaseDataEngine) {
+      result = await window.supabaseDataEngine.fetchPage('pl-phieu-in', currentPage, ROWS_PER_PAGE);
+    } else {
+      const { data, error } = await supabase.from('pl-phieu-in').select('*').order('id', { ascending: true });
       if (error) throw error;
-
-      if (data && data.length > 0) {
-        allData = allData.concat(data);
-        if (data.length < batchSize) {
-          hasMore = false;
-        } else {
-          from += batchSize;
-        }
-      } else {
-        hasMore = false;
-      }
+      result = { data: data || [], count: (data || []).length, totalPages: Math.max(1, Math.ceil((data || []).length / ROWS_PER_PAGE)) };
     }
+
+    const allData = result.data || [];
 
     rawSupabaseData = allData;
 
@@ -2911,8 +2896,8 @@ async function confirmDelete() {
   rowsToDelete.forEach(idx => {
     const record = rawSupabaseData && rawSupabaseData[idx - 1];
     if (typeof isRecordLocked === 'function' && isRecordLocked(record)) {
-      const rowId = record?.id || (tableData[idx] ? tableData[idx][0] : idx);
-      lockedItems.push(`ID: ${rowId}`);
+      const ticketNum = record?.['Số phiếu'] || record?.so_phieu || (tableData[idx] ? tableData[idx][0] : record?.id || idx);
+      lockedItems.push(`Số phiếu: ${ticketNum}`);
     }
   });
 
@@ -2954,6 +2939,7 @@ async function confirmDelete() {
     }
 
     // Reload data from Supabase
+    if (window.supabaseDataEngine) window.supabaseDataEngine.invalidateCache('pl-phieu-in');
     await loadGoogleSheet();
 
     // Reset selection
@@ -2988,8 +2974,8 @@ async function handleEditFormSubmit(e) {
 
   const recordToEdit = rawSupabaseData && rawSupabaseData[selectedRowIndex - 1];
   if (typeof isRecordLocked === 'function' && isRecordLocked(recordToEdit)) {
-    const rowId = recordToEdit?.id || (tableData[selectedRowIndex] ? tableData[selectedRowIndex][0] : selectedRowIndex);
-    (window.showWarningModal || alert)(`Dữ liệu (ID: ${rowId}) đã được nhập quá 24 giờ. Hệ thống không cho phép cập nhật.`);
+    const ticketNum = recordToEdit?.['Số phiếu'] || recordToEdit?.so_phieu || (tableData[selectedRowIndex] ? tableData[selectedRowIndex][0] : recordToEdit?.id || selectedRowIndex);
+    (window.showWarningModal || alert)(`Dữ liệu (Số phiếu: ${ticketNum}) đã được nhập quá 24 giờ. Hệ thống không cho phép cập nhật.`);
     return;
   }
 
