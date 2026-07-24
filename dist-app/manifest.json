@@ -1,8 +1,10 @@
 {
-  "name": "Hệ thống Quản lý Kho Phôi Cuộn - DDC",
-  "short_name": "Kho Phôi DDC",
-  "description": "Ứng dụng quản lý kho phôi cuộn và lập phiếu xuất nhập DDC",
+  "id": "/index.html",
+  "name": "Hệ thống Quản lý Kho Phôi Cuộn",
+  "short_name": "Kho Phôi cuộn",
+  "description": "Ứng dụng quản lý kho Phôi cuộn DDC",
   "start_url": "/index.html",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#1e293b",
@@ -18,13 +20,25 @@
       "src": "/assets/images/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/images/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/assets/images/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/images/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

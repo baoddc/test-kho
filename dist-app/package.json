@@ -26,10 +26,12 @@
     "appId": "com.ddc.khophoicuon",
     "productName": "Hệ thống Quản lý Kho Phôi Cuộn - DDC",
     "directories": {
-      "output": "dist"
+      "output": "release"
     },
     "files": [
       "**/*",
+      "!release/**/*",
+      "!build-exe/**/*",
       "!dist/**/*",
       "!.git/**/*"
     ],
@@ -47,5 +49,9 @@
       "createStartMenuShortcut": true,
       "shortcutName": "Kho Phôi DDC"
     }
+  },
+  "devDependencies": {
+    "electron": "^43.2.0",
+    "electron-builder": "^26.15.3"
   }
 }

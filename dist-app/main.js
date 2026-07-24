@@ -76,6 +76,8 @@ async function createWindow() {
   Menu.setApplicationMenu(null); // Hide default menu bar
 
   const port = await createLocalServer();
+  const localUrl = `http://127.0.0.1:${port}/index.html`;
+  const ONLINE_URL = 'https://baoddc.github.io/test-kho/index.html';
 
   mainWindow = new BrowserWindow({
     width: 1366,
@@ -92,7 +94,18 @@ async function createWindow() {
     }
   });
 
-  mainWindow.loadURL(`http://127.0.0.1:${port}/index.html`);
+  // Fallback sang local server nếu load online thất bại (offline)
+  mainWindow.webContents.on('did-fail-load', (event, errorCode) => {
+    if (errorCode !== -3 && mainWindow && !mainWindow.webContents.getURL().includes('127.0.0.1')) {
+      console.log('[Electron] Loading online URL failed. Falling back to local server.');
+      mainWindow.loadURL(localUrl);
+    }
+  });
+
+  // Thử nạp URL online (để luôn tự động cập nhật code mới nhất từ Web)
+  mainWindow.loadURL(ONLINE_URL).catch(() => {
+    mainWindow.loadURL(localUrl);
+  });
 
   mainWindow.on('closed', () => {
     mainWindow = null;

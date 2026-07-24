@@ -1,0 +1,8 @@
+{
+  "version": "1.0.1",
+  "releaseDate": "2026-07-24",
+  "changelog": [
+    "Tích hợp Chuông thông báo tự động cập nhật phiên bản mới 🔔",
+    "Tối ưu hóa tốc độ tải và khả năng làm việc Offline/Online"
+  ]
+}

@@ -4,35 +4,335 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Trang chủ - DDC Kho</title>
+  <title>Trang chủ</title>
   <meta name="description" content="Hệ thống quản lý kho DDC">
 
   <!-- Logo hiển thị trên tab -->
   <link rel="icon" type="image/png" href="/assets/img/Logo-DDC.png">
 
+  <!-- Google Fonts for stylish serif time and clean interface -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Outfit:wght@300;400;500;600;700&family=Cinzel:wght@400;600;700&display=swap"
+    rel="stylesheet">
+
   <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
-  <!-- Sidebar CSS -->
+  <!-- Sidebar & Theme CSS -->
   <link rel="stylesheet" href="/assets/css/sidebar.css">
   <link rel="stylesheet" href="/assets/css/home.css">
+  <link rel="stylesheet" href="/assets/css/flower.css">
 </head>
 
 <body>
 
-  <!-- Hero Section -->
-  <section class="hero" id="home">
-    <div class="hero-content">
-      <h1>I'M BAO</h1>
-      <p>Tôi là Vibe Code Developer</p>
-    </div>
-    <canvas id="fireworksCanvas"></canvas>
-  </section>
+  <!-- Background Ambient Glow & Floating Particles -->
+  <div class="ambient-bg">
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+    <canvas id="petalCanvas"></canvas>
+  </div>
 
-  <!-- Sidebar JS (auto-injects sidebar + topbar) -->
+  <!-- Main Container -->
+  <div class="app-layout">
+
+    <!-- Side Floating Control Panel -->
+    <aside class="control-panel" id="controlPanel">
+      <div class="panel-header">
+        <h3>Tùy Chỉnh Đồng Hồ</h3>
+        <button class="close-panel-btn" id="closePanelBtn">&times;</button>
+      </div>
+      <div class="panel-body">
+
+        <!-- Theme Selection -->
+        <div class="panel-group">
+          <label>Chủ Đề Flower Wreath</label>
+          <div class="theme-options">
+            <button class="theme-chip active" data-theme="purple">
+              <span class="chip-color purple"></span> Purple Flowers
+            </button>
+            <button class="theme-chip" data-theme="rose">
+              <span class="chip-color rose"></span> Rose Quartz
+            </button>
+            <button class="theme-chip" data-theme="emerald">
+              <span class="chip-color emerald"></span> Emerald Botanicals
+            </button>
+            <button class="theme-chip" data-theme="gold">
+              <span class="chip-color gold"></span> Golden Sunflower
+            </button>
+            <button class="theme-chip" data-theme="cyber">
+              <span class="chip-color cyber"></span> Cyber Neon
+            </button>
+          </div>
+        </div>
+
+        <!-- Typography Choice -->
+        <div class="panel-group">
+          <label>Font Chữ Giờ Chính</label>
+          <select id="fontSelect" class="custom-select">
+            <option value="font-serif" selected>Playfair Serif (Giống mẫu)</option>
+            <option value="font-outfit">Outfit Modern Sans</option>
+            <option value="font-cinzel">Cinzel Classic Luxury</option>
+            <option value="font-digital">Digital Tech Monospace</option>
+          </select>
+        </div>
+
+        <!-- Display Toggles -->
+        <div class="panel-group">
+          <label>Cấu hình Hiển thị</label>
+          <div class="toggle-row">
+            <span>Đường lưới Grid</span>
+            <input type="checkbox" id="gridToggle" checked class="toggle-switch">
+          </div>
+          <div class="toggle-row">
+            <span>Cánh hoa rơi (Particle Animation)</span>
+            <input type="checkbox" id="petalToggle" checked class="toggle-switch">
+          </div>
+          <div class="toggle-row">
+            <span>Đèn phản chiếu mặt kính</span>
+            <input type="checkbox" id="glareToggle" checked class="toggle-switch">
+          </div>
+        </div>
+
+        <!-- Audio Atmosphere -->
+        <div class="panel-group">
+          <label>Âm Thanh Tích Tắc</label>
+          <div class="toggle-row">
+            <span>Âm thanh đồng hồ</span>
+            <button class="sound-btn" id="soundToggleBtn">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 5L6 9H2v6h4l5 4V5z" />
+                <path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07" />
+              </svg>
+              <span id="soundLabel">Tắt</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </aside>
+
+    <!-- Center Stage: The Smartwatch Body -->
+    <main class="watch-stage">
+
+      <div class="watch-wrapper" id="watchWrapper">
+
+        <!-- Top Watch Strap -->
+        <div class="watch-strap strap-top">
+          <div class="strap-texture"></div>
+        </div>
+
+        <!-- Watch Case / Frame -->
+        <div class="watch-case" id="watchCase">
+
+          <!-- Crown Button on Right -->
+          <div class="watch-crown" id="watchCrown" title="Xoay hoặc click Crown để đổi theme">
+            <div class="crown-grooves"></div>
+          </div>
+
+          <!-- Outer Ring Shadow & Bezel -->
+          <div class="watch-bezel">
+
+            <!-- Glass Screen Container -->
+            <div class="watch-screen" id="watchScreen">
+
+              <!-- Dynamic Glare overlay -->
+              <div class="glass-glare" id="glassGlare"></div>
+
+              <!-- SVG Floral Wreath Layer -->
+              <div class="wreath-container" id="wreathContainer">
+                <svg viewBox="0 0 500 500" class="wreath-svg" id="wreathSvg">
+                  <defs>
+                    <radialGradient id="flowerGlow" cx="50%" cy="50%" r="50%">
+                      <stop offset="0%" stop-color="var(--flower-accent)" stop-opacity="0.8" />
+                      <stop offset="100%" stop-color="var(--flower-accent)" stop-opacity="0" />
+                    </radialGradient>
+                    <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+                      <feGaussianBlur stdDeviation="2" result="blur" />
+                      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                  </defs>
+
+                  <!-- Outer Vines & Branch Base Circular Path -->
+                  <g class="vine-branches" stroke="var(--vine-color)" stroke-width="1.5" fill="none" opacity="0.65">
+                    <circle cx="250" cy="250" r="215" stroke-dasharray="8 4 12 3" />
+                    <circle cx="250" cy="250" r="208" stroke-dasharray="15 6 4 8" opacity="0.4" />
+                  </g>
+
+                  <!-- Dynamic SVG Flowers and Leaves container -->
+                  <g class="wreath-render-group" id="wreathRenderGroup" filter="url(#softGlow)">
+                  </g>
+                </svg>
+              </div>
+
+              <!-- Watch Face Interface Content -->
+              <div class="watch-face-content minimalist-face">
+
+                <!-- Minimal Clean Grid Hairlines overlay -->
+                <div class="grid-overlay" id="gridOverlay">
+                  <div class="grid-line line-h-mid"></div>
+                  <div class="grid-line line-v-mid"></div>
+                </div>
+
+                <!-- MAIN TIME AND DATE CENTERED CONTAINER -->
+                <div class="section-mid-focused">
+
+                  <!-- Alarm Badge & Date Row -->
+                  <div class="alarm-date-row" id="alarmWidget" title="Thứ và Ngày">
+                    <div class="alarm-badge">
+                      <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
+                        <path
+                          d="M22 5.72l-4.6-3.86-1.29 1.53 4.6 3.86L22 5.72zM7.88 3.39L6.6 1.86 2 5.71l1.29 1.53 4.59-3.85zM12 4c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9-4.03-9-9-9zm0 16c-3.86 0-7-3.14-7-7s3.14-7 7-7 7 3.14 7 7-3.14 7-7 7zm-.5-11v6l5.25 3.15.75-1.23-4.5-2.67v-5.25h-1.5z" />
+                      </svg>
+                    </div>
+                    <div class="day-date-text">
+                      <span class="day-name" id="dayName">Wednesday</span>
+                      <span class="day-num" id="dayNum">29</span>
+                    </div>
+                  </div>
+
+                  <!-- Main Big Time Display -->
+                  <div class="main-time-container">
+                    <div class="main-time-val font-serif" id="mainTimeDisplay">4:14</div>
+
+                    <!-- Right Sub-Column: AM/PM & Live Seconds -->
+                    <div class="right-info-col">
+                      <div class="ampm-box" id="ampmDisplay">PM</div>
+                      <div class="seconds-box" id="secondsDisplay">53</div>
+                    </div>
+                  </div>
+
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom Watch Strap -->
+        <div class="watch-strap strap-bot">
+          <div class="strap-texture"></div>
+        </div>
+
+      </div>
+
+      <!-- Typography Title Under Watch -->
+      <div class="watch-caption-title" id="captionTitle">
+        P U R P L E &nbsp;&nbsp; F L O W E R S
+      </div>
+
+    </main>
+  </div>
+
+  <!-- MODALS FOR INTERACTIVE WIDGETS -->
+
+  <!-- World Clock Modal -->
+  <div class="modal-overlay" id="worldClockModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h4>Chọn Thành Phố Thế Giới</h4>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <ul class="city-list" id="cityList">
+          <li data-city="New York" data-tz="America/New_York" class="active">New York (EDT)</li>
+          <li data-city="London" data-tz="Europe/London">London (BST)</li>
+          <li data-city="Tokyo" data-tz="Asia/Tokyo">Tokyo (JST)</li>
+          <li data-city="Paris" data-tz="Europe/Paris">Paris (CEST)</li>
+          <li data-city="Hà Nội" data-tz="Asia/Ho_Chi_Minh">Hà Nội / TP.HCM (ICT)</li>
+          <li data-city="Sydney" data-tz="Australia/Sydney">Sydney (AEST)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alarm Modal -->
+  <div class="modal-overlay" id="alarmModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h4>Quản Lý Báo Thức</h4>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="alarm-item">
+          <div class="alarm-info">
+            <span class="alarm-time">07:00 AM</span>
+            <span class="alarm-days">Hàng ngày • Báo thức buổi sáng</span>
+          </div>
+          <input type="checkbox" checked class="toggle-switch">
+        </div>
+        <div class="alarm-item">
+          <div class="alarm-info">
+            <span class="alarm-time">10:14 AM</span>
+            <span class="alarm-days">Thứ 4 hàng tuần • Nhắc lịch họp</span>
+          </div>
+          <input type="checkbox" checked class="toggle-switch">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Messages Modal -->
+  <div class="modal-overlay" id="msgModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h4>Thông Báo Tin Nhắn (3)</h4>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="msg-item">
+          <div class="msg-avatar">🌸</div>
+          <div class="msg-content">
+            <h5>Rose Miller</h5>
+            <p>Đồng hồ Purple Flowers đẹp quá bạn ơi!</p>
+            <span class="msg-time">10:12 AM</span>
+          </div>
+        </div>
+        <div class="msg-item">
+          <div class="msg-avatar">⚡</div>
+          <div class="msg-content">
+            <h5>Aura Health</h5>
+            <p>Bạn đã hoàn thành 65% mục tiêu vận động hôm nay.</p>
+            <span class="msg-time">09:45 AM</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Health & Fitness Modal -->
+  <div class="modal-overlay" id="healthModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h4>Chỉ Số Sức Khỏe & Vận Động</h4>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="health-grid">
+          <div class="health-card">
+            <span class="hc-label">Bước chân</span>
+            <span class="hc-val" id="modalStepsVal">6,540 / 10,000</span>
+            <div class="progress-bar">
+              <div class="progress-fill" style="width: 65%;"></div>
+            </div>
+          </div>
+          <div class="health-card">
+            <span class="hc-label">Nhịp tim trung bình</span>
+            <span class="hc-val">80 BPM</span>
+            <span class="hc-sub">Bình thường (60-100 BPM)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sidebar & Theme Scripts -->
   <script src="/assets/js/sidebar.js"></script>
   <script src="/assets/js/home.js"></script>
-  <script src="/assets/js/fireworks.js"></script>
+  <script src="/assets/js/flower.js"></script>
+  <script src="/assets/js/update-checker.js" defer></script>
 </body>
 
 </html>

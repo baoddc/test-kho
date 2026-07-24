@@ -25,6 +25,11 @@ Thumbs.db
 
 # Vercel build output
 .vercel/
-
-
 .vercel
+
+# Executable & Build Artifacts
+dist-app/release/
+dist-app/dist/
+dist-app/build-exe/
+dist-app/node_modules/
+out-app/
