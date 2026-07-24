@@ -241,7 +241,10 @@
   // 5. Kiểm tra phiên bản từ Server
   async function checkForUpdates() {
     try {
-      const res = await fetch('/version.json?t=' + Date.now());
+      const versionUrl = window.location.pathname.includes('/pages/') 
+        ? '../version.json?t=' + Date.now() 
+        : './version.json?t=' + Date.now();
+      const res = await fetch(versionUrl);
       if (!res.ok) return;
 
       const data = await res.json();
