@@ -301,31 +301,16 @@ async function loadSupabaseData() {
     document.getElementById('loading').style.display = '';
     document.getElementById('loading').textContent = 'Đang tải dữ liệu...';
 
-    let allData = [];
-    let from = 0;
-    const batchSize = 1000;
-    let hasMore = true;
-
-    while (hasMore) {
-      const { data, error } = await supabase
-        .from(TABLE_NAME)
-        .select('*')
-        .order('id', { ascending: true })
-        .range(from, from + batchSize - 1);
-
+    let result;
+    if (window.supabaseDataEngine) {
+      result = await window.supabaseDataEngine.fetchPage(TABLE_NAME, currentPage, ROWS_PER_PAGE);
+    } else {
+      const { data, error } = await supabase.from(TABLE_NAME).select('*').order('id', { ascending: true });
       if (error) throw error;
-
-      if (data && data.length > 0) {
-        allData = allData.concat(data);
-        if (data.length < batchSize) {
-          hasMore = false;
-        } else {
-          from += batchSize;
-        }
-      } else {
-        hasMore = false;
-      }
+      result = { data: data || [], count: (data || []).length, totalPages: Math.max(1, Math.ceil((data || []).length / ROWS_PER_PAGE)) };
     }
+
+    const allData = result.data || [];
 
     window._rawSupabaseData = allData;
 
@@ -478,10 +463,21 @@ function renderTableData(data) {
 
 function updateCellTitles(table) {
   if (!table) return;
-  table.querySelectorAll('th, td').forEach(cell => {
-    if (cell.scrollWidth > cell.clientWidth + 1) cell.title = (cell.textContent || '').trim();
+  const cells = table.querySelectorAll('th, td');
+  const updates = [];
+  for (let i = 0; i < cells.length; i++) {
+    const cell = cells[i];
+    if (cell.scrollWidth > cell.clientWidth + 1) {
+      updates.push({ cell, title: (cell.textContent || '').trim() });
+    } else if (cell.hasAttribute('title')) {
+      updates.push({ cell, title: null });
+    }
+  }
+  for (let i = 0; i < updates.length; i++) {
+    const { cell, title } = updates[i];
+    if (title !== null) cell.title = title;
     else cell.removeAttribute('title');
-  });
+  }
 }
 
 function updateSelectedRows() {

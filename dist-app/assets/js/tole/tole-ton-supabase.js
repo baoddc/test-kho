@@ -384,10 +384,21 @@ function renderTableData(data) {
 
 function updateCellTitles(table) {
   if (!table) return;
-  table.querySelectorAll('th, td').forEach(cell => {
-    if (cell.scrollWidth > cell.clientWidth + 1) cell.title = (cell.textContent || '').trim();
+  const cells = table.querySelectorAll('th, td');
+  const updates = [];
+  for (let i = 0; i < cells.length; i++) {
+    const cell = cells[i];
+    if (cell.scrollWidth > cell.clientWidth + 1) {
+      updates.push({ cell, title: (cell.textContent || '').trim() });
+    } else if (cell.hasAttribute('title')) {
+      updates.push({ cell, title: null });
+    }
+  }
+  for (let i = 0; i < updates.length; i++) {
+    const { cell, title } = updates[i];
+    if (title !== null) cell.title = title;
     else cell.removeAttribute('title');
-  });
+  }
 }
 
 window.addEventListener('resize', () => updateCellTitles(document.getElementById('dataTable')));
