@@ -21,9 +21,9 @@
       /* Update Bell Floating / Header Icon */
       .update-bell-container {
         position: fixed;
-        top: 20px;
+        top: 12px;
         right: 24px;
-        z-index: 9999;
+        z-index: 999999;
         display: flex;
         align-items: center;
         gap: 8px;
@@ -266,11 +266,16 @@
     }
   }
 
-  // Init khi DOM ready
-  document.addEventListener('DOMContentLoaded', () => {
+  function init() {
     injectStyles();
     renderBellUI();
     checkForUpdates();
-  });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 
 })();
