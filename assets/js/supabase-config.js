@@ -86,4 +86,94 @@ if (typeof window !== 'undefined') {
   window.showWarningModal = showWarningModal;
 }
 
+/**
+ * Fast parallel fetch for Supabase table with automatic batching.
+ * @param {string} tableName - Name of Supabase table
+ * @param {string} [selectColumns='*'] - Columns to fetch
+ * @param {string} [orderBy='id'] - Column name to order by
+ * @param {boolean} [ascending=true] - Order direction
+ * @returns {Promise<Array>} Array of records
+ */
+async function fetchAllFromSupabase(tableName, selectColumns = '*', orderBy = 'id', ascending = true) {
+  const batchSize = 1000;
+
+  // Query first batch and exact total count
+  const { data: firstBatch, error, count } = await window.supabase
+    .from(tableName)
+    .select(selectColumns, { count: 'exact' })
+    .order(orderBy, { ascending })
+    .range(0, batchSize - 1);
+
+  if (error) throw error;
+  if (!firstBatch || firstBatch.length === 0) return [];
+
+  const totalCount = count ?? firstBatch.length;
+  if (totalCount <= batchSize || firstBatch.length < batchSize) {
+    return firstBatch;
+  }
+
+  // Fetch remaining batches in parallel
+  const totalBatches = Math.ceil(totalCount / batchSize);
+  const batchPromises = [];
+
+  for (let i = 1; i < totalBatches; i++) {
+    const from = i * batchSize;
+    const to = Math.min((i + 1) * batchSize - 1, totalCount - 1);
+    batchPromises.push(
+      window.supabase
+        .from(tableName)
+        .select(selectColumns)
+        .order(orderBy, { ascending })
+        .range(from, to)
+        .then(res => {
+          if (res.error) throw res.error;
+          return res.data || [];
+        })
+    );
+  }
+
+  const remainingBatches = await Promise.all(batchPromises);
+  return firstBatch.concat(...remainingBatches);
+}
+
+/**
+ * Storage cache helpers for instant load (SWR)
+ */
+function getStoredTableCache(key) {
+  try {
+    const item = sessionStorage.getItem('swr_cache_' + key);
+    return item ? JSON.parse(item) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function setStoredTableCache(key, data) {
+  try {
+    sessionStorage.setItem('swr_cache_' + key, JSON.stringify(data));
+  } catch (e) {
+    console.warn('Failed to set cache for', key, e);
+  }
+}
+
+function clearStoredTableCache(key) {
+  try {
+    if (key) {
+      sessionStorage.removeItem('swr_cache_' + key);
+    } else {
+      Object.keys(sessionStorage).forEach(k => {
+        if (k.startsWith('swr_cache_')) sessionStorage.removeItem(k);
+      });
+    }
+  } catch (e) {}
+}
+
+if (typeof window !== 'undefined') {
+  window.fetchAllFromSupabase = fetchAllFromSupabase;
+  window.getStoredTableCache = getStoredTableCache;
+  window.setStoredTableCache = setStoredTableCache;
+  window.clearStoredTableCache = clearStoredTableCache;
+}
+
+
 

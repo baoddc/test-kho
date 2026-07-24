@@ -295,10 +295,37 @@ window.addEventListener('load', () => {
   loadAllData();
 });
 
-/* =============================================================================
-   DATA LOADING
-   Tải dữ liệu từ Google Sheets
-================================================================================ */
+async function fetchAllFromTable(tableName) {
+  if (typeof fetchAllFromSupabase === 'function') {
+    return await fetchAllFromSupabase(tableName, '*', 'id', true);
+  }
+  let allData = [];
+  let from = 0;
+  const batchSize = 1000;
+  let hasMore = true;
+
+  while (hasMore) {
+    const { data, error } = await supabase
+      .from(tableName)
+      .select('*')
+      .order('id', { ascending: true })
+      .range(from, from + batchSize - 1);
+
+    if (error) throw error;
+
+    if (data && data.length > 0) {
+      allData = allData.concat(data);
+      if (data.length < batchSize) {
+        hasMore = false;
+      } else {
+        from += batchSize;
+      }
+    } else {
+      hasMore = false;
+    }
+  }
+  return allData;
+}
 
 async function loadAllData() {
   try {

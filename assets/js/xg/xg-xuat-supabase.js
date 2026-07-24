@@ -250,21 +250,53 @@ window.addEventListener('load', () => {
 
 async function loadSupabaseData() {
   try {
-    document.getElementById('loading').style.display = '';
-    document.getElementById('loading').textContent = 'Đang tải dữ liệu...';
+    const loadingEl = document.getElementById('loading');
+    const cachedRaw = typeof getStoredTableCache === 'function' ? getStoredTableCache(TABLE_NAME) : null;
 
-    let result;
-    if (window.supabaseDataEngine) {
-      result = await window.supabaseDataEngine.fetchPage(TABLE_NAME, currentPage, ROWS_PER_PAGE);
+    // 1. Instant render from SWR cache (0ms delay)
+    if (cachedRaw && Array.isArray(cachedRaw) && cachedRaw.length > 0) {
+      window._rawSupabaseData = cachedRaw;
+      tableData = [COLUMN_HEADERS, ...cachedRaw.map((row, idx) => {
+        const arr = rowToArray(row);
+        arr.originalIndex = idx + 1;
+        return arr;
+      })];
+      populateTypeDropdown('Loại xuất', 'typeFilterMenu', 'typeFilterBtn', 'typeFilterCount', tableData);
+      populateTypeDropdown('Mã chứng từ', 'voucherFilterMenu', 'voucherFilterBtn', 'voucherFilterCount', tableData);
+      renderTable(tableData, false);
+      if (loadingEl) loadingEl.style.display = 'none';
+      const btnExport = document.getElementById('btnExport');
+      if (btnExport) btnExport.disabled = false;
+      setupFilterEventListeners();
     } else {
-      const { data, error } = await supabase.from(TABLE_NAME).select('*').order('id', { ascending: true });
-      if (error) throw error;
-      result = { data: data || [], count: (data || []).length, totalPages: Math.max(1, Math.ceil((data || []).length / ROWS_PER_PAGE)) };
+      if (loadingEl) {
+        loadingEl.style.display = '';
+        loadingEl.textContent = 'Đang tải dữ liệu...';
+      }
     }
 
-    const allData = result.data || [];
+    // 2. Fetch fresh data in background with parallel batching
+    let allData;
+    if (window.supabaseDataEngine) {
+      const result = await window.supabaseDataEngine.fetchPage(TABLE_NAME, typeof currentPage !== 'undefined' ? currentPage : 1, typeof ROWS_PER_PAGE !== 'undefined' ? ROWS_PER_PAGE : 100);
+      allData = result.data || [];
+    } else {
+      allData = typeof fetchAllFromSupabase === 'function'
+        ? await fetchAllFromSupabase(TABLE_NAME, '*', 'id', true)
+        : await (async () => {
+            let rows = [], from = 0, batchSize = 1000, hasMore = true;
+            while (hasMore) {
+              const { data, error } = await supabase.from(TABLE_NAME).select('*').order('id', { ascending: true }).range(from, from + batchSize - 1);
+              if (error) throw error;
+              if (data && data.length > 0) { rows = rows.concat(data); if (data.length < batchSize) hasMore = false; else from += batchSize; } else hasMore = false;
+            }
+            return rows;
+          })();
+    }
 
+    if (typeof setStoredTableCache === 'function') setStoredTableCache(TABLE_NAME, allData);
     window._rawSupabaseData = allData;
+
     tableData = [COLUMN_HEADERS, ...allData.map((row, idx) => {
       const arr = rowToArray(row);
       arr.originalIndex = idx + 1;
@@ -276,14 +308,18 @@ async function loadSupabaseData() {
 
     renderTable(tableData, false);
 
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('btnExport').disabled = false;
+    if (loadingEl) loadingEl.style.display = 'none';
+    const btnExport = document.getElementById('btnExport');
+    if (btnExport) btnExport.disabled = false;
 
     setupFilterEventListeners();
 
   } catch (error) {
-    document.getElementById('loading').innerHTML =
-      `Lỗi kết nối Supabase: ${error.message}<br>Kiểm tra URL và anon key trong supabase-config.js`;
+    const loadingEl = document.getElementById('loading');
+    if (loadingEl && (!tableData || tableData.length === 0)) {
+      loadingEl.innerHTML =
+        `Lỗi kết nối Supabase: ${error.message}<br>Kiểm tra URL và anon key trong supabase-config.js`;
+    }
     console.error('Supabase error:', error);
   }
 }

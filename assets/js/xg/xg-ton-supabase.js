@@ -205,57 +205,55 @@ window.addEventListener('load', () => {
 
 async function loadSupabaseData() {
   try {
-    document.getElementById('loading').style.display = '';
-    document.getElementById('loading').textContent = 'Đang tải dữ liệu...';
+    const loadingEl = document.getElementById('loading');
+    const cachedTon = typeof getStoredTableCache === 'function' ? getStoredTableCache('xg-ton') : null;
 
-    async function fetchTableData(tableName, selectColumns = '*') {
-      let allData = [];
-      let from = 0;
-      const batchSize = 1000;
-      let hasMore = true;
-      while (hasMore) {
-        const { data, error } = await supabase
-          .from(tableName)
-          .select(selectColumns)
-          .order('id', { ascending: true })
-          .range(from, from + batchSize - 1);
-
-        if (error) throw error;
-
-        if (data && data.length > 0) {
-          allData = allData.concat(data);
-          if (data.length < batchSize) {
-            hasMore = false;
-          } else {
-            from += batchSize;
-          }
-        } else {
-          hasMore = false;
-        }
+    // 1. Instant render from cache (0ms delay)
+    if (cachedTon && Array.isArray(cachedTon) && cachedTon.length > 0) {
+      window._rawSupabaseData = cachedTon;
+      tableData = [COLUMN_HEADERS, ...cachedTon.map(rowToArray)];
+      renderTable(tableData);
+      if (loadingEl) loadingEl.style.display = 'none';
+      const btnExport = document.getElementById('btnExport');
+      if (btnExport) btnExport.disabled = false;
+      setupFilterEventListeners();
+    } else {
+      if (loadingEl) {
+        loadingEl.style.display = '';
+        loadingEl.textContent = 'Đang tải dữ liệu...';
       }
-      return allData;
     }
 
+    // 2. Fetch nhap & xuat in parallel using fetchAllFromSupabase
+    const fetchFunc = typeof fetchAllFromSupabase === 'function'
+      ? fetchAllFromSupabase
+      : async (tbl, col) => {
+          let rows = [], from = 0, batchSize = 1000, hasMore = true;
+          while (hasMore) {
+            const { data, error } = await supabase.from(tbl).select(col || '*').order('id', { ascending: true }).range(from, from + batchSize - 1);
+            if (error) throw error;
+            if (data && data.length > 0) { rows = rows.concat(data); if (data.length < batchSize) hasMore = false; else from += batchSize; } else hasMore = false;
+          }
+          return rows;
+        };
+
     const [nhapAll, xuatAll] = await Promise.all([
-      fetchTableData('xg-nhap'),
-      fetchTableData('xg-xuat', '"Cuộn ID"')
+      fetchFunc('xg-nhap', '*'),
+      fetchFunc('xg-xuat', '"Cuộn ID"')
     ]);
 
-    // 3. Xử lý khớp dữ liệu
     const exportedCuonIds = new Set(
       xuatAll
         .map(row => String(row['Cuộn ID'] || '').trim().toLowerCase())
         .filter(cuonId => cuonId !== '')
     );
 
-    // Lọc các cuộn trong xg-nhap mà chưa bị xuất (không nằm trong xg-xuat) và PHẢI CÓ Cuộn ID
     const tonData = nhapAll.filter(row => {
       const cuonId = String(row['Cuộn ID'] || '').trim().toLowerCase();
-      if (!cuonId) return false; // Chỉ lấy các dòng có Cuộn ID
+      if (!cuonId) return false;
       return !exportedCuonIds.has(cuonId);
     });
 
-    // Định dạng dữ liệu đầu ra theo cấu trúc xg-ton
     const processedTon = tonData.map(row => {
       return {
         id: row.id,
@@ -273,19 +271,23 @@ async function loadSupabaseData() {
       };
     });
 
+    if (typeof setStoredTableCache === 'function') setStoredTableCache('xg-ton', processedTon);
     window._rawSupabaseData = processedTon;
     tableData = [COLUMN_HEADERS, ...processedTon.map(rowToArray)];
 
     renderTable(tableData);
 
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('btnExport').disabled = false;
+    if (loadingEl) loadingEl.style.display = 'none';
+    const btnExport = document.getElementById('btnExport');
+    if (btnExport) btnExport.disabled = false;
 
     setupFilterEventListeners();
 
   } catch (error) {
-    document.getElementById('loading').innerHTML =
-      `Lỗi kết nối Supabase: ${error.message}`;
+    const loadingEl = document.getElementById('loading');
+    if (loadingEl && (!tableData || tableData.length === 0)) {
+      loadingEl.innerHTML = `Lỗi kết nối Supabase: ${error.message}`;
+    }
     console.error('Supabase error:', error);
   }
 }

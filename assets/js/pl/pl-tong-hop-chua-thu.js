@@ -146,36 +146,62 @@ function parseRowDate(raw) {
 }
 
 async function init() {
-  render(); // show loading
+  const cachedData = typeof getStoredTableCache === 'function' ? getStoredTableCache(TABLE_NAME) : null;
+
+  // 1. Instant render from cache (0ms delay)
+  if (cachedData && Array.isArray(cachedData) && cachedData.length > 0) {
+    allRows = cachedData.map(row => ({
+      'Ngày': row['Ngày'] || '',
+      'Kì đổ': row['Kì đổ'] || '',
+      'Xưởng': row['Xưởng'] || '',
+      'Loại phế liệu': row['Loại phế liệu'] || '',
+      'Số lượng (kg)': (row['Số lượng'] !== undefined && row['Số lượng'] !== null)
+        ? String(row['Số lượng'])
+        : ((row['Số lượng (kg)'] !== undefined && row['Số lượng (kg)'] !== null)
+          ? String(row['Số lượng (kg)'])
+          : '0'),
+      'Ghi chú': row['Ghi chú'] || ''
+    }));
+    loading = false;
+    render();
+  } else {
+    render(); // show loading
+  }
+
+  // 2. Background fetch fresh data from Supabase with parallel batching
   try {
-    const { data, error: dbError } = await supabase
-      .from(TABLE_NAME)
-      .select('*')
-      .order('id', { ascending: true });
+    const rawData = typeof fetchAllFromSupabase === 'function'
+      ? await fetchAllFromSupabase(TABLE_NAME, '*', 'id', true)
+      : await (async () => {
+          const { data, error: dbError } = await supabase.from(TABLE_NAME).select('*').order('id', { ascending: true });
+          if (dbError) throw dbError;
+          return data || [];
+        })();
 
-    if (dbError) throw dbError;
+    if (typeof setStoredTableCache === 'function') setStoredTableCache(TABLE_NAME, rawData);
 
-    allRows = (data || []).map(row => {
-      return {
-        'Ngày': row['Ngày'] || '',
-        'Kì đổ': row['Kì đổ'] || '',
-        'Xưởng': row['Xưởng'] || '',
-        'Loại phế liệu': row['Loại phế liệu'] || '',
-        'Số lượng (kg)': (row['Số lượng'] !== undefined && row['Số lượng'] !== null)
-          ? String(row['Số lượng'])
-          : ((row['Số lượng (kg)'] !== undefined && row['Số lượng (kg)'] !== null)
-            ? String(row['Số lượng (kg)'])
-            : '0'),
-        'Ghi chú': row['Ghi chú'] || ''
-      };
-    });
+    allRows = (rawData || []).map(row => ({
+      'Ngày': row['Ngày'] || '',
+      'Kì đổ': row['Kì đổ'] || '',
+      'Xưởng': row['Xưởng'] || '',
+      'Loại phế liệu': row['Loại phế liệu'] || '',
+      'Số lượng (kg)': (row['Số lượng'] !== undefined && row['Số lượng'] !== null)
+        ? String(row['Số lượng'])
+        : ((row['Số lượng (kg)'] !== undefined && row['Số lượng (kg)'] !== null)
+          ? String(row['Số lượng (kg)'])
+          : '0'),
+      'Ghi chú': row['Ghi chú'] || ''
+    }));
 
     loading = false;
     render();
   } catch (err) {
-    error = err.message;
-    loading = false;
-    render();
+    console.error('Error fetching summary:', err);
+    if (!allRows || allRows.length === 0) {
+      error = err.message;
+      loading = false;
+      render();
+    }
   }
 }
 
