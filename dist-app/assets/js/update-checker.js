@@ -931,6 +931,22 @@
     await fetchAnnouncements();
   }
 
+  async function subscribeToRealtimeAnnouncements() {
+    try {
+      const client = await ensureSupabaseClient();
+      if (!client || typeof client.channel !== 'function') return;
+
+      client.channel('public:system_announcements')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'system_announcements' }, () => {
+          isToastShown = false;
+          fetchAnnouncements();
+        })
+        .subscribe();
+    } catch (e) {
+      console.warn('Realtime subscription error:', e);
+    }
+  }
+
   function bindBellEventListener() {
     const bellBtn = document.getElementById('updateNotificationBell');
     if (bellBtn && !bellBtn.__updateListenerAttached) {
@@ -945,6 +961,7 @@
     setInterval(bindBellEventListener, 1000);
 
     checkUpdate();
+    subscribeToRealtimeAnnouncements();
     setInterval(checkUpdate, CHECK_INTERVAL_MS);
   }
 
