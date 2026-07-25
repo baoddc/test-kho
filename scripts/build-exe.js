@@ -14,6 +14,7 @@ async function build() {
     if (!fs.existsSync(jsDistDir)) fs.mkdirSync(jsDistDir, { recursive: true });
     fs.copyFileSync(path.join(__dirname, '../assets/js/update-checker.js'), path.join(jsDistDir, 'update-checker.js'));
     fs.copyFileSync(path.join(__dirname, '../assets/js/sidebar.js'), path.join(jsDistDir, 'sidebar.js'));
+    fs.copyFileSync(path.join(__dirname, '../assets/js/pwa-register.js'), path.join(jsDistDir, 'pwa-register.js'));
   } catch (err) {
     console.warn('[Build Script Warning] Failed to copy version/assets files:', err.message);
   }

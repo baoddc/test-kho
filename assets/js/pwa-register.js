@@ -4,9 +4,14 @@
   let deferredPrompt = null;
   let isAppInstalled = false;
 
-  // Check if running as standalone app
+  // Check if running as standalone app or Electron desktop app
   function checkIsStandalone() {
-    return window.matchMedia('(display-mode: standalone)').matches ||
+    const isElectron = /Electron/i.test(navigator.userAgent) ||
+                       !!window.electron ||
+                       (window.process && window.process.type === 'renderer') ||
+                       window.location.protocol === 'file:';
+    return isElectron ||
+           window.matchMedia('(display-mode: standalone)').matches ||
            window.navigator.standalone === true ||
            document.referrer.includes('android-app://');
   }
