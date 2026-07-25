@@ -10,6 +10,15 @@
   // THEME INITIALIZATION
   // ============================================================
 
+  // Auto load update-checker script for version notifications
+  if (!document.getElementById('update-checker-script')) {
+    const updateScript = document.createElement('script');
+    updateScript.id = 'update-checker-script';
+    updateScript.src = '/assets/js/update-checker.js';
+    updateScript.defer = true;
+    document.head.appendChild(updateScript);
+  }
+
   const savedTheme = localStorage.getItem('ddc_theme') || 'dark';
   document.documentElement.setAttribute('data-bs-theme', savedTheme);
 

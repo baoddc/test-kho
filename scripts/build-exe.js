@@ -7,16 +7,14 @@ async function build() {
   const appDir = path.join(__dirname, '..', 'dist-app');
   const outDir = path.join(__dirname, '..', 'out-app-' + Date.now());
 
-  console.log('[Build Script] Syncing version.json & update-checker.js to dist-app...');
+  console.log('[Build Script] Syncing version.json, assets, and pages to dist-app...');
   try {
     fs.copyFileSync(path.join(__dirname, '../version.json'), path.join(appDir, 'version.json'));
-    const jsDistDir = path.join(appDir, 'assets', 'js');
-    if (!fs.existsSync(jsDistDir)) fs.mkdirSync(jsDistDir, { recursive: true });
-    fs.copyFileSync(path.join(__dirname, '../assets/js/update-checker.js'), path.join(jsDistDir, 'update-checker.js'));
-    fs.copyFileSync(path.join(__dirname, '../assets/js/sidebar.js'), path.join(jsDistDir, 'sidebar.js'));
-    fs.copyFileSync(path.join(__dirname, '../assets/js/pwa-register.js'), path.join(jsDistDir, 'pwa-register.js'));
+    fs.cpSync(path.join(__dirname, '../assets'), path.join(appDir, 'assets'), { recursive: true });
+    fs.cpSync(path.join(__dirname, '../pages'), path.join(appDir, 'pages'), { recursive: true });
+    fs.copyFileSync(path.join(__dirname, '../index.html'), path.join(appDir, 'index.html'));
   } catch (err) {
-    console.warn('[Build Script Warning] Failed to copy version/assets files:', err.message);
+    console.warn('[Build Script Warning] Failed to copy version/assets/pages files:', err.message);
   }
 
   console.log('[Build Script] Packaging Electron app to:', outDir);

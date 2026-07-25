@@ -94,6 +94,9 @@ async function createWindow() {
     }
   });
 
+  // Xóa cache session để luôn nạp mới nhất
+  mainWindow.webContents.session.clearCache().catch(() => {});
+
   // Hỗ trợ phím tắt Phóng to / Thu nhỏ / Về mặc định (Ctrl + +, Ctrl + -, Ctrl + 0)
   mainWindow.webContents.on('before-input-event', (event, input) => {
     if (input.type !== 'keyDown') return;
