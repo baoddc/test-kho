@@ -2003,26 +2003,8 @@ async function submitAddData() {
 
 async function loadGoogleSheet() {
   try {
-    let result;
-    if (window.supabaseDataEngine) {
-      result = await window.supabaseDataEngine.fetchPage('pl-phieu-in', currentPage, ROWS_PER_PAGE);
-    } else {
-      const cachedData = typeof getStoredTableCache === 'function' ? getStoredTableCache('pl-phieu-in') : null;
-      let data;
-      if (typeof fetchAllFromSupabase === 'function') {
-        data = await fetchAllFromSupabase('pl-phieu-in');
-      } else {
-        const res = await supabase.from('pl-phieu-in').select('*').order('id', { ascending: true });
-        if (res.error) throw res.error;
-        data = res.data || [];
-      }
-      if (typeof setStoredTableCache === 'function') setStoredTableCache('pl-phieu-in', data);
-      result = { data: data || [], count: (data || []).length, totalPages: Math.max(1, Math.ceil((data || []).length / ROWS_PER_PAGE)) };
-    }
+    const cachedData = typeof getStoredTableCache === 'function' ? getStoredTableCache('pl-phieu-in') : null;
 
-    const allData = result.data || [];
-
-    rawSupabaseData = allData;
     const headers = [
       'Số phiếu',
       'Ngày',
@@ -2038,7 +2020,7 @@ async function loadGoogleSheet() {
 
     const formatSupabaseDate = (isoString) => {
       if (!isoString) return '';
-      const parts = isoString.split('-');
+      const parts = String(isoString).split('T')[0].split('-');
       if (parts.length === 3) {
         return `${parts[2]}/${parts[1]}/${parts[0]}`;
       }
@@ -2048,7 +2030,7 @@ async function loadGoogleSheet() {
     const processRows = (dataList) => {
       const res = [headers];
       (dataList || []).forEach(row => {
-        const benNhanVal = row['Bên nhận/Xưởng/Đội'] ?? row['Bên nhận/Xưởng/Đội'] ?? row['Bên nhận/ Xưởng/ Đội'] ?? row['Bên nhận / Xưởng / Đội'] ?? row['Bên nhận'] ?? row['ben_nhan'] ?? row['benNhan'] ?? row['Xưởng'] ?? '';
+        const benNhanVal = row['Bên nhận/Xưởng/Đội'] ?? row['Bên nhận/ Xưởng/ Đội'] ?? row['Bên nhận / Xưởng / Đội'] ?? row['Bên nhận'] ?? row['ben_nhan'] ?? row['benNhan'] ?? row['Xưởng'] ?? '';
 
         res.push([
           row['Số phiếu'] || '',
@@ -2076,7 +2058,7 @@ async function loadGoogleSheet() {
     }
 
     // 2. Fetch fresh data in background with parallel batching
-    const allData = typeof fetchAllFromSupabase === 'function'
+    const freshData = typeof fetchAllFromSupabase === 'function'
       ? await fetchAllFromSupabase('pl-phieu-in', '*', 'id', true)
       : await (async () => {
           let rows = [], from = 0, batchSize = 1000, hasMore = true;
@@ -2088,9 +2070,9 @@ async function loadGoogleSheet() {
           return rows;
         })();
 
-    if (typeof setStoredTableCache === 'function') setStoredTableCache('pl-phieu-in', allData);
-    rawSupabaseData = allData;
-    tableData = processRows(allData);
+    if (typeof setStoredTableCache === 'function') setStoredTableCache('pl-phieu-in', freshData);
+    rawSupabaseData = freshData;
+    tableData = processRows(freshData);
 
     renderTable();
     renderAddDataForm();
