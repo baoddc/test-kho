@@ -1,43 +1,51 @@
-# Immediate Toast Notification Implementation Plan
+# Immediate & Realtime Toast Notification Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Hiển thị Toast Popup thông báo ngay lập tức (0ms delay) ở góc màn hình khi vừa truy cập ứng dụng.
+**Goal:** Hiển thị Toast Popup thông báo ngay lập tức (0ms delay) khi vừa nạp trang web/app và đẩy thông báo tức thì (Realtime) khi Admin tạo thông báo mới.
 
-**Architecture:** Bỏ khoảng chờ 1.5s (`setTimeout(checkUpdate, 1500)`) trong `init()` của `update-checker.js`. Thực hiện `checkUpdate()` trực tiếp ngay khi trang/ứng dụng nạp xong.
+**Architecture:** Bỏ khoảng chờ 1.5s (`setTimeout(checkUpdate, 1500)`) trong `init()`. Đăng ký Supabase Realtime channel lắng nghe sự kiện trên bảng `system_announcements` để đẩy Toast thông báo tức thì tới tất cả người dùng đang online.
 
-**Tech Stack:** Vanilla JavaScript, HTML5, Supabase Client.
+**Tech Stack:** Vanilla JavaScript, HTML5, Supabase JS SDK (Realtime Postgres Changes).
 
 ## Global Constraints
 
-- Không làm gián đoạn chu kỳ polling 5 phút định kỳ.
-- Đồng bộ mã nguồn giữa `assets/js/update-checker.js` và `dist-app/assets/js/update-checker.js`.
+- Hỗ trợ cả Web và Desktop Executable (`dist-app/`).
+- Không ảnh hưởng tới cơ chế đánh dấu đã đọc (`read_announcements` trong `localStorage`).
 
 ---
 
-### Task 1: Update `assets/js/update-checker.js` for immediate execution
+### Task 1: Add Realtime Subscription & Instant Load to `assets/js/update-checker.js`
 
 **Files:**
-- Modify: `assets/js/update-checker.js:942-955`
+- Modify: `assets/js/update-checker.js`
 
 **Interfaces:**
-- Consumes: `checkUpdate()`
-- Produces: Immediate execution of `checkUpdate()` on load
+- Consumes: Supabase Realtime JS SDK (`client.channel()`)
+- Produces: Realtime updates for system announcements
 
-- [ ] **Step 1: Modify `init()` in `assets/js/update-checker.js`**
+- [ ] **Step 1: Implement `subscribeToRealtimeAnnouncements()` in `assets/js/update-checker.js`**
 
-Trong `assets/js/update-checker.js`, thay thế:
+Thêm hàm đăng ký Realtime channel:
 ```javascript
-  function init() {
-    injectStyles();
-    bindBellEventListener();
-    setInterval(bindBellEventListener, 1000);
+  async function subscribeToRealtimeAnnouncements() {
+    try {
+      const client = await ensureSupabaseClient();
+      if (!client || typeof client.channel !== 'function') return;
 
-    setTimeout(checkUpdate, 1500);
-    setInterval(checkUpdate, CHECK_INTERVAL_MS);
+      client.channel('public:system_announcements')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'system_announcements' }, () => {
+          isToastShown = false;
+          fetchAnnouncements();
+        })
+        .subscribe();
+    } catch (e) {
+      console.warn('Realtime subscription error:', e);
+    }
   }
 ```
-thành:
+
+Và gọi `subscribeToRealtimeAnnouncements()` trong hàm `init()`:
 ```javascript
   function init() {
     injectStyles();
@@ -45,6 +53,7 @@ thành:
     setInterval(bindBellEventListener, 1000);
 
     checkUpdate();
+    subscribeToRealtimeAnnouncements();
     setInterval(checkUpdate, CHECK_INTERVAL_MS);
   }
 ```
@@ -53,7 +62,7 @@ thành:
 
 ```bash
 git add assets/js/update-checker.js
-git commit -m "feat: trigger update and announcement check immediately on init"
+git commit -m "feat: add Supabase Realtime subscription for system announcements"
 ```
 
 ---
@@ -75,5 +84,5 @@ Copy nội dung từ `assets/js/update-checker.js` sang `dist-app/assets/js/upda
 
 ```bash
 git add dist-app/assets/js/update-checker.js
-git commit -m "chore: sync update-checker.js to dist-app"
+git commit -m "chore: sync Realtime update-checker.js to dist-app"
 ```
