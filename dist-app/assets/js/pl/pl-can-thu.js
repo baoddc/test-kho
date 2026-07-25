@@ -297,23 +297,13 @@ function parseNumber(value) {
 // Fetch dữ liệu từ Supabase
 async function fetchSheetData() {
   const loadingEl = document.getElementById('loading');
-  if (!loadingEl) return;
-
-  loadingEl.innerHTML = 'Đang tải dữ liệu từ Supabase...';
-  loadingEl.style.display = '';
-
+  
   try {
-    const { data, error } = await supabase
-      .from(TABLE_NAME)
-      .select('*')
-      .order('id', { ascending: true });
+    const cachedData = typeof getStoredTableCache === 'function' ? getStoredTableCache(TABLE_NAME) : null;
 
-    if (error) {
-      throw error;
-    }
-
-    tableData = (data || []).map((row, index) => {
-      return {
+    // 1. Instant render from cache if available (0ms delay)
+    if (cachedData && Array.isArray(cachedData) && cachedData.length > 0) {
+      tableData = cachedData.map((row, index) => ({
         id: row.id,
         stt: index + 1,
         ngay: row['Ngày'] ? formatDate(row['Ngày']) : '',
@@ -325,29 +315,65 @@ async function fetchSheetData() {
         column8: row['Cột 8 (Kì đổ_Xưởng_Loại phế liệu)'] || '',
         created_at: row.created_at || row.createdAt || row.created_Time,
         _raw: row,
-        _rowIndex: row.id // Dùng id làm _rowIndex để chỉnh sửa/xóa
-      };
-    });
+        _rowIndex: row.id
+      }));
 
-    // Update filter values
+      updateFilterValues();
+      await fetchLoaiPheLieuData();
+      const exportBtn = document.getElementById('btnExport');
+      if (exportBtn) exportBtn.disabled = false;
+      applyFilters();
+      if (loadingEl) loadingEl.style.display = 'none';
+    } else {
+      if (loadingEl) {
+        loadingEl.innerHTML = 'Đang tải dữ liệu từ Supabase...';
+        loadingEl.style.display = '';
+      }
+    }
+
+    // 2. Background fetch fresh data from Supabase with parallel batching
+    const rawData = typeof fetchAllFromSupabase === 'function'
+      ? await fetchAllFromSupabase(TABLE_NAME, '*', 'id', true)
+      : await (async () => {
+          const { data, error } = await supabase.from(TABLE_NAME).select('*').order('id', { ascending: true });
+          if (error) throw error;
+          return data || [];
+        })();
+
+    if (typeof setStoredTableCache === 'function') setStoredTableCache(TABLE_NAME, rawData);
+
+    tableData = (rawData || []).map((row, index) => ({
+      id: row.id,
+      stt: index + 1,
+      ngay: row['Ngày'] ? formatDate(row['Ngày']) : '',
+      kido: row['Kì đổ'] || '',
+      xuong: row['Xưởng'] || '',
+      loai: row['Loại phế liệu'] || '',
+      soluong: row['Số lượng (kg)'] !== null ? Number(row['Số lượng (kg)']) : null,
+      ghichu: row['Ghi chú'] || '',
+      column8: row['Cột 8 (Kì đổ_Xưởng_Loại phế liệu)'] || '',
+      created_at: row.created_at || row.createdAt || row.created_Time,
+      _raw: row,
+      _rowIndex: row.id
+    }));
+
     updateFilterValues();
-
-    // Fetch loại phế liệu data for dropdown
     await fetchLoaiPheLieuData();
-
-    // Enable export button
     const exportBtn = document.getElementById('btnExport');
     if (exportBtn) exportBtn.disabled = false;
-
-    // Apply initial filter and display
     applyFilters();
 
   } catch (error) {
     console.error('Lỗi khi tải dữ liệu từ Supabase:', error);
-    if (loadingEl) {
+    if (loadingEl && (!tableData || tableData.length === 0)) {
       loadingEl.innerHTML = `<div class="alert alert-danger">Lỗi khi tải dữ liệu: ${error.message}</div>`;
     }
   } finally {
+    if (loadingEl && !loadingEl.querySelector('.alert-danger')) {
+      loadingEl.style.display = 'none';
+    }
+  }
+}
     // Ẩn loading indicator sau khi tải xong (thành công hoặc lỗi)
     if (loadingEl && !loadingEl.querySelector('.alert-danger')) {
       loadingEl.style.display = 'none';

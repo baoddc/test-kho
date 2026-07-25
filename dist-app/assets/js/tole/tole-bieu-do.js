@@ -252,6 +252,9 @@ const COLUMN_HEADERS_TON = [
 ];
 
 async function fetchAllFromTable(tableName) {
+  if (typeof fetchAllFromSupabase === 'function') {
+    return await fetchAllFromSupabase(tableName, '*', 'id', true);
+  }
   let allData = [];
   let from = 0;
   const batchSize = 1000;

@@ -207,6 +207,7 @@ body>header {
 .sidebar-header {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
   padding: 0 16px;
   height: var(--topbar-height);

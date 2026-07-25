@@ -2007,15 +2007,22 @@ async function loadGoogleSheet() {
     if (window.supabaseDataEngine) {
       result = await window.supabaseDataEngine.fetchPage('pl-phieu-in', currentPage, ROWS_PER_PAGE);
     } else {
-      const { data, error } = await supabase.from('pl-phieu-in').select('*').order('id', { ascending: true });
-      if (error) throw error;
+      const cachedData = typeof getStoredTableCache === 'function' ? getStoredTableCache('pl-phieu-in') : null;
+      let data;
+      if (typeof fetchAllFromSupabase === 'function') {
+        data = await fetchAllFromSupabase('pl-phieu-in');
+      } else {
+        const res = await supabase.from('pl-phieu-in').select('*').order('id', { ascending: true });
+        if (res.error) throw res.error;
+        data = res.data || [];
+      }
+      if (typeof setStoredTableCache === 'function') setStoredTableCache('pl-phieu-in', data);
       result = { data: data || [], count: (data || []).length, totalPages: Math.max(1, Math.ceil((data || []).length / ROWS_PER_PAGE)) };
     }
 
     const allData = result.data || [];
 
     rawSupabaseData = allData;
-
     const headers = [
       'Số phiếu',
       'Ngày',
@@ -2028,7 +2035,6 @@ async function loadGoogleSheet() {
       'Mã công trình',
       'Tên công trình'
     ];
-    tableData = [headers];
 
     const formatSupabaseDate = (isoString) => {
       if (!isoString) return '';
@@ -2039,32 +2045,55 @@ async function loadGoogleSheet() {
       return isoString;
     };
 
-    (allData || []).forEach(row => {
-      const benNhanVal = row['Bên nhận/Xưởng/Đội'] ?? row['Bên nhận/Xưởng/Đội'] ?? row['Bên nhận/ Xưởng/ Đội'] ?? row['Bên nhận / Xưởng / Đội'] ?? row['Bên nhận'] ?? row['ben_nhan'] ?? row['benNhan'] ?? row['Xưởng'] ?? '';
+    const processRows = (dataList) => {
+      const res = [headers];
+      (dataList || []).forEach(row => {
+        const benNhanVal = row['Bên nhận/Xưởng/Đội'] ?? row['Bên nhận/Xưởng/Đội'] ?? row['Bên nhận/ Xưởng/ Đội'] ?? row['Bên nhận / Xưởng / Đội'] ?? row['Bên nhận'] ?? row['ben_nhan'] ?? row['benNhan'] ?? row['Xưởng'] ?? '';
 
-      tableData.push([
-        row['Số phiếu'] || '',
-        formatSupabaseDate(row['Ngày']),
-        benNhanVal,
-        row['Loại xuất'] || '',
-        row['Mặt hàng'] || '',
-        row['ĐVT'] || '',
-        row['Trọng lượng hàng'] !== undefined && row['Trọng lượng hàng'] !== null ? Number(row['Trọng lượng hàng']) : (row['Trọng lượng'] !== undefined && row['Trọng lượng'] !== null ? Number(row['Trọng lượng']) : ''),
-        row['Số xe'] || '',
-        row['Mã công trình'] || '',
-        row['Tên công trình'] || ''
-      ]);
-    });
+        res.push([
+          row['Số phiếu'] || '',
+          formatSupabaseDate(row['Ngày']),
+          benNhanVal,
+          row['Loại xuất'] || '',
+          row['Mặt hàng'] || '',
+          row['ĐVT'] || '',
+          row['Trọng lượng hàng'] !== undefined && row['Trọng lượng hàng'] !== null ? Number(row['Trọng lượng hàng']) : (row['Trọng lượng'] !== undefined && row['Trọng lượng'] !== null ? Number(row['Trọng lượng']) : ''),
+          row['Số xe'] || '',
+          row['Mã công trình'] || '',
+          row['Tên công trình'] || ''
+        ]);
+      });
+      return res;
+    };
 
-    console.log('Dữ liệu đã tải từ Supabase:', tableData);
+    // 1. Instant render from SWR cache (0ms delay)
+    if (cachedData && Array.isArray(cachedData) && cachedData.length > 0) {
+      rawSupabaseData = cachedData;
+      tableData = processRows(cachedData);
+      renderTable();
+      renderAddDataForm();
+      if (tableData.length > 1) populateFormWithLatestData();
+    }
 
-    // Hiển thị dữ liệu trong bảng
+    // 2. Fetch fresh data in background with parallel batching
+    const allData = typeof fetchAllFromSupabase === 'function'
+      ? await fetchAllFromSupabase('pl-phieu-in', '*', 'id', true)
+      : await (async () => {
+          let rows = [], from = 0, batchSize = 1000, hasMore = true;
+          while (hasMore) {
+            const { data, error } = await supabase.from('pl-phieu-in').select('*').order('id', { ascending: true }).range(from, from + batchSize - 1);
+            if (error) throw error;
+            if (data && data.length > 0) { rows = rows.concat(data); if (data.length < batchSize) hasMore = false; else from += batchSize; } else hasMore = false;
+          }
+          return rows;
+        })();
+
+    if (typeof setStoredTableCache === 'function') setStoredTableCache('pl-phieu-in', allData);
+    rawSupabaseData = allData;
+    tableData = processRows(allData);
+
     renderTable();
-
-    // Tạo form thêm dữ liệu động
     renderAddDataForm();
-
-    // Nếu có dữ liệu, điền vào form
     if (tableData.length > 1) {
       populateFormWithLatestData();
     }

@@ -362,10 +362,9 @@
     const header = document.createElement('a');
     header.className = 'sidebar-header';
     header.href = '/pages/home.html';
-    header.setAttribute('title', 'Trang chủ');
+    header.setAttribute('title', 'DDC Kho');
     header.innerHTML = `
-      <img src="/assets/img/Logo-DDC.png" alt="DDC Logo" class="sidebar-logo-img" style="height: 36px; width: auto; object-fit: contain; margin-right: 8px;">
-      <span class="sidebar-logo-text">Tổng kho</span>
+      <img src="/assets/img/Logo-DDC.png" alt="DDC Logo" class="sidebar-logo-img" style="height: 36px; width: auto; object-fit: contain;">
     `;
     sidebar.appendChild(header);
 
@@ -513,10 +512,9 @@
     document.body.appendChild(wrapper);
 
     // Register initial default tab
-    const cleanTitle = document.title ? document.title.replace(' - DDC Kho', '').replace('Kho ', '') : 'Trang chủ';
     tabs.push({
       id: 'tab-home',
-      title: cleanTitle,
+      title: 'Trang chủ',
       url: window.location.pathname + window.location.search,
       paneEl: homePane,
       tabEl: null

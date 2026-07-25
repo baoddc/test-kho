@@ -77,7 +77,7 @@ async function createWindow() {
 
   const port = await createLocalServer();
   const localUrl = `http://127.0.0.1:${port}/index.html`;
-  const ONLINE_URL = 'https://baoddc.github.io/test-kho/index.html';
+  const ONLINE_URL = 'https://web-supabase-five.vercel.app/pages/index.html';
 
   mainWindow = new BrowserWindow({
     width: 1366,
@@ -92,6 +92,49 @@ async function createWindow() {
       contextIsolation: true,
       sandbox: true
     }
+  });
+
+  // Hỗ trợ phím tắt Phóng to / Thu nhỏ / Về mặc định (Ctrl + +, Ctrl + -, Ctrl + 0)
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.type !== 'keyDown') return;
+    if (input.control || input.meta) {
+      if (input.key === '=' || input.key === '+' || input.code === 'NumpadAdd') {
+        const currentZoom = mainWindow.webContents.getZoomLevel();
+        if (currentZoom < 5) mainWindow.webContents.setZoomLevel(currentZoom + 0.5);
+        event.preventDefault();
+      } else if (input.key === '-' || input.key === '_' || input.code === 'NumpadSubtract') {
+        const currentZoom = mainWindow.webContents.getZoomLevel();
+        if (currentZoom > -3) mainWindow.webContents.setZoomLevel(currentZoom - 0.5);
+        event.preventDefault();
+      } else if (input.key === '0' || input.code === 'Numpad0') {
+        mainWindow.webContents.setZoomLevel(0);
+        event.preventDefault();
+      }
+    }
+  });
+
+  // Hỗ trợ Phóng to / Thu nhỏ bằng Ctrl + Con lăn chuột (Ctrl + MouseWheel)
+  mainWindow.webContents.on('zoom-changed', (event, zoomDirection) => {
+    const currentZoom = mainWindow.webContents.getZoomLevel();
+    if (zoomDirection === 'in') {
+      if (currentZoom < 5) mainWindow.webContents.setZoomLevel(currentZoom + 0.3);
+    } else if (zoomDirection === 'out') {
+      if (currentZoom > -3) mainWindow.webContents.setZoomLevel(currentZoom - 0.3);
+    }
+  });
+
+  // Đảm bảo Ctrl + Lăn chuột hoạt động mượt mà trên tất cả các trang
+  mainWindow.webContents.on('did-finish-load', () => {
+    mainWindow.webContents.executeJavaScript(`
+      if (!window.__ctrlWheelZoomAttached) {
+        window.__ctrlWheelZoomAttached = true;
+        window.addEventListener('wheel', function(e) {
+          if (e.ctrlKey) {
+            e.preventDefault();
+          }
+        }, { passive: false });
+      }
+    `).catch(() => {});
   });
 
   // Fallback sang local server nếu load online thất bại (offline)
