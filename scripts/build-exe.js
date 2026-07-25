@@ -7,6 +7,17 @@ async function build() {
   const appDir = path.join(__dirname, '..', 'dist-app');
   const outDir = path.join(__dirname, '..', 'out-app-' + Date.now());
 
+  console.log('[Build Script] Syncing version.json & update-checker.js to dist-app...');
+  try {
+    fs.copyFileSync(path.join(__dirname, '../version.json'), path.join(appDir, 'version.json'));
+    const jsDistDir = path.join(appDir, 'assets', 'js');
+    if (!fs.existsSync(jsDistDir)) fs.mkdirSync(jsDistDir, { recursive: true });
+    fs.copyFileSync(path.join(__dirname, '../assets/js/update-checker.js'), path.join(jsDistDir, 'update-checker.js'));
+    fs.copyFileSync(path.join(__dirname, '../assets/js/sidebar.js'), path.join(jsDistDir, 'sidebar.js'));
+  } catch (err) {
+    console.warn('[Build Script Warning] Failed to copy version/assets files:', err.message);
+  }
+
   console.log('[Build Script] Packaging Electron app to:', outDir);
   const appPaths = await packager({
     dir: appDir,
