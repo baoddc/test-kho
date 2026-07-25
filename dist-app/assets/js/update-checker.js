@@ -5,6 +5,8 @@
   const CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
   let isToastShown = false;
   let latestVersionData = null;
+  let activeAnnouncements = [];
+  let currentModalTab = 'announcements'; // 'announcements' | 'admin'
 
   function compareVersions(v1, v2) {
     const p1 = String(v1).split('.').map(Number);
@@ -16,6 +18,25 @@
       if (n1 < n2) return -1;
     }
     return 0;
+  }
+
+  function getReadAnnouncementIds() {
+    try {
+      const stored = localStorage.getItem('read_announcements');
+      return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function markAnnouncementAsRead(id) {
+    try {
+      const ids = getReadAnnouncementIds();
+      if (!ids.includes(id)) {
+        ids.push(id);
+        localStorage.setItem('read_announcements', JSON.stringify(ids));
+      }
+    } catch (e) {}
   }
 
   function injectStyles() {
@@ -77,7 +98,8 @@
         bottom: 24px;
         right: 24px;
         z-index: 99999;
-        max-width: 360px;
+        max-width: 380px;
+        width: calc(100vw - 48px);
         background: rgba(15, 23, 42, 0.92);
         backdrop-filter: blur(16px);
         -webkit-backdrop-filter: blur(16px);
@@ -102,7 +124,6 @@
       .update-toast-icon {
         width: 32px;
         height: 32px;
-        background: linear-gradient(135deg, #3b82f6, #8b5cf6);
         border-radius: 10px;
         display: flex;
         align-items: center;
@@ -117,9 +138,10 @@
       }
       .update-toast-body {
         font-size: 13px;
-        color: #94a3b8;
+        color: #cbd5e1;
         line-height: 1.5;
         margin-bottom: 14px;
+        white-space: pre-wrap;
       }
       .update-toast-actions {
         display: flex;
@@ -156,8 +178,603 @@
       .btn-update-dismiss:hover {
         background: rgba(255, 255, 255, 0.15);
       }
+
+      /* System Announcement Badges & Admin Elements */
+      .announcement-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+      }
+      .announcement-badge.maintenance {
+        background: rgba(239, 68, 68, 0.2);
+        color: #fca5a5;
+        border: 1px solid rgba(239, 68, 68, 0.4);
+      }
+      .announcement-badge.update {
+        background: rgba(139, 92, 246, 0.2);
+        color: #c084fc;
+        border: 1px solid rgba(139, 92, 246, 0.4);
+      }
+      .announcement-badge.info {
+        background: rgba(59, 130, 246, 0.2);
+        color: #93c5fd;
+        border: 1px solid rgba(59, 130, 246, 0.4);
+      }
+      .announcement-badge.warning {
+        background: rgba(245, 158, 11, 0.2);
+        color: #fde047;
+        border: 1px solid rgba(245, 158, 11, 0.4);
+      }
     `;
     document.head.appendChild(style);
+  }
+
+  function getAnnouncementMeta(type) {
+    switch (type) {
+      case 'maintenance':
+        return { icon: '🛠️', bg: 'linear-gradient(135deg, #ef4444, #b91c1c)', label: 'Bảo trì hệ thống' };
+      case 'update':
+        return { icon: '🚀', bg: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', label: 'Cập nhật tính năng' };
+      case 'warning':
+        return { icon: '⚠️', bg: 'linear-gradient(135deg, #f59e0b, #d97706)', label: 'Cảnh báo' };
+      default:
+        return { icon: '📢', bg: 'linear-gradient(135deg, #10b981, #059669)', label: 'Thông báo chung' };
+    }
+  }
+
+  function formatTimeAgo(dateStr) {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    const diffSec = Math.floor((Date.now() - date.getTime()) / 1000);
+    if (diffSec < 60) return 'Vừa xong';
+    if (diffSec < 3600) return `${Math.floor(diffSec / 60)} phút trước`;
+    if (diffSec < 86400) return `${Math.floor(diffSec / 3600)} giờ trước`;
+    return `${Math.floor(diffSec / 86400)} ngày trước`;
+  }
+
+  async function fetchAnnouncements() {
+    if (!window.supabase || typeof window.supabase.from !== 'function') return [];
+    try {
+      const currentUser = localStorage.getItem('currentUser');
+      const isAdmin = currentUser === 'bao.lt';
+
+      let query = window.supabase.from('system_announcements').select('*').order('created_at', { ascending: false });
+      if (!isAdmin) {
+        query = query.eq('is_active', true);
+      }
+
+      const { data, error } = await query;
+      if (error) {
+        console.warn('Failed to fetch announcements:', error);
+        return [];
+      }
+
+      const now = new Date();
+      const valid = (data || []).filter(item => {
+        if (!isAdmin && !item.is_active) return false;
+        if (item.expires_at && new Date(item.expires_at) <= now) return false;
+        return true;
+      });
+
+      activeAnnouncements = valid;
+
+      // Check unread announcements for bell indicator & toast
+      const readIds = getReadAnnouncementIds();
+      const unreadList = activeAnnouncements.filter(a => a.is_active && !readIds.includes(a.id));
+
+      const hasAppUpdate = latestVersionData && compareVersions(latestVersionData.version, CURRENT_VERSION) > 0;
+      updateBellUI(unreadList.length > 0 || hasAppUpdate);
+
+      if (unreadList.length > 0 && !isToastShown) {
+        showAnnouncementToast(unreadList[0]);
+      }
+
+      return activeAnnouncements;
+    } catch (e) {
+      console.warn('Error in fetchAnnouncements:', e);
+      return [];
+    }
+  }
+
+  function showAnnouncementToast(announcement) {
+    if (isToastShown) return;
+    isToastShown = true;
+    injectStyles();
+
+    const meta = getAnnouncementMeta(announcement.type);
+    const toast = document.createElement('div');
+    toast.className = 'update-toast';
+    toast.id = 'system-announcement-toast';
+    toast.innerHTML = `
+      <div class="update-toast-header">
+        <div class="update-toast-icon" style="background: ${meta.bg}">${meta.icon}</div>
+        <div class="update-toast-title">${announcement.title}</div>
+      </div>
+      <div class="update-toast-body">${announcement.content}</div>
+      <div class="update-toast-actions">
+        <button class="btn-update-now" id="btnAnnouncementView">🔍 Xem chi tiết</button>
+        <button class="btn-update-dismiss" id="btnAnnouncementDismiss">Bỏ qua</button>
+      </div>
+    `;
+
+    document.body.appendChild(toast);
+
+    document.getElementById('btnAnnouncementView').addEventListener('click', () => {
+      markAnnouncementAsRead(announcement.id);
+      toast.remove();
+      showVersionModal();
+    });
+
+    document.getElementById('btnAnnouncementDismiss').addEventListener('click', () => {
+      markAnnouncementAsRead(announcement.id);
+      toast.remove();
+    });
+  }
+
+  async function renderModalContent(modalContainer) {
+    const currentUser = localStorage.getItem('currentUser');
+    const isAdmin = currentUser === 'bao.lt';
+
+    const hasNewVersion = latestVersionData && compareVersions(latestVersionData.version, CURRENT_VERSION) > 0;
+    const serverVer = latestVersionData ? latestVersionData.version : CURRENT_VERSION;
+    const notes = latestVersionData ? (latestVersionData.releaseNotes || 'Hệ thống Quản lý Kho Phôi Cuộn - DDC.') : 'Đã kết nối máy chủ phiên bản.';
+
+    // Mark current active announcements as read when modal opens
+    activeAnnouncements.forEach(a => markAnnouncementAsRead(a.id));
+    updateBellUI(hasNewVersion);
+
+    modalContainer.innerHTML = `
+      <div style="
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 1.25rem;
+        max-width: 520px;
+        width: 100%;
+        padding: 1.5rem;
+        color: #f8fafc;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+        position: relative;
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+      ">
+        <button id="close-version-modal" style="
+          position: absolute;
+          top: 1rem;
+          right: 1rem;
+          background: transparent;
+          border: none;
+          color: #94a3b8;
+          font-size: 1.5rem;
+          cursor: pointer;
+          line-height: 1;
+        ">&times;</button>
+
+        <!-- Modal Header -->
+        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+          <div style="
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, #2563eb, #7c3aed);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            flex-shrink: 0;
+          ">🔔</div>
+          <div>
+            <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700;">Trung tâm Thông báo</h3>
+            <p style="margin: 0; font-size: 0.85rem; color: #94a3b8;">DDC Kho - Phôi Cuộn System</p>
+          </div>
+        </div>
+
+        <!-- Navigation Tabs (If Admin) -->
+        ${isAdmin ? `
+          <div style="
+            display: flex;
+            gap: 0.5rem;
+            background: rgba(15, 23, 42, 0.6);
+            padding: 4px;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+          ">
+            <button id="tabBtnAnnouncements" style="
+              flex: 1;
+              padding: 7px 12px;
+              border: none;
+              border-radius: 8px;
+              font-size: 0.85rem;
+              font-weight: 600;
+              cursor: pointer;
+              background: ${currentModalTab === 'announcements' ? '#3b82f6' : 'transparent'};
+              color: ${currentModalTab === 'announcements' ? '#ffffff' : '#94a3b8'};
+              transition: all 0.2s ease;
+            ">📢 Thông báo hệ thống</button>
+            <button id="tabBtnAdmin" style="
+              flex: 1;
+              padding: 7px 12px;
+              border: none;
+              border-radius: 8px;
+              font-size: 0.85rem;
+              font-weight: 600;
+              cursor: pointer;
+              background: ${currentModalTab === 'admin' ? '#3b82f6' : 'transparent'};
+              color: ${currentModalTab === 'admin' ? '#ffffff' : '#94a3b8'};
+              transition: all 0.2s ease;
+            ">⚙️ Quản lý (Admin bao.lt)</button>
+          </div>
+        ` : ''}
+
+        <!-- Tab Body Container -->
+        <div style="flex: 1; overflow-y: auto; padding-right: 4px;" id="modalTabContent">
+          ${currentModalTab === 'admin' && isAdmin ? renderAdminTabHTML() : renderUserTabHTML(hasNewVersion, serverVer, notes)}
+        </div>
+
+        <!-- Modal Footer -->
+        <div style="margin-top: 1rem; display: flex; justify-content: flex-end;">
+          <button id="btnModalClose" style="
+            background: rgba(255, 255, 255, 0.08);
+            color: #cbd5e1;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0.6rem 1.25rem;
+            border-radius: 0.6rem;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+          ">Đóng</button>
+        </div>
+      </div>
+    `;
+
+    // Event Bindings
+    modalContainer.querySelector('#close-version-modal').onclick = () => modalContainer.style.display = 'none';
+    modalContainer.querySelector('#btnModalClose').onclick = () => modalContainer.style.display = 'none';
+    modalContainer.onclick = (e) => { if (e.target === modalContainer) modalContainer.style.display = 'none'; };
+
+    if (isAdmin) {
+      const tabAnnBtn = modalContainer.querySelector('#tabBtnAnnouncements');
+      const tabAdmBtn = modalContainer.querySelector('#tabBtnAdmin');
+      if (tabAnnBtn && tabAdmBtn) {
+        tabAnnBtn.onclick = () => {
+          currentModalTab = 'announcements';
+          renderModalContent(modalContainer);
+        };
+        tabAdmBtn.onclick = () => {
+          currentModalTab = 'admin';
+          renderModalContent(modalContainer);
+        };
+      }
+
+      if (currentModalTab === 'admin') {
+        bindAdminTabEvents(modalContainer);
+      }
+    }
+
+    const updateBtn = modalContainer.querySelector('#btnModalUpdateNow');
+    if (updateBtn) {
+      updateBtn.onclick = () => window.location.reload(true);
+    }
+  }
+
+  function renderUserTabHTML(hasNewVersion, serverVer, notes) {
+    let announcementsHTML = '';
+    if (activeAnnouncements.length === 0) {
+      announcementsHTML = `
+        <div style="text-align: center; color: #64748b; padding: 1.5rem 0; font-size: 0.85rem;">
+          Không có thông báo hệ thống mới nào.
+        </div>
+      `;
+    } else {
+      announcementsHTML = activeAnnouncements.map(item => {
+        const meta = getAnnouncementMeta(item.type);
+        return `
+          <div style="
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 0.75rem;
+            padding: 0.85rem 1rem;
+            margin-bottom: 0.75rem;
+          ">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem;">
+              <span class="announcement-badge ${item.type}">${meta.icon} ${meta.label}</span>
+              <span style="font-size: 0.75rem; color: #64748b;">${formatTimeAgo(item.created_at)}</span>
+            </div>
+            <div style="font-weight: 600; font-size: 0.92rem; color: #f8fafc; margin-bottom: 0.25rem;">${item.title}</div>
+            <div style="font-size: 0.83rem; color: #94a3b8; line-height: 1.5; white-space: pre-wrap;">${item.content}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    return `
+      <!-- System Announcements Section -->
+      <div style="margin-bottom: 1.25rem;">
+        <div style="font-size: 0.85rem; font-weight: 700; color: #38bdf8; margin-bottom: 0.6rem; text-transform: uppercase; letter-spacing: 0.5px;">
+          📢 Thông báo từ Admin
+        </div>
+        ${announcementsHTML}
+      </div>
+
+      <!-- App Version Info Section -->
+      <div style="
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 0.75rem;
+        padding: 0.85rem 1rem;
+      ">
+        <div style="font-size: 0.85rem; font-weight: 700; color: #94a3b8; margin-bottom: 0.6rem; text-transform: uppercase; letter-spacing: 0.5px;">
+          💻 Phiên bản ứng dụng
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 0.4rem; font-size: 0.85rem;">
+          <span style="color: #94a3b8;">Phiên bản hiện tại:</span>
+          <strong style="color: #38bdf8;">v${CURRENT_VERSION}</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 0.6rem; font-size: 0.85rem;">
+          <span style="color: #94a3b8;">Phiên bản máy chủ:</span>
+          <strong style="color: ${hasNewVersion ? '#f59e0b' : '#10b981'};">v${serverVer}</strong>
+        </div>
+        ${hasNewVersion ? `
+          <button id="btnModalUpdateNow" style="
+            width: 100%;
+            background: linear-gradient(135deg, #2563eb, #7c3aed);
+            color: white;
+            border: none;
+            padding: 0.6rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+          ">⚡ Cập nhật ứng dụng ngay</button>
+        ` : `
+          <div style="
+            padding: 0.35rem 0.6rem;
+            border-radius: 0.4rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-align: center;
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+          ">✅ Bạn đang sử dụng phiên bản mới nhất</div>
+        `}
+      </div>
+    `;
+  }
+
+  function renderAdminTabHTML() {
+    const listHTML = activeAnnouncements.length === 0 ? `
+      <div style="text-align: center; color: #64748b; padding: 1rem 0; font-size: 0.85rem;">
+        Chưa có thông báo nào trong hệ thống.
+      </div>
+    ` : activeAnnouncements.map(item => `
+      <div style="
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 0.6rem;
+        padding: 0.75rem;
+        margin-bottom: 0.6rem;
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 0.5rem;
+      ">
+        <div style="flex: 1;">
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+            <span class="announcement-badge ${item.type}">${item.type}</span>
+            <span style="font-weight: 600; font-size: 0.88rem; color: #f8fafc;">${item.title}</span>
+          </div>
+          <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.35rem; white-space: pre-wrap;">${item.content}</div>
+          <div style="font-size: 0.72rem; color: #64748b;">Tạo lúc: ${new Date(item.created_at).toLocaleString('vi-VN')}</div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0;">
+          <button class="btnToggleActive" data-id="${item.id}" data-active="${item.is_active}" style="
+            background: ${item.is_active ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'};
+            color: ${item.is_active ? '#34d399' : '#fca5a5'};
+            border: 1px solid ${item.is_active ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)'};
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+          ">
+            ${item.is_active ? '🟢 Đang bật' : '🔴 Tạm ẩn'}
+          </button>
+          <button class="btnDeleteAnnouncement" data-id="${item.id}" style="
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            cursor: pointer;
+          ">🗑️ Xóa</button>
+        </div>
+      </div>
+    `).join('');
+
+    return `
+      <!-- Form Create Announcement -->
+      <div style="
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 0.75rem;
+        padding: 1rem;
+        margin-bottom: 1.25rem;
+      ">
+        <div style="font-size: 0.88rem; font-weight: 700; color: #38bdf8; margin-bottom: 0.75rem;">
+          ➕ Đăng thông báo mới (Admin bao.lt)
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 0.6rem;">
+          <input type="text" id="adminAnnTitle" placeholder="Tiêu đề thông báo..." style="
+            flex: 2;
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: #ffffff;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.83rem;
+          " />
+          <select id="adminAnnType" style="
+            flex: 1;
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: #ffffff;
+            padding: 0.5rem 0.5rem;
+            border-radius: 0.5rem;
+            font-size: 0.83rem;
+          ">
+            <option value="maintenance">🛠️ Bảo trì</option>
+            <option value="update">🚀 Cập nhật</option>
+            <option value="info" selected>📢 Thông báo</option>
+            <option value="warning">⚠️ Cảnh báo</option>
+          </select>
+        </div>
+
+        <textarea id="adminAnnContent" rows="3" placeholder="Nội dung thông báo chi tiết..." style="
+          width: 100%;
+          background: #0f172a;
+          border: 1px solid #334155;
+          color: #ffffff;
+          padding: 0.5rem 0.75rem;
+          border-radius: 0.5rem;
+          font-size: 0.83rem;
+          margin-bottom: 0.6rem;
+          resize: vertical;
+          box-sizing: border-box;
+        "></textarea>
+
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+          <select id="adminAnnExpiry" style="
+            flex: 1;
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: #ffffff;
+            padding: 0.5rem 0.5rem;
+            border-radius: 0.5rem;
+            font-size: 0.83rem;
+          ">
+            <option value="0">Tự động ẩn: Không hết hạn</option>
+            <option value="24">Tự động ẩn: Sau 24 giờ</option>
+            <option value="72">Tự động ẩn: Sau 3 ngày</option>
+            <option value="168">Tự động ẩn: Sau 7 ngày</option>
+          </select>
+          <button id="btnAdminCreateAnn" style="
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            font-size: 0.83rem;
+            cursor: pointer;
+            white-space: nowrap;
+          ">🚀 Đăng ngay</button>
+        </div>
+        <div id="adminAnnStatusMsg" style="font-size: 0.78rem; margin-top: 0.4rem; display: none;"></div>
+      </div>
+
+      <!-- Existing Announcements Management -->
+      <div>
+        <div style="font-size: 0.85rem; font-weight: 700; color: #94a3b8; margin-bottom: 0.5rem;">
+          📋 Danh sách thông báo đã đăng
+        </div>
+        ${listHTML}
+      </div>
+    `;
+  }
+
+  function bindAdminTabEvents(modalContainer) {
+    const btnCreate = modalContainer.querySelector('#btnAdminCreateAnn');
+    const msgEl = modalContainer.querySelector('#adminAnnStatusMsg');
+
+    if (btnCreate) {
+      btnCreate.onclick = async () => {
+        const title = modalContainer.querySelector('#adminAnnTitle').value.trim();
+        const type = modalContainer.querySelector('#adminAnnType').value;
+        const content = modalContainer.querySelector('#adminAnnContent').value.trim();
+        const expiryHours = parseInt(modalContainer.querySelector('#adminAnnExpiry').value, 10);
+
+        if (!title || !content) {
+          msgEl.style.display = 'block';
+          msgEl.style.color = '#f87171';
+          msgEl.textContent = '❌ Vui lòng nhập tiêu đề và nội dung thông báo.';
+          return;
+        }
+
+        btnCreate.disabled = true;
+        btnCreate.textContent = '⏳ Đang đăng...';
+
+        let expiresAt = null;
+        if (expiryHours > 0) {
+          expiresAt = new Date(Date.now() + expiryHours * 3600 * 1000).toISOString();
+        }
+
+        try {
+          const { error } = await window.supabase.from('system_announcements').insert([{
+            title,
+            type,
+            content,
+            is_active: true,
+            created_by: 'bao.lt',
+            expires_at: expiresAt
+          }]);
+
+          if (error) throw error;
+
+          msgEl.style.display = 'block';
+          msgEl.style.color = '#34d399';
+          msgEl.textContent = '✅ Đăng thông báo thành công!';
+
+          await fetchAnnouncements();
+          setTimeout(() => renderModalContent(modalContainer), 600);
+        } catch (err) {
+          msgEl.style.display = 'block';
+          msgEl.style.color = '#f87171';
+          msgEl.textContent = '❌ Lỗi khi đăng: ' + (err.message || err);
+          btnCreate.disabled = false;
+          btnCreate.textContent = '🚀 Đăng ngay';
+        }
+      };
+    }
+
+    modalContainer.querySelectorAll('.btnToggleActive').forEach(btn => {
+      btn.onclick = async () => {
+        const id = btn.getAttribute('data-id');
+        const currentActive = btn.getAttribute('data-active') === 'true';
+        btn.disabled = true;
+        btn.textContent = '⏳...';
+
+        try {
+          await window.supabase.from('system_announcements').update({ is_active: !currentActive }).eq('id', id);
+          await fetchAnnouncements();
+          renderModalContent(modalContainer);
+        } catch (e) {
+          alert('Lỗi cập nhật trạng thái: ' + e.message);
+        }
+      };
+    });
+
+    modalContainer.querySelectorAll('.btnDeleteAnnouncement').forEach(btn => {
+      btn.onclick = async () => {
+        const id = btn.getAttribute('data-id');
+        if (!confirm('Bạn có chắc chắn muốn xóa thông báo này?')) return;
+        btn.disabled = true;
+
+        try {
+          await window.supabase.from('system_announcements').delete().eq('id', id);
+          await fetchAnnouncements();
+          renderModalContent(modalContainer);
+        } catch (e) {
+          alert('Lỗi xóa thông báo: ' + e.message);
+        }
+      };
+    });
   }
 
   function showVersionModal() {
@@ -184,152 +801,8 @@
       document.body.appendChild(modal);
     }
 
-    const hasNewVersion = latestVersionData && compareVersions(latestVersionData.version, CURRENT_VERSION) > 0;
-    const serverVer = latestVersionData ? latestVersionData.version : CURRENT_VERSION;
-    const notes = latestVersionData ? (latestVersionData.releaseNotes || 'Hệ thống Quản lý Kho Phôi Cuộn - DDC.') : 'Đã kết nối máy chủ phiên bản.';
-
-    modal.innerHTML = `
-      <div style="
-        background: #1e293b;
-        border: 1px solid #334155;
-        border-radius: 1.25rem;
-        max-width: 440px;
-        width: 100%;
-        padding: 1.75rem;
-        color: #f8fafc;
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
-        position: relative;
-      ">
-        <button id="close-version-modal" style="
-          position: absolute;
-          top: 1rem;
-          right: 1rem;
-          background: transparent;
-          border: none;
-          color: #94a3b8;
-          font-size: 1.5rem;
-          cursor: pointer;
-          line-height: 1;
-        ">&times;</button>
-
-        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.25rem;">
-          <div style="
-            width: 44px;
-            height: 44px;
-            background: linear-gradient(135deg, #2563eb, #7c3aed);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 22px;
-          ">🔔</div>
-          <div>
-            <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700;">Thông tin Phiên bản App</h3>
-            <p style="margin: 0; font-size: 0.85rem; color: #94a3b8;">DDC Kho - Phôi Cuộn System</p>
-          </div>
-        </div>
-
-        <div style="
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 0.75rem;
-          padding: 1rem;
-          margin-bottom: 1.25rem;
-        ">
-          <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
-            <span style="color: #94a3b8;">Phiên bản hiện tại:</span>
-            <strong style="color: #38bdf8;">v${CURRENT_VERSION}</strong>
-          </div>
-          <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem; font-size: 0.9rem;">
-            <span style="color: #94a3b8;">Phiên bản máy chủ:</span>
-            <strong style="color: ${hasNewVersion ? '#f59e0b' : '#10b981'};">v${serverVer}</strong>
-          </div>
-          <div style="
-            padding: 0.4rem 0.75rem;
-            border-radius: 0.5rem;
-            font-size: 0.82rem;
-            font-weight: 600;
-            text-align: center;
-            background: ${hasNewVersion ? 'rgba(245, 158, 11, 0.15)' : 'rgba(16, 185, 129, 0.15)'};
-            color: ${hasNewVersion ? '#fbbf24' : '#34d399'};
-            border: 1px solid ${hasNewVersion ? 'rgba(245, 158, 11, 0.3)' : 'rgba(16, 185, 129, 0.3)'};
-          ">
-            ${hasNewVersion ? '🚀 Đã có phiên bản mới sẵn sàng cập nhật!' : '✅ Bạn đang sử dụng phiên bản mới nhất'}
-          </div>
-        </div>
-
-        <div style="margin-bottom: 1.25rem;">
-          <p style="margin: 0 0 0.4rem 0; font-size: 0.85rem; font-weight: 600; color: #cbd5e1;">Ghi chú cập nhật:</p>
-          <div style="
-            font-size: 0.85rem;
-            color: #94a3b8;
-            line-height: 1.5;
-            background: rgba(15, 23, 42, 0.6);
-            padding: 0.75rem;
-            border-radius: 0.5rem;
-            max-height: 100px;
-            overflow-y: auto;
-          ">${notes}</div>
-        </div>
-
-        <div style="display: flex; gap: 0.75rem;">
-          ${hasNewVersion ? `
-            <button id="btnModalUpdateNow" style="
-              flex: 1;
-              background: linear-gradient(135deg, #2563eb, #7c3aed);
-              color: white;
-              border: none;
-              padding: 0.75rem;
-              border-radius: 0.6rem;
-              font-weight: 600;
-              cursor: pointer;
-              box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
-            ">⚡ Cập nhật ngay</button>
-          ` : `
-            <button id="btnModalRecheck" style="
-              flex: 1;
-              background: #334155;
-              color: white;
-              border: none;
-              padding: 0.75rem;
-              border-radius: 0.6rem;
-              font-weight: 600;
-              cursor: pointer;
-            ">🔄 Kiểm tra lại</button>
-          `}
-          <button id="btnModalClose" style="
-            background: rgba(255, 255, 255, 0.08);
-            color: #cbd5e1;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 0.75rem 1.25rem;
-            border-radius: 0.6rem;
-            font-weight: 600;
-            cursor: pointer;
-          ">Đóng</button>
-        </div>
-      </div>
-    `;
-
     modal.style.display = 'flex';
-
-    const closeModal = () => modal.style.display = 'none';
-    modal.querySelector('#close-version-modal').onclick = closeModal;
-    modal.querySelector('#btnModalClose').onclick = closeModal;
-    modal.onclick = (e) => { if (e.target === modal) closeModal(); };
-
-    const updateBtn = modal.querySelector('#btnModalUpdateNow');
-    if (updateBtn) {
-      updateBtn.onclick = () => window.location.reload(true);
-    }
-
-    const recheckBtn = modal.querySelector('#btnModalRecheck');
-    if (recheckBtn) {
-      recheckBtn.onclick = async () => {
-        recheckBtn.textContent = '⏳ Đang kiểm tra...';
-        await checkUpdate();
-        showVersionModal();
-      };
-    }
+    renderModalContent(modal);
   }
 
   function showUpdateToast(data) {
@@ -342,7 +815,7 @@
     toast.id = 'app-update-toast';
     toast.innerHTML = `
       <div class="update-toast-header">
-        <div class="update-toast-icon">🚀</div>
+        <div class="update-toast-icon" style="background: linear-gradient(135deg, #3b82f6, #8b5cf6)">🚀</div>
         <div class="update-toast-title">Đã có phiên bản mới (v${data.version})</div>
       </div>
       <div class="update-toast-body">
@@ -370,10 +843,10 @@
     if (!bellBtn) return;
     if (hasUpdate) {
       bellBtn.classList.add('has-update');
-      bellBtn.title = 'Đã có phiên bản mới! Bấm để cập nhật';
+      bellBtn.title = 'Có thông báo mới / bản cập nhật!';
     } else {
       bellBtn.classList.remove('has-update');
-      bellBtn.title = 'Thông báo phiên bản (v' + CURRENT_VERSION + ')';
+      bellBtn.title = 'Thông báo hệ thống (v' + CURRENT_VERSION + ')';
     }
   }
 
@@ -383,15 +856,16 @@
       if (!response.ok) return;
       const data = await response.json();
       latestVersionData = data;
-      if (data && data.version && compareVersions(data.version, CURRENT_VERSION) > 0) {
+      const hasAppUpdate = data && data.version && compareVersions(data.version, CURRENT_VERSION) > 0;
+      if (hasAppUpdate) {
         updateBellUI(true);
         showUpdateToast(data);
-      } else {
-        updateBellUI(false);
       }
     } catch (err) {
       // Silently ignore network or offline errors
     }
+
+    await fetchAnnouncements();
   }
 
   function bindBellEventListener() {
@@ -407,7 +881,7 @@
     bindBellEventListener();
     setInterval(bindBellEventListener, 1000);
 
-    setTimeout(checkUpdate, 2000);
+    setTimeout(checkUpdate, 1500);
     setInterval(checkUpdate, CHECK_INTERVAL_MS);
   }
 
