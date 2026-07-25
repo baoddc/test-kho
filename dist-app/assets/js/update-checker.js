@@ -2,11 +2,48 @@
   const CURRENT_VERSION = '1.0.0';
   window.APP_VERSION = CURRENT_VERSION;
 
+  const SUPABASE_URL = 'https://ahcethtonjwktjtmxzog.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_zxmsB9cyjDwi9ai9Vw-s1w_QlqKMG0S';
+
   const CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
   let isToastShown = false;
   let latestVersionData = null;
   let activeAnnouncements = [];
   let currentModalTab = 'announcements'; // 'announcements' | 'admin'
+
+  async function ensureSupabaseClient() {
+    if (window.supabase && typeof window.supabase.from === 'function') {
+      return window.supabase;
+    }
+    if (window.supabase && typeof window.supabase.createClient === 'function') {
+      window.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      return window.supabase;
+    }
+
+    if (!window._supabaseLoadingPromise) {
+      window._supabaseLoadingPromise = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+        script.onload = () => {
+          if (window.supabase && typeof window.supabase.createClient === 'function') {
+            window.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            resolve(window.supabase);
+          } else {
+            reject(new Error('Supabase SDK loaded but createClient not found'));
+          }
+        };
+        script.onerror = () => reject(new Error('Failed to load Supabase SDK from CDN'));
+        document.head.appendChild(script);
+      });
+    }
+
+    try {
+      return await window._supabaseLoadingPromise;
+    } catch (e) {
+      console.warn('ensureSupabaseClient error:', e);
+      return null;
+    }
+  }
 
   function compareVersions(v1, v2) {
     const p1 = String(v1).split('.').map(Number);
@@ -235,12 +272,14 @@
   }
 
   async function fetchAnnouncements() {
-    if (!window.supabase || typeof window.supabase.from !== 'function') return [];
     try {
+      const client = await ensureSupabaseClient();
+      if (!client || typeof client.from !== 'function') return [];
+
       const currentUser = localStorage.getItem('currentUser');
       const isAdmin = currentUser === 'bao.lt';
 
-      let query = window.supabase.from('system_announcements').select('*').order('created_at', { ascending: false });
+      let query = client.from('system_announcements').select('*').order('created_at', { ascending: false });
       if (!isAdmin) {
         query = query.eq('is_active', true);
       }
@@ -716,7 +755,10 @@
         }
 
         try {
-          const { error } = await window.supabase.from('system_announcements').insert([{
+          const client = await ensureSupabaseClient();
+          if (!client) throw new Error('Không thể kết nối Supabase SDK. Vui lòng kiểm tra kết nối mạng.');
+
+          const { error } = await client.from('system_announcements').insert([{
             title,
             type,
             content,
@@ -751,11 +793,14 @@
         btn.textContent = '⏳...';
 
         try {
-          await window.supabase.from('system_announcements').update({ is_active: !currentActive }).eq('id', id);
+          const client = await ensureSupabaseClient();
+          if (!client) throw new Error('Không thể kết nối Supabase SDK.');
+
+          await client.from('system_announcements').update({ is_active: !currentActive }).eq('id', id);
           await fetchAnnouncements();
           renderModalContent(modalContainer);
         } catch (e) {
-          alert('Lỗi cập nhật trạng thái: ' + e.message);
+          alert('Lỗi cập nhật trạng thái: ' + (e.message || e));
         }
       };
     });
@@ -767,11 +812,14 @@
         btn.disabled = true;
 
         try {
-          await window.supabase.from('system_announcements').delete().eq('id', id);
+          const client = await ensureSupabaseClient();
+          if (!client) throw new Error('Không thể kết nối Supabase SDK.');
+
+          await client.from('system_announcements').delete().eq('id', id);
           await fetchAnnouncements();
           renderModalContent(modalContainer);
         } catch (e) {
-          alert('Lỗi xóa thông báo: ' + e.message);
+          alert('Lỗi xóa thông báo: ' + (e.message || e));
         }
       };
     });
