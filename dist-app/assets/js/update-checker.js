@@ -944,7 +944,7 @@
     bindBellEventListener();
     setInterval(bindBellEventListener, 1000);
 
-    setTimeout(checkUpdate, 1500);
+    checkUpdate();
     setInterval(checkUpdate, CHECK_INTERVAL_MS);
   }
 
