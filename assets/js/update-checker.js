@@ -100,6 +100,17 @@
         color: #ffffff;
         transform: translateY(-1px);
       }
+      html[data-bs-theme="light"] .topbar-bell-btn,
+      [data-bs-theme="light"] .topbar-bell-btn {
+        background: rgba(15, 23, 42, 0.06);
+        border: 1px solid rgba(15, 23, 42, 0.15);
+        color: #334155;
+      }
+      html[data-bs-theme="light"] .topbar-bell-btn:hover,
+      [data-bs-theme="light"] .topbar-bell-btn:hover {
+        background: rgba(15, 23, 42, 0.12);
+        color: #0f172a;
+      }
       .topbar-bell-btn .bell-icon {
         width: 18px;
         height: 18px;
@@ -108,6 +119,10 @@
       .topbar-bell-btn.has-update .bell-icon {
         animation: bellRing 1.5s infinite ease-in-out;
         color: #f59e0b;
+      }
+      html[data-bs-theme="light"] .topbar-bell-btn.has-update .bell-icon,
+      [data-bs-theme="light"] .topbar-bell-btn.has-update .bell-icon {
+        color: #d97706;
       }
       @keyframes bellRing {
         0%, 100% { transform: rotate(0); }

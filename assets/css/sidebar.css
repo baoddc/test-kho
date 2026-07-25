@@ -122,6 +122,86 @@ body>header {
   letter-spacing: 0.3px;
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.topbar-bell-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  color: #e2e8f0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.topbar-bell-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+/* Light Theme Styling for Bell Button */
+html[data-bs-theme="light"] .topbar-bell-btn,
+[data-bs-theme="light"] .topbar-bell-btn {
+  background: rgba(15, 23, 42, 0.06);
+  border: 1px solid rgba(15, 23, 42, 0.15);
+  color: #334155;
+}
+
+html[data-bs-theme="light"] .topbar-bell-btn:hover,
+[data-bs-theme="light"] .topbar-bell-btn:hover {
+  background: rgba(15, 23, 42, 0.12);
+  color: #0f172a;
+}
+
+.topbar-bell-btn .bell-icon {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.2s ease;
+}
+
+.topbar-bell-btn.has-update .bell-icon {
+  animation: bellRing 1.5s infinite ease-in-out;
+  color: #f59e0b;
+}
+
+html[data-bs-theme="light"] .topbar-bell-btn.has-update .bell-icon,
+[data-bs-theme="light"] .topbar-bell-btn.has-update .bell-icon {
+  color: #d97706;
+}
+
+@keyframes bellRing {
+  0%, 100% { transform: rotate(0); }
+  10%, 30%, 50%, 70%, 90% { transform: rotate(12deg); }
+  20%, 40%, 60%, 80% { transform: rotate(-12deg); }
+}
+
+.topbar-bell-btn .bell-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  background-color: #ef4444;
+  border-radius: 50%;
+  display: none;
+  box-shadow: 0 0 8px #ef4444;
+}
+
+.topbar-bell-btn.has-update .bell-badge {
+  display: block;
+}
+
 .topbar-user {
   display: flex;
   align-items: center;
