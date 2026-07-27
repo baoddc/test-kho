@@ -325,21 +325,16 @@ async function loadSupabaseData() {
 
     // 2. Fetch fresh data in background with parallel batching
     let allData;
-    if (window.supabaseDataEngine) {
-      const result = await window.supabaseDataEngine.fetchPage(TABLE_NAME, typeof currentPage !== 'undefined' ? currentPage : 1, typeof ROWS_PER_PAGE !== 'undefined' ? ROWS_PER_PAGE : 100);
-      allData = result.data || [];
+    if (typeof fetchAllFromSupabase === 'function') {
+      allData = await fetchAllFromSupabase(TABLE_NAME, '*', 'id', true);
     } else {
-      allData = typeof fetchAllFromSupabase === 'function'
-        ? await fetchAllFromSupabase(TABLE_NAME, '*', 'id', true)
-        : await (async () => {
-            let rows = [], from = 0, batchSize = 1000, hasMore = true;
-            while (hasMore) {
-              const { data, error } = await supabase.from(TABLE_NAME).select('*').order('id', { ascending: true }).range(from, from + batchSize - 1);
-              if (error) throw error;
-              if (data && data.length > 0) { rows = rows.concat(data); if (data.length < batchSize) hasMore = false; else from += batchSize; } else hasMore = false;
-            }
-            return rows;
-          })();
+      let rows = [], from = 0, batchSize = 1000, hasMore = true;
+      while (hasMore) {
+        const { data, error } = await supabase.from(TABLE_NAME).select('*').order('id', { ascending: true }).range(from, from + batchSize - 1);
+        if (error) throw error;
+        if (data && data.length > 0) { rows = rows.concat(data); if (data.length < batchSize) hasMore = false; else from += batchSize; } else hasMore = false;
+      }
+      allData = rows;
     }
 
     if (typeof setStoredTableCache === 'function') setStoredTableCache(TABLE_NAME, allData);
