@@ -77,7 +77,9 @@
     showInstallInstructionsModal();
   };
 
-  // Configurable Android APK download link
+  // Configurable download links (local relative paths or external URLs like Google Drive/GitHub Releases)
+  const DOWNLOAD_PC_EXE_URL = '/downloads/DDC-Kho-Setup-1.0.0.exe';
+  const DOWNLOAD_PC_RAR_URL = '/downloads/DDC-Kho-Setup-1.0.0.rar';
   const ANDROID_APK_URL = '';
 
   function showInstallInstructionsModal() {
@@ -165,49 +167,35 @@
                   <div style="font-size: 0.8rem; color: #94a3b8;">Bản cài đặt .exe hoặc file nén .rar</div>
                 </div>
               </div>
-              <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
-                <a href="/dist-app/release/H%E1%BB%99%20th%E1%BB%91ng%20Qu%E1%BA%A3n%20l%C3%BD%20Kho%20Ph%C3%B4i%20Cu%E1%BB%99n%20-%20DDC%20Setup%201.0.0.exe" download="Hệ thống Quản lý Kho Phôi Cuộn - DDC Setup 1.0.0.exe" id="pwa-download-pc-btn" style="
+              <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                <a href="${DOWNLOAD_PC_EXE_URL}" download="DDC-Kho-Setup-1.0.0.exe" id="pwa-download-pc-btn" style="
                   background: #2563eb;
                   color: white;
                   text-decoration: none;
-                  padding: 0.5rem 0.75rem;
+                  padding: 0.55rem 0.85rem;
                   border-radius: 0.5rem;
                   font-weight: 600;
-                  font-size: 0.8rem;
+                  font-size: 0.82rem;
                   display: inline-flex;
                   align-items: center;
-                  gap: 0.3rem;
+                  gap: 0.35rem;
                   white-space: nowrap;
                   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
                 ">📥 Tải .exe</a>
-                <a href="/dist-app/release/H%E1%BB%99%20th%E1%BB%91ng%20Qu%E1%BA%A3n%20l%C3%BD%20Kho%20Ph%C3%B4i%20Cu%E1%BB%99n%20-%20DDC%20Setup%201.0.0.zip" download="Hệ thống Quản lý Kho Phôi Cuộn - DDC Setup 1.0.0.zip" id="pwa-download-zip-btn" style="
-                  background: rgba(37, 99, 235, 0.2);
+                <a href="${DOWNLOAD_PC_RAR_URL}" download="DDC-Kho-Setup-1.0.0.rar" id="pwa-download-rar-btn" style="
+                  background: rgba(37, 99, 235, 0.15);
                   color: #60a5fa;
                   border: 1px solid #3b82f6;
                   text-decoration: none;
-                  padding: 0.5rem 0.75rem;
+                  padding: 0.55rem 0.85rem;
                   border-radius: 0.5rem;
                   font-weight: 600;
-                  font-size: 0.8rem;
+                  font-size: 0.82rem;
                   display: inline-flex;
                   align-items: center;
-                  gap: 0.3rem;
+                  gap: 0.35rem;
                   white-space: nowrap;
-                " title="Dùng khi máy tính bị chặn tải file .exe">📦 Tải .zip</a>
-                <a href="/dist-app/release/H%E1%BB%99%20th%E1%BB%91ng%20Qu%E1%BA%A3n%20l%C3%BD%20Kho%20Ph%C3%B4i%20Cu%E1%BB%99n%20-%20DDC%20Setup%201.0.0.rar" download="Hệ thống Quản lý Kho Phôi Cuộn - DDC Setup 1.0.0.rar" id="pwa-download-rar-btn" style="
-                  background: rgba(37, 99, 235, 0.1);
-                  color: #93c5fd;
-                  border: 1px solid #1e40af;
-                  text-decoration: none;
-                  padding: 0.5rem 0.75rem;
-                  border-radius: 0.5rem;
-                  font-weight: 600;
-                  font-size: 0.8rem;
-                  display: inline-flex;
-                  align-items: center;
-                  gap: 0.3rem;
-                  white-space: nowrap;
-                " title="File nén RAR">📦 Tải .rar</a>
+                " title="Dùng khi máy tính bị chặn tải file .exe">📦 Tải .rar</a>
               </div>
             </div>
 
