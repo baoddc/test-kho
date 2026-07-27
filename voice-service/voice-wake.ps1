@@ -60,7 +60,7 @@ $action = {
         Write-Host "[$(Get-Date -Format 'HH:mm:ss')] Da nhan dien: '$resultText' (Confidence: $([Math]::Round($confidence * 100))%)" -ForegroundColor Green
         Write-Host "-> Dang mo trang chu..." -ForegroundColor Cyan
         
-        $path = "c:\Users\benhhc\Desktop\web\pages\home.html"
+        $path = Join-Path $PSScriptRoot "..\pages\home.html"
         
         # Mo Chrome hoac mac dinh
         if (Test-Path "C:\Program Files\Google\Chrome\Application\chrome.exe") {

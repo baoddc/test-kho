@@ -1,4 +1,4 @@
-(function() {
+(function () {
   'use strict';
 
   let deferredPrompt = null;
@@ -7,13 +7,13 @@
   // Check if running as standalone app or Electron desktop app
   function checkIsStandalone() {
     const isElectron = /Electron/i.test(navigator.userAgent) ||
-                       !!window.electron ||
-                       (window.process && window.process.type === 'renderer') ||
-                       window.location.protocol === 'file:';
+      !!window.electron ||
+      (window.process && window.process.type === 'renderer') ||
+      window.location.protocol === 'file:';
     return isElectron ||
-           window.matchMedia('(display-mode: standalone)').matches ||
-           window.navigator.standalone === true ||
-           document.referrer.includes('android-app://');
+      window.matchMedia('(display-mode: standalone)').matches ||
+      window.navigator.standalone === true ||
+      document.referrer.includes('android-app://');
   }
 
   // Check if app is already installed on device
@@ -33,13 +33,13 @@
 
   // Register Service Worker
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function() {
+    window.addEventListener('load', function () {
       navigator.serviceWorker.register('/sw.js')
-        .then(function(registration) {
+        .then(function (registration) {
           console.log('[PWA] ServiceWorker registered with scope:', registration.scope);
           checkAppInstalled();
         })
-        .catch(function(error) {
+        .catch(function (error) {
           console.warn('[PWA] ServiceWorker registration failed:', error);
           checkAppInstalled();
         });
@@ -47,7 +47,7 @@
   }
 
   // Handle PWA Install Prompt event from Chrome/Edge
-  window.addEventListener('beforeinstallprompt', function(e) {
+  window.addEventListener('beforeinstallprompt', function (e) {
     e.preventDefault();
     deferredPrompt = e;
     console.log('[PWA] beforeinstallprompt event captured');
@@ -55,7 +55,7 @@
   });
 
   // Handle App Installed Event
-  window.addEventListener('appinstalled', function() {
+  window.addEventListener('appinstalled', function () {
     console.log('[PWA] App installed successfully');
     deferredPrompt = null;
     isAppInstalled = true;
@@ -63,13 +63,13 @@
   });
 
   // Global function to launch installed PWA app via protocol
-  window.openInstalledPWA = function() {
+  window.openInstalledPWA = function () {
     console.log('[PWA] Launching installed PWA app via custom protocol...');
     window.location.href = 'web+ddckho://open';
   };
 
   // Global function to trigger PWA installation or show instruction modal
-  window.installPWA = async function() {
+  window.installPWA = async function () {
     if (isAppInstalled) {
       window.openInstalledPWA();
       return;
@@ -77,10 +77,16 @@
     showInstallInstructionsModal();
   };
 
-  // Configurable download links (local relative paths or external URLs like Google Drive/GitHub Releases)
-  const DOWNLOAD_PC_EXE_URL = '/downloads/DDC-Kho-Setup-1.0.0.exe';
-  const DOWNLOAD_PC_RAR_URL = '/downloads/DDC-Kho-Setup-1.0.0.rar';
-  const ANDROID_APK_URL = '';
+  // Configurable download links (Direct download URLs via GitHub Releases)
+  window.APP_DOWNLOAD_LINKS = window.APP_DOWNLOAD_LINKS || {
+    pcExe: 'https://www.dropbox.com/scl/fi/yybsnjahrwnwtk8tp8i6z/H-th-ng-Qu-n-l-Kho-Ph-i-Cu-n-DDC-Setup-1.0.0.exe?rlkey=ddm2qj842wivi97bhfs8iqih0&st=d5p5jc6q&dl=1', // Direct download link for .exe
+    pcRar: 'https://www.dropbox.com/scl/fi/ljpfbzrkwnew7cbcufapa/H-th-ng-Qu-n-l-Kho-Ph-i-Cu-n-DDC-Setup-1.0.0.rar?rlkey=te062y7y0qjt63vj3c43r51gl&st=4ulddhkf&dl=1', // Direct download link for .rar
+    androidApk: '' // Insert link for .apk here
+  };
+
+  const DOWNLOAD_PC_EXE_URL = window.APP_DOWNLOAD_LINKS.pcExe || '/downloads/DDC-Kho-Setup-1.0.0.exe';
+  const DOWNLOAD_PC_RAR_URL = window.APP_DOWNLOAD_LINKS.pcRar || '/downloads/DDC-Kho-Setup-1.0.0.rar';
+  const ANDROID_APK_URL = window.APP_DOWNLOAD_LINKS.androidApk || '';
 
   function showInstallInstructionsModal() {
     // Check if modal already exists
@@ -256,7 +262,7 @@
 
       const apkBtn = modal.querySelector('#pwa-download-apk-btn');
       if (apkBtn) {
-        apkBtn.onclick = function() {
+        apkBtn.onclick = function () {
           if (ANDROID_APK_URL && ANDROID_APK_URL !== '#') {
             window.location.href = ANDROID_APK_URL;
           } else {
@@ -272,7 +278,7 @@
   function updateInstallButton() {
     const isStandalone = checkIsStandalone();
     const buttons = document.querySelectorAll('#pwa-install-btn, .pwa-install-btn');
-    
+
     buttons.forEach(btn => {
       if (isStandalone) {
         btn.style.display = 'none';

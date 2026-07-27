@@ -25,6 +25,7 @@
   "build": {
     "appId": "com.ddc.khophoicuon",
     "productName": "Hệ thống Quản lý Kho Phôi Cuộn - DDC",
+    "executableName": "KhoPhoiDDC",
     "directories": {
       "output": "release"
     },
@@ -40,7 +41,8 @@
         "nsis",
         "portable"
       ],
-      "icon": "assets/images/icon-512.png"
+      "icon": "assets/images/icon.ico",
+      "executableName": "KhoPhoiDDC"
     },
     "nsis": {
       "oneClick": false,

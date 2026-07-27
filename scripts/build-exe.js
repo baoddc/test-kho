@@ -21,8 +21,10 @@ async function build() {
   const appPaths = await packager({
     dir: appDir,
     out: outDir,
+    name: 'KhoPhoiDDC',
     platform: 'win32',
     arch: 'x64',
+    icon: path.join(appDir, 'assets', 'images', 'icon.ico'),
     overwrite: true,
     ignore: (file) => {
       if (!file) return false;
