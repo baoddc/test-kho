@@ -13,23 +13,27 @@ Hệ thống quản lý kho phôi cuộn cho Đại Dũng Corporation (DDC), tí
 ## 📁 Cấu trúc thư mục
 
 ```text
-├── assets/          # CSS, JS và hình ảnh ứng dụng
-│   ├── css/
-│   ├── img/
-│   └── js/
-├── backend/         # Dữ liệu JSON & cấu hình backend
-├── docs/            # Tài liệu hướng dẫn & Supabase schema
-├── pages/           # Các trang HTML chính của ứng dụng
-│   ├── index.html   # Trang đăng nhập chính
+├── assets/          # CSS, JS, Icons và hình ảnh ứng dụng
+│   ├── css/         # CSS theo module (5s, pl, tole, xg, sidebar, home, ...)
+│   ├── js/          # Logic Javascript & Supabase Engine
+│   ├── icons/       # PWA Icons
+│   └── images/      # Hình ảnh & Logo
+├── dist-app/        # Nguồn và cấu hình đóng gói Desktop App (Electron Wrapper)
+├── docs/            # Tài liệu dự án và hướng dẫn Supabase
+├── pages/           # Các trang HTML phân theo module
+│   ├── index.html   # Trang điều hướng chính
 │   ├── home.html    # Trang chủ
 │   ├── about.html   # Trang giới thiệu
-│   ├── 5s/          # Quản lý 5S
-│   ├── pl/          # Quản lý Phôi cuộn (PL)
+│   ├── 5s/          # Quản lý 5S & HSE
+│   ├── pl/          # Quản lý Phôi Lá (PL)
 │   ├── tole/        # Quản lý Tole
-│   └── xg/          # Quản lý Xà gồ (XG)
-├── scripts/         # Các script tiện ích & migration
-├── voice-service/   # Dịch vụ giọng nói (PowerShell / VBScript)
-├── index.html       # File chuyển hướng root
+│   └── xg/          # Quản lý Xà Gồ (XG)
+├── scripts/         # Các script tiện ích (Build EXE, PWA Icons generator, Migration, Local Server)
+├── voice-service/   # Dịch vụ nhận diện giọng nói (PowerShell / VBScript)
+├── index.html       # File chuyển hướng PWA Root
+├── manifest.json    # PWA Manifest configuration
+├── sw.js            # PWA Service Worker
+├── version.json     # Tự động cập nhật phiên bản
 ├── vercel.json      # Cấu hình deployment cho Vercel
 └── package.json     # Metadata & Dependencies
 ```
