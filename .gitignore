@@ -34,4 +34,7 @@ dist-app/dist/
 dist-app/build-exe/
 dist-app/node_modules/
 out-app/
+out-app-*/
+downloads/
+
 
