@@ -921,7 +921,7 @@
           window.installPWA();
         } else {
           const pcLink = (window.APP_DOWNLOAD_LINKS && window.APP_DOWNLOAD_LINKS.pcExe) 
-            || 'https://www.dropbox.com/scl/fi/stoup33i5zunpzntrxy2y/H-th-ng-Qu-n-l-Kho-Ph-i-Cu-n-DDC-Setup-1.0.1.exe?rlkey=im71u1wfju9jx04nf5qkj00om&st=s15gnyla&dl=1';
+            || 'https://www.dropbox.com/scl/fi/stoup33i5zunpzntrxy2y/H-th-ng-Qu-n-l-Kho-Ph-i-Cu-n-DDC-Setup-1.0.2.exe?rlkey=im71u1wfju9jx04nf5qkj00om&st=bvle10ve&dl=1';
           window.open(pcLink, '_blank');
         }
         toast.remove();

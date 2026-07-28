@@ -79,8 +79,8 @@
 
   // Configurable download links (Direct download URLs via GitHub Releases)
   window.APP_DOWNLOAD_LINKS = window.APP_DOWNLOAD_LINKS || {
-    pcExe: 'https://www.dropbox.com/scl/fi/stoup33i5zunpzntrxy2y/H-th-ng-Qu-n-l-Kho-Ph-i-Cu-n-DDC-Setup-1.0.1.exe?rlkey=im71u1wfju9jx04nf5qkj00om&st=s15gnyla&dl=1', // Direct download link for .exe
-    pcRar: 'https://www.dropbox.com/scl/fi/75ztaw0clt1b7avh202za/H-th-ng-Qu-n-l-Kho-Ph-i-Cu-n-DDC-Setup-1.0.1.rar?rlkey=8z7ugdqpj1vnzfut7p9et2xt9&st=xrpc4hp6&dl=1', // Direct download link for .rar
+    pcExe: 'https://www.dropbox.com/scl/fi/stoup33i5zunpzntrxy2y/H-th-ng-Qu-n-l-Kho-Ph-i-Cu-n-DDC-Setup-1.0.2.exe?rlkey=im71u1wfju9jx04nf5qkj00om&st=bvle10ve&dl=1', // Direct download link for .exe
+    pcRar: 'https://www.dropbox.com/scl/fi/75ztaw0clt1b7avh202za/H-th-ng-Qu-n-l-Kho-Ph-i-Cu-n-DDC-Setup-1.0.2.rar?rlkey=8z7ugdqpj1vnzfut7p9et2xt9&st=7m3bnsx2&dl=1', // Direct download link for .rar
     androidApk: '' // Insert link for .apk here
   };
 
