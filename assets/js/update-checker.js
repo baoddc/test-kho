@@ -509,11 +509,23 @@
 
     const updateBtn = modalContainer.querySelector('#btnModalUpdateNow');
     if (updateBtn) {
-      updateBtn.onclick = () => window.location.reload(true);
+      updateBtn.onclick = () => {
+        const env = getEnvironmentInfo();
+        if (env.isElectron || env.isDesktopPC) {
+          const pcLink = (window.APP_DOWNLOAD_LINKS && window.APP_DOWNLOAD_LINKS.pcExe) 
+            || 'https://www.dropbox.com/scl/fi/stoup33i5zunpzntrxy2y/H-th-ng-Qu-n-l-Kho-Ph-i-Cu-n-DDC-Setup-1.0.2.exe?rlkey=im71u1wfju9jx04nf5qkj00om&st=bvle10ve&dl=1';
+          window.open(pcLink, '_blank');
+        } else {
+          window.location.reload(true);
+        }
+      };
     }
   }
 
   function renderUserTabHTML(hasNewVersion, serverVer, notes) {
+    const env = getEnvironmentInfo();
+    const isPC = env.isElectron || env.isDesktopPC;
+
     let announcementsHTML = '';
     if (activeAnnouncements.length === 0) {
       announcementsHTML = `
@@ -582,7 +594,7 @@
             font-size: 0.85rem;
             cursor: pointer;
             box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-          ">⚡ Cập nhật ứng dụng ngay</button>
+          ">${isPC ? '📥 Tải bản cài đặt PC (.exe) mới' : '⚡ Cập nhật ứng dụng ngay'}</button>
         ` : `
           <div style="
             padding: 0.35rem 0.6rem;
