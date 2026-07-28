@@ -84,8 +84,8 @@
     androidApk: '' // Insert link for .apk here
   };
 
-  const DOWNLOAD_PC_EXE_URL = window.APP_DOWNLOAD_LINKS.pcExe || '/downloads/DDC-Kho-Setup-1.0.6.exe';
-  const DOWNLOAD_PC_RAR_URL = window.APP_DOWNLOAD_LINKS.pcRar || '/downloads/DDC-Kho-Setup-1.0.6.rar';
+  const DOWNLOAD_PC_EXE_URL = window.APP_DOWNLOAD_LINKS.pcExe || '/downloads/DDC-Kho-Setup-1.0.7.exe';
+  const DOWNLOAD_PC_RAR_URL = window.APP_DOWNLOAD_LINKS.pcRar || '/downloads/DDC-Kho-Setup-1.0.7.rar';
   const ANDROID_APK_URL = window.APP_DOWNLOAD_LINKS.androidApk || '';
 
   function showInstallInstructionsModal() {
