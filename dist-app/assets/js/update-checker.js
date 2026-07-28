@@ -1,5 +1,8 @@
 (function () {
-  const CURRENT_VERSION = '1.0.5';
+  // ⚠️ QUAN TRỌNG: CURRENT_VERSION này chỉ được cập nhật khi BUILD ra file .exe MỚI để phân phối.
+  // KHÔNG cập nhật khi chỉ release web version mới.
+  // Xem workflow: docs/versioning.md
+  const CURRENT_VERSION = '1.0.3';
   window.APP_VERSION = CURRENT_VERSION;
 
   const SUPABASE_URL = 'https://ahcethtonjwktjtmxzog.supabase.co';
