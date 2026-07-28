@@ -7,14 +7,20 @@ async function build() {
   const appDir = path.join(__dirname, '..', 'dist-app');
   const outDir = path.join(__dirname, '..', 'out-app-' + Date.now());
 
-  console.log('[Build Script] Syncing version.json, assets, and pages to dist-app...');
+  console.log('[Build Script] Syncing assets, and pages to dist-app...');
+  console.log('[Build Script] NOTE: dist-app/version.json is NOT overwritten (Solution B - it defines the .exe version)');
   try {
-    fs.copyFileSync(path.join(__dirname, '../version.json'), path.join(appDir, 'version.json'));
+    // ⚠️ KHÔNG copy version.json từ root vào dist-app.
+    // dist-app/version.json phải được cập nhật thủ công khi build .exe mới.
+    // fs.copyFileSync(path.join(__dirname, '../version.json'), path.join(appDir, 'version.json'));
+
+    // Copy assets nhưng KHÔNG đè update-checker.js (vì Solution B dùng version.json)
+    // update-checker.js đã giống nhau ở cả hai nơi nên copy cũng an toàn
     fs.cpSync(path.join(__dirname, '../assets'), path.join(appDir, 'assets'), { recursive: true });
     fs.cpSync(path.join(__dirname, '../pages'), path.join(appDir, 'pages'), { recursive: true });
     fs.copyFileSync(path.join(__dirname, '../index.html'), path.join(appDir, 'index.html'));
   } catch (err) {
-    console.warn('[Build Script Warning] Failed to copy version/assets/pages files:', err.message);
+    console.warn('[Build Script Warning] Failed to copy assets/pages files:', err.message);
   }
 
   console.log('[Build Script] Packaging Electron app to:', outDir);

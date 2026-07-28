@@ -1,5 +1,7 @@
 (function () {
-  const CURRENT_VERSION = '1.0.6';
+  // Giải pháp B: CURRENT_VERSION được đọc từ /version.json local lúc khởi động.
+  // Không hardcode ở đây nữa — dist-app/version.json xác định phiên bản PC app thực tế.
+  let CURRENT_VERSION = '1.0.0'; // fallback mặc định, sẽ bị ghi đè bởi version.json
   window.APP_VERSION = CURRENT_VERSION;
 
   const SUPABASE_URL = 'https://ahcethtonjwktjtmxzog.supabase.co';
@@ -1016,12 +1018,28 @@
     }
   }
 
-  function init() {
+  async function init() {
     injectStyles();
     bindBellEventListener();
     setInterval(bindBellEventListener, 1000);
 
-    checkUpdate();
+    // Giải pháp B: Đọc phiên bản thực tế từ /version.json local
+    // Với PC app: đọc từ dist-app/version.json → phiên bản .exe đã cài
+    // Với Web: đọc từ Vercel version.json → luôn là phiên bản web hiện tại
+    try {
+      const localRes = await fetch('/version.json?_init=1', { cache: 'no-store' });
+      if (localRes.ok) {
+        const localData = await localRes.json();
+        if (localData && localData.version) {
+          CURRENT_VERSION = localData.version;
+          window.APP_VERSION = CURRENT_VERSION;
+        }
+      }
+    } catch (e) {
+      // Giữ fallback nếu lỗi
+    }
+
+    await checkUpdate();
     subscribeToRealtimeAnnouncements();
     setInterval(checkUpdate, CHECK_INTERVAL_MS);
   }
