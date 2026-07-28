@@ -2,16 +2,144 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#1e293b">
+  <meta name="theme-color" content="#0f172a">
   <link rel="apple-touch-icon" href="/assets/images/apple-touch-icon.png">
-  <script src="/assets/js/pwa-register.js" defer></script>
-  <title>Kho Phôi cuộn - DDC</title>
-  <script>
-    window.location.href = "/pages/index.html";
-  </script>
+  <link rel="icon" type="image/png" href="/assets/img/Logo-DDC.png">
+  <title>Hệ thống Quản lý Kho Phôi Cuộn - DDC</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background: #0f172a;
+      color: #f8fafc;
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      user-select: none;
+    }
+    .splash-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      max-width: 420px;
+      padding: 2rem;
+      position: relative;
+      z-index: 10;
+    }
+    .logo-wrapper {
+      position: relative;
+      width: 90px;
+      height: 90px;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .logo-glow {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.4) 0%, rgba(124, 58, 237, 0) 70%);
+      border-radius: 50%;
+      animation: pulseGlow 2s infinite ease-in-out;
+    }
+    .logo-img {
+      width: 72px;
+      height: 72px;
+      object-fit: contain;
+      position: relative;
+      z-index: 2;
+      filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.4));
+    }
+    .app-title {
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      background: linear-gradient(135deg, #60a5fa, #c084fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.35rem;
+    }
+    .app-subtitle {
+      font-size: 0.88rem;
+      color: #94a3b8;
+      margin-bottom: 2rem;
+    }
+    .progress-container {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 99px;
+      overflow: hidden;
+      position: relative;
+      margin-bottom: 1rem;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #2563eb, #8b5cf6, #38bdf8);
+      border-radius: 99px;
+      transition: width 0.25s ease-out;
+    }
+    .status-text {
+      font-size: 0.8rem;
+      color: #64748b;
+      font-weight: 500;
+    }
+    @keyframes pulseGlow {
+      0%, 100% { transform: scale(1); opacity: 0.6; }
+      50% { transform: scale(1.25); opacity: 0.9; }
+    }
+  </style>
 </head>
 <body>
-  <p>Đang chuyển hướng đến <a href="/pages/index.html">Trang Đăng nhập</a>...</p>
+  <div class="splash-container">
+    <div class="logo-wrapper">
+      <div class="logo-glow"></div>
+      <img src="/assets/img/Logo-DDC.png" alt="DDC Logo" class="logo-img" onerror="this.src='/assets/images/icon-512.png'">
+    </div>
+    <div class="app-title">KHO PHÔI CUỘN - DDC</div>
+    <div class="app-subtitle">Hệ thống Quản lý Kho DDC</div>
+    <div class="progress-container">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+    <div class="status-text" id="statusText">Đang khởi tạo hệ thống...</div>
+  </div>
+
+  <script>
+    (function() {
+      const progressBar = document.getElementById('progressBar');
+      const statusText = document.getElementById('statusText');
+      
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += Math.floor(Math.random() * 25) + 15;
+        if (progress >= 100) {
+          progress = 100;
+          progressBar.style.width = '100%';
+          statusText.textContent = 'Đang nạp giao diện...';
+          clearInterval(interval);
+          setTimeout(() => {
+            window.location.href = "/pages/index.html";
+          }, 150);
+        } else {
+          progressBar.style.width = progress + '%';
+        }
+      }, 100);
+    })();
+  </script>
 </body>
 </html>

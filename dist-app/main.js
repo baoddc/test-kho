@@ -134,6 +134,7 @@ async function createWindow() {
     minWidth: 1024,
     minHeight: 600,
     title: 'Hệ thống Quản lý Kho Phôi Cuộn - DDC',
+    backgroundColor: '#0f172a',
     icon: path.join(__dirname, 'assets', 'images', 'icon-512.png'),
     autoHideMenuBar: true,
     webPreferences: {
