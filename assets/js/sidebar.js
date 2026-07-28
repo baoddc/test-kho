@@ -26,7 +26,13 @@
   // IFRAME DETECTION & PREPARATION
   // ============================================================
 
-  const isIframe = window.self !== window.top;
+  let isTabIframe = false;
+  try {
+    isTabIframe = window.name === 'tab-iframe' || (window.frameElement && window.frameElement.classList.contains('tab-iframe'));
+  } catch (e) {
+    isTabIframe = false;
+  }
+  const isIframe = (window.self !== window.top) && isTabIframe;
 
   function ensureMobileCSS() {
     if (!document.querySelector('link[href*="mobile-responsive.css"]')) {
@@ -786,6 +792,7 @@
 
     const iframe = document.createElement('iframe');
     iframe.className = 'tab-iframe';
+    iframe.name = 'tab-iframe';
     iframe.setAttribute('loading', 'lazy');
     iframe.src = url;
     iframe.setAttribute('frameborder', '0');
