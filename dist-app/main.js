@@ -135,6 +135,7 @@ async function createWindow() {
     minHeight: 600,
     title: 'Hệ thống Quản lý Kho Phôi Cuộn - DDC',
     backgroundColor: '#0f172a',
+    show: false,
     icon: path.join(__dirname, 'assets', 'images', 'icon-512.png'),
     autoHideMenuBar: true,
     webPreferences: {
@@ -142,6 +143,10 @@ async function createWindow() {
       contextIsolation: true,
       sandbox: true
     }
+  });
+
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show();
   });
 
   // Xóa cache session để luôn nạp mới nhất
