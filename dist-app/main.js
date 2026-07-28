@@ -139,9 +139,10 @@ async function createWindow() {
     icon: path.join(__dirname, 'assets', 'images', 'icon-512.png'),
     autoHideMenuBar: true,
     webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
-      sandbox: true
+      sandbox: false
     }
   });
 
@@ -186,14 +187,6 @@ async function createWindow() {
     const installedVer = getInstalledControlPanelVersion();
     mainWindow.webContents.executeJavaScript(`
       window.__ELECTRON_INSTALLED_VERSION__ = "${installedVer}";
-      if (!window.__ctrlWheelZoomAttached) {
-        window.__ctrlWheelZoomAttached = true;
-        window.addEventListener('wheel', function(e) {
-          if (e.ctrlKey) {
-            e.preventDefault();
-          }
-        }, { passive: false });
-      }
     `).catch(() => {});
   });
 
