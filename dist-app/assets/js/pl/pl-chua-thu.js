@@ -378,12 +378,6 @@ async function fetchSheetData() {
     }
   }
 }
-    // Ẩn loading indicator sau khi tải xong (thành công hoặc lỗi)
-    if (loadingEl && !loadingEl.querySelector('.alert-danger')) {
-      loadingEl.style.display = 'none';
-    }
-  }
-}
 
 // Lấy danh sách Loại phế liệu duy nhất từ tableData để làm gợi ý dropdown
 async function fetchLoaiPheLieuData() {
@@ -1728,6 +1722,10 @@ async function handleConfirmDelete() {
 
 // Handle export
 function handleExport() {
+  if (typeof XLSX === 'undefined') {
+    alert('Thư viện XLSX chưa tải xong, vui lòng thử lại sau giây lát.');
+    return;
+  }
   if (!filteredData || filteredData.length === 0) {
     alert('Không có dữ liệu để xuất file Excel');
     return;
@@ -1809,127 +1807,160 @@ function escapeHtml(text) {
    Khởi tạo các event listeners
 ================================================================================ */
 
-// Wait for DOM and XLSX to be ready
-function initApp() {
-  if (typeof XLSX === 'undefined') {
-    // XLSX not loaded yet, try again
-    setTimeout(initApp, 100);
+// Wait for DOM to be ready
+function startApp() {
+  // Kiểm tra xem đã đăng nhập chưa, nếu chưa thì quay về trang đăng nhập
+  const currentUser = localStorage.getItem('currentUser');
+  if (!currentUser) {
+    window.location.href = '/pages/index.html';
     return;
   }
 
-  // DOM is ready and XLSX is loaded
-  document.addEventListener('DOMContentLoaded', function () {
-    // Kiểm tra xem đã đăng nhập chưa, nếu chưa thì quay về trang đăng nhập
-    const currentUser = localStorage.getItem('currentUser');
-    if (!currentUser) {
-      window.location.href = '/pages/index.html';
-      return;
-    }
+  // Hiển thị tên đăng nhập
+  const usernameElement = document.getElementById('currentUsername');
+  if (usernameElement && currentUser) {
+    usernameElement.textContent = currentUser;
+  }
 
-    // Hiển thị tên đăng nhập
-    const usernameElement = document.getElementById('currentUsername');
-    if (usernameElement && currentUser) {
-      usernameElement.textContent = currentUser;
-    }
+  // Load data
+  fetchSheetData();
 
-    // Load data
-    fetchSheetData();
+  // Load loại phế liệu data for dropdown (in parallel)
+  fetchLoaiPheLieuData();
 
-    // Load loại phế liệu data for dropdown (in parallel)
-    fetchLoaiPheLieuData();
+  // Button event listeners
+  document.getElementById('btnAddData')?.addEventListener('click', showAddDataModal);
+  document.getElementById('btnEditData')?.addEventListener('click', showEditDataModal);
+  document.getElementById('btnDeleteData')?.addEventListener('click', handleDelete);
+  document.getElementById('btnConfirmDelete')?.addEventListener('click', handleConfirmDelete);
+  document.getElementById('btnExport')?.addEventListener('click', handleExport);
+  document.getElementById('btnResetFilter')?.addEventListener('click', resetFilters);
 
-    // Button event listeners
-    document.getElementById('btnAddData')?.addEventListener('click', showAddDataModal);
-    document.getElementById('btnEditData')?.addEventListener('click', showEditDataModal);
-    document.getElementById('btnDeleteData')?.addEventListener('click', handleDelete);
-    document.getElementById('btnConfirmDelete')?.addEventListener('click', handleConfirmDelete);
-    document.getElementById('btnExport')?.addEventListener('click', handleExport);
-    document.getElementById('btnResetFilter')?.addEventListener('click', resetFilters);
+  // Form submit handlers
+  document.getElementById('addDataForm')?.addEventListener('submit', handleAddSubmit);
+  document.getElementById('editDataForm')?.addEventListener('submit', handleEditSubmit);
 
-    // Form submit handlers
-    document.getElementById('addDataForm')?.addEventListener('submit', handleAddSubmit);
-    document.getElementById('editDataForm')?.addEventListener('submit', handleEditSubmit);
+  // Add loại button
+  document.getElementById('btnAddLoai')?.addEventListener('click', () => addLoaiRow());
+  document.getElementById('btnEditAddLoai')?.addEventListener('click', () => addEditLoaiRow());
 
-    // Add loại button
-    document.getElementById('btnAddLoai')?.addEventListener('click', () => addLoaiRow());
-    document.getElementById('btnEditAddLoai')?.addEventListener('click', () => addEditLoaiRow());
+  // Search input with debounce
+  const searchInput = document.getElementById('searchInput');
+  if (searchInput) {
+    searchInput.addEventListener('input', debounce(applyFilters, 300));
+  }
 
-    // Search input with debounce
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput) {
-      searchInput.addEventListener('input', debounce(applyFilters, 300));
-    }
+  // Date filters
+  document.getElementById('fromDate')?.addEventListener('change', applyFilters);
+  document.getElementById('toDate')?.addEventListener('change', applyFilters);
 
-    // Date filters
-    document.getElementById('fromDate')?.addEventListener('change', applyFilters);
-    document.getElementById('toDate')?.addEventListener('change', applyFilters);
+  // Pagination
+  document.getElementById('pageSelect')?.addEventListener('change', (e) => {
+    currentPage = parseInt(e.target.value, 10);
+    renderTable();
+    updatePagination();
+  });
 
-    // Pagination
-    document.getElementById('pageSelect')?.addEventListener('change', (e) => {
-      currentPage = parseInt(e.target.value, 10);
+  document.getElementById('prevPage')?.addEventListener('click', () => {
+    if (currentPage > 1) {
+      currentPage--;
       renderTable();
       updatePagination();
-    });
+    }
+  });
 
-    document.getElementById('prevPage')?.addEventListener('click', () => {
-      if (currentPage > 1) {
-        currentPage--;
-        renderTable();
-        updatePagination();
-      }
-    });
+  document.getElementById('nextPage')?.addEventListener('click', () => {
+    if (currentPage < totalPages) {
+      currentPage++;
+      renderTable();
+      updatePagination();
+    }
+  });
 
-    document.getElementById('nextPage')?.addEventListener('click', () => {
-      if (currentPage < totalPages) {
-        currentPage++;
-        renderTable();
-        updatePagination();
-      }
-    });
-
-    // Logout button
-    document.getElementById('btnLogout')?.addEventListener('click', () => {
-      if (confirm('Bạn có chắc chắn muốn đăng xuất?')) {
-        localStorage.removeItem('currentUser');
-        window.location.href = '/pages/index.html';
-      }
-    });
-
-    // Logo click to go home
-    const logo = document.querySelector('.logo');
-    if (logo) {
-      logo.style.cursor = 'pointer';
-      logo.addEventListener('click', function () {
-        window.location.href = '/pages/home.html';
+  // Select all checkbox
+  const selectAllCb = document.getElementById('selectAll');
+  if (selectAllCb) {
+    selectAllCb.addEventListener('change', function () {
+      const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+      rowCheckboxes.forEach(cb => {
+        cb.checked = this.checked;
+        const rowId = parseInt(cb.dataset.id, 10);
+        if (this.checked) {
+          selectedRows.add(rowId);
+        } else {
+          selectedRows.delete(rowId);
+        }
       });
-    }
-
-    // Hamburger menu
-    document.getElementById('hamburger')?.addEventListener('click', () => {
-      // document.getElementById('mainNav')?.classList.toggle('active');
+      updateSelectedCount();
     });
+  }
 
-    // Load username (giữ để tương thích ngược)
-    const username = localStorage.getItem('currentUser');
-    const usernameEl = document.getElementById('currentUsername');
-    if (usernameEl) {
-      usernameEl.textContent = username || 'Khách';
-    }
-
-    // Add input event listeners for live total update (add modal)
-    document.getElementById('loaiTableBody')?.addEventListener('input', (e) => {
-      if (e.target.classList.contains('kg-input')) {
-        updateLoaiTotals();
-      }
-    });
-
-    // Add input event listeners for live total update (edit modal)
-    document.getElementById('editLoaiTableBody')?.addEventListener('input', (e) => {
-      if (e.target.classList.contains('kg-input')) {
-        updateEditLoaiTotals();
-      }
+  // Add event listeners for Kì đổ filter options
+  document.querySelectorAll('.kido-filter-checkbox').forEach(cb => {
+    cb.addEventListener('change', function () {
+      updateKiDoFilterCount();
+      applyFilters();
     });
   });
+
+  // Add event listeners for Xưởng filter options
+  document.querySelectorAll('.xuong-filter-checkbox').forEach(cb => {
+    cb.addEventListener('change', function () {
+      updateXuongFilterCount();
+      applyFilters();
+    });
+  });
+
+  // Kì đổ & Xưởng select handlers to update column 8
+  const kidoSelect = document.querySelector('#addDataForm select[name="kido"]');
+  const xuongSelect = document.querySelector('#addDataForm select[name="xuong"]');
+  if (kidoSelect) kidoSelect.addEventListener('change', updateColumn8Value);
+  if (xuongSelect) xuongSelect.addEventListener('change', updateColumn8Value);
+
+  // Edit modal Kì đổ & Xưởng select handlers
+  const editKidoSelect = document.querySelector('#editDataForm select[name="kido"]');
+  const editXuongSelect = document.querySelector('#editDataForm select[name="xuong"]');
+  if (editKidoSelect) editKidoSelect.addEventListener('change', updateEditColumn8Value);
+  if (editXuongSelect) editXuongSelect.addEventListener('change', updateEditColumn8Value);
+
+  // Add input event listeners for live total update (add modal)
+  document.getElementById('loaiTableBody')?.addEventListener('input', (e) => {
+    if (e.target.classList.contains('kg-input')) {
+      updateLoaiTotals();
+    }
+  });
+
+  // Add input event listeners for live total update (edit modal)
+  document.getElementById('editLoaiTableBody')?.addEventListener('input', (e) => {
+    if (e.target.classList.contains('kg-input')) {
+      updateEditLoaiTotals();
+    }
+  });
+
+  // Logout button
+  document.getElementById('btnLogout')?.addEventListener('click', () => {
+    if (confirm('Bạn có chắc chắn muốn đăng xuất?')) {
+      localStorage.removeItem('currentUser');
+      window.location.href = '/pages/index.html';
+    }
+  });
+
+  // Logo click to go home
+  const logo = document.querySelector('.logo');
+  if (logo) {
+    logo.style.cursor = 'pointer';
+    logo.addEventListener('click', function () {
+      window.location.href = '/pages/home.html';
+    });
+  }
+}
+
+function initApp() {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startApp);
+  } else {
+    startApp();
+  }
 }
 
 // Update column 8 value (Kì đổ_Xưởng_Loại phế liệu)
