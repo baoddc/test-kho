@@ -1,5 +1,5 @@
 (function () {
-  const CURRENT_VERSION = '1.0.4';
+  const CURRENT_VERSION = '1.0.5';
   window.APP_VERSION = CURRENT_VERSION;
 
   const SUPABASE_URL = 'https://ahcethtonjwktjtmxzog.supabase.co';

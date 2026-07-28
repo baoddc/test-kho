@@ -1,6 +1,6 @@
 {
   "name": "ddc-kho-app",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Hệ thống Quản lý Kho Phôi Cuộn - DDC",
   "main": "main.js",
   "scripts": {

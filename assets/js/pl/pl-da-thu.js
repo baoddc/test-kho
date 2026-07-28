@@ -259,7 +259,7 @@ function formatNumber(num) {
 function parseNumber(value) {
   if (value === null || value === undefined || value === '') return null;
   if (typeof value === 'number') return value;
-  
+
   let text = value.toString().replace(/ kg/g, '').trim();
   text = text.replace(/\s+/g, '');
 
@@ -322,7 +322,7 @@ async function fetchSheetData() {
       if (loadingEl) loadingEl.style.display = 'none';
     } else {
       if (loadingEl) {
-        loadingEl.innerHTML = 'Đang tải dữ liệu từ Supabase...';
+        loadingEl.innerHTML = 'Đang tải dữ liệu...';
         loadingEl.style.display = '';
       }
     }
@@ -331,10 +331,10 @@ async function fetchSheetData() {
     const rawData = typeof fetchAllFromSupabase === 'function'
       ? await fetchAllFromSupabase(TABLE_NAME, '*', 'id', true)
       : await (async () => {
-          const { data, error } = await supabase.from(TABLE_NAME).select('*').order('id', { ascending: true });
-          if (error) throw error;
-          return data || [];
-        })();
+        const { data, error } = await supabase.from(TABLE_NAME).select('*').order('id', { ascending: true });
+        if (error) throw error;
+        return data || [];
+      })();
 
     if (typeof setStoredTableCache === 'function') setStoredTableCache(TABLE_NAME, rawData);
 
