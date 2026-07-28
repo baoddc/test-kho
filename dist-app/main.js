@@ -25,7 +25,17 @@ const MIME_TYPES = {
 function createLocalServer() {
   return new Promise((resolve, reject) => {
     const srv = http.createServer((req, res) => {
-      let safePath = path.normalize(decodeURIComponent(req.url.split('?')[0]));
+      const urlPath = req.url.split('?')[0];
+      if (urlPath === '/version.json') {
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        return res.end(JSON.stringify({
+          version: app.getVersion(),
+          releaseNotes: `Phiên bản PC app (${app.getVersion()})`,
+          minExeVersion: '1.0.0'
+        }));
+      }
+
+      let safePath = path.normalize(decodeURIComponent(urlPath));
       if (safePath === '/' || safePath === '\\') {
         safePath = '/index.html';
       }
