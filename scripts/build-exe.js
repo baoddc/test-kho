@@ -7,15 +7,44 @@ async function build() {
   const appDir = path.join(__dirname, '..', 'dist-app');
   const outDir = path.join(__dirname, '..', 'out-app-' + Date.now());
 
-  console.log('[Build Script] Syncing assets, and pages to dist-app...');
-  console.log('[Build Script] NOTE: dist-app/version.json is NOT overwritten (Solution B - it defines the .exe version)');
-  try {
-    // ⚠️ KHÔNG copy version.json từ root vào dist-app.
-    // dist-app/version.json phải được cập nhật thủ công khi build .exe mới.
-    // fs.copyFileSync(path.join(__dirname, '../version.json'), path.join(appDir, 'version.json'));
+  // 1. Xử lý phiên bản build (ưu tiên tham số truyền vào > version.json ở root)
+  let targetVersion = process.argv[2];
+  const rootVersionPath = path.join(__dirname, '..', 'version.json');
+  let rootVersionObj = {};
+  if (fs.existsSync(rootVersionPath)) {
+    try {
+      rootVersionObj = JSON.parse(fs.readFileSync(rootVersionPath, 'utf8'));
+    } catch (e) {}
+  }
 
-    // Copy assets nhưng KHÔNG đè update-checker.js (vì Solution B dùng version.json)
-    // update-checker.js đã giống nhau ở cả hai nơi nên copy cũng an toàn
+  if (!targetVersion) {
+    targetVersion = rootVersionObj.version || '1.0.0';
+  }
+
+  console.log(`[Build Script] 📦 Target App Version: v${targetVersion}`);
+
+  // Cập nhật version trong dist-app/package.json (để electron-builder đặt tên .exe & registry version)
+  const distPkgPath = path.join(appDir, 'package.json');
+  if (fs.existsSync(distPkgPath)) {
+    const pkgJson = JSON.parse(fs.readFileSync(distPkgPath, 'utf8'));
+    pkgJson.version = targetVersion;
+    fs.writeFileSync(distPkgPath, JSON.stringify(pkgJson, null, 2), 'utf8');
+    console.log(`[Build Script] Updated dist-app/package.json version -> ${targetVersion}`);
+  }
+
+  // Cập nhật dist-app/version.json cho Electron App tự kiểm tra version
+  const distVerPath = path.join(appDir, 'version.json');
+  const newDistVer = {
+    version: targetVersion,
+    buildTime: new Date().toISOString(),
+    releaseNotes: `Phiên bản PC app (v${targetVersion}).`,
+    minExeVersion: rootVersionObj.minExeVersion || "1.0.0"
+  };
+  fs.writeFileSync(distVerPath, JSON.stringify(newDistVer, null, 2), 'utf8');
+  console.log(`[Build Script] Updated dist-app/version.json -> ${targetVersion}`);
+
+  console.log('[Build Script] Syncing assets, and pages to dist-app...');
+  try {
     fs.cpSync(path.join(__dirname, '../assets'), path.join(appDir, 'assets'), { recursive: true });
     fs.cpSync(path.join(__dirname, '../pages'), path.join(appDir, 'pages'), { recursive: true });
     fs.copyFileSync(path.join(__dirname, '../index.html'), path.join(appDir, 'index.html'));

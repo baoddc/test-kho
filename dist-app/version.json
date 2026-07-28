@@ -1,6 +1,6 @@
 {
-  "version": "1.0.0",
-  "buildTime": "2026-07-01T00:00:00Z",
-  "releaseNotes": "Phiên bản PC app đang phân phối hiện tại (v1.0.0).",
-  "minExeVersion": "1.0.0"
+  "version": "1.0.7",
+  "buildTime": "2026-07-28T18:20:00Z",
+  "releaseNotes": "Phiên bản PC app (v1.0.7).",
+  "minExeVersion": "1.0.1"
 }
