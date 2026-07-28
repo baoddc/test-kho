@@ -868,10 +868,35 @@
     renderModalContent(modal);
   }
 
+  function getEnvironmentInfo() {
+    const ua = navigator.userAgent;
+    const isElectron = /electron/i.test(ua) || Boolean(window.process && window.process.versions && window.process.versions.electron);
+    const isStandalonePWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true || document.referrer.includes('android-app://');
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+    const isDesktopPC = !isMobile && !isElectron && !isStandalonePWA;
+    
+    return { isElectron, isStandalonePWA, isMobile, isDesktopPC };
+  }
+
   function showUpdateToast(data) {
     if (isToastShown) return;
     isToastShown = true;
     injectStyles();
+
+    const env = getEnvironmentInfo();
+    const isPCWeb = env.isDesktopPC;
+
+    const titleText = isPCWeb 
+      ? `Đã có phiên bản PC mới (v${data.version})` 
+      : `Đã có phiên bản mới (v${data.version})`;
+
+    const bodyText = isPCWeb 
+      ? `Đã có bản cập nhật phần mềm .exe dành cho máy tính (PC).` 
+      : (data.releaseNotes || 'Tính năng và giao diện đã được cập nhật.');
+
+    const primaryBtnText = isPCWeb 
+      ? `📥 Tải bản PC (.exe)` 
+      : `⚡ Cập nhật ngay`;
 
     const toast = document.createElement('div');
     toast.className = 'update-toast';
@@ -879,13 +904,11 @@
     toast.innerHTML = `
       <div class="update-toast-header">
         <div class="update-toast-icon" style="background: linear-gradient(135deg, #3b82f6, #8b5cf6)">🚀</div>
-        <div class="update-toast-title">Đã có phiên bản mới (v${data.version})</div>
+        <div class="update-toast-title">${titleText}</div>
       </div>
-      <div class="update-toast-body">
-        ${data.releaseNotes || 'Tính năng và giao diện đã được cập nhật.'}
-      </div>
+      <div class="update-toast-body">${bodyText}</div>
       <div class="update-toast-actions">
-        <button class="btn-update-now" id="btnAppUpdateNow">⚡ Cập nhật ngay</button>
+        <button class="btn-update-now" id="btnAppUpdateNow">${primaryBtnText}</button>
         <button class="btn-update-dismiss" id="btnAppUpdateDismiss">Bỏ qua</button>
       </div>
     `;
@@ -893,7 +916,18 @@
     document.body.appendChild(toast);
 
     document.getElementById('btnAppUpdateNow').addEventListener('click', () => {
-      window.location.reload(true);
+      if (isPCWeb) {
+        if (typeof window.installPWA === 'function') {
+          window.installPWA();
+        } else {
+          const pcLink = (window.APP_DOWNLOAD_LINKS && window.APP_DOWNLOAD_LINKS.pcExe) 
+            || 'https://www.dropbox.com/scl/fi/stoup33i5zunpzntrxy2y/H-th-ng-Qu-n-l-Kho-Ph-i-Cu-n-DDC-Setup-1.0.1.exe?rlkey=im71u1wfju9jx04nf5qkj00om&st=s15gnyla&dl=1';
+          window.open(pcLink, '_blank');
+        }
+        toast.remove();
+      } else {
+        window.location.reload(true);
+      }
     });
 
     document.getElementById('btnAppUpdateDismiss').addEventListener('click', () => {
@@ -913,12 +947,6 @@
     }
   }
 
-  function isAppOrPWA() {
-    const isElectron = /electron/i.test(navigator.userAgent) || Boolean(window.process && window.process.versions && window.process.versions.electron);
-    const isStandalonePWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true || document.referrer.includes('android-app://');
-    return isElectron || isStandalonePWA;
-  }
-
   async function checkUpdate() {
     try {
       const response = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store' });
@@ -928,8 +956,11 @@
       const hasAppUpdate = data && data.version && compareVersions(data.version, CURRENT_VERSION) > 0;
       if (hasAppUpdate) {
         updateBellUI(true);
-        // Chỉ hiển thị toast cập nhật nếu là app PC (.exe) hoặc PWA/Mobile app đã cài đặt (không hiện trên Web trình duyệt thông thường)
-        if (isAppOrPWA()) {
+        const env = getEnvironmentInfo();
+        // Thông báo cập nhật xuất hiện khi:
+        // 1. Đang chạy trong App PC (.exe) hoặc PWA đã cài đặt
+        // 2. Hoặc người dùng đang sử dụng Web trên máy tính (Desktop PC)
+        if (env.isElectron || env.isStandalonePWA || env.isDesktopPC) {
           showUpdateToast(data);
         }
       }
