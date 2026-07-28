@@ -1,5 +1,5 @@
 (function () {
-  const CURRENT_VERSION = '1.0.0';
+  const CURRENT_VERSION = '1.0.1';
   window.APP_VERSION = CURRENT_VERSION;
 
   const SUPABASE_URL = 'https://ahcethtonjwktjtmxzog.supabase.co';
@@ -913,6 +913,12 @@
     }
   }
 
+  function isAppOrPWA() {
+    const isElectron = /electron/i.test(navigator.userAgent) || Boolean(window.process && window.process.versions && window.process.versions.electron);
+    const isStandalonePWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true || document.referrer.includes('android-app://');
+    return isElectron || isStandalonePWA;
+  }
+
   async function checkUpdate() {
     try {
       const response = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store' });
@@ -922,7 +928,10 @@
       const hasAppUpdate = data && data.version && compareVersions(data.version, CURRENT_VERSION) > 0;
       if (hasAppUpdate) {
         updateBellUI(true);
-        showUpdateToast(data);
+        // Chỉ hiển thị toast cập nhật nếu là app PC (.exe) hoặc PWA/Mobile app đã cài đặt (không hiện trên Web trình duyệt thông thường)
+        if (isAppOrPWA()) {
+          showUpdateToast(data);
+        }
       }
     } catch (err) {
       // Silently ignore network or offline errors

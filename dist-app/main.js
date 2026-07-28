@@ -1,10 +1,11 @@
-const { app, BrowserWindow, Menu } = require('electron');
+const { app, BrowserWindow, Menu, dialog } = require('electron');
 const path = require('path');
 const http = require('http');
 const fs = require('fs');
 
 let mainWindow = null;
 let server = null;
+let isQuitting = false;
 
 // MIME types for local file server
 const MIME_TYPES = {
@@ -151,6 +152,54 @@ async function createWindow() {
   // Thử nạp URL online (để luôn tự động cập nhật code mới nhất từ Web)
   mainWindow.loadURL(ONLINE_URL).catch(() => {
     mainWindow.loadURL(localUrl);
+  });
+
+  mainWindow.on('close', async (e) => {
+    if (isQuitting) return;
+    e.preventDefault();
+
+    let isEditingOrAdding = false;
+    try {
+      isEditingOrAdding = await mainWindow.webContents.executeJavaScript(`
+        (() => {
+          const modals = Array.from(document.querySelectorAll('.modal, [id*="modal"], [class*="modal"], .popup-container, .dialog, dialog[open]'));
+          return modals.some(el => {
+            const style = window.getComputedStyle(el);
+            return style.display !== 'none' && style.visibility !== 'hidden' && el.offsetWidth > 0 && el.offsetHeight > 0;
+          });
+        })()
+      `);
+    } catch (err) {
+      isEditingOrAdding = false;
+    }
+
+    let dialogOptions;
+    if (isEditingOrAdding) {
+      dialogOptions = {
+        type: 'warning',
+        buttons: ['Không', 'Có'],
+        defaultId: 0,
+        cancelId: 0,
+        title: 'Cảnh báo dữ liệu chưa lưu',
+        message: 'Bạn đang mở cửa sổ Thêm/Sửa dữ liệu.',
+        detail: 'Bạn có chắc chắn muốn đóng ứng dụng không? Các thay đổi chưa lưu có thể bị mất.'
+      };
+    } else {
+      dialogOptions = {
+        type: 'question',
+        buttons: ['Hủy', 'Đồng ý'],
+        defaultId: 0,
+        cancelId: 0,
+        title: 'Xác nhận thoát',
+        message: 'Bạn có chắc chắn muốn thoát ứng dụng Quản lý Kho Phôi Cuộn - DDC không?'
+      };
+    }
+
+    const { response } = await dialog.showMessageBox(mainWindow, dialogOptions);
+    if (response === 1) {
+      isQuitting = true;
+      app.quit();
+    }
   });
 
   mainWindow.on('closed', () => {

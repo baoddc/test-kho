@@ -77,15 +77,15 @@
     showInstallInstructionsModal();
   };
 
-  // Configurable download links (Direct download URLs via Dropbox)
+  // Configurable download links (Direct download URLs via GitHub Releases)
   window.APP_DOWNLOAD_LINKS = window.APP_DOWNLOAD_LINKS || {
-    pcExe: 'https://www.dropbox.com/scl/fi/yybsnjahrwnwtk8tp8i6z/H-th-ng-Qu-n-l-Kho-Ph-i-Cu-n-DDC-Setup-1.0.0.exe?rlkey=ddm2qj842wivi97bhfs8iqih0&st=d5p5jc6q&dl=1', // Direct download link for .exe
-    pcRar: 'https://www.dropbox.com/scl/fi/ljpfbzrkwnew7cbcufapa/H-th-ng-Qu-n-l-Kho-Ph-i-Cu-n-DDC-Setup-1.0.0.rar?rlkey=te062y7y0qjt63vj3c43r51gl&st=4ulddhkf&dl=1', // Direct download link for .rar
+    pcExe: 'https://www.dropbox.com/scl/fi/stoup33i5zunpzntrxy2y/H-th-ng-Qu-n-l-Kho-Ph-i-Cu-n-DDC-Setup-1.0.1.exe?rlkey=im71u1wfju9jx04nf5qkj00om&st=s15gnyla&dl=1', // Direct download link for .exe
+    pcRar: 'https://www.dropbox.com/scl/fi/75ztaw0clt1b7avh202za/H-th-ng-Qu-n-l-Kho-Ph-i-Cu-n-DDC-Setup-1.0.1.rar?rlkey=8z7ugdqpj1vnzfut7p9et2xt9&st=xrpc4hp6&dl=1', // Direct download link for .rar
     androidApk: '' // Insert link for .apk here
   };
 
-  const DOWNLOAD_PC_EXE_URL = window.APP_DOWNLOAD_LINKS.pcExe || '/downloads/DDC-Kho-Setup-1.0.0.exe';
-  const DOWNLOAD_PC_RAR_URL = window.APP_DOWNLOAD_LINKS.pcRar || '/downloads/DDC-Kho-Setup-1.0.0.rar';
+  const DOWNLOAD_PC_EXE_URL = window.APP_DOWNLOAD_LINKS.pcExe || '/downloads/DDC-Kho-Setup-1.0.1.exe';
+  const DOWNLOAD_PC_RAR_URL = window.APP_DOWNLOAD_LINKS.pcRar || '/downloads/DDC-Kho-Setup-1.0.1.rar';
   const ANDROID_APK_URL = window.APP_DOWNLOAD_LINKS.androidApk || '';
 
   function showInstallInstructionsModal() {
