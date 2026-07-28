@@ -4,6 +4,7 @@
 
   const SUPABASE_URL = 'https://ahcethtonjwktjtmxzog.supabase.co';
   const SUPABASE_ANON_KEY = 'sb_publishable_zxmsB9cyjDwi9ai9Vw-s1w_QlqKMG0S';
+  const ONLINE_VERSION_URL = 'https://web-supabase-five.vercel.app/version.json';
 
   const CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
   let isToastShown = false;
@@ -961,7 +962,15 @@
 
   async function checkUpdate() {
     try {
-      const response = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store' });
+      const env = getEnvironmentInfo();
+      const targetUrl = env.isElectron 
+        ? `${ONLINE_VERSION_URL}?t=${Date.now()}` 
+        : `/version.json?t=${Date.now()}`;
+
+      let response = await fetch(targetUrl, { cache: 'no-store' });
+      if (!response.ok && env.isElectron) {
+        response = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store' });
+      }
       if (!response.ok) return;
       const data = await response.json();
       latestVersionData = data;
