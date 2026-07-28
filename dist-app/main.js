@@ -3,9 +3,46 @@ const path = require('path');
 const http = require('http');
 const fs = require('fs');
 
+const { execSync } = require('child_process');
+
 let mainWindow = null;
 let server = null;
 let isQuitting = false;
+
+// Query Windows Registry to get the exact version registered in Control Panel (DisplayVersion)
+function getInstalledControlPanelVersion() {
+  if (process.platform !== 'win32') return app.getVersion();
+
+  try {
+    const regRoots = [
+      'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall',
+      'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall',
+      'HKLM\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall'
+    ];
+
+    for (const regRoot of regRoots) {
+      try {
+        const searchOutput = execSync(`reg query "${regRoot}" /s /f "KhoPhoiDDC.exe"`, { encoding: 'utf8', timeout: 3000 });
+        const match = searchOutput.match(/HKEY_[^\r\n]+/);
+        if (match) {
+          const keyPath = match[0].trim();
+          const verOutput = execSync(`reg query "${keyPath}" /v "DisplayVersion"`, { encoding: 'utf8', timeout: 3000 });
+          const verMatch = verOutput.match(/DisplayVersion\s+REG_SZ\s+([^\r\n]+)/);
+          if (verMatch && verMatch[1]) {
+            const ver = verMatch[1].trim();
+            if (ver) return ver;
+          }
+        }
+      } catch (e) {
+        // Try next registry location
+      }
+    }
+  } catch (err) {
+    console.warn('[Version Check] Failed to read Control Panel version from registry:', err.message);
+  }
+
+  return app.getVersion();
+}
 
 // MIME types for local file server
 const MIME_TYPES = {
@@ -27,10 +64,11 @@ function createLocalServer() {
     const srv = http.createServer((req, res) => {
       const urlPath = req.url.split('?')[0];
       if (urlPath === '/version.json') {
+        const installedVer = getInstalledControlPanelVersion();
         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
         return res.end(JSON.stringify({
-          version: app.getVersion(),
-          releaseNotes: `Phiên bản PC app (${app.getVersion()})`,
+          version: installedVer,
+          releaseNotes: `Phiên bản PC app (${installedVer})`,
           minExeVersion: '1.0.0'
         }));
       }
