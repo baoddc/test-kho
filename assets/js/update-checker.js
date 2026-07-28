@@ -1023,11 +1023,15 @@
     bindBellEventListener();
     setInterval(bindBellEventListener, 1000);
 
-    // Giải pháp B: Đọc phiên bản thực tế từ /version.json local
-    // Với PC app: đọc từ dist-app/version.json → phiên bản .exe đã cài
-    // Với Web: đọc từ Vercel version.json → luôn là phiên bản web hiện tại
+    const env = getEnvironmentInfo();
     try {
-      const localRes = await fetch('/version.json?_init=1', { cache: 'no-store' });
+      // Nếu là Electron (App PC): Luôn fetch '/version.json' từ local server (127.0.0.1) -> trả về v1.0.0 từ Control Panel / Registry
+      // Nếu là Web: Fetch từ ONLINE_VERSION_URL -> trả về v1.0.6 từ Vercel
+      const versionUrl = env.isElectron 
+        ? '/version.json?_init=1' 
+        : `${ONLINE_VERSION_URL}?_init=1`;
+
+      const localRes = await fetch(versionUrl, { cache: 'no-store' });
       if (localRes.ok) {
         const localData = await localRes.json();
         if (localData && localData.version) {
