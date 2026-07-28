@@ -175,9 +175,11 @@ async function createWindow() {
     }
   });
 
-  // Đảm bảo Ctrl + Lăn chuột hoạt động mượt mà trên tất cả các trang
+  // Inject phiên bản cài đặt từ Registry vào giao diện web
   mainWindow.webContents.on('did-finish-load', () => {
+    const installedVer = getInstalledControlPanelVersion();
     mainWindow.webContents.executeJavaScript(`
+      window.__ELECTRON_INSTALLED_VERSION__ = "${installedVer}";
       if (!window.__ctrlWheelZoomAttached) {
         window.__ctrlWheelZoomAttached = true;
         window.addEventListener('wheel', function(e) {

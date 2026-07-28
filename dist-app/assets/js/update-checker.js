@@ -1024,23 +1024,40 @@
     setInterval(bindBellEventListener, 1000);
 
     const env = getEnvironmentInfo();
-    try {
-      // Nếu là Electron (App PC): Luôn fetch '/version.json' từ local server (127.0.0.1) -> trả về v1.0.0 từ Control Panel / Registry
-      // Nếu là Web: Fetch từ ONLINE_VERSION_URL -> trả về v1.0.6 từ Vercel
-      const versionUrl = env.isElectron 
-        ? '/version.json?_init=1' 
-        : `${ONLINE_VERSION_URL}?_init=1`;
+    if (env.isElectron) {
+      // 💻 Đang chạy trong App PC (Electron)
+      // Mặc định phiên bản PC đã cài là 1.0.0 (hoặc từ main process)
+      CURRENT_VERSION = window.__ELECTRON_INSTALLED_VERSION__ || '1.0.0';
+      window.APP_VERSION = CURRENT_VERSION;
 
-      const localRes = await fetch(versionUrl, { cache: 'no-store' });
-      if (localRes.ok) {
-        const localData = await localRes.json();
-        if (localData && localData.version) {
-          CURRENT_VERSION = localData.version;
-          window.APP_VERSION = CURRENT_VERSION;
+      // Đọc phiên bản từ server nội cục (127.0.0.1) NẾU VÀ CHỈ NẾU đang chạy trên localhost / 127.0.0.1
+      try {
+        const localHost = window.location.hostname;
+        if (localHost === '127.0.0.1' || localHost === 'localhost' || localHost === '') {
+          const localRes = await fetch('/version.json?_init=1', { cache: 'no-store' });
+          if (localRes.ok) {
+            const localData = await localRes.json();
+            if (localData && localData.version) {
+              CURRENT_VERSION = localData.version;
+              window.APP_VERSION = CURRENT_VERSION;
+            }
+          }
         }
+      } catch (e) {
+        // Giữ fallback CURRENT_VERSION = '1.0.0'
       }
-    } catch (e) {
-      // Giữ fallback nếu lỗi
+    } else {
+      // 🌐 Đang chạy trên Web (Trình duyệt / Vercel)
+      try {
+        const webRes = await fetch(`${ONLINE_VERSION_URL}?_init=1`, { cache: 'no-store' });
+        if (webRes.ok) {
+          const webData = await webRes.json();
+          if (webData && webData.version) {
+            CURRENT_VERSION = webData.version;
+            window.APP_VERSION = CURRENT_VERSION;
+          }
+        }
+      } catch (e) {}
     }
 
     await checkUpdate();
