@@ -1,6 +1,6 @@
 {
   "name": "test-kho",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Hệ thống Quản lý Kho Phôi Cuộn - DDC",
   "main": "pages/index.html",
   "scripts": {
