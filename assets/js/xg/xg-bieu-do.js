@@ -790,10 +790,8 @@ function processDataAndCreateCharts() {
   // Process monthly data
   const monthlyData = {};
   const workshopVolumes = {};
-  const importMaterialVolumesByCode = {};
-  const importMaterialNamesByCode = {};
-  const exportMaterialVolumesByCode = {};
-  const exportMaterialNamesByCode = {};
+  const importMaterialVolumes = {};
+  const exportMaterialVolumes = {};
 
   // Process import data
   for (let i = 1; i < importData.length; i++) {
@@ -833,20 +831,19 @@ function processDataAndCreateCharts() {
       importByType.congTrinh += quantity;
     }
 
-    // Material volume
+    // Material volume (SUMIF by Mã vật tư - Tên vật tư)
     const ma = importMaColIndex !== -1 ? String(row[importMaColIndex] || '').trim() : '';
     const ten = importTenColIndex !== -1 ? String(row[importTenColIndex] || '').trim() : '';
-    const code = ma || ten;
-    if (code) {
-      importMaterialVolumesByCode[code] = (importMaterialVolumesByCode[code] || 0) + quantity;
-      if (ten) {
-        if (!importMaterialNamesByCode[code]) {
-          importMaterialNamesByCode[code] = [];
-        }
-        if (!importMaterialNamesByCode[code].includes(ten)) {
-          importMaterialNamesByCode[code].push(ten);
-        }
-      }
+    
+    let key = '';
+    if (ma && ten && ma !== ten) {
+      key = `${ma} - ${ten}`;
+    } else {
+      key = ma || ten;
+    }
+
+    if (key) {
+      importMaterialVolumes[key] = (importMaterialVolumes[key] || 0) + quantity;
     }
   }
 
@@ -888,20 +885,19 @@ function processDataAndCreateCharts() {
       exportByType.congTrinh += quantity;
     }
 
-    // Material volume
+    // Material volume (SUMIF by Mã vật tư - Tên vật tư)
     const ma = exportMaColIndex !== -1 ? String(row[exportMaColIndex] || '').trim() : '';
     const ten = exportTenColIndex !== -1 ? String(row[exportTenColIndex] || '').trim() : '';
-    const code = ma || ten;
-    if (code) {
-      exportMaterialVolumesByCode[code] = (exportMaterialVolumesByCode[code] || 0) + quantity;
-      if (ten) {
-        if (!exportMaterialNamesByCode[code]) {
-          exportMaterialNamesByCode[code] = [];
-        }
-        if (!exportMaterialNamesByCode[code].includes(ten)) {
-          exportMaterialNamesByCode[code].push(ten);
-        }
-      }
+
+    let key = '';
+    if (ma && ten && ma !== ten) {
+      key = `${ma} - ${ten}`;
+    } else {
+      key = ma || ten;
+    }
+
+    if (key) {
+      exportMaterialVolumes[key] = (exportMaterialVolumes[key] || 0) + quantity;
     }
 
     // Workshop volume
@@ -909,40 +905,6 @@ function processDataAndCreateCharts() {
     const xuongKey = xuong ? String(xuong).trim() : '';
     if (xuongKey) {
       workshopVolumes[xuongKey] = (workshopVolumes[xuongKey] || 0) + quantity;
-    }
-  }
-
-  // Build final importMaterialVolumes map grouped by code
-  const importMaterialVolumes = {};
-  for (const [code, quantity] of Object.entries(importMaterialVolumesByCode)) {
-    const names = importMaterialNamesByCode[code] || [];
-    let bestName = '';
-    if (names.length > 0) {
-      const validNames = names.filter(n => n.length > 0);
-      if (validNames.length > 0) {
-        bestName = validNames.reduce((shortest, current) => current.length < shortest.length ? current : shortest, validNames[0]);
-      }
-    }
-    const displayKey = code && bestName && code !== bestName ? `${code} - ${bestName}` : (code || bestName || '');
-    if (displayKey) {
-      importMaterialVolumes[displayKey] = (importMaterialVolumes[displayKey] || 0) + quantity;
-    }
-  }
-
-  // Build final exportMaterialVolumes map grouped by code
-  const exportMaterialVolumes = {};
-  for (const [code, quantity] of Object.entries(exportMaterialVolumesByCode)) {
-    const names = exportMaterialNamesByCode[code] || [];
-    let bestName = '';
-    if (names.length > 0) {
-      const validNames = names.filter(n => n.length > 0);
-      if (validNames.length > 0) {
-        bestName = validNames.reduce((shortest, current) => current.length < shortest.length ? current : shortest, validNames[0]);
-      }
-    }
-    const displayKey = code && bestName && code !== bestName ? `${code} - ${bestName}` : (code || bestName || '');
-    if (displayKey) {
-      exportMaterialVolumes[displayKey] = (exportMaterialVolumes[displayKey] || 0) + quantity;
     }
   }
 
