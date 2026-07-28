@@ -141,17 +141,9 @@ async function createWindow() {
     `).catch(() => {});
   });
 
-  // Fallback sang local server nếu load online thất bại (offline)
-  mainWindow.webContents.on('did-fail-load', (event, errorCode) => {
-    if (errorCode !== -3 && mainWindow && !mainWindow.webContents.getURL().includes('127.0.0.1')) {
-      console.log('[Electron] Loading online URL failed. Falling back to local server.');
-      mainWindow.loadURL(localUrl);
-    }
-  });
-
-  // Thử nạp URL online (để luôn tự động cập nhật code mới nhất từ Web)
-  mainWindow.loadURL(ONLINE_URL).catch(() => {
-    mainWindow.loadURL(localUrl);
+  // Nạp giao diện ứng dụng từ máy chủ nội cục (Local Standalone Executable App)
+  mainWindow.loadURL(localUrl).catch((err) => {
+    console.error('[Electron] Failed to load local URL:', err);
   });
 
   mainWindow.on('close', async (e) => {
