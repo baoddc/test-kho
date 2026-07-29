@@ -147,7 +147,7 @@ body {
   overflow: hidden;
 }
 
-/* Animated Glowing Border Trail around Titles */
+/* Animated Flowing Border Beam (Left to Right) */
 .highlight-line {
   position: relative;
   display: inline-flex;
@@ -168,18 +168,24 @@ body {
 .highlight-line::before {
   content: '';
   position: absolute;
-  top: -75%;
-  left: -75%;
-  width: 250%;
-  height: 250%;
-  background: conic-gradient(
-    transparent,
-    rgba(0, 217, 255, 0.9),
-    rgba(0, 255, 136, 1),
-    transparent 35%
+  inset: 0;
+  border-radius: 50px;
+  padding: 2px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.08) 0%,
+    #00d9ff 40%,
+    #00ff88 60%,
+    rgba(255, 255, 255, 0.08) 100%
   );
-  animation: rotateBorder 3.5s linear infinite;
-  z-index: -2;
+  background-size: 200% 100%;
+  animation: flowRight 3s linear infinite;
+  -webkit-mask: 
+     linear-gradient(#fff 0 0) content-box, 
+     linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  z-index: -1;
 }
 
 .highlight-line::after {
@@ -188,13 +194,13 @@ body {
   inset: 2px;
   border-radius: 48px;
   background: #0f172a;
-  z-index: -1;
+  z-index: -2;
   transition: background 0.3s ease;
 }
 
-@keyframes rotateBorder {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+@keyframes flowRight {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 .tech-grid {
@@ -566,12 +572,14 @@ body {
 }
 
 [data-bs-theme="light"] .highlight-line::before {
-  background: conic-gradient(
-    transparent,
-    rgba(2, 132, 199, 0.9),
-    rgba(5, 150, 105, 1),
-    transparent 35%
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.08) 0%,
+    #0284c7 40%,
+    #059669 60%,
+    rgba(0, 0, 0, 0.08) 100%
   );
+  background-size: 200% 100%;
 }
 
 [data-bs-theme="light"] .highlight-line::after {
