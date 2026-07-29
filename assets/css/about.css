@@ -370,3 +370,133 @@ body {
 .custom-table tbody tr:hover td {
   background: rgba(255, 255, 255, 0.05);
 }
+
+/* Live Status Badges */
+.status-pills-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 1.5rem;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-radius: 30px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #e2e8f0;
+  transition: all 0.3s ease;
+}
+
+.status-pill:hover {
+  transform: translateY(-2px);
+  border-color: rgba(0, 217, 255, 0.3);
+  box-shadow: 0 4px 15px rgba(0, 217, 255, 0.15);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  box-shadow: 0 0 10px currentColor;
+}
+
+.status-dot.green { background-color: #00ff88; color: #00ff88; }
+.status-dot.blue { background-color: #00d9ff; color: #00d9ff; }
+.status-dot.purple { background-color: #a855f7; color: #a855f7; }
+.status-dot.yellow { background-color: #ffc107; color: #ffc107; }
+
+/* Spotlight & Technical Architecture Cards */
+.spotlight-card {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 20px;
+  padding: 1.8rem;
+  height: 100%;
+  text-align: left;
+  transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.spotlight-card:hover {
+  transform: translateY(-6px);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(0, 217, 255, 0.3);
+  box-shadow: 0 12px 30px rgba(0, 217, 255, 0.1);
+}
+
+.spotlight-icon {
+  font-size: 2rem;
+  margin-bottom: 1.2rem;
+  display: inline-block;
+}
+
+.spotlight-card h4 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+
+.spotlight-card p {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Supabase Optimization Note Card */
+.supabase-note-card {
+  background: linear-gradient(135deg, rgba(0, 217, 255, 0.05) 0%, rgba(0, 255, 136, 0.05) 100%);
+  border: 1px solid rgba(0, 217, 255, 0.2);
+  border-radius: 20px;
+  padding: 1.5rem 2rem;
+  margin-top: 1.5rem;
+}
+
+.supabase-note-card h5 {
+  color: #00d9ff;
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.supabase-note-card p {
+  color: #cbd5e1;
+  font-size: 0.9rem;
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* Dev Terminal Badge */
+.dev-terminal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(0, 217, 255, 0.25);
+  padding: 12px 28px;
+  border-radius: 50px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.95rem;
+  color: #94a3b8;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+.dev-terminal-badge strong {
+  color: #00d9ff;
+}
+
+.dev-terminal-badge i {
+  color: #00ff88;
+}
+
