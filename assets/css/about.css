@@ -147,23 +147,54 @@ body {
   overflow: hidden;
 }
 
+/* Animated Glowing Border Trail around Titles */
 .highlight-line {
   position: relative;
-  display: inline-block;
-  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 28px;
+  font-weight: 800;
   color: #f8fafc;
+  font-size: 1.75rem;
+  border-radius: 50px;
+  overflow: hidden;
+  z-index: 1;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.highlight-line::before {
+  content: '';
+  position: absolute;
+  top: -75%;
+  left: -75%;
+  width: 250%;
+  height: 250%;
+  background: conic-gradient(
+    transparent,
+    rgba(0, 217, 255, 0.9),
+    rgba(0, 255, 136, 1),
+    transparent 35%
+  );
+  animation: rotateBorder 3.5s linear infinite;
+  z-index: -2;
 }
 
 .highlight-line::after {
   content: '';
   position: absolute;
-  bottom: -10px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 50px;
-  height: 3px;
-  background: linear-gradient(90deg, #00d9ff, #00ff88);
-  border-radius: 3px;
+  inset: 2px;
+  border-radius: 48px;
+  background: #0f172a;
+  z-index: -1;
+  transition: background 0.3s ease;
+}
+
+@keyframes rotateBorder {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .tech-grid {
@@ -531,6 +562,20 @@ body {
 
 [data-bs-theme="light"] .highlight-line {
   color: #0f172a;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="light"] .highlight-line::before {
+  background: conic-gradient(
+    transparent,
+    rgba(2, 132, 199, 0.9),
+    rgba(5, 150, 105, 1),
+    transparent 35%
+  );
+}
+
+[data-bs-theme="light"] .highlight-line::after {
+  background: #ffffff;
 }
 
 [data-bs-theme="light"] .status-pill {
