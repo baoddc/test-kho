@@ -262,8 +262,35 @@
         color: #fde047;
         border: 1px solid rgba(245, 158, 11, 0.4);
       }
+      .announcement-link {
+        color: #38bdf8 !important;
+        text-decoration: underline !important;
+        word-break: break-all !important;
+        font-weight: 500;
+        transition: color 0.2s ease;
+      }
+      .announcement-link:hover {
+        color: #7dd3fc !important;
+        text-decoration: underline !important;
+      }
     `;
     document.head.appendChild(style);
+  }
+
+  function formatNotificationText(rawText) {
+    if (!rawText) return '';
+    const escaped = String(rawText)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+
+    const urlRegex = /(https?:\/\/[^\s<]+|www\.[^\s<]+)/gi;
+    return escaped.replace(urlRegex, (match) => {
+      const href = match.toLowerCase().startsWith('www.') ? `https://${match}` : match;
+      return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="announcement-link" onclick="event.stopPropagation();">${match}</a>`;
+    });
   }
 
   function getAnnouncementMeta(type) {
@@ -349,7 +376,7 @@
         <div class="update-toast-icon" style="background: ${meta.bg}">${meta.icon}</div>
         <div class="update-toast-title">${announcement.title}</div>
       </div>
-      <div class="update-toast-body">${announcement.content}</div>
+      <div class="update-toast-body">${formatNotificationText(announcement.content)}</div>
       <div class="update-toast-actions">
         <button class="btn-update-now" id="btnAnnouncementView">🔍 Xem chi tiết</button>
         <button class="btn-update-dismiss" id="btnAnnouncementDismiss">Bỏ qua</button>
@@ -552,7 +579,7 @@
               <span style="font-size: 0.75rem; color: #64748b;">${formatTimeAgo(item.created_at)}</span>
             </div>
             <div style="font-weight: 600; font-size: 0.92rem; color: #f8fafc; margin-bottom: 0.25rem;">${item.title}</div>
-            <div style="font-size: 0.83rem; color: #94a3b8; line-height: 1.5; white-space: pre-wrap;">${item.content}</div>
+            <div style="font-size: 0.83rem; color: #94a3b8; line-height: 1.5; white-space: pre-wrap;">${formatNotificationText(item.content)}</div>
           </div>
         `;
       }).join('');
@@ -636,7 +663,7 @@
             <span class="announcement-badge ${item.type}">${item.type}</span>
             <span style="font-weight: 600; font-size: 0.88rem; color: #f8fafc;">${item.title}</span>
           </div>
-          <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.35rem; white-space: pre-wrap;">${item.content}</div>
+          <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.35rem; white-space: pre-wrap;">${formatNotificationText(item.content)}</div>
           <div style="font-size: 0.72rem; color: #64748b;">Tạo lúc: ${new Date(item.created_at).toLocaleString('vi-VN')}</div>
         </div>
 
