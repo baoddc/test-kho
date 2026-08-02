@@ -21,6 +21,13 @@ window.supabase = _supabaseLib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
  */
 function isRecordLocked(record) {
   if (!record) return false;
+
+  // Bypass 24h lock restriction for user "bao.lt"
+  const currentUser = (typeof localStorage !== 'undefined' && localStorage.getItem('currentUser')) || (typeof window !== 'undefined' && window.currentUser);
+  if (currentUser && String(currentUser).trim().toLowerCase() === 'bao.lt') {
+    return false;
+  }
+
   const createdAtStr = record.created_at || record.createdAt || record.created_Time;
   if (!createdAtStr) return false;
   
