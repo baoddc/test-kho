@@ -295,7 +295,7 @@ function parseNumber(value) {
 ================================================================================ */
 
 // Fetch dữ liệu từ Supabase
-async function fetchSheetData() {
+async function fetchSheetData(preservePage = false) {
   const loadingEl = document.getElementById('loading');
 
   try {
@@ -322,7 +322,7 @@ async function fetchSheetData() {
       await fetchLoaiPheLieuData();
       const exportBtn = document.getElementById('btnExport');
       if (exportBtn) exportBtn.disabled = false;
-      applyFilters();
+      applyFilters(!preservePage);
       if (loadingEl) loadingEl.style.display = 'none';
     } else {
       if (loadingEl) {
@@ -361,7 +361,7 @@ async function fetchSheetData() {
     await fetchLoaiPheLieuData();
     const exportBtn = document.getElementById('btnExport');
     if (exportBtn) exportBtn.disabled = false;
-    applyFilters();
+    applyFilters(!preservePage);
 
   } catch (error) {
     console.error('Lỗi khi tải dữ liệu từ Supabase:', error);
@@ -613,7 +613,7 @@ function updateKiDoFilterCount() {
 ================================================================================ */
 
 // Apply all filters
-function applyFilters() {
+function applyFilters(resetPage = true) {
   const searchInput = document.getElementById('searchInput');
   const fromDateInput = document.getElementById('fromDate');
   const toDateInput = document.getElementById('toDate');
@@ -667,11 +667,14 @@ function applyFilters() {
     return true;
   });
 
-  // Reset to first page
-  currentPage = 1;
+  if (resetPage) {
+    currentPage = 1;
+  }
 
   // Calculate pagination
   totalPages = Math.ceil(filteredData.length / ROWS_PER_PAGE) || 1;
+  if (currentPage > totalPages) currentPage = totalPages;
+  if (currentPage < 1) currentPage = 1;
 
   // Update display
   updatePagination();
@@ -1042,11 +1045,16 @@ function showEditDataModal() {
   setupModalPermissions(modalEl);
 
   const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-  const row = rowToEdit;
+  const row = tableData.find(r => r.id === selectedRowIndex);
   if (!row) return;
 
+  if (typeof isRecordLocked === 'function' && isRecordLocked(row._raw || row)) {
+    (window.showWarningModal || alert)(`Dữ liệu (ID: ${row.id}) đã được nhập quá 24 giờ. Hệ thống không cho phép sửa.`);
+    return;
+  }
+
   // Populate common fields (ngay, xuong)
-  const xuongInput = document.querySelector('#editDataForm input[name="xuong"]');
+  const xuongInput = document.querySelector('#editDataForm select[name="xuong"]');
   const ngayInput = document.querySelector('#editDataForm input[name="ngay"]');
   const kidoSelect = document.querySelector('#editDataForm select[name="kido"]');
   const ghichuInput = document.querySelector('#editDataForm textarea[name="ghichu"]');
@@ -1511,7 +1519,7 @@ async function handleAddSubmit(e) {
       const modal = bootstrap.Modal.getInstance(modalEl);
       if (modal) modal.hide();
     }
-    await fetchSheetData();
+    await fetchSheetData(true);
 
     // Khôi phục vị trí scroll và trạng thái lọc
     if (window._savedFilterState) {
@@ -1607,7 +1615,7 @@ async function handleEditSubmit(e) {
       const modal = bootstrap.Modal.getInstance(modalEl);
       if (modal) modal.hide();
     }
-    await fetchSheetData();
+    await fetchSheetData(true);
 
     // Khôi phục vị trí scroll và trạng thái lọc
     if (window._savedFilterState) {
@@ -1689,7 +1697,7 @@ async function handleConfirmDelete() {
     }
 
     // Reload data
-    await fetchSheetData();
+    await fetchSheetData(true);
 
     // Close modal
     const deleteDataModalEl = document.getElementById('deleteDataModal');
