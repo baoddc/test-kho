@@ -84,6 +84,7 @@ function restoreFilterState(state) {
     const cb = document.querySelector(`#voucherFilterMenu input[value="${CSS.escape(filter.value)}"]`);
     if (cb) cb.checked = filter.checked;
   });
+  filterTable(false);
 }
 
 
@@ -601,7 +602,7 @@ function renderTableWithPagination() {
 
 const debouncedFilter = debounce(filterTable, 300);
 
-function filterTable() {
+function filterTable(resetPage = true) {
   const fromVal = document.getElementById('fromDate')?.value || '';
   const toVal = document.getElementById('toDate')?.value || '';
   const searchVal = document.getElementById('searchInput')?.value?.trim().toLowerCase() || '';
@@ -648,7 +649,7 @@ function filterTable() {
     }
     filtered.push(row);
   }
-  renderTable(filtered);
+  renderTable(filtered, resetPage);
 }
 
 function populateTypeDropdown(headerName, menuId, btnId, countId, data) {

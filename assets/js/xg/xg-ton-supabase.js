@@ -313,9 +313,9 @@ function setupFilterEventListeners() {
    TABLE RENDERING
 ================================================================================ */
 
-function renderTable(data) {
+function renderTable(data, resetPage = true) {
   filteredData = data;
-  currentPage = 1;
+  if (resetPage) currentPage = 1;
   if (groupByMode) {
     renderGroupedTable(data);
   } else {
@@ -516,7 +516,7 @@ function renderTableWithPagination() {
 
 const debouncedFilter = debounce(filterTable, 300);
 
-function filterTable() {
+function filterTable(resetPage = true) {
   const searchVal = document.getElementById('searchInput')?.value?.trim().toLowerCase() || '';
   const needsSearchFilter = searchVal !== '';
 
@@ -537,7 +537,7 @@ function filterTable() {
     }
     filtered.push(row);
   }
-  renderTable(filtered);
+  renderTable(filtered, resetPage);
 }
 
 
