@@ -875,7 +875,7 @@ function openAddDataModal() {
   // Additional: Mã CT công trình(10), Tên CT(11), Ghi chú(12)
   const additionalColIndices = [];
   for (let i = quantityColIndex + 1; i < COLUMN_HEADERS.length; i++) {
-    if (!HIDDEN_COLUMNS.includes(COLUMN_HEADERS[i])) additionalColIndices.push(i);
+    if (!HIDDEN_COLUMNS.includes(COLUMN_HEADERS[i]) && COLUMN_HEADERS[i] !== 'Số lượng (m)') additionalColIndices.push(i);
   }
   additionalColIndices.forEach(colIdx => {
     buildFormField(COLUMN_HEADERS[colIdx], colIdx, undefined, additionalFieldsContainer, 'add_ext_');
@@ -956,7 +956,7 @@ function openEditDataModal() {
 
   const additionalColIndices = [];
   for (let i = quantityColIndex + 1; i < COLUMN_HEADERS.length; i++) {
-    if (!HIDDEN_COLUMNS.includes(COLUMN_HEADERS[i])) additionalColIndices.push(i);
+    if (!HIDDEN_COLUMNS.includes(COLUMN_HEADERS[i]) && COLUMN_HEADERS[i] !== 'Số lượng (m)') additionalColIndices.push(i);
   }
   additionalColIndices.forEach(colIdx => {
     buildFormField(COLUMN_HEADERS[colIdx], colIdx, rowData[colIdx], additionalFieldsContainer, 'edit_ext_');

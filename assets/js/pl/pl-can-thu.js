@@ -1490,7 +1490,7 @@ async function handleAddSubmit(e) {
   }
 
   // Show loading overlay
-  showLoadingOverlay('Đang thêm dữ liệu vào Supabase...');
+  showLoadingOverlay('Đang thêm dữ liệu...');
 
   try {
     // Create multiple records (one for each loại)

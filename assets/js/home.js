@@ -57,23 +57,12 @@ function showAuthModal() {
     };
 
     document.getElementById('modal-cancel-btn').onclick = () => {
-      const currentPage = window.location.pathname.split('/').pop() || 'index.html';
-
-      if (!PUBLIC_PAGES.includes(currentPage) && currentPage !== 'index.html') {
-        window.location.href = '/pages/home.html';
-      } else {
-        modal.classList.remove('active');
-      }
+      window.location.href = '/pages/index.html';
     };
 
     modal.onclick = (e) => {
-      if (e.target === modal) {
-        // Only allow closing if we aren't on a restricted page
-        const currentPage = window.location.pathname.split('/').pop() || 'index.html';
-        if (PUBLIC_PAGES.includes(currentPage)) {
-          modal.classList.remove('active');
-        }
-      }
+      // Backdrop click is locked: do not close modal to prevent viewing restricted data
+      e.stopPropagation();
     };
   }
 
@@ -1030,7 +1019,28 @@ window.addEventListener('load', () => {
       }
       
       const shift = hasSyntheticSTT ? 1 : 0;
-      const dataColIndex = idx - startIdx - shift;
+      const domColIdx = idx - startIdx - shift;
+      let dataColIndex = domColIdx;
+
+      if (!isPL && typeof tableData !== 'undefined' && tableData && tableData[0]) {
+        const cloneWrapper = wrapper.cloneNode(true);
+        const oldFilterBtn = cloneWrapper.querySelector('.ddc-filter-btn');
+        if (oldFilterBtn) oldFilterBtn.remove();
+        const thText = cloneWrapper.textContent.trim();
+        const cleanThText = thText.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+        const matchedIdx = tableData[0].findIndex(h => {
+          const cleanH = String(h || '').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          return cleanH === cleanThText;
+        });
+
+        if (matchedIdx >= 0) {
+          dataColIndex = matchedIdx;
+        } else if (typeof displayColIndexes !== 'undefined' && Array.isArray(displayColIndexes) && displayColIndexes[domColIdx] !== undefined) {
+          dataColIndex = displayColIndexes[domColIdx];
+        }
+      }
+
       const colKeyOrIdx = isPL ? TABLE_COLUMNS[dataColIndex] : String(dataColIndex);
       
       let filterBtn = wrapper.querySelector('.ddc-filter-btn');

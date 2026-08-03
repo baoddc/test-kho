@@ -965,7 +965,7 @@ function openAddDataModal() {
   // Chỉ render Mã công trình, Tên công trình, Ghi chú trong additional
   const additionalColIndices = [];
   for (let i = quantityColIndex + 1; i < COLUMN_HEADERS.length; i++) {
-    if (!HIDDEN_COLUMNS.includes(COLUMN_HEADERS[i]) && COLUMN_HEADERS[i] !== 'Vị trí') {
+    if (!HIDDEN_COLUMNS.includes(COLUMN_HEADERS[i]) && COLUMN_HEADERS[i] !== 'Vị trí' && COLUMN_HEADERS[i] !== 'Số lượng (m)') {
       additionalColIndices.push(i);
     }
   }
@@ -1042,7 +1042,7 @@ function openEditDataModal() {
 
   const additionalColIndices = [];
   for (let i = quantityColIndex + 1; i < COLUMN_HEADERS.length; i++) {
-    if (!HIDDEN_COLUMNS.includes(COLUMN_HEADERS[i]) && COLUMN_HEADERS[i] !== 'Vị trí') {
+    if (!HIDDEN_COLUMNS.includes(COLUMN_HEADERS[i]) && COLUMN_HEADERS[i] !== 'Vị trí' && COLUMN_HEADERS[i] !== 'Số lượng (m)') {
       additionalColIndices.push(i);
     }
   }
@@ -1096,47 +1096,11 @@ function openDeleteDataModal() {
 ================================================================================ */
 
 function updateRollCuonIds() {
-  const maVatTuInput = document.querySelector('#addDataCommonFields input[name="col_5"]');
-  if (!maVatTuInput) return;
-  const maVatTu = maVatTuInput.value.trim();
-  if (!maVatTu) {
-    document.querySelectorAll('#rollsTableBody .roll-cuon-id').forEach(input => { input.value = ''; });
-    return;
-  }
-
-  const existingCount = (window._rawSupabaseData || []).filter(row => 
-    String(row['Mã vật tư'] || '').trim().toLowerCase() === maVatTu.toLowerCase()
-  ).length;
-
-  document.querySelectorAll('#rollsTableBody tr').forEach((row, index) => {
-    const cuonIdInput = row.querySelector('.roll-cuon-id');
-    if (cuonIdInput) {
-      cuonIdInput.value = `${maVatTu} - Cuộn ${existingCount + index}`;
-    }
-  });
+  // Cuộn ID is no longer automatically recalculated
 }
 
 function updateEditRollCuonIds() {
-  const maVatTuInput = document.querySelector('#editDataCommonFields input[name="col_5"]');
-  if (!maVatTuInput) return;
-  const maVatTu = maVatTuInput.value.trim();
-  if (!maVatTu) {
-    document.querySelectorAll('#editRollsTableBody .edit-roll-cuon-id').forEach(input => { input.value = ''; });
-    return;
-  }
-
-  const rowId = document.querySelector('#editDataCommonFields input[name="row_id"]')?.value;
-  const existingCount = (window._rawSupabaseData || []).filter(row => 
-    String(row['Mã vật tư'] || '').trim().toLowerCase() === maVatTu.toLowerCase() &&
-    String(row['id']) !== String(rowId)
-  ).length;
-
-  document.querySelectorAll('#editRollsTableBody tr').forEach((row, index) => {
-    const cuonIdInput = row.querySelector('.edit-roll-cuon-id');
-    if (cuonIdInput) {
-      cuonIdInput.value = `${maVatTu} - Cuộn ${existingCount + index}`;
-    }
-  });
+  // Cuộn ID is no longer automatically recalculated
 }
 
 function addRollRow(cuonId = '', kgValue = '', mValue = '', viTri = '') {
@@ -1146,7 +1110,7 @@ function addRollRow(cuonId = '', kgValue = '', mValue = '', viTri = '') {
   tr.dataset.rollId = rollCount;
   tr.innerHTML = `
     <td class="text-center roll-stt">${rollCount}</td>
-    <td><input type="text" class="form-control form-control-sm roll-cuon-id" readonly placeholder="Cuộn ID" value="${cuonId}"></td>
+    <td><input type="text" class="form-control form-control-sm roll-cuon-id" placeholder="Cuộn ID" value="${cuonId}"></td>
     <td><input type="number" class="form-control form-control-sm roll-kg" step="any" min="0" inputMode="decimal" required placeholder="Nhập số kg" value="${kgValue}"></td>
     <td><input type="number" class="form-control form-control-sm roll-m" step="any" min="0" inputMode="decimal" required placeholder="Nhập số m" value="${mValue}"></td>
     <td><input type="text" class="form-control form-control-sm roll-vi-tri" required placeholder="Vị trí" value="${viTri}"></td>
@@ -1205,7 +1169,7 @@ function addEditRollRow(cuonId = '', kgValue = '', mValue = '', viTri = '') {
   tr.dataset.rollId = editRollCount;
   tr.innerHTML = `
     <td class="text-center edit-roll-stt">${editRollCount}</td>
-    <td><input type="text" class="form-control form-control-sm edit-roll-cuon-id" readonly placeholder="Cuộn ID" value="${cuonId}"></td>
+    <td><input type="text" class="form-control form-control-sm edit-roll-cuon-id" placeholder="Cuộn ID" value="${cuonId}"></td>
     <td><input type="number" class="form-control form-control-sm edit-roll-kg" step="any" min="0" inputMode="decimal" required placeholder="Nhập số kg" value="${kgValue}"></td>
     <td><input type="number" class="form-control form-control-sm edit-roll-m" step="any" min="0" inputMode="decimal" required placeholder="Nhập số m" value="${mValue}"></td>
     <td><input type="text" class="form-control form-control-sm edit-roll-vi-tri" required placeholder="Vị trí" value="${viTri}"></td>

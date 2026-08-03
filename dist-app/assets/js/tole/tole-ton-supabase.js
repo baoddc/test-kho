@@ -535,7 +535,8 @@ function filterTable() {
 
     if (needsSearchFilter) {
       let matchFound = false;
-      for (let colIdx = 0; colIdx < row.length; colIdx++) {
+      // Only search in displayed/visible columns, skipping hidden ID (index 0)
+      for (const colIdx of displayColIndexes) {
         let cellValue = row[colIdx];
         if (cellValue !== undefined && cellValue !== null) {
           if (typeof cellValue !== 'string') cellValue = String(cellValue);

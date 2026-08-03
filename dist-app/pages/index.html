@@ -62,6 +62,43 @@
       </form>
    </div>
 
+   <!-- OTP Verification Modal -->
+   <div id="otpModal" class="otp__modal">
+      <div class="otp__card">
+         <h2 class="otp__title"><i class="ri-shield-keyhole-line"></i> Xác Thực OTP</h2>
+         <p class="otp__subtitle">Mã xác nhận 6 chữ số đã được gửi tới email:<br><strong id="otpTargetEmail">thaibao06061997@gmail.com</strong></p>
+         
+         <div class="otp__inputs" id="otpInputGroup">
+            <input type="text" maxlength="1" class="otp__field" data-index="0" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+            <input type="text" maxlength="1" class="otp__field" data-index="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+            <input type="text" maxlength="1" class="otp__field" data-index="2" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+            <input type="text" maxlength="1" class="otp__field" data-index="3" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+            <input type="text" maxlength="1" class="otp__field" data-index="4" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+            <input type="text" maxlength="1" class="otp__field" data-index="5" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+         </div>
+
+         <div class="otp__error" id="otpError"></div>
+
+         <div class="otp__timer-box">
+            <span>Gửi lại mã sau: <strong id="otpTimer">60</strong>s</span>
+            <button type="button" id="resendOtpBtn" class="otp__resend-btn" disabled>Gửi lại mã</button>
+         </div>
+
+         <div class="otp__actions">
+            <button type="button" id="cancelOtpBtn" class="otp__btn otp__btn--cancel">Hủy</button>
+            <button type="button" id="verifyOtpBtn" class="otp__btn otp__btn--submit">Xác nhận</button>
+         </div>
+      </div>
+   </div>
+
+   <!-- Demo Toast Notification -->
+   <div id="demoOtpToast" class="otp__toast">
+      <div class="otp__toast-header"><i class="ri-mail-send-fill"></i> [DEMO] MÃ OTP ĐÃ GỬI TỚI EMAIL</div>
+      <div class="otp__toast-body">Mã OTP đăng nhập của bạn là: <strong id="demoOtpCode">123456</strong></div>
+   </div>
+
+   <!-- EmailJS SDK -->
+   <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
    <!-- JavaScript -->
    <script src="/assets/js/update-checker.js" defer></script>
    <script src="/assets/js/dang_nhap.js"></script>

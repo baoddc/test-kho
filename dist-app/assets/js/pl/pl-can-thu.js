@@ -1042,11 +1042,16 @@ function showEditDataModal() {
   setupModalPermissions(modalEl);
 
   const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-  const row = rowToEdit;
+  const row = tableData.find(r => r.id === selectedRowIndex);
   if (!row) return;
 
+  if (typeof isRecordLocked === 'function' && isRecordLocked(row._raw || row)) {
+    (window.showWarningModal || alert)(`Dữ liệu (ID: ${row.id}) đã được nhập quá 24 giờ. Hệ thống không cho phép sửa.`);
+    return;
+  }
+
   // Populate common fields (ngay, xuong)
-  const xuongInput = document.querySelector('#editDataForm input[name="xuong"]');
+  const xuongInput = document.querySelector('#editDataForm select[name="xuong"]');
   const ngayInput = document.querySelector('#editDataForm input[name="ngay"]');
   const kidoSelect = document.querySelector('#editDataForm select[name="kido"]');
   const ghichuInput = document.querySelector('#editDataForm textarea[name="ghichu"]');
@@ -1482,7 +1487,7 @@ async function handleAddSubmit(e) {
   }
 
   // Show loading overlay
-  showLoadingOverlay('Đang thêm dữ liệu vào Supabase...');
+  showLoadingOverlay('Đang thêm dữ liệu...');
 
   try {
     // Create multiple records (one for each loại)

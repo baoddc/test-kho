@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản Lý Công Việc & Nhắc Hẹn - DDC</title>
+  <link rel="icon" type="image/png" href="/assets/img/Logo-DDC.png">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Remix Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/3.5.0/remixicon.css">
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="/assets/css/sidebar.css">
+  <link rel="stylesheet" href="/assets/css/cong-viec.css">
+</head>
+<body class="cong-viec-page">
+
+  <div class="cv-container">
+
+    <!-- Top Header -->
+    <header class="cv-header-box">
+      <div class="cv-header-title">
+        <i class="ri-calendar-todo-fill" style="font-size: 2rem; color: #38bdf8;"></i>
+        <div>
+          <h2>Quản Lý Công Việc & Nhắc Hẹn</h2>
+          <small style="color: #94a3b8;">Hệ thống theo dõi lịch hẹn và công việc DDC</small>
+        </div>
+      </div>
+      <div class="cv-header-actions">
+        <button class="cv-btn-create" id="openCreateModalBtn">
+          <i class="ri-add-line"></i> Tạo Công Việc Mới
+        </button>
+      </div>
+    </header>
+
+    <!-- KPI Overview Cards -->
+    <section class="cv-kpi-grid">
+      <div class="cv-kpi-card kpi-total">
+        <div class="cv-kpi-info">
+          <span>Tổng số công việc</span>
+          <h3 id="statTotal">0</h3>
+        </div>
+        <div class="cv-kpi-icon">
+          <i class="ri-list-check"></i>
+        </div>
+      </div>
+
+      <div class="cv-kpi-card kpi-today">
+        <div class="cv-kpi-info">
+          <span>Cần làm hôm nay</span>
+          <h3 id="statToday">0</h3>
+        </div>
+        <div class="cv-kpi-icon">
+          <i class="ri-time-line"></i>
+        </div>
+      </div>
+
+      <div class="cv-kpi-card kpi-overdue">
+        <div class="cv-kpi-info">
+          <span>Công việc quá hạn</span>
+          <h3 id="statOverdue">0</h3>
+        </div>
+        <div class="cv-kpi-icon">
+          <i class="ri-alarm-warning-line"></i>
+        </div>
+      </div>
+
+      <div class="cv-kpi-card kpi-completed">
+        <div class="cv-kpi-info">
+          <span>Đã hoàn thành</span>
+          <h3 id="statCompleted">0</h3>
+        </div>
+        <div class="cv-kpi-icon">
+          <i class="ri-checkbox-circle-line"></i>
+        </div>
+      </div>
+    </section>
+
+    <!-- Filter Bar -->
+    <section class="cv-filter-box">
+      <div class="cv-search-wrap">
+        <i class="ri-search-line"></i>
+        <input type="text" id="searchInput" placeholder="Tìm kiếm theo tiêu đề hoặc ghi chú...">
+      </div>
+
+      <div class="cv-filter-groups">
+        <select id="filterStatus" class="cv-select">
+          <option value="tat_ca">Tất cả trạng thái</option>
+          <option value="cho_xu_ly">Chờ xử lý</option>
+          <option value="dang_lam">Đang làm</option>
+          <option value="qua_han">Quá hạn</option>
+          <option value="hoan_thanh">Đã hoàn thành</option>
+        </select>
+
+        <select id="filterUserCreated" class="cv-select" style="display: none;">
+          <option value="tat_ca">Tất cả người tạo</option>
+        </select>
+
+        <select id="filterPriority" class="cv-select">
+          <option value="tat_ca">Tất cả mức ưu tiên</option>
+          <option value="cao">🔴 Cao</option>
+          <option value="trung_binh">🟡 Trung bình</option>
+          <option value="thap">🟢 Thấp</option>
+        </select>
+
+        <button class="cv-btn-create" id="filterCreateBtn">
+          <i class="ri-add-line"></i> Tạo Công Việc Mới
+        </button>
+      </div>
+    </section>
+
+    <!-- Data Table -->
+    <section class="cv-table-panel">
+      <div class="cv-table-responsive">
+        <table class="cv-table">
+          <thead>
+            <tr>
+              <th style="width: 50px;">STT</th>
+              <th>Tiêu Đề & Ghi Chú</th>
+              <th style="width: 180px;">Thời Gian Hẹn</th>
+              <th style="width: 140px;">Mức Ưu Tiên</th>
+              <th style="width: 130px;">Trạng Thái</th>
+              <th style="width: 140px;">Người Tạo</th>
+              <th style="width: 120px; text-align: center;">Thao Tác</th>
+            </tr>
+          </thead>
+          <tbody id="taskTableBody">
+            <!-- Rendered by JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <div id="emptyState" style="display: none; text-align: center; padding: 3rem 1rem; color: #94a3b8;">
+        <i class="ri-task-line" style="font-size: 3.5rem; margin-bottom: 0.5rem; display: block; color: #38bdf8; opacity: 0.7;"></i>
+        <p style="margin: 0 0 1.25rem 0; font-size: 1.05rem;">Chưa có công việc nào phù hợp với bộ lọc.</p>
+        <button class="cv-btn-create" id="emptyStateCreateBtn" style="margin: 0 auto; display: inline-flex;">
+          <i class="ri-add-line"></i> Tạo Công Việc Mới
+        </button>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Modal Form: Add / Edit Task -->
+  <div class="cv-modal-overlay" id="taskModal">
+    <div class="cv-modal-card">
+      <div class="cv-modal-header">
+        <h4 id="modalTaskTitle">Tạo Công Việc Mới</h4>
+        <button class="cv-modal-close" id="closeTaskModalBtn">&times;</button>
+      </div>
+      <form id="taskForm">
+        <input type="hidden" id="taskIdInput">
+        <div class="cv-modal-body">
+          <div class="cv-form-group">
+            <label for="tieuDeInput">Tiêu Đề Công Việc / Lịch Hẹn <span style="color: #ef4444;">*</span></label>
+            <input type="text" id="tieuDeInput" placeholder="Nhập tiêu đề..." required>
+          </div>
+
+          <div class="cv-form-group">
+            <label for="ghiChuInput">Ghi Chú / Nội Dung Bổ Sung</label>
+            <textarea id="ghiChuInput" rows="3" placeholder="Nhập chi tiết ghi chú công việc..."></textarea>
+          </div>
+
+          <div class="cv-form-group">
+            <label for="ngayHenInput">Thời Gian Hẹn (Ngày & Giờ) <span style="color: #ef4444;">*</span></label>
+            <input type="datetime-local" id="ngayHenInput" required>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="cv-form-group">
+              <label for="uuTienSelect">Mức Ưu Tiên</label>
+              <select id="uuTienSelect">
+                <option value="cao">🔴 Cao</option>
+                <option value="trung_binh" selected>🟡 Trung bình</option>
+                <option value="thap">🟢 Thấp</option>
+              </select>
+            </div>
+
+            <div class="cv-form-group">
+              <label for="trangThaiSelect">Trạng Thái</label>
+              <select id="trangThaiSelect">
+                <option value="cho_xu_ly">Chờ xử lý</option>
+                <option value="dang_lam">Đang làm</option>
+                <option value="hoan_thanh">Hoàn thành</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="cv-modal-footer">
+          <button type="button" class="cv-btn-cancel" id="cancelTaskModalBtn">Hủy Bỏ</button>
+          <button type="submit" class="cv-btn-save">Lưu Công Việc</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Alert: Real-time Reminder Popup -->
+  <div class="cv-modal-overlay" id="reminderModal">
+    <div class="cv-modal-card reminder-modal-card">
+      <div class="cv-modal-header reminder-header">
+        <h4><i class="ri-alarm-warning-fill"></i> NHẮC HẸN CÔNG VIỆC!</h4>
+        <button class="cv-modal-close" id="closeReminderModalBtn">&times;</button>
+      </div>
+      <div class="cv-modal-body">
+        <div style="text-align: center; margin-bottom: 1.25rem;">
+          <i class="ri-notification-3-line" style="font-size: 3.5rem; color: #f59e0b; display: inline-block; animation: pulse 1s infinite alternate;"></i>
+        </div>
+        <h3 id="reminderTaskTitle" style="color: #fff; text-align: center; margin-bottom: 0.5rem; font-size: 1.25rem;"></h3>
+        <p id="reminderTaskDesc" style="color: #cbd5e1; font-size: 0.95rem; background: rgba(15,23,42,0.6); padding: 0.8rem; border-radius: 0.5rem; white-space: pre-wrap; margin-bottom: 1rem;"></p>
+        <div style="font-size: 0.85rem; color: #94a3b8; text-align: center;" id="reminderTaskTime"></div>
+      </div>
+      <div class="cv-modal-footer" style="justify-content: space-between;">
+        <button type="button" class="cv-btn-cancel" id="dismissReminderBtn">Đã hiểu & Tắt nhắc</button>
+        <button type="button" class="cv-btn-save" id="completeReminderBtn" style="background: #10b981;">Đánh dấu Hoàn Thành</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Action Button: Quick Create Task -->
+  <button class="cv-fab-create" id="fabCreateBtn" title="Tạo Công Việc Mới">
+    <i class="ri-add-line"></i>
+  </button>
+
+  <!-- Supabase SDK & Config -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="/assets/js/supabase-config.js"></script>
+  <script src="/assets/js/sidebar.js"></script>
+  <script src="/assets/js/cong-viec.js"></script>
+
+</body>
+</html>

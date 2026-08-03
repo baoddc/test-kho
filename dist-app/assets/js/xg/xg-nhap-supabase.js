@@ -1093,47 +1093,11 @@ function openDeleteDataModal() {
 ================================================================================ */
 
 function updateRollCuonIds() {
-  const maVatTuInput = document.querySelector('#addDataCommonFields input[name="col_5"]');
-  if (!maVatTuInput) return;
-  const maVatTu = maVatTuInput.value.trim();
-  if (!maVatTu) {
-    document.querySelectorAll('#rollsTableBody .roll-cuon-id').forEach(input => { input.value = ''; });
-    return;
-  }
-
-  const existingCount = (window._rawSupabaseData || []).filter(row => 
-    String(row['Mã vật tư'] || '').trim().toLowerCase() === maVatTu.toLowerCase()
-  ).length;
-
-  document.querySelectorAll('#rollsTableBody tr').forEach((row, index) => {
-    const cuonIdInput = row.querySelector('.roll-cuon-id');
-    if (cuonIdInput) {
-      cuonIdInput.value = `${maVatTu} - Cuộn ${existingCount + index}`;
-    }
-  });
+  // Cuộn ID is no longer automatically recalculated
 }
 
 function updateEditRollCuonIds() {
-  const maVatTuInput = document.querySelector('#editDataCommonFields input[name="col_5"]');
-  if (!maVatTuInput) return;
-  const maVatTu = maVatTuInput.value.trim();
-  if (!maVatTu) {
-    document.querySelectorAll('#editRollsTableBody .edit-roll-cuon-id').forEach(input => { input.value = ''; });
-    return;
-  }
-
-  const rowId = document.querySelector('#editDataCommonFields input[name="row_id"]')?.value;
-  const existingCount = (window._rawSupabaseData || []).filter(row => 
-    String(row['Mã vật tư'] || '').trim().toLowerCase() === maVatTu.toLowerCase() &&
-    String(row['id']) !== String(rowId)
-  ).length;
-
-  document.querySelectorAll('#editRollsTableBody tr').forEach((row, index) => {
-    const cuonIdInput = row.querySelector('.edit-roll-cuon-id');
-    if (cuonIdInput) {
-      cuonIdInput.value = `${maVatTu} - Cuộn ${existingCount + index}`;
-    }
-  });
+  // Cuộn ID is no longer automatically recalculated
 }
 
 function addRollRow(cuonId = '', kgValue = '', viTri = '') {
@@ -1143,7 +1107,7 @@ function addRollRow(cuonId = '', kgValue = '', viTri = '') {
   tr.dataset.rollId = rollCount;
   tr.innerHTML = `
     <td class="text-center roll-stt">${rollCount}</td>
-    <td><input type="text" class="form-control form-control-sm roll-cuon-id" readonly placeholder="Cuộn ID" value="${cuonId}"></td>
+    <td><input type="text" class="form-control form-control-sm roll-cuon-id" placeholder="Cuộn ID" value="${cuonId}"></td>
     <td><input type="number" class="form-control form-control-sm roll-kg" step="any" min="0" inputMode="decimal" required placeholder="Nhập số kg" value="${kgValue}"></td>
     <td><input type="text" class="form-control form-control-sm roll-vi-tri" required placeholder="Vị trí" value="${viTri}"></td>
     <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger btn-remove-roll">X</button></td>
@@ -1189,7 +1153,7 @@ function addEditRollRow(cuonId = '', kgValue = '', viTri = '') {
   tr.dataset.rollId = editRollCount;
   tr.innerHTML = `
     <td class="text-center edit-roll-stt">${editRollCount}</td>
-    <td><input type="text" class="form-control form-control-sm edit-roll-cuon-id" readonly placeholder="Cuộn ID" value="${cuonId}"></td>
+    <td><input type="text" class="form-control form-control-sm edit-roll-cuon-id" placeholder="Cuộn ID" value="${cuonId}"></td>
     <td><input type="number" class="form-control form-control-sm edit-roll-kg" step="any" min="0" inputMode="decimal" required placeholder="Nhập số kg" value="${kgValue}"></td>
     <td><input type="text" class="form-control form-control-sm edit-roll-vi-tri" required placeholder="Vị trí" value="${viTri}"></td>
     <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger btn-remove-edit-roll">X</button></td>

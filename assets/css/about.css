@@ -173,14 +173,12 @@ body {
   width: 250%;
   height: 250%;
   background: conic-gradient(
-    from 0deg,
-    rgba(0, 255, 136, 1) 0deg,
-    rgba(0, 217, 255, 0.95) 45deg,
-    rgba(0, 217, 255, 0.2) 90deg,
-    transparent 120deg,
-    transparent 360deg
+    transparent,
+    rgba(0, 217, 255, 0.9),
+    rgba(0, 255, 136, 1),
+    transparent 35%
   );
-  animation: rotateBorderClockwise 3.5s linear infinite;
+  animation: rotateBorder 3.5s linear infinite;
   z-index: -2;
 }
 
@@ -194,13 +192,9 @@ body {
   transition: background 0.3s ease;
 }
 
-@keyframes rotateBorderClockwise {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
+@keyframes rotateBorder {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .tech-grid {
@@ -573,12 +567,10 @@ body {
 
 [data-bs-theme="light"] .highlight-line::before {
   background: conic-gradient(
-    from 0deg,
-    rgba(5, 150, 105, 1) 0deg,
-    rgba(2, 132, 199, 0.95) 45deg,
-    rgba(2, 132, 199, 0.2) 90deg,
-    transparent 120deg,
-    transparent 360deg
+    transparent,
+    rgba(2, 132, 199, 0.9),
+    rgba(5, 150, 105, 1),
+    transparent 35%
   );
 }
 
