@@ -114,6 +114,8 @@ function restoreFilterState(state) {
       if (cb) cb.checked = filter.checked;
     });
   }
+
+  filterTable(false);
 }
 
 
@@ -658,7 +660,7 @@ function renderTableWithPagination() {
 
 const debouncedFilter = debounce(filterTable, 300);
 
-function filterTable() {
+function filterTable(resetPage = true) {
   const fromVal = document.getElementById('fromDate')?.value || '';
   const toVal = document.getElementById('toDate')?.value || '';
   const searchVal = document.getElementById('searchInput')?.value?.trim().toLowerCase() || '';
@@ -715,7 +717,7 @@ function filterTable() {
     filtered.push(row);
   }
 
-  renderTable(filtered);
+  renderTable(filtered, resetPage);
 }
 
 function populateTypeDropdown(headerName, menuId, btnId, countId, data) {
@@ -965,7 +967,7 @@ function openAddDataModal() {
   // Chỉ render Mã công trình, Tên công trình, Ghi chú trong additional
   const additionalColIndices = [];
   for (let i = quantityColIndex + 1; i < COLUMN_HEADERS.length; i++) {
-    if (!HIDDEN_COLUMNS.includes(COLUMN_HEADERS[i]) && COLUMN_HEADERS[i] !== 'Vị trí') {
+    if (!HIDDEN_COLUMNS.includes(COLUMN_HEADERS[i]) && COLUMN_HEADERS[i] !== 'Vị trí' && COLUMN_HEADERS[i] !== 'Số lượng (m)') {
       additionalColIndices.push(i);
     }
   }
@@ -1042,7 +1044,7 @@ function openEditDataModal() {
 
   const additionalColIndices = [];
   for (let i = quantityColIndex + 1; i < COLUMN_HEADERS.length; i++) {
-    if (!HIDDEN_COLUMNS.includes(COLUMN_HEADERS[i]) && COLUMN_HEADERS[i] !== 'Vị trí') {
+    if (!HIDDEN_COLUMNS.includes(COLUMN_HEADERS[i]) && COLUMN_HEADERS[i] !== 'Vị trí' && COLUMN_HEADERS[i] !== 'Số lượng (m)') {
       additionalColIndices.push(i);
     }
   }
