@@ -153,6 +153,40 @@
     return path === href || path.endsWith(href) || href.endsWith(path.split('/').pop());
   }
 
+  function isPageAllowed(href) {
+    if (!href || href === '#' || href.startsWith('#') || href.startsWith('javascript:')) return true;
+    const currentUser = localStorage.getItem('currentUser');
+    if (!currentUser) return true;
+    if (currentUser === 'bao.lt') return true;
+
+    let allowedPages = [];
+    try {
+      allowedPages = JSON.parse(localStorage.getItem('userAllowedPages') || '[]');
+    } catch (e) {
+      allowedPages = [];
+    }
+
+    if (allowedPages.includes('*')) return true;
+
+    // Trang chủ mặc định được phép
+    if (href.endsWith('home.html')) return true;
+
+    const cleanHref = href.split('?')[0];
+    return allowedPages.some(page => {
+      const cleanPage = page.split('?')[0];
+      return cleanHref === cleanPage || cleanHref.endsWith(cleanPage) || cleanPage.endsWith(cleanHref.split('/').pop());
+    });
+  }
+
+  function checkRoutePermission() {
+    const page = window.location.pathname;
+    if (page.endsWith('dang_nhap.html') || page === '/' || page.endsWith('/index.html') || page.endsWith('home.html')) return;
+    if (!isPageAllowed(page)) {
+      alert('Rất tiếc! Bạn không có quyền truy cập trang này.');
+      window.location.href = '/pages/home.html';
+    }
+  }
+
   // ============================================================
   // BUILD SIDEBAR HTML
   // ============================================================
@@ -225,14 +259,24 @@
       href: '/pages/cong-viec.html',
       icon: `<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M9 16l2 2 4-4"/></svg>`,
     },
+    {
+      id: 'nav-quan-ly-user',
+      label: 'QUẢN LÝ NGƯỜI DÙNG',
+      href: '/pages/quan-ly-user.html',
+      onlyAdmin: true,
+      icon: `<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="17" y1="11" x2="23" y2="11"/></svg>`,
+    },
   ];
 
   function buildSubSubGroup(children, groupId) {
+    const allowedChildren = children.filter(c => isPageAllowed(c.href));
+    if (allowedChildren.length === 0) return null;
+
     const ul = document.createElement('ul');
     ul.className = 'sidebar-subsub-group';
     ul.id = groupId + '-sub';
 
-    children.forEach(child => {
+    allowedChildren.forEach(child => {
       const li = document.createElement('li');
       li.className = 'sidebar-sub-item';
       const a = document.createElement('a');
@@ -254,20 +298,20 @@
     ul.id = groupId;
 
     let hasActiveChild = false;
+    let visibleChildCount = 0;
 
     children.forEach((child, i) => {
-      const li = document.createElement('li');
-      li.className = 'sidebar-sub-item';
-
       if (child.children) {
         // Sub-group (level 3)
         const subId = groupId + '-sub' + i;
+        const subGroup = buildSubSubGroup(child.children, subId);
+        if (!subGroup || subGroup.children.length === 0) return;
+
+        visibleChildCount++;
         const btn = document.createElement('button');
         btn.className = 'sidebar-sub-link';
         btn.innerHTML = child.label + CHEVRON_SVG;
         btn.setAttribute('aria-expanded', 'false');
-
-        const subGroup = buildSubSubGroup(child.children, subId);
 
         const subActive = child.children.some(sc => isActive(sc.href));
         if (subActive) {
@@ -285,10 +329,17 @@
           btn.setAttribute('aria-expanded', String(!isOpen));
         });
 
+        const li = document.createElement('li');
+        li.className = 'sidebar-sub-item';
         li.appendChild(btn);
         li.appendChild(subGroup);
+        ul.appendChild(li);
       } else {
-        // Simple link
+        if (!isPageAllowed(child.href)) return;
+
+        visibleChildCount++;
+        const li = document.createElement('li');
+        li.className = 'sidebar-sub-item';
         const a = document.createElement('a');
         a.className = 'sidebar-sub-link';
         a.href = child.href;
@@ -298,12 +349,11 @@
           hasActiveChild = true;
         }
         li.appendChild(a);
+        ul.appendChild(li);
       }
-
-      ul.appendChild(li);
     });
 
-    return { ul, hasActiveChild };
+    return { ul, hasActiveChild, visibleChildCount };
   }
 
   function buildSidebarNav() {
@@ -318,19 +368,24 @@
     ul.style.margin = '0';
 
     NAV_ITEMS.forEach(item => {
-      const li = document.createElement('li');
-      li.className = 'sidebar-item';
+      if (item.onlyAdmin && localStorage.getItem('currentUser') !== 'bao.lt') {
+        return;
+      }
 
       if (item.children) {
         // Collapsible group
         const groupId = item.id + '-group';
+        const { ul: subUl, hasActiveChild, visibleChildCount } = buildSubGroup(item.children, groupId);
+        if (visibleChildCount === 0) return;
+
+        const li = document.createElement('li');
+        li.className = 'sidebar-item';
+
         const btn = document.createElement('button');
         btn.className = 'sidebar-link';
         btn.innerHTML = item.icon + `<span>${item.label}</span>` + CHEVRON_SVG;
         btn.setAttribute('aria-expanded', 'false');
         btn.setAttribute('aria-controls', groupId);
-
-        const { ul: subUl, hasActiveChild } = buildSubGroup(item.children, groupId);
 
         if (hasActiveChild) {
           subUl.classList.add('open');
@@ -347,7 +402,13 @@
 
         li.appendChild(btn);
         li.appendChild(subUl);
+        ul.appendChild(li);
       } else {
+        if (!isPageAllowed(item.href)) return;
+
+        const li = document.createElement('li');
+        li.className = 'sidebar-item';
+
         // Simple nav link
         const a = document.createElement('a');
         a.className = 'sidebar-link';
@@ -357,9 +418,8 @@
           a.classList.add('active');
         }
         li.appendChild(a);
+        ul.appendChild(li);
       }
-
-      ul.appendChild(li);
     });
 
     nav.appendChild(ul);
@@ -775,6 +835,11 @@
   }
 
   function openTab(url, title) {
+    if (!isPageAllowed(url)) {
+      alert('Rất tiếc! Bạn không có quyền truy cập trang này.');
+      return;
+    }
+
     const normalizedUrl = url.startsWith('/') ? url : '/' + url;
 
     let existingTab = tabs.find(t => {
@@ -993,6 +1058,7 @@
   // ============================================================
 
   function init() {
+    checkRoutePermission();
     ensureMobileCSS();
     ensurePWATags();
     initTableSpaceSaver();

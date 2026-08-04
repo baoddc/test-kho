@@ -14,8 +14,12 @@ CREATE TABLE IF NOT EXISTS public.users (
     can_edit BOOLEAN DEFAULT FALSE,   -- Quyền Sửa dữ liệu
     can_delete BOOLEAN DEFAULT FALSE, -- Quyền Xóa dữ liệu
     can_view BOOLEAN DEFAULT TRUE,    -- Quyền Xem dữ liệu
+    allowed_pages JSONB DEFAULT '[]'::jsonb, -- Quyền truy cập các file HTML
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Thêm cột allowed_pages nếu bảng đã tồn tại từ trước
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS allowed_pages JSONB DEFAULT '[]'::jsonb;
 
 -- 2. Bật Row Level Security (RLS) để CHẶN F12 đọc trực tiếp bảng users
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
@@ -23,7 +27,7 @@ ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 -- (Không tạo policy SELECT public -> Mặc định gõ supabase.from('users').select() sẽ bị trả về rỗng)
 
 -- 3. Tạo hàm RPC check_login (Chạy 100% trên Server Supabase)
--- Trả về duy nhất các cột quyền hạn & thông tin user. KHÔNG TRẢ VỀ MẬT KHẨU!
+-- Trả về duy nhất các cột quyền hạn & thông tin user. KHÔNG TRẢ VỀ MẬT KHỦA!
 CREATE OR REPLACE FUNCTION public.check_login(p_username TEXT, p_password TEXT)
 RETURNS TABLE (
     username TEXT,
@@ -32,7 +36,8 @@ RETURNS TABLE (
     can_add BOOLEAN,
     can_edit BOOLEAN,
     can_delete BOOLEAN,
-    can_view BOOLEAN
+    can_view BOOLEAN,
+    allowed_pages JSONB
 ) 
 LANGUAGE plpgsql
 SECURITY DEFINER -- Thực thi với quyền Admin của Server để bỏ qua RLS
@@ -46,7 +51,8 @@ BEGIN
         u.can_add,
         u.can_edit,
         u.can_delete,
-        u.can_view
+        u.can_view,
+        u.allowed_pages
     FROM public.users u
     WHERE u.username = p_username 
       AND u.password = p_password;
@@ -55,12 +61,12 @@ $$;
 
 -- 4. Chèn dữ liệu người dùng ban đầu
 INSERT INTO public.users 
-    (username, password, email, require_otp, can_add, can_edit, can_delete, can_view)
+    (username, password, email, require_otp, can_add, can_edit, can_delete, can_view, allowed_pages)
 VALUES 
-    ('bao.lt', '6697@', 'thaibao06061997@gmail.com', TRUE, TRUE, TRUE, TRUE, TRUE),
-    ('admin', 'admin123', NULL, FALSE, FALSE, FALSE, FALSE, TRUE),
-    ('user1', 'pass123', NULL, FALSE, FALSE, FALSE, FALSE, TRUE),
-    ('user2', 'pass456', NULL, FALSE, FALSE, FALSE, FALSE, TRUE)
+    ('bao.lt', '6697@', 'thaibao06061997@gmail.com', TRUE, TRUE, TRUE, TRUE, TRUE, '["*"]'::jsonb),
+    ('admin', 'admin123', NULL, FALSE, FALSE, FALSE, FALSE, TRUE, '["*"]'::jsonb),
+    ('user1', 'pass123', NULL, FALSE, FALSE, FALSE, FALSE, TRUE, '["/pages/home.html"]'::jsonb),
+    ('user2', 'pass456', NULL, FALSE, FALSE, FALSE, FALSE, TRUE, '["/pages/home.html"]'::jsonb)
 ON CONFLICT (username) 
 DO UPDATE SET 
     password = EXCLUDED.password,
@@ -69,4 +75,5 @@ DO UPDATE SET
     can_add = EXCLUDED.can_add,
     can_edit = EXCLUDED.can_edit,
     can_delete = EXCLUDED.can_delete,
-    can_view = EXCLUDED.can_view;
+    can_view = EXCLUDED.can_view,
+    allowed_pages = EXCLUDED.allowed_pages;

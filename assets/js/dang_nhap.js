@@ -71,6 +71,7 @@ function initLoginForm() {
                username: u.username,
                email: u.email,
                requireOtp: u.require_otp,
+               allowedPages: u.allowed_pages || [],
                permissions: {
                   canAdd: u.can_add,
                   canEdit: u.can_edit,
@@ -344,8 +345,13 @@ function handleVerifyOtpSubmit() {
 function completeLogin(username, accountObj = null) {
    localStorage.setItem('currentUser', username);
 
-   if (accountObj && accountObj.permissions) {
-      localStorage.setItem('userPermissions', JSON.stringify(accountObj.permissions));
+   if (accountObj) {
+      if (accountObj.permissions) {
+         localStorage.setItem('userPermissions', JSON.stringify(accountObj.permissions));
+      }
+      if (accountObj.allowedPages) {
+         localStorage.setItem('userAllowedPages', JSON.stringify(accountObj.allowedPages));
+      }
    }
 
    window.location.href = 'home.html';

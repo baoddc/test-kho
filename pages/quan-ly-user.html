@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Người dùng - DDC App</title>
+    <!-- Favicon & Base CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.net/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/assets/css/mobile-responsive.css">
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --card-dark: #1e293b;
+            --border-dark: #334155;
+            --text-light: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #3b82f6;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+        }
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+        }
+        .main-content {
+            padding: 1.5rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .card-custom {
+            background-color: var(--card-dark);
+            border: 1px solid var(--border-dark);
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+        .table-custom {
+            color: var(--text-light);
+        }
+        .table-custom th {
+            background-color: #0f172a;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-dark);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.5px;
+            padding: 1rem;
+        }
+        .table-custom td {
+            border-bottom: 1px solid var(--border-dark);
+            vertical-align: middle;
+            padding: 0.85rem 1rem;
+        }
+        .badge-perm {
+            font-size: 0.75rem;
+            padding: 0.3em 0.6em;
+            border-radius: 6px;
+            margin-right: 3px;
+        }
+        .modal-content-custom {
+            background-color: var(--card-dark);
+            color: var(--text-light);
+            border: 1px solid var(--border-dark);
+            border-radius: 14px;
+        }
+        .form-control-custom {
+            background-color: #0f172a;
+            border: 1px solid var(--border-dark);
+            color: var(--text-light);
+            border-radius: 8px;
+        }
+        .form-control-custom:focus {
+            background-color: #0f172a;
+            color: var(--text-light);
+            border-color: var(--primary);
+            box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, 0.25);
+        }
+    </style>
+</head>
+<body>
+    <div id="sidebarContainer"></div>
+
+    <div class="main-content">
+        <!-- Header Page -->
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+            <div>
+                <h3 class="fw-bold mb-1"><i class="fa-solid fa-users-gear text-primary me-2"></i>Quản lý Người dùng & Phân quyền</h3>
+                <p class="text-muted mb-0">Tạo, xóa và thiết lập quyền truy cập cho người dùng trong hệ thống (Dành cho Quản trị viên bao.lt)</p>
+            </div>
+            <button id="btnOpenAddUser" class="btn btn-primary px-3 py-2 fw-semibold">
+                <i class="fa-solid fa-user-plus me-2"></i>Thêm người dùng mới
+            </button>
+        </div>
+
+        <!-- Filter & Search Bar -->
+        <div class="card-custom p-3 mb-4">
+            <div class="row g-3 align-items-center">
+                <div class="col-md-6 col-12">
+                    <div class="input-group">
+                        <span class="input-group-text bg-dark border-secondary text-muted"><i class="fa-solid fa-magnifying-glass"></i></span>
+                        <input type="text" id="searchInput" class="form-control form-control-custom" placeholder="Tìm kiếm theo Tên đăng nhập hoặc Email...">
+                    </div>
+                </div>
+                <div class="col-md-6 col-12 text-md-end text-muted small">
+                    Tổng số người dùng: <span id="totalUserCount" class="badge bg-primary fs-6">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- User List Table -->
+        <div class="card-custom overflow-hidden">
+            <div class="table-responsive">
+                <table class="table table-custom mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">STT</th>
+                            <th>Tên đăng nhập</th>
+                            <th>Email</th>
+                            <th>Xác thực OTP</th>
+                            <th>Quyền hạn</th>
+                            <th>Ngày tạo</th>
+                            <th class="text-end" style="width: 130px;">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userTableBody">
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-muted">
+                                <i class="fa-solid fa-spinner fa-spin me-2"></i>Đang tải danh sách người dùng...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Thêm / Chỉnh sửa Người dùng -->
+    <div class="modal fade" id="userModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content modal-content-custom">
+                <div class="modal-header border-bottom border-secondary">
+                    <h5 class="modal-title fw-bold" id="userModalTitle"><i class="fa-solid fa-user-plus text-primary me-2"></i>Thêm Người dùng mới</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="userForm">
+                        <input type="hidden" id="editUserId" value="">
+                        
+                        <div class="mb-3">
+                            <label for="inputUsername" class="form-label font-weight-semibold">Tên đăng nhập <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-custom" id="inputUsername" placeholder="Nhập username (vd: user1)" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="inputPassword" class="form-label font-weight-semibold" id="labelPassword">Mật khẩu <span class="text-danger">*</span></label>
+                            <input type="password" class="form-control form-control-custom" id="inputPassword" placeholder="Nhập mật khẩu">
+                            <div class="form-text text-muted" id="passwordHelp"></div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="inputEmail" class="form-label">Email liên hệ</label>
+                            <input type="email" class="form-control form-control-custom" id="inputEmail" placeholder="vd: name@example.com">
+                        </div>
+
+                        <div class="mb-3 form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="checkRequireOtp">
+                            <label class="form-check-label" for="checkRequireOtp">Yêu cầu OTP khi đăng nhập (EmailJS)</label>
+                        </div>
+
+                        <hr class="border-secondary my-3">
+                        <h6 class="fw-bold mb-2 text-primary"><i class="fa-solid fa-shield-halved me-2"></i>Quyền thao tác dữ liệu</h6>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="checkCanView" checked>
+                                    <label class="form-check-label" for="checkCanView">👁️ Xem dữ liệu</label>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="checkCanAdd">
+                                    <label class="form-check-label" for="checkCanAdd">➕ Thêm dữ liệu</label>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="checkCanEdit">
+                                    <label class="form-check-label" for="checkCanEdit">✏️ Sửa dữ liệu</label>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="checkCanDelete">
+                                    <label class="form-check-label" for="checkCanDelete">🗑️ Xóa dữ liệu</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="border-secondary my-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="fw-bold text-info mb-0"><i class="fa-solid fa-folder-tree me-2"></i>Quyền truy cập trang HTML</h6>
+                            <button type="button" id="btnToggleAllPages" class="btn btn-sm btn-outline-info py-0 px-2" style="font-size: 0.75rem;">Chọn tất cả</button>
+                        </div>
+
+                        <div class="accordion accordion-flush rounded bg-dark p-2 border border-secondary" id="pagePermAccordion" style="max-height: 260px; overflow-y: auto;">
+                            <!-- Trang Chung -->
+                            <div class="mb-2 p-2 rounded border border-secondary bg-opacity-10 bg-secondary">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="fw-bold text-light small"><i class="fa-solid fa-house text-primary me-1"></i>Trang Chung</span>
+                                    <input type="checkbox" class="form-check-input group-select-all" data-group="chung" title="Chọn toàn bộ nhóm">
+                                </div>
+                                <div class="row g-1 ps-2">
+                                    <div class="col-12"><div class="form-check small"><input class="form-check-input page-checkbox group-page-chung" type="checkbox" value="/pages/home.html" id="p_home" checked><label class="form-check-label text-muted" for="p_home">Trang chủ (home.html)</label></div></div>
+                                    <div class="col-12"><div class="form-check small"><input class="form-check-input page-checkbox group-page-chung" type="checkbox" value="/pages/about.html" id="p_about"><label class="form-check-label text-muted" for="p_about">Giới thiệu (about.html)</label></div></div>
+                                    <div class="col-12"><div class="form-check small"><input class="form-check-input page-checkbox group-page-chung" type="checkbox" value="/pages/cong-viec.html" id="p_cong_viec"><label class="form-check-label text-muted" for="p_cong_viec">Công việc & Nhắc hẹn (cong-viec.html)</label></div></div>
+                                </div>
+                            </div>
+
+                            <!-- Nhóm 5S -->
+                            <div class="mb-2 p-2 rounded border border-secondary bg-opacity-10 bg-secondary">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="fw-bold text-light small"><i class="fa-solid fa-boxes-stacked text-warning me-1"></i>Nhóm 5S</span>
+                                    <input type="checkbox" class="form-check-input group-select-all" data-group="5s" title="Chọn toàn bộ nhóm">
+                                </div>
+                                <div class="row g-1 ps-2">
+                                    <div class="col-12"><div class="form-check small"><input class="form-check-input page-checkbox group-page-5s" type="checkbox" value="/pages/5s/5s-so-do-phoi-cuon.html" id="p_5s_phoi"><label class="form-check-label text-muted" for="p_5s_phoi">Sơ đồ kho Phôi cuộn</label></div></div>
+                                    <div class="col-12"><div class="form-check small"><input class="form-check-input page-checkbox group-page-5s" type="checkbox" value="/pages/5s/5s-so-do-phe-lieu.html" id="p_5s_phe"><label class="form-check-label text-muted" for="p_5s_phe">Sơ đồ kho Phế liệu</label></div></div>
+                                    <div class="col-12"><div class="form-check small"><input class="form-check-input page-checkbox group-page-5s" type="checkbox" value="/pages/5s/hse.html" id="p_5s_hse"><label class="form-check-label text-muted" for="p_5s_hse">HSE (hse.html)</label></div></div>
+                                </div>
+                            </div>
+
+                            <!-- Nhóm XÀ GỒ -->
+                            <div class="mb-2 p-2 rounded border border-secondary bg-opacity-10 bg-secondary">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="fw-bold text-light small"><i class="fa-solid fa-industry text-success me-1"></i>Nhóm XÀ GỒ</span>
+                                    <input type="checkbox" class="form-check-input group-select-all" data-group="xg" title="Chọn toàn bộ nhóm">
+                                </div>
+                                <div class="row g-1 ps-2">
+                                    <div class="col-6"><div class="form-check small"><input class="form-check-input page-checkbox group-page-xg" type="checkbox" value="/pages/xg/xg-nhap.html" id="p_xg_nhap"><label class="form-check-label text-muted" for="p_xg_nhap">Nhập - XG</label></div></div>
+                                    <div class="col-6"><div class="form-check small"><input class="form-check-input page-checkbox group-page-xg" type="checkbox" value="/pages/xg/xg-xuat.html" id="p_xg_xuat"><label class="form-check-label text-muted" for="p_xg_xuat">Xuất - XG</label></div></div>
+                                    <div class="col-6"><div class="form-check small"><input class="form-check-input page-checkbox group-page-xg" type="checkbox" value="/pages/xg/xg-ton.html" id="p_xg_ton"><label class="form-check-label text-muted" for="p_xg_ton">Tồn - XG</label></div></div>
+                                    <div class="col-6"><div class="form-check small"><input class="form-check-input page-checkbox group-page-xg" type="checkbox" value="/pages/xg/xg-bieu-do.html" id="p_xg_bieu_do"><label class="form-check-label text-muted" for="p_xg_bieu_do">Biểu đồ - XG</label></div></div>
+                                </div>
+                            </div>
+
+                            <!-- Nhóm TOLE -->
+                            <div class="mb-2 p-2 rounded border border-secondary bg-opacity-10 bg-secondary">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="fw-bold text-light small"><i class="fa-solid fa-scroll text-danger me-1"></i>Nhóm TOLE</span>
+                                    <input type="checkbox" class="form-check-input group-select-all" data-group="tole" title="Chọn toàn bộ nhóm">
+                                </div>
+                                <div class="row g-1 ps-2">
+                                    <div class="col-6"><div class="form-check small"><input class="form-check-input page-checkbox group-page-tole" type="checkbox" value="/pages/tole/tole-nhap.html" id="p_tole_nhap"><label class="form-check-label text-muted" for="p_tole_nhap">Nhập - Tole</label></div></div>
+                                    <div class="col-6"><div class="form-check small"><input class="form-check-input page-checkbox group-page-tole" type="checkbox" value="/pages/tole/tole-xuat.html" id="p_tole_xuat"><label class="form-check-label text-muted" for="p_tole_xuat">Xuất - Tole</label></div></div>
+                                    <div class="col-6"><div class="form-check small"><input class="form-check-input page-checkbox group-page-tole" type="checkbox" value="/pages/tole/tole-ton.html" id="p_tole_ton"><label class="form-check-label text-muted" for="p_tole_ton">Tồn - Tole</label></div></div>
+                                    <div class="col-6"><div class="form-check small"><input class="form-check-input page-checkbox group-page-tole" type="checkbox" value="/pages/tole/tole-bieu-do.html" id="p_tole_bieu_do"><label class="form-check-label text-muted" for="p_tole_bieu_do">Biểu đồ - Tole</label></div></div>
+                                </div>
+                            </div>
+
+                            <!-- Nhóm PHẾ LIỆU -->
+                            <div class="mb-2 p-2 rounded border border-secondary bg-opacity-10 bg-secondary">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="fw-bold text-light small"><i class="fa-solid fa-recycle text-info me-1"></i>Nhóm PHẾ LIỆU</span>
+                                    <input type="checkbox" class="form-check-input group-select-all" data-group="pl" title="Chọn toàn bộ nhóm">
+                                </div>
+                                <div class="row g-1 ps-2">
+                                    <div class="col-6"><div class="form-check small"><input class="form-check-input page-checkbox group-page-pl" type="checkbox" value="/pages/pl/pl-can-thu.html" id="p_pl_can_thu"><label class="form-check-label text-muted" for="p_pl_can_thu">PL - Cần thu</label></div></div>
+                                    <div class="col-6"><div class="form-check small"><input class="form-check-input page-checkbox group-page-pl" type="checkbox" value="/pages/pl/pl-da-thu.html" id="p_pl_da_thu"><label class="form-check-label text-muted" for="p_pl_da_thu">PL - Đã thu</label></div></div>
+                                    <div class="col-6"><div class="form-check small"><input class="form-check-input page-checkbox group-page-pl" type="checkbox" value="/pages/pl/pl-chua-thu.html" id="p_pl_chua_thu"><label class="form-check-label text-muted" for="p_pl_chua_thu">PL - Chưa thu</label></div></div>
+                                    <div class="col-6"><div class="form-check small"><input class="form-check-input page-checkbox group-page-pl" type="checkbox" value="/pages/pl/pl-phieu-in.html" id="p_pl_phieu_in"><label class="form-check-label text-muted" for="p_pl_phieu_in">Xuất bán/Xuất trả</label></div></div>
+                                </div>
+                            </div>
+
+                            <!-- Quản trị -->
+                            <div class="p-2 rounded border border-secondary bg-opacity-10 bg-secondary">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="fw-bold text-light small"><i class="fa-solid fa-user-shield text-danger me-1"></i>Quản trị</span>
+                                </div>
+                                <div class="row g-1 ps-2">
+                                    <div class="col-12"><div class="form-check small"><input class="form-check-input page-checkbox group-page-admin" type="checkbox" value="/pages/quan-ly-user.html" id="p_quan_ly_user"><label class="form-check-label text-muted" for="p_quan_ly_user">Quản lý Người dùng (quan-ly-user.html)</label></div></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="formErrorMessage" class="alert alert-danger mt-3 d-none" role="alert"></div>
+                    </form>
+                </div>
+                <div class="modal-footer border-top border-secondary">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" id="btnSaveUser" class="btn btn-primary"><i class="fa-solid fa-floppy-disk me-1"></i>Lưu thông tin</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Xác nhận Xóa -->
+    <div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content modal-content-custom text-center p-3">
+                <div class="text-danger mb-2">
+                    <i class="fa-solid fa-triangle-exclamation fa-3x"></i>
+                </div>
+                <h5 class="fw-bold">Xác nhận xóa?</h5>
+                <p class="text-muted small mb-3">Bạn có chắc chắn muốn xóa người dùng <strong id="deleteTargetUsername" class="text-light"></strong>? Thao tác này không thể hoàn tác.</p>
+                <div class="d-flex gap-2 justify-content-center">
+                    <button type="button" class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" id="btnConfirmDelete" class="btn btn-danger px-3">Xóa luôn</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="/assets/js/supabase-config.js"></script>
+    <script src="/assets/js/sidebar.js"></script>
+    <script src="/assets/js/quan-ly-user.js"></script>
+</body>
+</html>
