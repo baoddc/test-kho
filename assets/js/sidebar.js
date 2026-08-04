@@ -178,12 +178,64 @@
     });
   }
 
+  function showAccessDeniedModal(msg, onConfirm) {
+    let modalEl = document.getElementById('accessDeniedModal');
+    if (!modalEl) {
+      modalEl = document.createElement('div');
+      modalEl.id = 'accessDeniedModal';
+      modalEl.className = 'modal fade';
+      modalEl.setAttribute('tabindex', '-1');
+      modalEl.setAttribute('aria-hidden', 'true');
+      modalEl.innerHTML = `
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+          <div class="modal-content text-center p-4" style="background-color: #1e293b; color: #f8fafc; border: 1px solid #334155; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);">
+            <div class="mb-3 text-warning">
+              <svg viewBox="0 0 24 24" width="56" height="56" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto; display: block;">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+            </div>
+            <h5 class="fw-bold mb-2" style="color: #f8fafc; font-size: 1.15rem;">Không có quyền truy cập</h5>
+            <p id="accessDeniedMsg" class="text-muted small mb-4" style="color: #94a3b8 !important; line-height: 1.5;">${msg || 'Rất tiếc! Bạn không có quyền truy cập trang này.'}</p>
+            <div>
+              <button type="button" id="btnConfirmAccessDenied" class="btn btn-primary px-3 py-2 fw-semibold" style="border-radius: 8px; width: 100%; font-size: 0.9rem;">
+                Đồng ý / Quay về Trang chủ
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modalEl);
+    } else {
+      const msgEl = modalEl.querySelector('#accessDeniedMsg');
+      if (msgEl) msgEl.textContent = msg || 'Rất tiếc! Bạn không có quyền truy cập trang này.';
+    }
+
+    const btnConfirm = modalEl.querySelector('#btnConfirmAccessDenied');
+    
+    // Check if bootstrap is available
+    if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+      const bsModal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+      btnConfirm.onclick = () => {
+        bsModal.hide();
+        if (typeof onConfirm === 'function') onConfirm();
+      };
+      bsModal.show();
+    } else {
+      alert(msg || 'Rất tiếc! Bạn không có quyền truy cập trang này.');
+      if (typeof onConfirm === 'function') onConfirm();
+    }
+  }
+
   function checkRoutePermission() {
     const page = window.location.pathname;
     if (page.endsWith('dang_nhap.html') || page === '/' || page.endsWith('/index.html') || page.endsWith('home.html')) return;
     if (!isPageAllowed(page)) {
-      alert('Rất tiếc! Bạn không có quyền truy cập trang này.');
-      window.location.href = '/pages/home.html';
+      setTimeout(() => {
+        showAccessDeniedModal('Rất tiếc! Tài khoản của bạn chưa được cấp quyền truy cập vào trang này.', () => {
+          window.location.href = '/pages/home.html';
+        });
+      }, 100);
     }
   }
 
@@ -836,7 +888,7 @@
 
   function openTab(url, title) {
     if (!isPageAllowed(url)) {
-      alert('Rất tiếc! Bạn không có quyền truy cập trang này.');
+      showAccessDeniedModal('Rất tiếc! Tài khoản của bạn chưa được cấp quyền truy cập vào trang này.');
       return;
     }
 
