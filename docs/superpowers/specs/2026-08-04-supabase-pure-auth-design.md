@@ -29,7 +29,10 @@ Remove all hardcoded user accounts and credentials (`validAccounts`) from fronte
 ### 3.1 Frontend `assets/js/dang_nhap.js` & `dist-app/assets/js/dang_nhap.js`
 - **Delete Hardcoded Accounts:** Remove `const validAccounts = [...]`.
 - **Remove Fallback Auth:** Delete local array match fallback (`validAccounts.find(...)`).
-- **Refactor `initLoginForm` Handler:**
+- **Refactor `completeLogin` & Storage Policy:**
+  - `localStorage` only stores `currentUser` (username string) and `userPermissions` (permissions object).
+  - Absolutely **NO password** or hashed credential is saved to `localStorage`, `sessionStorage`, or cookies upon successful login.
+
   1. Validate that input username & password are non-empty.
   2. Call `window.supabase.rpc('check_login', { p_username, p_password })`.
   3. If Supabase returns user row:
