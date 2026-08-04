@@ -7,8 +7,8 @@ document.addEventListener('DOMContentLoaded', function () {
     // 1. Auth Guard - Kiểm tra xem user hiện tại có phải bao.lt không
     const currentUser = localStorage.getItem('currentUser');
     if (!currentUser || currentUser !== 'bao.lt') {
-        alert('Rất tiếc! Chỉ tài khoản Quản trị viên (bao.lt) mới có quyền truy cập trang này.');
-        window.location.href = 'home.html';
+        const mainContent = document.querySelector('.main-content');
+        if (mainContent) mainContent.style.display = 'none';
         return;
     }
 
@@ -116,22 +116,6 @@ async function loadUserList() {
 }
 
 /**
- * Helper parse an toàn mảng allowed_pages từ Supabase
- */
-function parseAllowedPages(val) {
-    if (!val) return [];
-    if (Array.isArray(val)) return val;
-    if (typeof val === 'string') {
-        try {
-            return JSON.parse(val);
-        } catch (e) {
-            return [];
-        }
-    }
-    return [];
-}
-
-/**
  * Hiển thị dữ liệu lên Bảng
  */
 function renderUserTable(filterText = '') {
@@ -171,7 +155,7 @@ function renderUserTable(filterText = '') {
         if (!permBadges) permBadges = `<span class="badge bg-dark text-muted badge-perm">Không có quyền</span>`;
 
         // Render Badge số lượng trang HTML được xem
-        const allowedPages = parseAllowedPages(u.allowed_pages);
+        const allowedPages = Array.isArray(u.allowed_pages) ? u.allowed_pages : [];
         const isBaoLt = u.username === 'bao.lt';
         const isAllPages = isBaoLt || allowedPages.includes('*');
         const pageBadge = isAllPages 
@@ -267,7 +251,7 @@ function openEditUserModal(userId) {
     document.getElementById('checkCanDelete').checked = !!user.can_delete;
 
     // Tick chọn các trang HTML mà user được phép truy cập
-    const allowedPages = parseAllowedPages(user.allowed_pages);
+    const allowedPages = Array.isArray(user.allowed_pages) ? user.allowed_pages : [];
     const isAll = user.username === 'bao.lt' || allowedPages.includes('*');
 
     document.querySelectorAll('.page-checkbox').forEach(cb => {
