@@ -21,14 +21,6 @@ document.addEventListener('DOMContentLoaded', function () {
    Xử lý form đăng nhập
 ================================================================================ */
 
-// Danh sách tài khoản hợp lệ
-const validAccounts = [
-   { username: 'bao.lt', password: '6697@', email: 'thaibao06061997@gmail.com', requireOtp: true },
-   { username: 'admin', password: 'admin123' },
-   { username: 'user1', password: 'pass123' },
-   { username: 'user2', password: 'pass456' }
-];
-
 // Biến lưu trạng thái OTP tạm thời
 let currentPendingUser = null;
 let currentGeneratedOtp = null;
@@ -45,46 +37,53 @@ function initLoginForm() {
       const username = form.username.value.trim();
       const password = form.password.value;
 
-      let account = null;
-
-      // 1. Thử xác thực an toàn qua Supabase RPC (chống F12 xem mật khẩu)
-      if (window.supabase && typeof window.supabase.rpc === 'function') {
-         try {
-            const { data, error } = await window.supabase.rpc('check_login', {
-               p_username: username,
-               p_password: password
-            });
-
-            if (!error && data && data.length > 0) {
-               const u = data[0];
-               account = {
-                  username: u.username,
-                  email: u.email,
-                  requireOtp: u.require_otp,
-                  permissions: {
-                     canAdd: u.can_add,
-                     canEdit: u.can_edit,
-                     canDelete: u.can_delete,
-                     canView: u.can_view
-                  }
-               };
-            }
-         } catch (err) {
-            console.warn('Supabase RPC check_login error or not set up yet:', err);
-         }
+      if (!username || !password) {
+         errorMessage.textContent = 'Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu!';
+         errorMessage.style.display = 'block';
+         return;
       }
 
-      // 2. Dự phòng nếu Supabase chưa kết nối hoặc chưa tạo hàm SQL
-      if (!account) {
-         const found = validAccounts.find(acc => acc.username === username && acc.password === password);
-         if (found) {
+      let account = null;
+
+      // Xác thực an toàn 100% qua Supabase RPC (chống F12 xem mật khẩu)
+      if (!window.supabase || typeof window.supabase.rpc !== 'function') {
+         errorMessage.textContent = 'Không thể kết nối đến máy chủ Supabase. Vui lòng kiểm tra kết nối mạng!';
+         errorMessage.style.display = 'block';
+         return;
+      }
+
+      try {
+         const { data, error } = await window.supabase.rpc('check_login', {
+            p_username: username,
+            p_password: password
+         });
+
+         if (error) {
+            console.error('Supabase RPC check_login error:', error);
+            errorMessage.textContent = 'Lỗi hệ thống khi xác thực. Vui lòng thử lại sau!';
+            errorMessage.style.display = 'block';
+            return;
+         }
+
+         if (data && data.length > 0) {
+            const u = data[0];
             account = {
-               username: found.username,
-               email: found.email,
-               requireOtp: !!found.requireOtp,
-               permissions: { canAdd: true, canEdit: true, canDelete: true, canView: true }
+               username: u.username,
+               email: u.email,
+               requireOtp: u.require_otp,
+               permissions: {
+                  canAdd: u.can_add,
+                  canEdit: u.can_edit,
+                  canDelete: u.can_delete,
+                  canView: u.can_view
+               }
             };
          }
+      } catch (err) {
+         console.error('Supabase connection exception:', err);
+         errorMessage.textContent = 'Không thể kết nối đến máy chủ Supabase. Vui lòng kiểm tra lại!';
+         errorMessage.style.display = 'block';
+         return;
       }
 
       if (account) {
@@ -99,8 +98,8 @@ function initLoginForm() {
             completeLogin(account.username, account);
          }
       } else {
-         // Sai → hiển thị lỗi
-         errorMessage.textContent = 'Tên đăng nhập hoặc mật khẩu không đúng!';
+         // Sai thông tin đăng nhập
+         errorMessage.textContent = 'Tên đăng nhập hoặc mật khẩu không chính xác!';
          errorMessage.style.display = 'block';
       }
    });
@@ -351,3 +350,4 @@ function completeLogin(username, accountObj = null) {
 
    window.location.href = 'home.html';
 }
+
