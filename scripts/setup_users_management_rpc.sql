@@ -4,6 +4,7 @@
 -- =============================================================================
 
 -- 1. Hàm lấy danh sách tất cả người dùng (KHÔNG lấy password)
+DROP FUNCTION IF EXISTS public.admin_get_users();
 CREATE OR REPLACE FUNCTION public.admin_get_users()
 RETURNS TABLE (
     id BIGINT,
@@ -39,6 +40,8 @@ END;
 $$;
 
 -- 2. Hàm Thêm mới hoặc Cập nhật thông tin & phân quyền người dùng
+DROP FUNCTION IF EXISTS public.admin_save_user(BIGINT, TEXT, TEXT, TEXT, BOOLEAN, BOOLEAN, BOOLEAN, BOOLEAN, BOOLEAN);
+DROP FUNCTION IF EXISTS public.admin_save_user(BIGINT, TEXT, TEXT, TEXT, BOOLEAN, BOOLEAN, BOOLEAN, BOOLEAN, BOOLEAN, JSONB);
 CREATE OR REPLACE FUNCTION public.admin_save_user(
     p_id BIGINT DEFAULT NULL,
     p_username TEXT DEFAULT NULL,

@@ -27,7 +27,8 @@ ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 -- (Không tạo policy SELECT public -> Mặc định gõ supabase.from('users').select() sẽ bị trả về rỗng)
 
 -- 3. Tạo hàm RPC check_login (Chạy 100% trên Server Supabase)
--- Trả về duy nhất các cột quyền hạn & thông tin user. KHÔNG TRẢ VỀ MẬT KHỦA!
+-- Trả về duy nhất các cột quyền hạn & thông tin user. KHÔNG TRẢ VỀ MẬT KHẨU!
+DROP FUNCTION IF EXISTS public.check_login(TEXT, TEXT);
 CREATE OR REPLACE FUNCTION public.check_login(p_username TEXT, p_password TEXT)
 RETURNS TABLE (
     username TEXT,
