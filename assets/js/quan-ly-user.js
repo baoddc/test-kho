@@ -7,8 +7,8 @@ document.addEventListener('DOMContentLoaded', function () {
     // 1. Auth Guard - Kiểm tra xem user hiện tại có phải bao.lt không
     const currentUser = localStorage.getItem('currentUser');
     if (!currentUser || currentUser !== 'bao.lt') {
-        const mainContent = document.querySelector('.main-content');
-        if (mainContent) mainContent.style.display = 'none';
+        alert('Rất tiếc! Chỉ tài khoản Quản trị viên (bao.lt) mới có quyền truy cập trang này.');
+        window.location.href = 'home.html';
         return;
     }
 
@@ -35,8 +35,11 @@ function initUserManagement() {
     if (btnToggleAll) {
         btnToggleAll.addEventListener('click', function () {
             const pageCheckboxes = document.querySelectorAll('.page-checkbox');
+            const actionCheckboxes = document.querySelectorAll('.group-perm-action');
             const allChecked = Array.from(pageCheckboxes).every(cb => cb.checked);
+            
             pageCheckboxes.forEach(cb => cb.checked = !allChecked);
+            actionCheckboxes.forEach(cb => cb.checked = !allChecked);
             document.querySelectorAll('.group-select-all').forEach(g => g.checked = !allChecked);
             btnToggleAll.textContent = !allChecked ? 'Bỏ chọn tất cả' : 'Chọn tất cả';
         });
@@ -48,6 +51,9 @@ function initUserManagement() {
             const groupName = this.getAttribute('data-group');
             const memberCheckboxes = document.querySelectorAll(`.group-page-${groupName}`);
             memberCheckboxes.forEach(cb => cb.checked = this.checked);
+
+            const actionCheckboxes = document.querySelectorAll(`.group-perm-${groupName}`);
+            actionCheckboxes.forEach(cb => cb.checked = this.checked);
         });
     });
 
@@ -154,8 +160,17 @@ function renderUserTable(filterText = '') {
         if (u.can_delete) permBadges += `<span class="badge bg-danger badge-perm">Xóa</span>`;
         if (!permBadges) permBadges = `<span class="badge bg-dark text-muted badge-perm">Không có quyền</span>`;
 
-        // Render Badge số lượng trang HTML được xem
-        const allowedPages = Array.isArray(u.allowed_pages) ? u.allowed_pages : [];
+        // Render Badge số lượng trang HTML được xem & chi tiết nhóm
+        let allowedPages = [];
+        let groupsObj = null;
+
+        if (Array.isArray(u.allowed_pages)) {
+            allowedPages = u.allowed_pages;
+        } else if (u.allowed_pages && typeof u.allowed_pages === 'object') {
+            allowedPages = Array.isArray(u.allowed_pages.pages) ? u.allowed_pages.pages : [];
+            groupsObj = u.allowed_pages.groups || null;
+        }
+
         const isBaoLt = u.username === 'bao.lt';
         const isAllPages = isBaoLt || allowedPages.includes('*');
         const pageBadge = isAllPages 
@@ -212,8 +227,11 @@ function openAddUserModal() {
     document.getElementById('passwordHelp').textContent = 'Bắt buộc nhập mật khẩu khi tạo tài khoản mới.';
     document.getElementById('inputPassword').required = true;
     
-    document.getElementById('checkCanView').checked = true;
-    
+    // Reset group action checkboxes
+    document.querySelectorAll('.group-perm-action').forEach(cb => {
+        cb.checked = (cb.id === 'perm_chung_view');
+    });
+
     // Mặc định chọn Trang chủ cho user mới
     document.querySelectorAll('.page-checkbox').forEach(cb => {
         cb.checked = (cb.value === '/pages/home.html');
@@ -221,6 +239,7 @@ function openAddUserModal() {
     document.querySelectorAll('.group-select-all').forEach(g => g.checked = false);
 
     document.getElementById('formErrorMessage').classList.add('d-none');
+    window._editingUserOriginalPermissions = null;
     userModalInstance.show();
 }
 
@@ -245,32 +264,153 @@ function openEditUserModal(userId) {
 
     document.getElementById('inputEmail').value = user.email || '';
     document.getElementById('checkRequireOtp').checked = !!user.require_otp;
-    document.getElementById('checkCanView').checked = !!user.can_view;
-    document.getElementById('checkCanAdd').checked = !!user.can_add;
-    document.getElementById('checkCanEdit').checked = !!user.can_edit;
-    document.getElementById('checkCanDelete').checked = !!user.can_delete;
+
+    // Parse allowed_pages (Array hoặc Object)
+    let allowedPagesList = [];
+    let groupsObj = null;
+
+    if (Array.isArray(user.allowed_pages)) {
+        allowedPagesList = user.allowed_pages;
+    } else if (user.allowed_pages && typeof user.allowed_pages === 'object') {
+        allowedPagesList = Array.isArray(user.allowed_pages.pages) ? user.allowed_pages.pages : [];
+        groupsObj = user.allowed_pages.groups || null;
+    }
+
+    // Lưu lại vị thế phân quyền ban đầu để tính diff sau khi lưu
+    window._editingUserOriginalPermissions = {
+        allowedPages: [...allowedPagesList],
+        groups: groupsObj ? JSON.parse(JSON.stringify(groupsObj)) : null
+    };
+
+    const isAll = user.username === 'bao.lt' || allowedPagesList.includes('*');
 
     // Tick chọn các trang HTML mà user được phép truy cập
-    const allowedPages = Array.isArray(user.allowed_pages) ? user.allowed_pages : [];
-    const isAll = user.username === 'bao.lt' || allowedPages.includes('*');
-
     document.querySelectorAll('.page-checkbox').forEach(cb => {
         if (isAll) {
             cb.checked = true;
         } else {
-            cb.checked = allowedPages.includes(cb.value);
+            cb.checked = allowedPagesList.includes(cb.value);
         }
+    });
+
+    // Tick chọn các quyền thao tác theo nhóm
+    const groupNames = ['chung', '5s', 'xg', 'tole', 'pl', 'admin'];
+    groupNames.forEach(grp => {
+        ['view', 'add', 'edit', 'delete'].forEach(act => {
+            const cb = document.getElementById(`perm_${grp}_${act}`);
+            if (!cb) return;
+
+            if (isAll) {
+                cb.checked = true;
+            } else if (groupsObj && groupsObj[grp]) {
+                const actKey = 'can' + act.charAt(0).toUpperCase() + act.slice(1);
+                cb.checked = !!groupsObj[grp][actKey];
+            } else {
+                // Fallback từ quyền tổng hợp cũ nếu chưa có cấu hình group
+                if (act === 'view') cb.checked = !!user.can_view;
+                else if (act === 'add') cb.checked = !!user.can_add;
+                else if (act === 'edit') cb.checked = !!user.can_edit;
+                else if (act === 'delete') cb.checked = !!user.can_delete;
+            }
+        });
     });
 
     // Cập nhật các ô chọn toàn bộ nhóm
     document.querySelectorAll('.group-select-all').forEach(groupCb => {
         const groupName = groupCb.getAttribute('data-group');
         const memberCbs = Array.from(document.querySelectorAll(`.group-page-${groupName}`));
-        groupCb.checked = memberCbs.length > 0 && memberCbs.every(c => c.checked);
+        const actionCbs = Array.from(document.querySelectorAll(`.group-perm-${groupName}`));
+        const allMember = memberCbs.every(c => c.checked);
+        const allAction = actionCbs.every(c => c.checked);
+        groupCb.checked = (memberCbs.length > 0 && allMember) && (actionCbs.length > 0 && allAction);
     });
 
     document.getElementById('formErrorMessage').classList.add('d-none');
     userModalInstance.show();
+}
+
+/**
+ * Tính toán sự thay đổi phân quyền (Diff) giữa cũ và mới
+ */
+function computePermissionDiff(username, oldPerms, newAllowedPagesPayload) {
+    if (!oldPerms) {
+        return {
+            hasChanges: true,
+            title: '🎉 Tài khoản của bạn đã được khởi tạo',
+            content: `Tài khoản ${username} đã được Admin khởi tạo và cấp quyền truy cập hệ thống. Vui lòng kiểm tra danh sách trang và chức năng được phân quyền.`,
+            type: 'info'
+        };
+    }
+
+    const pageLabels = {
+        '/pages/home.html': 'Trang chủ',
+        '/pages/cong-viec.html': 'Quản lý Công việc',
+        '/pages/quan-ly-user.html': 'Quản lý User',
+        '/pages/about.html': 'Giới thiệu',
+        '/pages/5s/quan-ly-5s.html': 'Quản lý 5S',
+        '/pages/xg/xg-nhap-supabase.html': 'Xưởng Phôi - Nhập kho',
+        '/pages/xg/xg-xuat-supabase.html': 'Xưởng Phôi - Xuất kho',
+        '/pages/tole/tole-nhap-supabase.html': 'Xưởng Tole - Nhập kho',
+        '/pages/tole/tole-xuat-supabase.html': 'Xưởng Tole - Xuất kho',
+        '/pages/pl/pl-chua-thu.html': 'Phân Loại - Phôi Chưa Thu',
+        '/pages/pl/pl-da-thu.html': 'Phân Loại - Phôi Đã Thu',
+        '/pages/pl/pl-can-thu.html': 'Phân Loại - Phôi Cần Thu'
+    };
+
+    const oldPages = Array.isArray(oldPerms.allowedPages) ? oldPerms.allowedPages : [];
+    const newPages = Array.isArray(newAllowedPagesPayload) ? newAllowedPagesPayload : (Array.isArray(newAllowedPagesPayload?.pages) ? newAllowedPagesPayload.pages : []);
+
+    const addedPages = newPages.filter(p => !oldPages.includes(p));
+    const removedPages = oldPages.filter(p => !newPages.includes(p));
+
+    const addedTextList = addedPages.map(p => pageLabels[p] || p);
+    const removedTextList = removedPages.map(p => pageLabels[p] || p);
+
+    // Track group action changes if available
+    const oldGroups = oldPerms.groups || {};
+    const newGroups = newAllowedPagesPayload?.groups || {};
+    const groupLabels = {
+        chung: 'Chung (Home, Công việc)',
+        '5s': 'Quản lý 5S',
+        xg: 'Xưởng Phôi',
+        tole: 'Xưởng Tole',
+        pl: 'Phân loại Phôi',
+        admin: 'Quản trị User'
+    };
+    const actionLabels = { canView: 'Xem', canAdd: 'Thêm', canEdit: 'Sửa', canDelete: 'Xóa' };
+
+    ['chung', '5s', 'xg', 'tole', 'pl', 'admin'].forEach(grp => {
+        const oldG = oldGroups[grp] || {};
+        const newG = newGroups[grp] || {};
+        ['canView', 'canAdd', 'canEdit', 'canDelete'].forEach(act => {
+            if (!oldG[act] && newG[act]) {
+                addedTextList.push(`Quyền ${actionLabels[act]} (${groupLabels[grp]})`);
+            } else if (oldG[act] && !newG[act]) {
+                removedTextList.push(`Quyền ${actionLabels[act]} (${groupLabels[grp]})`);
+            }
+        });
+    });
+
+    if (addedTextList.length === 0 && removedTextList.length === 0) {
+        return { hasChanges: false };
+    }
+
+    let summaryParts = [];
+    if (addedTextList.length > 0) {
+        summaryParts.push(`➕ Cấp thêm:\n • ${addedTextList.join('\n • ')}`);
+    }
+    if (removedTextList.length > 0) {
+        summaryParts.push(`➖ Thu hồi:\n • ${removedTextList.join('\n • ')}`);
+    }
+
+    const isWarning = removedTextList.length > 0 && addedTextList.length === 0;
+
+    return {
+        hasChanges: true,
+        title: isWarning ? '⚠️ Thu hồi quyền truy cập' : '📢 Cập nhật quyền truy cập tài khoản',
+        content: `Phân quyền tài khoản của bạn vừa được Quản trị viên cập nhật:\n${summaryParts.join('\n\n')}`,
+        type: isWarning ? 'warning' : 'info'
+    };
 }
 
 /**
@@ -285,10 +425,6 @@ async function handleSaveUser() {
     const password = document.getElementById('inputPassword').value;
     const email = document.getElementById('inputEmail').value.trim();
     const requireOtp = document.getElementById('checkRequireOtp').checked;
-    const canView = document.getElementById('checkCanView').checked;
-    const canAdd = document.getElementById('checkCanAdd').checked;
-    const canEdit = document.getElementById('checkCanEdit').checked;
-    const canDelete = document.getElementById('checkCanDelete').checked;
 
     if (!editId && (!username || !password)) {
         errElem.textContent = 'Vui lòng nhập đầy đủ Tên đăng nhập và Mật khẩu!';
@@ -296,16 +432,40 @@ async function handleSaveUser() {
         return;
     }
 
-    // Thu thập danh sách các trang HTML được tick chọn
-    const allowedPages = [];
     const isBaoLt = username === 'bao.lt';
+    const allowedPagesList = [];
+
     if (isBaoLt) {
-        allowedPages.push('*');
+        allowedPagesList.push('*');
     } else {
         document.querySelectorAll('.page-checkbox:checked').forEach(cb => {
-            allowedPages.push(cb.value);
+            allowedPagesList.push(cb.value);
         });
     }
+
+    // Thu thập quyền thao tác theo từng nhóm
+    const groupNames = ['chung', '5s', 'xg', 'tole', 'pl', 'admin'];
+    const groupsObj = {};
+
+    groupNames.forEach(grp => {
+        groupsObj[grp] = {
+            canView: isBaoLt || !!document.getElementById(`perm_${grp}_view`)?.checked,
+            canAdd: isBaoLt || !!document.getElementById(`perm_${grp}_add`)?.checked,
+            canEdit: isBaoLt || !!document.getElementById(`perm_${grp}_edit`)?.checked,
+            canDelete: isBaoLt || !!document.getElementById(`perm_${grp}_delete`)?.checked
+        };
+    });
+
+    // Tính toán quyền hệ thống (OR combination)
+    const canView = isBaoLt || Object.values(groupsObj).some(g => g.canView);
+    const canAdd = isBaoLt || Object.values(groupsObj).some(g => g.canAdd);
+    const canEdit = isBaoLt || Object.values(groupsObj).some(g => g.canEdit);
+    const canDelete = isBaoLt || Object.values(groupsObj).some(g => g.canDelete);
+
+    const allowedPagesPayload = isBaoLt ? ['*'] : {
+        pages: allowedPagesList,
+        groups: groupsObj
+    };
 
     const payload = {
         p_id: editId ? parseInt(editId, 10) : null,
@@ -317,7 +477,7 @@ async function handleSaveUser() {
         p_can_edit: canEdit,
         p_can_delete: canDelete,
         p_can_view: canView,
-        p_allowed_pages: allowedPages
+        p_allowed_pages: allowedPagesPayload
     };
 
     try {
@@ -334,6 +494,23 @@ async function handleSaveUser() {
             const res = data[0];
             if (res.success) {
                 userModalInstance.hide();
+
+                // Đẩy thông báo phân quyền tới người dùng được điều chỉnh
+                const diff = computePermissionDiff(username, window._editingUserOriginalPermissions, allowedPagesPayload);
+                if (diff.hasChanges && window.supabase && typeof window.supabase.from === 'function') {
+                    window.supabase.from('system_announcements').insert([{
+                        title: diff.title,
+                        content: diff.content,
+                        type: diff.type,
+                        target_user: username,
+                        created_by: 'bao.lt',
+                        is_active: true
+                    }]).then(({ error: notifErr }) => {
+                        if (notifErr) console.warn('Lỗi gửi thông báo phân quyền:', notifErr);
+                    }).catch(e => console.warn('Lỗi gửi thông báo phân quyền:', e));
+                }
+                window._editingUserOriginalPermissions = null;
+
                 loadUserList(); // Tải lại danh sách
             } else {
                 errElem.textContent = res.message || 'Thao tác không thành công!';
