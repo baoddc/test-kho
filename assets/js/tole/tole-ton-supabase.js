@@ -219,7 +219,7 @@ async function loadSupabaseData() {
     if (cachedTon && Array.isArray(cachedTon) && cachedTon.length > 0) {
       window._rawSupabaseData = cachedTon;
       tableData = [COLUMN_HEADERS, ...cachedTon.map(rowToArray)];
-      renderTable(tableData);
+      renderTable(tableData, false);
       if (loadingEl) loadingEl.style.display = 'none';
       const btnExport = document.getElementById('btnExport');
       if (btnExport) btnExport.disabled = false;
@@ -283,7 +283,7 @@ async function loadSupabaseData() {
     window._rawSupabaseData = processedTon;
     tableData = [COLUMN_HEADERS, ...processedTon.map(rowToArray)];
 
-    renderTable(tableData);
+    renderTable(tableData, false);
 
     if (loadingEl) loadingEl.style.display = 'none';
     const btnExport = document.getElementById('btnExport');
