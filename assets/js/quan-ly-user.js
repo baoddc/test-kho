@@ -357,18 +357,43 @@ function computePermissionDiff(username, oldPerms, newAllowedPagesPayload) {
 
     const pageLabels = {
         '/pages/home.html': 'Trang chủ',
-        '/pages/cong-viec.html': 'Quản lý Công việc',
-        '/pages/quan-ly-user.html': 'Quản lý User',
         '/pages/about.html': 'Giới thiệu',
+        '/pages/cong-viec.html': 'Công việc & Nhắc hẹn',
+        '/pages/quan-ly-user.html': 'Quản lý User',
+        '/pages/5s/5s-so-do-phoi-cuon.html': 'Sơ đồ kho Phôi cuộn',
+        '/pages/5s/5s-so-do-phe-lieu.html': 'Sơ đồ kho Phế liệu',
+        '/pages/5s/hse.html': 'HSE',
         '/pages/5s/quan-ly-5s.html': 'Quản lý 5S',
-        '/pages/xg/xg-nhap-supabase.html': 'Xưởng Phôi - Nhập kho',
-        '/pages/xg/xg-xuat-supabase.html': 'Xưởng Phôi - Xuất kho',
-        '/pages/tole/tole-nhap-supabase.html': 'Xưởng Tole - Nhập kho',
-        '/pages/tole/tole-xuat-supabase.html': 'Xưởng Tole - Xuất kho',
-        '/pages/pl/pl-chua-thu.html': 'Phân Loại - Phôi Chưa Thu',
-        '/pages/pl/pl-da-thu.html': 'Phân Loại - Phôi Đã Thu',
-        '/pages/pl/pl-can-thu.html': 'Phân Loại - Phôi Cần Thu'
+        '/pages/xg/xg-nhap.html': 'Nhập - XG',
+        '/pages/xg/xg-nhap-supabase.html': 'Nhập - XG',
+        '/pages/xg/xg-xuat.html': 'Xuất - XG',
+        '/pages/xg/xg-xuat-supabase.html': 'Xuất - XG',
+        '/pages/xg/xg-ton.html': 'Tồn - XG',
+        '/pages/xg/xg-ton-supabase.html': 'Tồn - XG',
+        '/pages/xg/xg-bieu-do.html': 'Biểu đồ - XG',
+        '/pages/tole/tole-nhap.html': 'Nhập - Tole',
+        '/pages/tole/tole-nhap-supabase.html': 'Nhập - Tole',
+        '/pages/tole/tole-xuat.html': 'Xuất - Tole',
+        '/pages/tole/tole-xuat-supabase.html': 'Xuất - Tole',
+        '/pages/tole/tole-ton.html': 'Tồn - Tole',
+        '/pages/tole/tole-ton-supabase.html': 'Tồn - Tole',
+        '/pages/tole/tole-bieu-do.html': 'Biểu đồ - Tole',
+        '/pages/pl/pl-can-thu.html': 'Cần thu - PL',
+        '/pages/pl/pl-da-thu.html': 'Đã thu - PL',
+        '/pages/pl/pl-chua-thu.html': 'Chưa thu - PL',
+        '/pages/pl/pl-phieu-in.html': 'Xuất bán/Xuất trả - PL'
     };
+
+    function formatPageName(p) {
+        if (!p) return '';
+        if (pageLabels[p]) return pageLabels[p];
+        let clean = p.replace(/^\/pages\//, '').replace(/\.html$/, '');
+        const parts = clean.split('/');
+        let name = parts[parts.length - 1];
+        name = name.replace(/^xg-/, '').replace(/^tole-/, '').replace(/^pl-/, '').replace(/-supabase$/, '');
+        const section = parts[0].toUpperCase();
+        return `${name.charAt(0).toUpperCase() + name.slice(1)} - ${section}`;
+    }
 
     const oldPages = Array.isArray(oldPerms.allowedPages) ? oldPerms.allowedPages : [];
     const newPages = Array.isArray(newAllowedPagesPayload) ? newAllowedPagesPayload : (Array.isArray(newAllowedPagesPayload?.pages) ? newAllowedPagesPayload.pages : []);
@@ -376,8 +401,8 @@ function computePermissionDiff(username, oldPerms, newAllowedPagesPayload) {
     const addedPages = newPages.filter(p => !oldPages.includes(p));
     const removedPages = oldPages.filter(p => !newPages.includes(p));
 
-    const addedTextList = addedPages.map(p => pageLabels[p] || p);
-    const removedTextList = removedPages.map(p => pageLabels[p] || p);
+    const addedTextList = addedPages.map(p => formatPageName(p));
+    const removedTextList = removedPages.map(p => formatPageName(p));
 
     // Track group action changes if available
     const oldGroups = oldPerms.groups || {};
