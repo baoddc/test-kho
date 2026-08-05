@@ -159,6 +159,9 @@
     if (!currentUser) return true;
     if (currentUser === 'bao.lt') return true;
 
+    // Trang chủ mặc định luôn được phép
+    if (href.endsWith('home.html')) return true;
+
     let allowedPages = [];
     try {
       allowedPages = JSON.parse(localStorage.getItem('userAllowedPages') || '[]');
@@ -167,9 +170,6 @@
     }
 
     if (allowedPages.includes('*')) return true;
-
-    // Trang chủ mặc định được phép
-    if (href.endsWith('home.html')) return true;
 
     let groupPerms = {};
     try {
@@ -181,22 +181,27 @@
     const cleanHref = href.split('?')[0];
     const hrefFile = cleanHref.split('/').pop().replace('.html', '').replace('-supabase', '');
 
-    // 1. Kiểm tra theo quyền Nhóm (View)
-    if (cleanHref.includes('/xg/') && groupPerms.xg && groupPerms.xg.canView) return true;
-    if (cleanHref.includes('/tole/') && groupPerms.tole && groupPerms.tole.canView) return true;
-    if (cleanHref.includes('/5s/') && groupPerms['5s'] && groupPerms['5s'].canView) return true;
-    if (cleanHref.includes('/pl/') && groupPerms.pl && groupPerms.pl.canView) return true;
-    if (cleanHref.endsWith('cong-viec.html') && groupPerms.chung && groupPerms.chung.canView) return true;
-    if (cleanHref.endsWith('quan-ly-user.html') && groupPerms.admin && groupPerms.admin.canView) return true;
+    // 1. Nếu có danh sách allowedPages cụ thể (không rỗng):
+    // Trang CHỈ ĐƯỢC PHÉP HIỂN THỊ khi nó thực sự nằm trong allowedPages!
+    if (Array.isArray(allowedPages) && allowedPages.length > 0) {
+      return allowedPages.some(page => {
+        const cleanPage = page.split('?')[0];
+        if (cleanHref === cleanPage || cleanHref.endsWith(cleanPage)) return true;
 
-    // 2. Kiểm tra theo từng trang HTML được cấp trong allowedPages
-    return allowedPages.some(page => {
-      const cleanPage = page.split('?')[0];
-      if (cleanHref === cleanPage || cleanHref.endsWith(cleanPage)) return true;
+        const pageFile = cleanPage.split('/').pop().replace('.html', '').replace('-supabase', '');
+        return hrefFile === pageFile;
+      });
+    }
 
-      const pageFile = cleanPage.split('/').pop().replace('.html', '').replace('-supabase', '');
-      return hrefFile === pageFile;
-    });
+    // 2. Nếu allowedPages rỗng, kiểm tra theo quyền Nhóm (canView)
+    if (cleanHref.includes('/xg/')) return !!(groupPerms.xg && groupPerms.xg.canView);
+    if (cleanHref.includes('/tole/')) return !!(groupPerms.tole && groupPerms.tole.canView);
+    if (cleanHref.includes('/5s/')) return !!(groupPerms['5s'] && groupPerms['5s'].canView);
+    if (cleanHref.includes('/pl/')) return !!(groupPerms.pl && groupPerms.pl.canView);
+    if (cleanHref.endsWith('cong-viec.html')) return !!(groupPerms.chung && groupPerms.chung.canView);
+    if (cleanHref.endsWith('quan-ly-user.html')) return !!(groupPerms.admin && groupPerms.admin.canView);
+
+    return false;
   }
 
   function showAccessDeniedModal(msg, onConfirm) {
@@ -1168,7 +1173,12 @@
             localStorage.setItem('userAllowedPages', JSON.stringify(rawAllowed.pages || []));
             if (rawAllowed.groups) {
               localStorage.setItem('userGroupPermissions', JSON.stringify(rawAllowed.groups));
+            } else {
+              localStorage.removeItem('userGroupPermissions');
             }
+          } else {
+            localStorage.setItem('userAllowedPages', '[]');
+            localStorage.removeItem('userGroupPermissions');
           }
 
           localStorage.setItem('userPermissions', JSON.stringify({
@@ -1180,6 +1190,9 @@
 
           // Tái tạo thanh sidebar ngay lập tức không cần reload trang
           updateSidebarNav();
+
+          // Kiểm tra nếu trang hiện tại bị thu hồi quyền thì cảnh báo & chuyển về Trang chủ
+          checkRoutePermission();
         }
       }
     } catch (e) {

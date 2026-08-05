@@ -147,6 +147,116 @@
     return path === href || path.endsWith(href) || href.endsWith(path.split('/').pop());
   }
 
+  function isPageAllowed(href) {
+    if (!href || href === '#' || href.startsWith('#') || href.startsWith('javascript:')) return true;
+    const currentUser = localStorage.getItem('currentUser');
+    if (!currentUser) return true;
+    if (currentUser === 'bao.lt') return true;
+
+    // Trang chủ mặc định luôn được phép
+    if (href.endsWith('home.html')) return true;
+
+    let allowedPages = [];
+    try {
+      allowedPages = JSON.parse(localStorage.getItem('userAllowedPages') || '[]');
+    } catch (e) {
+      allowedPages = [];
+    }
+
+    if (allowedPages.includes('*')) return true;
+
+    let groupPerms = {};
+    try {
+      groupPerms = JSON.parse(localStorage.getItem('userGroupPermissions') || '{}');
+    } catch (e) {
+      groupPerms = {};
+    }
+
+    const cleanHref = href.split('?')[0];
+    const hrefFile = cleanHref.split('/').pop().replace('.html', '').replace('-supabase', '');
+
+    // 1. Nếu có danh sách allowedPages cụ thể (không rỗng):
+    // Trang CHỈ ĐƯỢC PHÉP HIỂN THỊ khi nó thực sự nằm trong allowedPages!
+    if (Array.isArray(allowedPages) && allowedPages.length > 0) {
+      return allowedPages.some(page => {
+        const cleanPage = page.split('?')[0];
+        if (cleanHref === cleanPage || cleanHref.endsWith(cleanPage)) return true;
+
+        const pageFile = cleanPage.split('/').pop().replace('.html', '').replace('-supabase', '');
+        return hrefFile === pageFile;
+      });
+    }
+
+    // 2. Nếu allowedPages rỗng, kiểm tra theo quyền Nhóm (canView)
+    if (cleanHref.includes('/xg/')) return !!(groupPerms.xg && groupPerms.xg.canView);
+    if (cleanHref.includes('/tole/')) return !!(groupPerms.tole && groupPerms.tole.canView);
+    if (cleanHref.includes('/5s/')) return !!(groupPerms['5s'] && groupPerms['5s'].canView);
+    if (cleanHref.includes('/pl/')) return !!(groupPerms.pl && groupPerms.pl.canView);
+    if (cleanHref.endsWith('cong-viec.html')) return !!(groupPerms.chung && groupPerms.chung.canView);
+    if (cleanHref.endsWith('quan-ly-user.html')) return !!(groupPerms.admin && groupPerms.admin.canView);
+
+    return false;
+  }
+
+  function showAccessDeniedModal(msg, onConfirm) {
+    let modalEl = document.getElementById('accessDeniedModal');
+    if (!modalEl) {
+      modalEl = document.createElement('div');
+      modalEl.id = 'accessDeniedModal';
+      modalEl.className = 'modal fade';
+      modalEl.setAttribute('tabindex', '-1');
+      modalEl.setAttribute('aria-hidden', 'true');
+      modalEl.innerHTML = `
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+          <div class="modal-content text-center p-4" style="background-color: #1e293b; color: #f8fafc; border: 1px solid #334155; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);">
+            <div class="mb-3 text-warning">
+              <svg viewBox="0 0 24 24" width="56" height="56" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto; display: block;">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+            </div>
+            <h5 class="fw-bold mb-2" style="color: #f8fafc; font-size: 1.15rem;">Không có quyền truy cập</h5>
+            <p id="accessDeniedMsg" class="text-muted small mb-4" style="color: #94a3b8 !important; line-height: 1.5;">${msg || 'Rất tiếc! Bạn không có quyền truy cập trang này.'}</p>
+            <div>
+              <button type="button" id="btnConfirmAccessDenied" class="btn btn-primary px-3 py-2 fw-semibold" style="border-radius: 8px; width: 100%; font-size: 0.9rem;">
+                Đồng ý / Quay về Trang chủ
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modalEl);
+    } else {
+      const msgEl = modalEl.querySelector('#accessDeniedMsg');
+      if (msgEl) msgEl.textContent = msg || 'Rất tiếc! Bạn không có quyền truy cập trang này.';
+    }
+
+    const btnConfirm = modalEl.querySelector('#btnConfirmAccessDenied');
+    if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+      const bsModal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+      btnConfirm.onclick = () => {
+        bsModal.hide();
+        if (typeof onConfirm === 'function') onConfirm();
+      };
+      bsModal.show();
+    } else {
+      alert(msg || 'Rất tiếc! Bạn không có quyền truy cập trang này.');
+      if (typeof onConfirm === 'function') onConfirm();
+    }
+  }
+
+  function checkRoutePermission() {
+    const page = window.location.pathname;
+    if (page.endsWith('dang_nhap.html') || page === '/' || page.endsWith('/index.html') || page.endsWith('home.html')) return;
+    if (!isPageAllowed(page)) {
+      setTimeout(() => {
+        showAccessDeniedModal('Rất tiếc! Tài khoản của bạn chưa được cấp quyền truy cập vào trang này.', () => {
+          window.location.href = '/pages/home.html';
+        });
+      }, 100);
+    }
+  }
+
   // ============================================================
   // BUILD SIDEBAR HTML
   // ============================================================
@@ -1023,7 +1133,12 @@
             localStorage.setItem('userAllowedPages', JSON.stringify(rawAllowed.pages || []));
             if (rawAllowed.groups) {
               localStorage.setItem('userGroupPermissions', JSON.stringify(rawAllowed.groups));
+            } else {
+              localStorage.removeItem('userGroupPermissions');
             }
+          } else {
+            localStorage.setItem('userAllowedPages', '[]');
+            localStorage.removeItem('userGroupPermissions');
           }
 
           localStorage.setItem('userPermissions', JSON.stringify({
@@ -1035,6 +1150,9 @@
 
           // Tái tạo thanh sidebar ngay lập tức không cần reload trang
           updateSidebarNav();
+
+          // Kiểm tra nếu trang hiện tại bị thu hồi quyền thì cảnh báo & chuyển về Trang chủ
+          checkRoutePermission();
         }
       }
     } catch (e) {
