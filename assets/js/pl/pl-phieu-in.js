@@ -2001,7 +2001,7 @@ async function submitAddData() {
 // DATA LOADING
 // =============================================================================
 
-async function loadGoogleSheet() {
+async function loadGoogleSheet(resetPage = false) {
   try {
     const cachedData = typeof getStoredTableCache === 'function' ? getStoredTableCache('pl-phieu-in') : null;
 
@@ -2052,7 +2052,7 @@ async function loadGoogleSheet() {
     if (cachedData && Array.isArray(cachedData) && cachedData.length > 0) {
       rawSupabaseData = cachedData;
       tableData = processRows(cachedData);
-      renderTable();
+      renderTable(tableData, resetPage);
       renderAddDataForm();
       if (tableData.length > 1) populateFormWithLatestData();
     }
@@ -2074,7 +2074,7 @@ async function loadGoogleSheet() {
     rawSupabaseData = freshData;
     tableData = processRows(freshData);
 
-    renderTable();
+    renderTable(tableData, resetPage);
     renderAddDataForm();
     if (tableData.length > 1) {
       populateFormWithLatestData();
