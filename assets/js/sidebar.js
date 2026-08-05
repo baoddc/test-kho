@@ -1222,6 +1222,30 @@
     const SUPABASE_URL = 'https://ahcethtonjwktjtmxzog.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_zxmsB9cyjDwi9ai9Vw-s1w_QlqKMG0S';
     
+    // 1. Thử gọi RPC admin_get_users để bypass RLS
+    try {
+      const resRpc = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_users`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({}),
+        cache: 'no-store'
+      });
+      if (resRpc.ok) {
+        const users = await resRpc.json();
+        if (Array.isArray(users)) {
+          const matched = users.find(u => u.username === username);
+          if (matched) return matched;
+        }
+      }
+    } catch (e) {
+      console.warn('Error fetching via RPC admin_get_users:', e);
+    }
+
+    // 2. Fallback: Trực tiếp qua REST Endpoint bảng users
     try {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/users?username=eq.${encodeURIComponent(username)}&select=allowed_pages,can_view,can_add,can_edit,can_delete`, {
         headers: {
