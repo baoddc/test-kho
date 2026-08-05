@@ -359,11 +359,15 @@ function computePermissionDiff(username, oldPerms, newAllowedPagesPayload) {
         '/pages/home.html': 'Trang chủ',
         '/pages/about.html': 'Giới thiệu',
         '/pages/cong-viec.html': 'Công việc & Nhắc hẹn',
-        '/pages/quan-ly-user.html': 'Quản lý User',
+        '/pages/quan-ly-user.html': 'Quản lý Người dùng',
+        
+        // Nhóm 5S
         '/pages/5s/5s-so-do-phoi-cuon.html': 'Sơ đồ kho Phôi cuộn',
         '/pages/5s/5s-so-do-phe-lieu.html': 'Sơ đồ kho Phế liệu',
         '/pages/5s/hse.html': 'HSE',
         '/pages/5s/quan-ly-5s.html': 'Quản lý 5S',
+        
+        // Nhóm XÀ GỒ
         '/pages/xg/xg-nhap.html': 'Nhập - XG',
         '/pages/xg/xg-nhap-supabase.html': 'Nhập - XG',
         '/pages/xg/xg-xuat.html': 'Xuất - XG',
@@ -371,6 +375,8 @@ function computePermissionDiff(username, oldPerms, newAllowedPagesPayload) {
         '/pages/xg/xg-ton.html': 'Tồn - XG',
         '/pages/xg/xg-ton-supabase.html': 'Tồn - XG',
         '/pages/xg/xg-bieu-do.html': 'Biểu đồ - XG',
+        
+        // Nhóm TOLE
         '/pages/tole/tole-nhap.html': 'Nhập - Tole',
         '/pages/tole/tole-nhap-supabase.html': 'Nhập - Tole',
         '/pages/tole/tole-xuat.html': 'Xuất - Tole',
@@ -378,21 +384,34 @@ function computePermissionDiff(username, oldPerms, newAllowedPagesPayload) {
         '/pages/tole/tole-ton.html': 'Tồn - Tole',
         '/pages/tole/tole-ton-supabase.html': 'Tồn - Tole',
         '/pages/tole/tole-bieu-do.html': 'Biểu đồ - Tole',
-        '/pages/pl/pl-can-thu.html': 'Cần thu - PL',
-        '/pages/pl/pl-da-thu.html': 'Đã thu - PL',
-        '/pages/pl/pl-chua-thu.html': 'Chưa thu - PL',
-        '/pages/pl/pl-phieu-in.html': 'Xuất bán/Xuất trả - PL'
+        
+        // Nhóm PHẾ LIỆU
+        '/pages/pl/pl-can-thu.html': 'PL - Cần thu',
+        '/pages/pl/pl-da-thu.html': 'PL - Đã thu',
+        '/pages/pl/pl-chua-thu.html': 'PL - Chưa thu',
+        '/pages/pl/pl-phieu-in.html': 'Xuất bán/Xuất trả (PL)'
     };
 
-    function formatPageName(p) {
-        if (!p) return '';
-        if (pageLabels[p]) return pageLabels[p];
-        let clean = p.replace(/^\/pages\//, '').replace(/\.html$/, '');
-        const parts = clean.split('/');
-        let name = parts[parts.length - 1];
-        name = name.replace(/^xg-/, '').replace(/^tole-/, '').replace(/^pl-/, '').replace(/-supabase$/, '');
-        const section = parts[0].toUpperCase();
-        return `${name.charAt(0).toUpperCase() + name.slice(1)} - ${section}`;
+    function getPageLabel(path) {
+        if (!path) return '';
+        if (pageLabels[path]) return pageLabels[path];
+        
+        const basename = path.split('/').pop().replace('.html', '');
+        if (basename.startsWith('xg-')) {
+            const action = basename.replace('xg-', '').replace('-supabase', '');
+            const actionMap = { nhap: 'Nhập', xuat: 'Xuất', ton: 'Tồn', 'bieu-do': 'Biểu đồ' };
+            return `${actionMap[action] || action} - XG`;
+        }
+        if (basename.startsWith('tole-')) {
+            const action = basename.replace('tole-', '').replace('-supabase', '');
+            const actionMap = { nhap: 'Nhập', xuat: 'Xuất', ton: 'Tồn', 'bieu-do': 'Biểu đồ' };
+            return `${actionMap[action] || action} - Tole`;
+        }
+        if (basename.startsWith('pl-')) {
+            const actionMap = { 'can-thu': 'PL - Cần thu', 'da-thu': 'PL - Đã thu', 'chua-thu': 'PL - Chưa thu', 'phieu-in': 'Xuất bán/Xuất trả (PL)' };
+            return actionMap[basename] || basename;
+        }
+        return basename;
     }
 
     const oldPages = Array.isArray(oldPerms.allowedPages) ? oldPerms.allowedPages : [];
@@ -401,8 +420,8 @@ function computePermissionDiff(username, oldPerms, newAllowedPagesPayload) {
     const addedPages = newPages.filter(p => !oldPages.includes(p));
     const removedPages = oldPages.filter(p => !newPages.includes(p));
 
-    const addedTextList = addedPages.map(p => formatPageName(p));
-    const removedTextList = removedPages.map(p => formatPageName(p));
+    const addedTextList = addedPages.map(p => getPageLabel(p));
+    const removedTextList = removedPages.map(p => getPageLabel(p));
 
     // Track group action changes if available
     const oldGroups = oldPerms.groups || {};
