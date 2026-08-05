@@ -48,6 +48,8 @@
     }
   }
 
+  window.ensureSupabaseClient = ensureSupabaseClient;
+
   function compareVersions(v1, v2) {
     const p1 = String(v1).split('.').map(Number);
     const p2 = String(v2).split('.').map(Number);

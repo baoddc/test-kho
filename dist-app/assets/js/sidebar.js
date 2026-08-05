@@ -1105,6 +1105,13 @@
     }
   }
 
+  function closeRevokedTabs() {
+    const revokedTabs = tabs.filter(t => t.id !== 'tab-home' && !isPageAllowed(t.url));
+    revokedTabs.forEach(t => {
+      closeTab(t.id);
+    });
+  }
+
   async function reloadUserPermissionsAndSidebar() {
     const currentUser = localStorage.getItem('currentUser');
     if (!currentUser || currentUser === 'bao.lt') return;
@@ -1115,6 +1122,10 @@
         client = await window.ensureSupabaseClient();
       } else if (window.supabase && typeof window.supabase.from === 'function') {
         client = window.supabase;
+      } else if (window.supabase && typeof window.supabase.createClient === 'function') {
+        const SUPABASE_URL = 'https://ahcethtonjwktjtmxzog.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_zxmsB9cyjDwi9ai9Vw-s1w_QlqKMG0S';
+        client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
       }
 
       if (client && typeof client.from === 'function') {
@@ -1151,6 +1162,9 @@
           // Tái tạo thanh sidebar ngay lập tức không cần reload trang
           updateSidebarNav();
 
+          // Đóng ngay các tab iframe đang mở của các trang bị thu hồi quyền
+          closeRevokedTabs();
+
           // Kiểm tra nếu trang hiện tại bị thu hồi quyền thì cảnh báo & chuyển về Trang chủ
           checkRoutePermission();
         }
@@ -1179,10 +1193,18 @@
     initLinkInterception();
     initThemeToggle();
 
+    // Lắng nghe tín hiệu thu hồi quyền gửi từ iframe
+    window.addEventListener('message', (e) => {
+      if (e.data && e.data.type === 'PERM_REVOKED') {
+        reloadUserPermissionsAndSidebar();
+      }
+    });
+
     // Lắng nghe sự kiện thay đổi localStorage trên cùng trình duyệt (đa tab)
     window.addEventListener('storage', (e) => {
       if (e.key === 'userAllowedPages' || e.key === 'userGroupPermissions' || e.key === 'userPermissions') {
         updateSidebarNav();
+        closeRevokedTabs();
       }
     });
 
