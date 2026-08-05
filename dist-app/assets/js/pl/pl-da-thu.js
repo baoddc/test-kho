@@ -915,41 +915,55 @@ function updateFilterCounts() {
 ================================================================================ */
 
 function setupModalPermissions(modalEl) {
-  const currentUser = localStorage.getItem('currentUser');
-  const isAdmin = currentUser === 'bao.lt';
+  const perms = (typeof getUserPermissions === 'function')
+    ? getUserPermissions('pl')
+    : { canAdd: true, canEdit: true, canDelete: true, isAdmin: true };
 
-  if (!modalEl) return isAdmin;
+  if (!modalEl) return perms.isAdmin;
 
-  // Vô hiệu hóa tất cả các input, select, textarea trong modal nếu không phải admin
+  const modalId = (modalEl.id || '').toLowerCase();
+  let hasPerm = perms.isAdmin;
+
+  if (modalId.includes('delete')) {
+    hasPerm = perms.isAdmin || perms.canDelete;
+  } else if (modalId.includes('add')) {
+    hasPerm = perms.isAdmin || perms.canAdd;
+  } else if (modalId.includes('edit')) {
+    hasPerm = perms.isAdmin || perms.canEdit;
+  } else {
+    hasPerm = perms.isAdmin || perms.canEdit || perms.canAdd;
+  }
+
+  // Vô hiệu hóa tất cả các input, select, textarea trong modal nếu không có quyền
   const inputs = modalEl.querySelectorAll('input, select, textarea');
   inputs.forEach(input => {
-    input.disabled = !isAdmin;
+    input.disabled = !hasPerm;
   });
 
   // Ẩn/hiện các nút hành động trong modal
   const submitBtn = modalEl.querySelector('button[type="submit"]');
   if (submitBtn) {
-    submitBtn.style.display = isAdmin ? '' : 'none';
+    submitBtn.style.display = hasPerm ? '' : 'none';
   }
 
-  // Ẩn nút "Xác nhận xóa" nếu không phải admin (cho deleteDataModal)
+  // Ẩn nút "Xác nhận xóa" nếu không có quyền xóa
   const btnConfirmDelete = modalEl.querySelector('#btnConfirmDelete');
   if (btnConfirmDelete) {
-    btnConfirmDelete.style.display = isAdmin ? '' : 'none';
+    btnConfirmDelete.style.display = (perms.isAdmin || perms.canDelete) ? '' : 'none';
   }
 
-  // Ẩn các nút "Thêm loại" và "Xóa loại" trong modal nếu không phải admin
+  // Ẩn các nút "Thêm loại" và "Xóa loại" trong modal nếu không có quyền
   const btnAddLoai = modalEl.querySelector('#btnAddLoai, #btnEditAddLoai');
   if (btnAddLoai) {
-    btnAddLoai.style.display = isAdmin ? '' : 'none';
+    btnAddLoai.style.display = hasPerm ? '' : 'none';
   }
 
   const btnRemoveLoai = modalEl.querySelectorAll('.btn-remove-loai');
   btnRemoveLoai.forEach(btn => {
-    btn.style.display = isAdmin ? '' : 'none';
+    btn.style.display = hasPerm ? '' : 'none';
   });
 
-  return isAdmin;
+  return hasPerm;
 }
 
 // Show add data modal

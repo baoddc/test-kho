@@ -57,7 +57,7 @@ function showAuthModal() {
     };
 
     document.getElementById('modal-cancel-btn').onclick = () => {
-      window.location.href = '/pages/index.html';
+      window.location.href = '/pages/home.html';
     };
 
     modal.onclick = (e) => {

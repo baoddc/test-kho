@@ -746,15 +746,41 @@ document.getElementById('btnExport').addEventListener('click', () => {
 ================================================================================ */
 
 function setupModalPermissions(modalEl) {
-  const isAdmin = localStorage.getItem('currentUser') === 'bao.lt';
-  if (!modalEl) return isAdmin;
-  modalEl.querySelectorAll('input, select, textarea').forEach(input => { input.disabled = !isAdmin; });
+  const perms = (typeof getUserPermissions === 'function')
+    ? getUserPermissions('xg')
+    : { canAdd: true, canEdit: true, canDelete: true, isAdmin: true };
+
+  if (!modalEl) return perms.isAdmin;
+
+  const modalId = (modalEl.id || '').toLowerCase();
+  let hasPerm = perms.isAdmin;
+
+  if (modalId.includes('delete')) {
+    hasPerm = perms.isAdmin || perms.canDelete;
+  } else if (modalId.includes('add')) {
+    hasPerm = perms.isAdmin || perms.canAdd;
+  } else if (modalId.includes('edit')) {
+    hasPerm = perms.isAdmin || perms.canEdit;
+  } else {
+    hasPerm = perms.isAdmin || perms.canEdit || perms.canAdd;
+  }
+
+  modalEl.querySelectorAll('input, select, textarea').forEach(input => { input.disabled = !hasPerm; });
+
   const submitBtn = modalEl.querySelector('button[type="submit"]');
-  if (submitBtn) submitBtn.style.display = isAdmin ? '' : 'none';
+  if (submitBtn) submitBtn.style.display = hasPerm ? '' : 'none';
+
+  const btnConfirmDelete = modalEl.querySelector('#btnConfirmDelete');
+  if (btnConfirmDelete) btnConfirmDelete.style.display = (perms.isAdmin || perms.canDelete) ? '' : 'none';
+
   const btnAddRollEl = modalEl.querySelector('#btnAddRoll, #btnEditAddRoll');
-  if (btnAddRollEl) btnAddRollEl.style.display = isAdmin ? '' : 'none';
-  modalEl.querySelectorAll('.btn-remove-roll, .btn-remove-edit-roll').forEach(btn => { btn.style.display = isAdmin ? '' : 'none'; });
-  return isAdmin;
+  if (btnAddRollEl) btnAddRollEl.style.display = hasPerm ? '' : 'none';
+
+  modalEl.querySelectorAll('.btn-remove-roll, .btn-remove-edit-roll').forEach(btn => {
+    btn.style.display = hasPerm ? '' : 'none';
+  });
+
+  return hasPerm;
 }
 
 function buildFormField(colName, colIdx, currentVal, container, namePrefix) {
@@ -1001,9 +1027,10 @@ function openDeleteDataModal() {
   const modalEl = document.getElementById('deleteDataModal');
   if (!modalEl) return;
 
-  const isAdmin = localStorage.getItem('currentUser') === 'bao.lt';
+  const perms = (typeof getUserPermissions === 'function') ? getUserPermissions('xg') : { canDelete: true, isAdmin: true };
+  const canDelete = perms.isAdmin || perms.canDelete;
   const deleteBtn = modalEl.querySelector('#btnConfirmDelete');
-  if (deleteBtn) deleteBtn.style.display = isAdmin ? '' : 'none';
+  if (deleteBtn) deleteBtn.style.display = canDelete ? '' : 'none';
 
   new bootstrap.Modal(modalEl).show();
 }

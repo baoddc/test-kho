@@ -43,6 +43,64 @@ if (typeof window !== 'undefined') {
 }
 
 /**
+ * Gets user permissions for currently logged in user, optionally filtered by group.
+ * @param {string} [groupName=null] - Group identifier (e.g. 'xg', 'tole', 'pl', '5s', 'chung')
+ * @returns {Object} { canView: boolean, canAdd: boolean, canEdit: boolean, canDelete: boolean, isAdmin: boolean }
+ */
+function getUserPermissions(groupName = null) {
+  const currentUser = (typeof localStorage !== 'undefined' && localStorage.getItem('currentUser')) || (typeof window !== 'undefined' && window.currentUser);
+  if (!currentUser) {
+    return { canView: false, canAdd: false, canEdit: false, canDelete: false, isAdmin: false };
+  }
+  
+  if (String(currentUser).trim().toLowerCase() === 'bao.lt') {
+    return { canView: true, canAdd: true, canEdit: true, canDelete: true, isAdmin: true };
+  }
+
+  if (groupName && typeof localStorage !== 'undefined') {
+    try {
+      const rawGroups = localStorage.getItem('userGroupPermissions');
+      if (rawGroups) {
+        const groupsObj = JSON.parse(rawGroups);
+        const gPerm = groupsObj[groupName];
+        if (gPerm) {
+          return {
+            canView: !!gPerm.canView,
+            canAdd: !!gPerm.canAdd,
+            canEdit: !!gPerm.canEdit,
+            canDelete: !!gPerm.canDelete,
+            isAdmin: false
+          };
+        }
+      }
+    } catch (e) {
+      console.error('Error parsing userGroupPermissions from localStorage', e);
+    }
+  }
+
+  let storedPerms = null;
+  try {
+    const raw = localStorage.getItem('userPermissions');
+    if (raw) storedPerms = JSON.parse(raw);
+  } catch (e) {
+    console.error('Error parsing userPermissions from localStorage', e);
+  }
+
+  return {
+    canView: storedPerms ? !!storedPerms.canView : true,
+    canAdd: storedPerms ? !!storedPerms.canAdd : false,
+    canEdit: storedPerms ? !!storedPerms.canEdit : false,
+    canDelete: storedPerms ? !!storedPerms.canDelete : false,
+    isAdmin: false
+  };
+}
+
+if (typeof window !== 'undefined') {
+  window.getUserPermissions = getUserPermissions;
+}
+
+
+/**
  * Displays a centered warning modal popup on screen.
  * @param {string} message - Warning message content.
  * @param {string} [title='Cảnh báo hệ thống'] - Modal title.
