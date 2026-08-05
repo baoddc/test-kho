@@ -1361,6 +1361,11 @@
 
         // Kiểm tra nếu trang hiện tại bị thu hồi quyền thì cảnh báo & chuyển về Trang chủ
         checkRoutePermission();
+      } else {
+        // Tài khoản không còn tồn tại trên máy chủ Supabase (Đã bị Admin xóa)
+        // TỰ ĐỘNG ĐĂNG XUẤT LẬP TỨC NGAY VỀ TRANG ĐĂNG NHẬP!
+        forceLogoutUser('Tài khoản của bạn đã bị xóa khỏi hệ thống bởi Quản trị viên!');
+        return;
       }
     } catch (e) {
       console.warn('Error reloading user permissions:', e);
