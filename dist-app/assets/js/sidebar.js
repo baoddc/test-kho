@@ -166,6 +166,12 @@
       }
     });
 
+    // Đồng bộ định kỳ quyền từ máy chủ ngay trong iframe mỗi 2 giây
+    setInterval(() => {
+      reloadUserPermissionsAndSidebar();
+      checkRoutePermissionInIframe();
+    }, 2000);
+
     return; // Stop initialization of main shell sidebar
   }
 
@@ -228,19 +234,18 @@
     const cleanHref = href.split('?')[0];
     const hrefFile = cleanHref.split('/').pop().replace('.html', '').replace('-supabase', '');
 
-    // 1. Nếu có danh sách allowedPages cụ thể (không rỗng):
-    // Trang CHỈ ĐƯỢC PHÉP HIỂN THỊ khi nó thực sự nằm trong allowedPages!
-    if (Array.isArray(allowedPages) && allowedPages.length > 0) {
-      return allowedPages.some(page => {
-        const cleanPage = page.split('?')[0];
-        if (cleanHref === cleanPage || cleanHref.endsWith(cleanPage)) return true;
+    // 1. Kiểm tra xem trang có nằm trực tiếp trong allowedPages hay không
+    const isDirectlyAllowed = Array.isArray(allowedPages) && allowedPages.some(page => {
+      const cleanPage = page.split('?')[0];
+      if (cleanHref === cleanPage || cleanHref.endsWith(cleanPage)) return true;
 
-        const pageFile = cleanPage.split('/').pop().replace('.html', '').replace('-supabase', '');
-        return hrefFile === pageFile;
-      });
-    }
+      const pageFile = cleanPage.split('/').pop().replace('.html', '').replace('-supabase', '');
+      return hrefFile === pageFile;
+    });
 
-    // 2. Nếu allowedPages rỗng, kiểm tra theo quyền Nhóm (canView)
+    if (isDirectlyAllowed) return true;
+
+    // 2. Nếu không nằm trực tiếp trong allowedPages, kiểm tra theo quyền Nhóm (canView)
     if (cleanHref.includes('/xg/')) return !!(groupPerms.xg && groupPerms.xg.canView);
     if (cleanHref.includes('/tole/')) return !!(groupPerms.tole && groupPerms.tole.canView);
     if (cleanHref.includes('/5s/')) return !!(groupPerms['5s'] && groupPerms['5s'].canView);
@@ -1165,35 +1170,12 @@
     });
   }
 
-  function parseAllowedPagesPayload(raw) {
-    let parsed = raw;
-    if (typeof parsed === 'string') {
-      try {
-        parsed = JSON.parse(parsed);
-      } catch (e) {
-        parsed = [];
-      }
-    }
-    
-    let pages = [];
-    let groups = null;
-
-    if (Array.isArray(parsed)) {
-      pages = parsed;
-    } else if (parsed && typeof parsed === 'object') {
-      pages = Array.isArray(parsed.pages) ? parsed.pages : [];
-      groups = parsed.groups || null;
-    }
-
-    return { pages, groups };
-  }
-
   async function fetchUserPermissionsFromSupabase(username) {
     const SUPABASE_URL = 'https://ahcethtonjwktjtmxzog.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_zxmsB9cyjDwi9ai9Vw-s1w_QlqKMG0S';
     
     try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/users?username=ilike.${encodeURIComponent(username)}&select=allowed_pages,can_view,can_add,can_edit,can_delete`, {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/users?username=eq.${encodeURIComponent(username)}&select=allowed_pages,can_view,can_add,can_edit,can_delete`, {
         headers: {
           'apikey': SUPABASE_ANON_KEY,
           'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
@@ -1228,19 +1210,32 @@
           const res = await client
             .from('users')
             .select('allowed_pages, can_view, can_add, can_edit, can_delete')
-            .ilike('username', currentUser)
-            .maybeSingle();
+            .eq('username', currentUser)
+            .single();
           if (!res.error && res.data) data = res.data;
         }
       }
 
       if (data) {
-        const { pages, groups } = parseAllowedPagesPayload(data.allowed_pages);
+        let rawAllowed = data.allowed_pages;
+        if (typeof rawAllowed === 'string') {
+          try {
+            rawAllowed = JSON.parse(rawAllowed);
+          } catch (e) {}
+        }
 
-        localStorage.setItem('userAllowedPages', JSON.stringify(pages));
-        if (groups) {
-          localStorage.setItem('userGroupPermissions', JSON.stringify(groups));
+        if (Array.isArray(rawAllowed)) {
+          localStorage.setItem('userAllowedPages', JSON.stringify(rawAllowed));
+          localStorage.removeItem('userGroupPermissions');
+        } else if (rawAllowed && typeof rawAllowed === 'object') {
+          localStorage.setItem('userAllowedPages', JSON.stringify(rawAllowed.pages || []));
+          if (rawAllowed.groups) {
+            localStorage.setItem('userGroupPermissions', JSON.stringify(rawAllowed.groups));
+          } else {
+            localStorage.removeItem('userGroupPermissions');
+          }
         } else {
+          localStorage.setItem('userAllowedPages', '[]');
           localStorage.removeItem('userGroupPermissions');
         }
 
