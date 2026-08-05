@@ -1165,12 +1165,35 @@
     });
   }
 
+  function parseAllowedPagesPayload(raw) {
+    let parsed = raw;
+    if (typeof parsed === 'string') {
+      try {
+        parsed = JSON.parse(parsed);
+      } catch (e) {
+        parsed = [];
+      }
+    }
+    
+    let pages = [];
+    let groups = null;
+
+    if (Array.isArray(parsed)) {
+      pages = parsed;
+    } else if (parsed && typeof parsed === 'object') {
+      pages = Array.isArray(parsed.pages) ? parsed.pages : [];
+      groups = parsed.groups || null;
+    }
+
+    return { pages, groups };
+  }
+
   async function fetchUserPermissionsFromSupabase(username) {
     const SUPABASE_URL = 'https://ahcethtonjwktjtmxzog.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_zxmsB9cyjDwi9ai9Vw-s1w_QlqKMG0S';
     
     try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/users?username=eq.${encodeURIComponent(username)}&select=allowed_pages,can_view,can_add,can_edit,can_delete`, {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/users?username=ilike.${encodeURIComponent(username)}&select=allowed_pages,can_view,can_add,can_edit,can_delete`, {
         headers: {
           'apikey': SUPABASE_ANON_KEY,
           'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
@@ -1205,26 +1228,19 @@
           const res = await client
             .from('users')
             .select('allowed_pages, can_view, can_add, can_edit, can_delete')
-            .eq('username', currentUser)
-            .single();
+            .ilike('username', currentUser)
+            .maybeSingle();
           if (!res.error && res.data) data = res.data;
         }
       }
 
       if (data) {
-        const rawAllowed = data.allowed_pages;
-        if (Array.isArray(rawAllowed)) {
-          localStorage.setItem('userAllowedPages', JSON.stringify(rawAllowed));
-          localStorage.removeItem('userGroupPermissions');
-        } else if (rawAllowed && typeof rawAllowed === 'object') {
-          localStorage.setItem('userAllowedPages', JSON.stringify(rawAllowed.pages || []));
-          if (rawAllowed.groups) {
-            localStorage.setItem('userGroupPermissions', JSON.stringify(rawAllowed.groups));
-          } else {
-            localStorage.removeItem('userGroupPermissions');
-          }
+        const { pages, groups } = parseAllowedPagesPayload(data.allowed_pages);
+
+        localStorage.setItem('userAllowedPages', JSON.stringify(pages));
+        if (groups) {
+          localStorage.setItem('userGroupPermissions', JSON.stringify(groups));
         } else {
-          localStorage.setItem('userAllowedPages', '[]');
           localStorage.removeItem('userGroupPermissions');
         }
 
