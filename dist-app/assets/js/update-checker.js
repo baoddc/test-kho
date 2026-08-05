@@ -360,19 +360,6 @@
 
       activeAnnouncements = valid;
 
-      // Tự động đăng xuất lập tức nếu có thông báo thay đổi phân quyền gửi tới user
-      if (!isAdmin && currentUser) {
-        const permNotif = activeAnnouncements.find(a => 
-          a.is_active && 
-          (a.target_user === currentUser || (a.title && a.title.includes(currentUser))) &&
-          (a.title.includes('Thu hồi quyền') || a.title.includes('Cập nhật quyền'))
-        );
-        if (permNotif && typeof window.forceLogoutUser === 'function') {
-          window.forceLogoutUser('Quyền truy cập của bạn vừa được Quản trị viên thay đổi.');
-          return activeAnnouncements;
-        }
-      }
-
       // Check unread announcements for bell indicator & toast
       const readIds = getReadAnnouncementIds();
       const unreadList = activeAnnouncements.filter(a => a.is_active && !readIds.includes(a.id));
