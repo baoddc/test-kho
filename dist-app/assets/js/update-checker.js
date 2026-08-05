@@ -327,11 +327,6 @@
       let query = client.from('system_announcements').select('*').order('created_at', { ascending: false });
       if (!isAdmin) {
         query = query.eq('is_active', true);
-        if (currentUser) {
-          query = query.or(`target_user.is.null,target_user.eq.*,target_user.eq.${currentUser}`);
-        } else {
-          query = query.or(`target_user.is.null,target_user.eq.*`);
-        }
       }
 
       const { data, error } = await query;
@@ -344,10 +339,20 @@
       const valid = (data || []).filter(item => {
         if (!isAdmin && !item.is_active) return false;
         if (item.expires_at && new Date(item.expires_at) <= now) return false;
-        // Bảo vệ lọc lớp JS: Chỉ hiển thị nếu thông báo dành cho currentUser hoặc là thông báo chung (target_user null/*)
+
+        // 1. Lọc thông báo cá nhân theo cột target_user
         if (!isAdmin && item.target_user && item.target_user !== '*' && item.target_user !== currentUser) {
           return false;
         }
+
+        // 2. Lọc thông báo cá nhân dạng fallback tag [Gửi username] (nếu DB chưa tạo cột target_user)
+        if (!isAdmin && item.title && item.title.startsWith('[Gửi ')) {
+          const tagMatch = item.title.match(/^\[Gửi ([^\]]+)\]/);
+          if (tagMatch && tagMatch[1] !== currentUser) {
+            return false;
+          }
+        }
+
         return true;
       });
 

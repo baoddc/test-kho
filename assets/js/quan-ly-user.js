@@ -276,10 +276,23 @@ function openEditUserModal(userId) {
         groupsObj = user.allowed_pages.groups || null;
     }
 
+    // Nếu chưa có cấu hình group riêng, lấy theo quyền tổng hợp cũ để so sánh chuẩn xác
+    if (!groupsObj) {
+        groupsObj = {};
+        ['chung', '5s', 'xg', 'tole', 'pl', 'admin'].forEach(grp => {
+            groupsObj[grp] = {
+                canView: !!user.can_view,
+                canAdd: !!user.can_add,
+                canEdit: !!user.can_edit,
+                canDelete: !!user.can_delete
+            };
+        });
+    }
+
     // Lưu lại vị thế phân quyền ban đầu để tính diff sau khi lưu
     window._editingUserOriginalPermissions = {
         allowedPages: [...allowedPagesList],
-        groups: groupsObj ? JSON.parse(JSON.stringify(groupsObj)) : null
+        groups: JSON.parse(JSON.stringify(groupsObj))
     };
 
     const isAll = user.username === 'bao.lt' || allowedPagesList.includes('*');
@@ -498,15 +511,26 @@ async function handleSaveUser() {
                 // Đẩy thông báo phân quyền tới người dùng được điều chỉnh
                 const diff = computePermissionDiff(username, window._editingUserOriginalPermissions, allowedPagesPayload);
                 if (diff.hasChanges && window.supabase && typeof window.supabase.from === 'function') {
-                    window.supabase.from('system_announcements').insert([{
+                    const notifPayload = {
                         title: diff.title,
                         content: diff.content,
                         type: diff.type,
                         target_user: username,
                         created_by: 'bao.lt',
                         is_active: true
-                    }]).then(({ error: notifErr }) => {
-                        if (notifErr) console.warn('Lỗi gửi thông báo phân quyền:', notifErr);
+                    };
+
+                    window.supabase.from('system_announcements').insert([notifPayload]).then(({ error: notifErr }) => {
+                        if (notifErr) {
+                            console.warn('Lỗi gửi thông báo phân quyền (thử lại dạng fallback):', notifErr);
+                            // Nếu DB trên Supabase chưa chạy script migration cột target_user -> Fallback chèn thông báo kèm tag username trong tiêu đề
+                            if (notifErr.message && notifErr.message.includes('target_user')) {
+                                const fallbackPayload = { ...notifPayload };
+                                delete fallbackPayload.target_user;
+                                fallbackPayload.title = `[Gửi ${username}] ` + fallbackPayload.title;
+                                window.supabase.from('system_announcements').insert([fallbackPayload]);
+                            }
+                        }
                     }).catch(e => console.warn('Lỗi gửi thông báo phân quyền:', e));
                 }
                 window._editingUserOriginalPermissions = null;
