@@ -339,6 +339,34 @@ function handleVerifyOtpSubmit() {
    }
 }
 
+function getPermChecksum(rawAllowed, sysPerms) {
+   let pages = [];
+   let groups = {};
+
+   if (typeof rawAllowed === 'string') {
+      try {
+         rawAllowed = JSON.parse(rawAllowed);
+      } catch (e) {}
+   }
+
+   if (Array.isArray(rawAllowed)) {
+      pages = rawAllowed.slice().sort();
+   } else if (rawAllowed && typeof rawAllowed === 'object') {
+      pages = Array.isArray(rawAllowed.pages) ? rawAllowed.pages.slice().sort() : [];
+      groups = rawAllowed.groups || {};
+   }
+
+   const sortedGroupsStr = Object.keys(groups).sort().map(k => {
+      const g = groups[k] || {};
+      return `${k}:${!!(g.canView || g.can_view)},${!!(g.canAdd || g.can_add)},${!!(g.canEdit || g.can_edit)},${!!(g.canDelete || g.can_delete)}`;
+   }).join('|');
+
+   const pagesStr = pages.join(',');
+   const sysPermsStr = sysPerms ? `${!!(sysPerms.canView || sysPerms.can_view)},${!!(sysPerms.canAdd || sysPerms.can_add)},${!!(sysPerms.canEdit || sysPerms.can_edit)},${!!(sysPerms.canDelete || sysPerms.can_delete)}` : '';
+
+   return `P:[${pagesStr}]|G:[${sortedGroupsStr}]|S:[${sysPermsStr}]`;
+}
+
 /**
  * Hoàn tất đăng nhập và chuyển hướng trang
  */
@@ -362,12 +390,9 @@ function completeLogin(username, accountObj = null) {
          }
       }
 
-      // Lưu permHash khởi tạo ban đầu để so sánh khi Admin thay đổi quyền
-      const permHash = JSON.stringify({
-         allowed: accountObj.allowedPages || null,
-         perms: accountObj.permissions || null
-      });
-      localStorage.setItem('userPermHash', permHash);
+      // Lưu permChecksum khởi tạo ban đầu để so sánh khi Admin thay đổi quyền
+      const checksum = getPermChecksum(accountObj.allowedPages, accountObj.permissions);
+      localStorage.setItem('userPermChecksum', checksum);
    }
 
    window.location.href = 'home.html';

@@ -1231,6 +1231,34 @@
     }
   }
 
+  function getPermChecksum(rawAllowed, sysPerms) {
+    let pages = [];
+    let groups = {};
+
+    if (typeof rawAllowed === 'string') {
+      try {
+        rawAllowed = JSON.parse(rawAllowed);
+      } catch (e) {}
+    }
+
+    if (Array.isArray(rawAllowed)) {
+      pages = rawAllowed.slice().sort();
+    } else if (rawAllowed && typeof rawAllowed === 'object') {
+      pages = Array.isArray(rawAllowed.pages) ? rawAllowed.pages.slice().sort() : [];
+      groups = rawAllowed.groups || {};
+    }
+
+    const sortedGroupsStr = Object.keys(groups).sort().map(k => {
+      const g = groups[k] || {};
+      return `${k}:${!!(g.canView || g.can_view)},${!!(g.canAdd || g.can_add)},${!!(g.canEdit || g.can_edit)},${!!(g.canDelete || g.can_delete)}`;
+    }).join('|');
+
+    const pagesStr = pages.join(',');
+    const sysPermsStr = sysPerms ? `${!!(sysPerms.canView || sysPerms.can_view)},${!!(sysPerms.canAdd || sysPerms.can_add)},${!!(sysPerms.canEdit || sysPerms.can_edit)},${!!(sysPerms.canDelete || sysPerms.can_delete)}` : '';
+
+    return `P:[${pagesStr}]|G:[${sortedGroupsStr}]|S:[${sysPermsStr}]`;
+  }
+
   function forceLogoutUser(reason) {
     const currentUser = localStorage.getItem('currentUser');
     if (!currentUser || currentUser === 'bao.lt') return;
@@ -1240,6 +1268,8 @@
     localStorage.removeItem('userAllowedPages');
     localStorage.removeItem('userGroupPermissions');
     localStorage.removeItem('userPermHash');
+    localStorage.removeItem('userPermChecksum');
+    localStorage.setItem('userForceLoggedOut', Date.now().toString());
 
     alert(reason || 'Quyền truy cập của bạn đã được thay đổi bởi Quản trị viên. Vui lòng đăng nhập lại!');
 
@@ -1288,24 +1318,16 @@
           } catch (e) {}
         }
 
-        // Tạo mã băm phân quyền mới từ máy chủ
-        const newHash = JSON.stringify({
-          allowed: rawAllowed,
-          perms: {
-            canView: data.can_view,
-            canAdd: data.can_add,
-            canEdit: data.can_edit,
-            canDelete: data.can_delete
-          }
-        });
+        // Tính toán Checksum chuẩn hóa của quyền hiện tại trên DB
+        const serverChecksum = getPermChecksum(data.allowed_pages, data);
+        const currentChecksum = localStorage.getItem('userPermChecksum');
 
-        const currentHash = localStorage.getItem('userPermHash');
-
-        if (currentHash === null) {
-          // Lần đầu lưu permHash
-          localStorage.setItem('userPermHash', newHash);
-        } else if (currentHash !== newHash) {
-          // QUYỀN ĐÃ THAY ĐỔI (CẤP THÊM HOẶC THU HỒI)! LẬP TỨC ĐĂNG XUẤT THEO YÊU CẦU CỦA NGƯỜI DÙNG!
+        if (currentChecksum === null) {
+          // Lần đầu khởi tạo checksum
+          localStorage.setItem('userPermChecksum', serverChecksum);
+        } else if (currentChecksum !== serverChecksum) {
+          // QUYỀN TRUY CẬP ĐÃ THAY ĐỔI (CẤP THÊM HOẶC THU HỒI)!
+          // NGAY LẬP TỨC ĐĂNG XUẤT THEO ĐÚNG YÊU CẦU CỦA KHÁCH HÀNG!
           forceLogoutUser('Quyền truy cập của bạn đã được Quản trị viên thay đổi. Vui lòng đăng nhập lại để áp dụng phân quyền mới!');
           return;
         }
