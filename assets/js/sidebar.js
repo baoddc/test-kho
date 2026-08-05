@@ -1206,7 +1206,24 @@
     if (!sidebar) return;
     const oldNav = sidebar.querySelector('.sidebar-nav');
     if (oldNav) {
+      // Lưu danh sách ID các nhóm/menu đang mở
+      const openGroupIds = Array.from(oldNav.querySelectorAll('.sidebar-group.open, .sidebar-subsub-group.open')).map(el => el.id);
+
       const newNav = buildSidebarNav();
+
+      // Khôi phục lại trạng thái mở nhóm
+      openGroupIds.forEach(id => {
+        const grp = newNav.querySelector(`#${id}`);
+        if (grp) {
+          grp.classList.add('open');
+          const btn = grp.previousElementSibling;
+          if (btn && btn.tagName === 'BUTTON') {
+            btn.classList.add('open');
+            btn.setAttribute('aria-expanded', 'true');
+          }
+        }
+      });
+
       sidebar.replaceChild(newNav, oldNav);
     }
   }
@@ -1368,6 +1385,9 @@
           // QUYỀN TRUY CẬP ĐÃ THAY ĐỔI (CẤP THÊM HOẶC THU HỒI)!
           // NGAY LẬP TỨC ĐĂNG XUẤT THEO ĐÚNG YÊU CẦU CỦA KHÁCH HÀNG!
           forceLogoutUser('Quyền truy cập của bạn đã được Quản trị viên thay đổi. Vui lòng đăng nhập lại để áp dụng phân quyền mới!');
+          return;
+        } else {
+          // Quyền không thay đổi ➔ Giữ nguyên 100% giao diện và nhóm menu đang mở của người dùng
           return;
         }
 
