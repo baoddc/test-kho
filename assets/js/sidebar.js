@@ -171,10 +171,31 @@
     // Trang chủ mặc định được phép
     if (href.endsWith('home.html')) return true;
 
+    let groupPerms = {};
+    try {
+      groupPerms = JSON.parse(localStorage.getItem('userGroupPermissions') || '{}');
+    } catch (e) {
+      groupPerms = {};
+    }
+
     const cleanHref = href.split('?')[0];
+    const hrefFile = cleanHref.split('/').pop().replace('.html', '').replace('-supabase', '');
+
+    // 1. Kiểm tra theo quyền Nhóm (View)
+    if (cleanHref.includes('/xg/') && groupPerms.xg && groupPerms.xg.canView) return true;
+    if (cleanHref.includes('/tole/') && groupPerms.tole && groupPerms.tole.canView) return true;
+    if (cleanHref.includes('/5s/') && groupPerms['5s'] && groupPerms['5s'].canView) return true;
+    if (cleanHref.includes('/pl/') && groupPerms.pl && groupPerms.pl.canView) return true;
+    if (cleanHref.endsWith('cong-viec.html') && groupPerms.chung && groupPerms.chung.canView) return true;
+    if (cleanHref.endsWith('quan-ly-user.html') && groupPerms.admin && groupPerms.admin.canView) return true;
+
+    // 2. Kiểm tra theo từng trang HTML được cấp trong allowedPages
     return allowedPages.some(page => {
       const cleanPage = page.split('?')[0];
-      return cleanHref === cleanPage || cleanHref.endsWith(cleanPage) || cleanPage.endsWith(cleanHref.split('/').pop());
+      if (cleanHref === cleanPage || cleanHref.endsWith(cleanPage)) return true;
+
+      const pageFile = cleanPage.split('/').pop().replace('.html', '').replace('-supabase', '');
+      return hrefFile === pageFile;
     });
   }
 
@@ -1184,6 +1205,18 @@
     initToggle();
     initLinkInterception();
     initThemeToggle();
+
+    // Lắng nghe sự kiện thay đổi localStorage trên cùng trình duyệt (đa tab)
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'userAllowedPages' || e.key === 'userGroupPermissions' || e.key === 'userPermissions') {
+        updateSidebarNav();
+      }
+    });
+
+    // Tự động đồng bộ quyền người dùng từ Supabase định kỳ (mỗi 5 giây)
+    setInterval(() => {
+      reloadUserPermissionsAndSidebar();
+    }, 5000);
   }
 
   if (document.readyState === 'loading') {

@@ -1060,6 +1060,18 @@
     initToggle();
     initLinkInterception();
     initThemeToggle();
+
+    // Lắng nghe sự kiện thay đổi localStorage trên cùng trình duyệt (đa tab)
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'userAllowedPages' || e.key === 'userGroupPermissions' || e.key === 'userPermissions') {
+        updateSidebarNav();
+      }
+    });
+
+    // Tự động đồng bộ quyền người dùng từ Supabase định kỳ (mỗi 5 giây)
+    setInterval(() => {
+      reloadUserPermissionsAndSidebar();
+    }, 5000);
   }
 
   if (document.readyState === 'loading') {
