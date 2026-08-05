@@ -427,12 +427,12 @@ function computePermissionDiff(username, oldPerms, newAllowedPagesPayload) {
     const oldGroups = oldPerms.groups || {};
     const newGroups = newAllowedPagesPayload?.groups || {};
     const groupLabels = {
-        chung: 'Chung (Home, Công việc)',
-        '5s': 'Quản lý 5S',
-        xg: 'Xưởng Phôi',
-        tole: 'Xưởng Tole',
-        pl: 'Phân loại Phôi',
-        admin: 'Quản trị User'
+        chung: 'Trang Chung',
+        '5s': '5S',
+        xg: 'XÀ GỒ',
+        tole: 'TOLE',
+        pl: 'PHẾ LIỆU',
+        admin: 'Quản trị'
     };
     const actionLabels = { canView: 'Xem', canAdd: 'Thêm', canEdit: 'Sửa', canDelete: 'Xóa' };
 
