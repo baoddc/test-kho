@@ -982,10 +982,75 @@
   }
 
   // ============================================================
+  // REAL-TIME SIDEBAR PERMISSION RELOAD (NO PAGE REFRESH REQUIRED)
+  // ============================================================
+
+  function updateSidebarNav() {
+    const sidebar = document.getElementById('mainSidebar');
+    if (!sidebar) return;
+    const oldNav = sidebar.querySelector('.sidebar-nav');
+    if (oldNav) {
+      const newNav = buildSidebarNav();
+      sidebar.replaceChild(newNav, oldNav);
+    }
+  }
+
+  async function reloadUserPermissionsAndSidebar() {
+    const currentUser = localStorage.getItem('currentUser');
+    if (!currentUser || currentUser === 'bao.lt') return;
+
+    try {
+      let client = null;
+      if (typeof window.ensureSupabaseClient === 'function') {
+        client = await window.ensureSupabaseClient();
+      } else if (window.supabase && typeof window.supabase.from === 'function') {
+        client = window.supabase;
+      }
+
+      if (client && typeof client.from === 'function') {
+        const { data, error } = await client
+          .from('users')
+          .select('allowed_pages, can_view, can_add, can_edit, can_delete')
+          .eq('username', currentUser)
+          .single();
+
+        if (!error && data) {
+          const rawAllowed = data.allowed_pages;
+          if (Array.isArray(rawAllowed)) {
+            localStorage.setItem('userAllowedPages', JSON.stringify(rawAllowed));
+            localStorage.removeItem('userGroupPermissions');
+          } else if (rawAllowed && typeof rawAllowed === 'object') {
+            localStorage.setItem('userAllowedPages', JSON.stringify(rawAllowed.pages || []));
+            if (rawAllowed.groups) {
+              localStorage.setItem('userGroupPermissions', JSON.stringify(rawAllowed.groups));
+            }
+          }
+
+          localStorage.setItem('userPermissions', JSON.stringify({
+            canView: data.can_view,
+            canAdd: data.can_add,
+            canEdit: data.can_edit,
+            canDelete: data.can_delete
+          }));
+
+          // Tái tạo thanh sidebar ngay lập tức không cần reload trang
+          updateSidebarNav();
+        }
+      }
+    } catch (e) {
+      console.warn('Error reloading user permissions:', e);
+    }
+  }
+
+  window.renderSidebarMenu = updateSidebarNav;
+  window.reloadUserPermissionsAndSidebar = reloadUserPermissionsAndSidebar;
+
+  // ============================================================
   // INITIALIZE
   // ============================================================
 
   function init() {
+    checkRoutePermission();
     ensureMobileCSS();
     ensurePWATags();
     initTableSpaceSaver();

@@ -1040,10 +1040,27 @@
       const client = await ensureSupabaseClient();
       if (!client || typeof client.channel !== 'function') return;
 
+      // 1. Lắng nghe thông báo hệ thống mới / phân quyền mới
       client.channel('public:system_announcements')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'system_announcements' }, () => {
           isToastShown = false;
-          fetchAnnouncements();
+          fetchAnnouncements().then(() => {
+            if (typeof window.reloadUserPermissionsAndSidebar === 'function') {
+              window.reloadUserPermissionsAndSidebar();
+            }
+          });
+        })
+        .subscribe();
+
+      // 2. Lắng nghe trực tiếp khi Admin thay đổi phân quyền trong bảng users
+      client.channel('public:users_changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, (payload) => {
+          const currentUser = localStorage.getItem('currentUser');
+          if (payload && payload.new && payload.new.username === currentUser) {
+            if (typeof window.reloadUserPermissionsAndSidebar === 'function') {
+              window.reloadUserPermissionsAndSidebar();
+            }
+          }
         })
         .subscribe();
     } catch (e) {
@@ -1064,14 +1081,26 @@
     bindBellEventListener();
     setInterval(bindBellEventListener, 1000);
 
+    // Tải thông báo & phân quyền sidebar định kỳ và khi quay lại tab
+    setInterval(() => {
+      fetchAnnouncements();
+      if (typeof window.reloadUserPermissionsAndSidebar === 'function') {
+        window.reloadUserPermissionsAndSidebar();
+      }
+    }, 10000);
+
+    window.addEventListener('focus', () => {
+      fetchAnnouncements();
+      if (typeof window.reloadUserPermissionsAndSidebar === 'function') {
+        window.reloadUserPermissionsAndSidebar();
+      }
+    });
+
     const env = getEnvironmentInfo();
     if (env.isElectron) {
-      // 💻 Đang chạy trong App PC (Electron)
-      // Mặc định phiên bản PC đã cài là 1.0.0 (hoặc từ main process)
       CURRENT_VERSION = window.__ELECTRON_INSTALLED_VERSION__ || '1.0.0';
       window.APP_VERSION = CURRENT_VERSION;
 
-      // Đọc phiên bản từ server nội cục (127.0.0.1) NẾU VÀ CHỈ NẾU đang chạy trên localhost / 127.0.0.1
       try {
         const localHost = window.location.hostname;
         if (localHost === '127.0.0.1' || localHost === 'localhost' || localHost === '') {
@@ -1084,11 +1113,8 @@
             }
           }
         }
-      } catch (e) {
-        // Giữ fallback CURRENT_VERSION = '1.0.0'
-      }
+      } catch (e) {}
     } else {
-      // 🌐 Đang chạy trên Web (Trình duyệt / Vercel)
       try {
         const webRes = await fetch(`${ONLINE_VERSION_URL}?_init=1`, { cache: 'no-store' });
         if (webRes.ok) {
@@ -1104,6 +1130,11 @@
     await checkUpdate();
     subscribeToRealtimeAnnouncements();
     setInterval(checkUpdate, CHECK_INTERVAL_MS);
+
+    // Tự động kiểm tra & cập nhật sidebar lần đầu
+    if (typeof window.reloadUserPermissionsAndSidebar === 'function') {
+      window.reloadUserPermissionsAndSidebar();
+    }
   }
 
   if (document.readyState === 'loading') {
