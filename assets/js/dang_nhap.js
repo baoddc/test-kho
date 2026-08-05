@@ -349,9 +349,25 @@ function completeLogin(username, accountObj = null) {
       if (accountObj.permissions) {
          localStorage.setItem('userPermissions', JSON.stringify(accountObj.permissions));
       }
-      if (accountObj.allowedPages) {
-         localStorage.setItem('userAllowedPages', JSON.stringify(accountObj.allowedPages));
+      const rawAllowed = accountObj.allowedPages;
+      if (rawAllowed) {
+         if (Array.isArray(rawAllowed)) {
+            localStorage.setItem('userAllowedPages', JSON.stringify(rawAllowed));
+            localStorage.removeItem('userGroupPermissions');
+         } else if (typeof rawAllowed === 'object') {
+            localStorage.setItem('userAllowedPages', JSON.stringify(rawAllowed.pages || []));
+            if (rawAllowed.groups) {
+               localStorage.setItem('userGroupPermissions', JSON.stringify(rawAllowed.groups));
+            }
+         }
       }
+
+      // Lưu permHash khởi tạo ban đầu để so sánh khi Admin thay đổi quyền
+      const permHash = JSON.stringify({
+         allowed: accountObj.allowedPages || null,
+         perms: accountObj.permissions || null
+      });
+      localStorage.setItem('userPermHash', permHash);
    }
 
    window.location.href = 'home.html';

@@ -1191,6 +1191,30 @@
     }
   }
 
+  function forceLogoutUser(reason) {
+    const currentUser = localStorage.getItem('currentUser');
+    if (!currentUser || currentUser === 'bao.lt') return;
+
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('userPermissions');
+    localStorage.removeItem('userAllowedPages');
+    localStorage.removeItem('userGroupPermissions');
+    localStorage.removeItem('userPermHash');
+
+    alert(reason || 'Quyền truy cập của bạn đã được thay đổi bởi Quản trị viên. Vui lòng đăng nhập lại!');
+
+    const loginUrl = '/pages/dang_nhap.html';
+    try {
+      if (window.top && window.top !== window) {
+        window.top.location.href = loginUrl;
+      } else {
+        window.location.href = loginUrl;
+      }
+    } catch (e) {
+      window.location.href = loginUrl;
+    }
+  }
+
   async function reloadUserPermissionsAndSidebar() {
     const currentUser = localStorage.getItem('currentUser');
     if (!currentUser || currentUser === 'bao.lt') return;
@@ -1222,6 +1246,28 @@
           try {
             rawAllowed = JSON.parse(rawAllowed);
           } catch (e) {}
+        }
+
+        // Tạo mã băm phân quyền mới từ máy chủ
+        const newHash = JSON.stringify({
+          allowed: rawAllowed,
+          perms: {
+            canView: data.can_view,
+            canAdd: data.can_add,
+            canEdit: data.can_edit,
+            canDelete: data.can_delete
+          }
+        });
+
+        const currentHash = localStorage.getItem('userPermHash');
+
+        if (currentHash === null) {
+          // Lần đầu lưu permHash
+          localStorage.setItem('userPermHash', newHash);
+        } else if (currentHash !== newHash) {
+          // QUYỀN ĐÃ THAY ĐỔI (CẤP THÊM HOẶC THU HỒI)! LẬP TỨC ĐĂNG XUẤT THEO YÊU CẦU CỦA NGƯỜI DÙNG!
+          forceLogoutUser('Quyền truy cập của bạn đã được Quản trị viên thay đổi. Vui lòng đăng nhập lại để áp dụng phân quyền mới!');
+          return;
         }
 
         if (Array.isArray(rawAllowed)) {
@@ -1262,6 +1308,7 @@
 
   window.renderSidebarMenu = updateSidebarNav;
   window.reloadUserPermissionsAndSidebar = reloadUserPermissionsAndSidebar;
+  window.forceLogoutUser = forceLogoutUser;
 
   // ============================================================
   // INITIALIZE
@@ -1288,7 +1335,9 @@
 
     // Lắng nghe sự kiện thay đổi localStorage trên cùng trình duyệt (đa tab)
     window.addEventListener('storage', (e) => {
-      if (e.key === 'userAllowedPages' || e.key === 'userGroupPermissions' || e.key === 'userPermissions') {
+      if (e.key === 'currentUser' && !e.newValue) {
+        forceLogoutUser();
+      } else if (e.key === 'userAllowedPages' || e.key === 'userGroupPermissions' || e.key === 'userPermissions') {
         updateSidebarNav();
         closeRevokedTabs();
       }
