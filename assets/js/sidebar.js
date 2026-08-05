@@ -644,6 +644,14 @@
     `;
     sidebar.appendChild(footer);
 
+    const logoutBtn = sidebar.querySelector('#btnLogout');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        performUserLogout();
+      });
+    }
+
     // Overlay (mobile)
     const overlay = document.createElement('div');
     overlay.className = 'sidebar-overlay';
@@ -1259,10 +1267,7 @@
     return `P:[${pagesStr}]|G:[${sortedGroupsStr}]|S:[${sysPermsStr}]`;
   }
 
-  function forceLogoutUser(reason) {
-    const currentUser = localStorage.getItem('currentUser');
-    if (!currentUser || currentUser === 'bao.lt') return;
-
+  function performUserLogout() {
     localStorage.removeItem('currentUser');
     localStorage.removeItem('userPermissions');
     localStorage.removeItem('userAllowedPages');
@@ -1270,8 +1275,6 @@
     localStorage.removeItem('userPermHash');
     localStorage.removeItem('userPermChecksum');
     localStorage.setItem('userForceLoggedOut', Date.now().toString());
-
-    alert(reason || 'Quyền truy cập của bạn đã được thay đổi bởi Quản trị viên. Vui lòng đăng nhập lại!');
 
     const loginUrl = '/pages/dang_nhap.html';
     try {
@@ -1283,6 +1286,18 @@
     } catch (e) {
       window.location.href = loginUrl;
     }
+  }
+
+  function forceLogoutUser(reason) {
+    const currentUser = localStorage.getItem('currentUser');
+    if (!currentUser || currentUser === 'bao.lt') return;
+
+    // Tự động nhấn nút Đăng xuất (#btnLogout) và đăng xuất tức thì không cần chờ thao tác thủ công
+    const btnLogout = document.getElementById('btnLogout');
+    if (btnLogout && typeof btnLogout.click === 'function') {
+      btnLogout.click();
+    }
+    performUserLogout();
   }
 
   async function reloadUserPermissionsAndSidebar() {
