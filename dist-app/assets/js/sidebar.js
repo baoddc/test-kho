@@ -26,7 +26,28 @@
   // IFRAME DETECTION & PREPARATION
   // ============================================================
 
-  const isIframe = window.self !== window.top;
+  let isTabIframe = false;
+  try {
+    isTabIframe = window.name === 'tab-iframe' || (window.frameElement && window.frameElement.classList.contains('tab-iframe'));
+  } catch (e) {
+    isTabIframe = false;
+  }
+  const isIframe = (window.self !== window.top) && isTabIframe;
+
+  // Deep-linking & F5 reload handling for standalone sub-pages
+  const currentPath = window.location.pathname;
+  const isStandalonePage = currentPath === '/' ||
+    currentPath.endsWith('/home.html') ||
+    currentPath.endsWith('/index.html') ||
+    currentPath.endsWith('/dang_nhap.html') ||
+    currentPath.endsWith('/flower.html') ||
+    currentPath.endsWith('/offline.html');
+
+  if (!isIframe && !isStandalonePage && currentPath.includes('/pages/')) {
+    const targetUrl = currentPath + window.location.search + window.location.hash;
+    window.location.replace('/pages/home.html?openTab=' + encodeURIComponent(targetUrl));
+    return;
+  }
 
   function ensureMobileCSS() {
     if (!document.querySelector('link[href*="mobile-responsive.css"]')) {
@@ -318,6 +339,8 @@
     }
 
     const btnConfirm = modalEl.querySelector('#btnConfirmAccessDenied');
+    
+    // Check if bootstrap is available
     if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
       const bsModal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
       btnConfirm.onclick = () => {
@@ -423,14 +446,49 @@
       href: '/pages/cong-viec.html',
       icon: `<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M9 16l2 2 4-4"/></svg>`,
     },
+    {
+      id: 'nav-quan-ly-user',
+      label: 'QUẢN LÝ NGƯỜI DÙNG',
+      href: '/pages/quan-ly-user.html',
+      onlyAdmin: true,
+      icon: `<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="17" y1="11" x2="23" y2="11"/></svg>`,
+    },
   ];
 
+  function getTitleForUrl(url) {
+    if (!url) return 'Trang';
+    const cleanUrl = url.split('?')[0].split('#')[0];
+
+    function searchItems(items) {
+      for (const item of items) {
+        if (item.href && (item.href.split('?')[0] === cleanUrl || cleanUrl.endsWith(item.href.split('?')[0]))) {
+          return item.label;
+        }
+        if (item.children) {
+          const found = searchItems(item.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    }
+
+    const foundTitle = searchItems(NAV_ITEMS);
+    if (foundTitle) return foundTitle;
+
+    const filename = cleanUrl.split('/').pop().replace('.html', '').replace('-supabase', '');
+    const words = filename.split(/[-_]/).map(w => w.charAt(0).toUpperCase() + w.slice(1));
+    return words.join(' ') || 'Chi tiết';
+  }
+
   function buildSubSubGroup(children, groupId) {
+    const allowedChildren = children.filter(c => isPageAllowed(c.href));
+    if (allowedChildren.length === 0) return null;
+
     const ul = document.createElement('ul');
     ul.className = 'sidebar-subsub-group';
     ul.id = groupId + '-sub';
 
-    children.forEach(child => {
+    allowedChildren.forEach(child => {
       const li = document.createElement('li');
       li.className = 'sidebar-sub-item';
       const a = document.createElement('a');
@@ -452,20 +510,20 @@
     ul.id = groupId;
 
     let hasActiveChild = false;
+    let visibleChildCount = 0;
 
     children.forEach((child, i) => {
-      const li = document.createElement('li');
-      li.className = 'sidebar-sub-item';
-
       if (child.children) {
         // Sub-group (level 3)
         const subId = groupId + '-sub' + i;
+        const subGroup = buildSubSubGroup(child.children, subId);
+        if (!subGroup || subGroup.children.length === 0) return;
+
+        visibleChildCount++;
         const btn = document.createElement('button');
         btn.className = 'sidebar-sub-link';
         btn.innerHTML = child.label + CHEVRON_SVG;
         btn.setAttribute('aria-expanded', 'false');
-
-        const subGroup = buildSubSubGroup(child.children, subId);
 
         const subActive = child.children.some(sc => isActive(sc.href));
         if (subActive) {
@@ -483,10 +541,17 @@
           btn.setAttribute('aria-expanded', String(!isOpen));
         });
 
+        const li = document.createElement('li');
+        li.className = 'sidebar-sub-item';
         li.appendChild(btn);
         li.appendChild(subGroup);
+        ul.appendChild(li);
       } else {
-        // Simple link
+        if (!isPageAllowed(child.href)) return;
+
+        visibleChildCount++;
+        const li = document.createElement('li');
+        li.className = 'sidebar-sub-item';
         const a = document.createElement('a');
         a.className = 'sidebar-sub-link';
         a.href = child.href;
@@ -496,12 +561,11 @@
           hasActiveChild = true;
         }
         li.appendChild(a);
+        ul.appendChild(li);
       }
-
-      ul.appendChild(li);
     });
 
-    return { ul, hasActiveChild };
+    return { ul, hasActiveChild, visibleChildCount };
   }
 
   function buildSidebarNav() {
@@ -516,19 +580,24 @@
     ul.style.margin = '0';
 
     NAV_ITEMS.forEach(item => {
-      const li = document.createElement('li');
-      li.className = 'sidebar-item';
+      if (item.onlyAdmin && localStorage.getItem('currentUser') !== 'bao.lt') {
+        return;
+      }
 
       if (item.children) {
         // Collapsible group
         const groupId = item.id + '-group';
+        const { ul: subUl, hasActiveChild, visibleChildCount } = buildSubGroup(item.children, groupId);
+        if (visibleChildCount === 0) return;
+
+        const li = document.createElement('li');
+        li.className = 'sidebar-item';
+
         const btn = document.createElement('button');
         btn.className = 'sidebar-link';
         btn.innerHTML = item.icon + `<span>${item.label}</span>` + CHEVRON_SVG;
         btn.setAttribute('aria-expanded', 'false');
         btn.setAttribute('aria-controls', groupId);
-
-        const { ul: subUl, hasActiveChild } = buildSubGroup(item.children, groupId);
 
         if (hasActiveChild) {
           subUl.classList.add('open');
@@ -545,7 +614,13 @@
 
         li.appendChild(btn);
         li.appendChild(subUl);
+        ul.appendChild(li);
       } else {
+        if (!isPageAllowed(item.href)) return;
+
+        const li = document.createElement('li');
+        li.className = 'sidebar-item';
+
         // Simple nav link
         const a = document.createElement('a');
         a.className = 'sidebar-link';
@@ -555,9 +630,8 @@
           a.classList.add('active');
         }
         li.appendChild(a);
+        ul.appendChild(li);
       }
-
-      ul.appendChild(li);
     });
 
     nav.appendChild(ul);
@@ -751,7 +825,7 @@
     tabs.push({
       id: 'tab-home',
       title: 'Trang chủ',
-      url: window.location.pathname + window.location.search,
+      url: '/pages/home.html',
       paneEl: homePane,
       tabEl: null
     });
@@ -931,7 +1005,7 @@
     });
   }
 
-  function switchTab(tabId) {
+  function switchTab(tabId, updateHistory = true) {
     const targetTab = tabs.find(t => t.id === tabId);
     if (!targetTab) return;
 
@@ -947,6 +1021,30 @@
     });
 
     updateSidebarActiveState(targetTab.url);
+
+    // Cập nhật tiêu đề trang
+    const baseTitle = 'Kho Phôi cuộn - DDC';
+    const pageTitle = (targetTab.title && targetTab.id !== 'tab-home')
+      ? `${targetTab.title} | ${baseTitle}`
+      : baseTitle;
+    document.title = pageTitle;
+
+    // Cập nhật URL trên thanh địa chỉ bằng HTML5 History API
+    if (updateHistory) {
+      const targetUrl = targetTab.id === 'tab-home' ? '/pages/home.html' : targetTab.url;
+      try {
+        const currentFullUrl = window.location.pathname + window.location.search + window.location.hash;
+        if (currentFullUrl !== targetUrl) {
+          window.history.pushState(
+            { tabId: targetTab.id, url: targetUrl, title: targetTab.title },
+            pageTitle,
+            targetUrl
+          );
+        }
+      } catch (e) {
+        console.warn('Could not pushState:', e);
+      }
+    }
   }
 
   function updateSidebarActiveState(url) {
@@ -980,7 +1078,7 @@
     });
   }
 
-  function openTab(url, title) {
+  function openTab(url, title, updateHistory = true) {
     if (!isPageAllowed(url)) {
       const currentUser = localStorage.getItem('currentUser');
       if (!currentUser) {
@@ -1005,7 +1103,7 @@
     });
 
     if (existingTab) {
-      switchTab(existingTab.id);
+      switchTab(existingTab.id, updateHistory);
       return;
     }
 
@@ -1020,13 +1118,14 @@
 
     const iframe = document.createElement('iframe');
     iframe.className = 'tab-iframe';
+    iframe.name = 'tab-iframe';
     iframe.setAttribute('loading', 'lazy');
     iframe.src = url;
     iframe.setAttribute('frameborder', '0');
 
     const tabObj = {
       id: tabId,
-      title: title,
+      title: title || getTitleForUrl(url),
       url: url,
       paneEl: paneEl,
       tabEl: null
@@ -1039,11 +1138,35 @@
           iframe.contentDocument.documentElement.setAttribute('data-bs-theme', currentTheme);
         }
 
-        const currentUrl = iframe.contentWindow.location.pathname + iframe.contentWindow.location.search;
-        tabObj.url = currentUrl;
+        const iframeLocation = iframe.contentWindow.location;
+        const currentUrl = iframeLocation.pathname + iframeLocation.search + iframeLocation.hash;
 
-        if (activeTabId === tabId) {
-          updateSidebarActiveState(currentUrl);
+        if (currentUrl && currentUrl !== 'about:blank') {
+          tabObj.url = currentUrl;
+          if (iframe.contentDocument && iframe.contentDocument.title) {
+            const innerTitle = iframe.contentDocument.title.replace('- DDC', '').replace('Kho Phôi cuộn', '').trim();
+            if (innerTitle && innerTitle !== '') {
+              tabObj.title = innerTitle;
+              if (tabObj.tabEl) {
+                const titleEl = tabObj.tabEl.querySelector('.tab-item-title');
+                if (titleEl) titleEl.textContent = innerTitle;
+              }
+            }
+          }
+
+          if (activeTabId === tabId) {
+            updateSidebarActiveState(currentUrl);
+            const baseTitle = 'Kho Phôi cuộn - DDC';
+            const pageTitle = tabObj.title ? `${tabObj.title} | ${baseTitle}` : baseTitle;
+            document.title = pageTitle;
+            try {
+              window.history.replaceState(
+                { tabId: tabObj.id, url: currentUrl, title: tabObj.title },
+                pageTitle,
+                currentUrl
+              );
+            } catch (e) {}
+          }
         }
       } catch (e) {
         console.warn('Could not sync theme or URL to iframe on load', e);
@@ -1058,7 +1181,7 @@
 
     tabs.push(tabObj);
 
-    switchTab(tabId);
+    switchTab(tabId, updateHistory);
   }
 
   function closeTab(tabId) {
@@ -1088,7 +1211,7 @@
     if (activeTabId === tabId) {
       const prevTab = tabs[Math.max(0, tabIndex - 1)];
       if (prevTab) {
-        switchTab(prevTab.id);
+        switchTab(prevTab.id, true);
       }
     }
   }
@@ -1449,6 +1572,64 @@
   window.forceLogoutUser = forceLogoutUser;
 
   // ============================================================
+  // HISTORY POPSTATE & DEEP LINK HANDLING
+  // ============================================================
+
+  function initHistoryPopstateListener() {
+    window.addEventListener('popstate', (e) => {
+      const state = e.state;
+      if (state && state.tabId) {
+        const existingTab = tabs.find(t => t.id === state.tabId);
+        if (existingTab) {
+          switchTab(existingTab.id, false);
+        } else if (state.url) {
+          openTab(state.url, state.title || getTitleForUrl(state.url), false);
+        }
+      } else {
+        const currentPath = window.location.pathname;
+        if (currentPath === '/' || currentPath.endsWith('home.html') || currentPath.endsWith('index.html')) {
+          switchTab('tab-home', false);
+        } else {
+          const foundTab = tabs.find(t => t.url.split('?')[0] === currentPath);
+          if (foundTab) {
+            switchTab(foundTab.id, false);
+          } else {
+            const title = getTitleForUrl(currentPath);
+            openTab(currentPath + window.location.search, title, false);
+          }
+        }
+      }
+    });
+
+    if (!window.history.state) {
+      const initUrl = window.location.pathname + window.location.search;
+      try {
+        window.history.replaceState({ tabId: 'tab-home', url: initUrl, title: 'Trang chủ' }, document.title, initUrl);
+      } catch (e) {}
+    }
+  }
+
+  function handleDeepLinkOnStartup() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const openTabTarget = urlParams.get('openTab');
+    if (openTabTarget) {
+      const targetUrl = decodeURIComponent(openTabTarget);
+      const targetTitle = getTitleForUrl(targetUrl);
+      openTab(targetUrl, targetTitle, false);
+      const baseTitle = 'Kho Phôi cuộn - DDC';
+      const fullTitle = targetTitle ? `${targetTitle} | ${baseTitle}` : baseTitle;
+      document.title = fullTitle;
+      try {
+        window.history.replaceState(
+          { tabId: activeTabId, url: targetUrl, title: targetTitle },
+          fullTitle,
+          targetUrl
+        );
+      } catch (e) {}
+    }
+  }
+
+  // ============================================================
   // INITIALIZE
   // ============================================================
 
@@ -1460,6 +1641,8 @@
     injectSidebar();
     injectTopbar();
     wrapContent();
+    handleDeepLinkOnStartup();
+    initHistoryPopstateListener();
     initToggle();
     initLinkInterception();
     initThemeToggle();
