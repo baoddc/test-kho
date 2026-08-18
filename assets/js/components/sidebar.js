@@ -135,7 +135,7 @@
         if (window.parent && window.parent !== window) {
           window.parent.postMessage({ type: 'PERM_REVOKED', url: page }, '*');
         } else {
-          window.location.href = '/pages/home.html';
+          window.location.href = '/';
         }
       });
 
@@ -317,7 +317,7 @@
     if (!isPageAllowed(page)) {
       setTimeout(() => {
         showAccessDeniedModal('Rất tiếc! Tài khoản của bạn chưa được cấp quyền truy cập vào trang này.', () => {
-          window.location.href = '/pages/home.html';
+          window.location.href = '/';
         });
       }, 100);
     }
@@ -578,7 +578,7 @@
     // Header (logo)
     const header = document.createElement('a');
     header.className = 'sidebar-header';
-    header.href = '/pages/home.html';
+    header.href = '/';
     header.setAttribute('title', 'DDC Kho');
     header.innerHTML = `
       <img src="/assets/images/logos/Logo-DDC.png" alt="DDC Logo" class="sidebar-logo-img" style="height: 36px; width: auto; object-fit: contain;">
@@ -1097,7 +1097,7 @@
       const isLogoLink = link.classList.contains('sidebar-header');
 
       if ((isSidebarLink || isLogoLink) && href && href !== '#' && !href.startsWith('javascript:')) {
-        if (href.includes('home.html')) {
+        if (href.includes('home.html') || href === '/' || href.endsWith('/index.html')) {
           e.preventDefault();
           switchTab('tab-home');
           return;
