@@ -95,11 +95,31 @@
     });
   }
 
+  const PUBLIC_PAGES = [
+    'home.html',
+    'about.html',
+    'flower.html',
+    'index.html',
+    'xg-ton.html',
+    'tole-ton.html'
+  ];
+
   function checkRoutePermissionInIframe() {
     const page = window.location.pathname;
-    if (page.endsWith('dang_nhap.html') || page === '/' || page.endsWith('/index.html') || page.endsWith('home.html')) return;
+    const pageFile = page.split('/').pop();
+    if (page.endsWith('dang_nhap.html') || page === '/' || page.endsWith('/index.html') || PUBLIC_PAGES.some(p => pageFile === p || page.endsWith('/' + p))) return;
 
     if (!isPageAllowed(page)) {
+      const currentUser = localStorage.getItem('currentUser');
+      if (!currentUser) {
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({ type: 'AUTH_REQUIRED', url: page }, '*');
+        } else {
+          window.location.href = '/pages/index.html';
+        }
+        return;
+      }
+
       // Vô hiệu hóa toàn bộ nút thao tác và ô nhập dữ liệu trên trang iframe lập tức
       document.querySelectorAll('.btn, button, input, select, textarea').forEach(el => {
         el.disabled = true;
@@ -208,12 +228,21 @@
 
   function isPageAllowed(href) {
     if (!href || href === '#' || href.startsWith('#') || href.startsWith('javascript:')) return true;
-    const currentUser = localStorage.getItem('currentUser');
-    if (!currentUser) return true;
-    if (currentUser === 'bao.lt') return true;
 
-    // Trang chủ mặc định luôn được phép
-    if (href.endsWith('home.html')) return true;
+    const cleanHref = href.split('?')[0];
+    const hrefFile = cleanHref.split('/').pop();
+
+    // 1. Các trang công khai (PUBLIC): Ai cũng có thể xem mà không cần đăng nhập
+    if (PUBLIC_PAGES.some(p => hrefFile === p || cleanHref.endsWith('/' + p))) {
+      return true;
+    }
+
+    const currentUser = localStorage.getItem('currentUser');
+    // Chưa đăng nhập mà truy cập trang bảo mật => Không được phép
+    if (!currentUser) return false;
+
+    // Admin toàn quyền
+    if (currentUser === 'bao.lt') return true;
 
     let allowedPages = [];
     try {
@@ -231,8 +260,7 @@
       groupPerms = {};
     }
 
-    const cleanHref = href.split('?')[0];
-    const hrefFile = cleanHref.split('/').pop().replace('.html', '').replace('-supabase', '');
+    const pageFileNoExt = hrefFile.replace('.html', '').replace('-supabase', '');
 
     // 1. Kiểm tra xem trang có nằm trực tiếp trong allowedPages hay không
     const isDirectlyAllowed = Array.isArray(allowedPages) && allowedPages.some(page => {
@@ -240,7 +268,7 @@
       if (cleanHref === cleanPage || cleanHref.endsWith(cleanPage)) return true;
 
       const pageFile = cleanPage.split('/').pop().replace('.html', '').replace('-supabase', '');
-      return hrefFile === pageFile;
+      return pageFileNoExt === pageFile;
     });
 
     if (isDirectlyAllowed) return true;
@@ -305,7 +333,15 @@
 
   function checkRoutePermission() {
     const page = window.location.pathname;
-    if (page.endsWith('dang_nhap.html') || page === '/' || page.endsWith('/index.html') || page.endsWith('home.html')) return;
+    const pageFile = page.split('/').pop();
+    if (page.endsWith('dang_nhap.html') || page === '/' || page.endsWith('/index.html') || PUBLIC_PAGES.some(p => pageFile === p || page.endsWith('/' + p))) return;
+
+    const currentUser = localStorage.getItem('currentUser');
+    if (!currentUser) {
+      window.location.href = '/pages/index.html';
+      return;
+    }
+
     if (!isPageAllowed(page)) {
       setTimeout(() => {
         showAccessDeniedModal('Rất tiếc! Tài khoản của bạn chưa được cấp quyền truy cập vào trang này.', () => {
@@ -945,6 +981,22 @@
   }
 
   function openTab(url, title) {
+    if (!isPageAllowed(url)) {
+      const currentUser = localStorage.getItem('currentUser');
+      if (!currentUser) {
+        if (typeof showAuthModal === 'function') {
+          showAuthModal();
+        } else {
+          showAccessDeniedModal('Bạn cần đăng nhập tài khoản để truy cập chức năng này.', () => {
+            window.location.href = '/pages/index.html';
+          });
+        }
+        return;
+      }
+      showAccessDeniedModal('Rất tiếc! Tài khoản của bạn chưa được cấp quyền truy cập vào trang này.');
+      return;
+    }
+
     const normalizedUrl = url.startsWith('/') ? url : '/' + url;
 
     let existingTab = tabs.find(t => {

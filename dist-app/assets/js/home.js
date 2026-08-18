@@ -6,16 +6,11 @@
 // Kiểm tra xem đã đăng nhập chưa, nếu chưa thì quay về trang đăng nhập
 const PUBLIC_PAGES = [
   'home.html',
-  '5s-so-do-phoi-cuon.html',
-  '5s-so-do-phe-lieu.html',
-  'hse.html',
-  'xg-nhap.html',
-  'xg-xuat.html',
+  'about.html',
+  'flower.html',
+  'index.html',
   'xg-ton.html',
-  'tole-nhap.html',
-  'tole-xuat.html',
-  'tole-ton.html',
-  'about.html'
+  'tole-ton.html'
 ];
 
 /**
