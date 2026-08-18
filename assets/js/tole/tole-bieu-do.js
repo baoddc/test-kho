@@ -205,7 +205,7 @@ window.addEventListener('load', () => {
   if (logo) {
     logo.style.cursor = 'pointer';
     logo.addEventListener('click', () => {
-      window.location.href = '/';
+      window.location.href = '/pages/home.html';
     });
   }
 

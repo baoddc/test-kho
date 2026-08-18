@@ -192,7 +192,7 @@ window.addEventListener('load', () => {
   const logo = document.querySelector('.logo');
   if (logo) {
     logo.style.cursor = 'pointer';
-    logo.addEventListener('click', () => { window.location.href = '/'; });
+    logo.addEventListener('click', () => { window.location.href = '/pages/home.html'; });
   }
 
   loadSupabaseData();

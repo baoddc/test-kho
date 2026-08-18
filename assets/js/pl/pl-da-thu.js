@@ -1962,7 +1962,7 @@ function startApp() {
   if (logo) {
     logo.style.cursor = 'pointer';
     logo.addEventListener('click', function () {
-      window.location.href = '/';
+      window.location.href = '/pages/home.html';
     });
   }
 }

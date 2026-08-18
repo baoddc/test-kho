@@ -1,337 +1,234 @@
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Kho Phôi cuộn</title>
-  <meta name="description" content="Hệ thống quản lý kho DDC">
-
-  <!-- Logo hiển thị trên tab -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="apple-touch-icon" href="/assets/images/apple-touch-icon.png">
   <link rel="icon" type="image/png" href="/assets/images/logos/Logo-DDC.png">
-
-  <!-- Google Fonts for stylish serif time and clean interface -->
+  <title>Kho Phôi Cuộn - DDC</title>
+  
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Outfit:wght@300;400;500;600;700&family=Cinzel:wght@400;600;700&display=swap"
-    rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="/assets/js/core/pwa-register.js" defer></script>
 
-  <!-- Bootstrap CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-  <!-- Sidebar & Theme CSS -->
-  <link rel="stylesheet" href="/assets/css/sidebar.css">
-  <link rel="stylesheet" href="/assets/css/home.css">
-  <link rel="stylesheet" href="/assets/css/flower.css">
+    body {
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Ambient Background Glow */
+    .glow-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(100px);
+      opacity: 0.35;
+      animation: pulseGlow 6s ease-in-out infinite alternate;
+    }
+
+    .orb-1 {
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, #3b82f6, #1d4ed8);
+      top: -100px;
+      left: -100px;
+    }
+
+    .orb-2 {
+      width: 450px;
+      height: 450px;
+      background: radial-gradient(circle, #8b5cf6, #6d28d9);
+      bottom: -150px;
+      right: -150px;
+      animation-delay: -3s;
+    }
+
+    @keyframes pulseGlow {
+      0% { transform: scale(1) translate(0, 0); opacity: 0.25; }
+      100% { transform: scale(1.15) translate(20px, 20px); opacity: 0.45; }
+    }
+
+    /* Splash Container Card */
+    .splash-card {
+      position: relative;
+      z-index: 10;
+      background: rgba(30, 41, 59, 0.75);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 1.5rem;
+      padding: 2.5rem 3rem;
+      width: 420px;
+      max-width: 90vw;
+      text-align: center;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5),
+                  0 0 30px rgba(59, 130, 246, 0.15);
+    }
+
+    .logo-box {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 1.25rem;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 25px rgba(56, 189, 248, 0.25);
+      animation: logoFloat 3s ease-in-out infinite alternate;
+    }
+
+    .logo-box img {
+      max-width: 54px;
+      max-height: 54px;
+      object-fit: contain;
+    }
+
+    @keyframes logoFloat {
+      0% { transform: translateY(0); box-shadow: 0 0 20px rgba(56, 189, 248, 0.2); }
+      100% { transform: translateY(-6px); box-shadow: 0 10px 30px rgba(56, 189, 248, 0.4); }
+    }
+
+    .app-title {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.3px;
+      margin-bottom: 0.3rem;
+    }
+
+    .app-subtitle {
+      font-size: 0.85rem;
+      color: #94a3b8;
+      margin-bottom: 1.75rem;
+      font-weight: 400;
+    }
+
+    /* Progress Bar */
+    .progress-container {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      height: 10px;
+      overflow: hidden;
+      position: relative;
+      margin-bottom: 1rem;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
+      border-radius: 999px;
+      transition: width 0.3s ease;
+      position: relative;
+    }
+
+    .progress-fill::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+      animation: shimmer 1.5s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    .status-text {
+      font-size: 0.82rem;
+      color: #38bdf8;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .status-msg {
+      transition: opacity 0.2s ease;
+    }
+
+    .status-percent {
+      color: #94a3b8;
+      font-family: monospace;
+    }
+  </style>
 </head>
-
 <body>
+  <div class="glow-orb orb-1"></div>
+  <div class="glow-orb orb-2"></div>
 
-  <!-- Background Ambient Glow & Floating Particles -->
-  <div class="ambient-bg">
-    <div class="glow-orb orb-1"></div>
-    <div class="glow-orb orb-2"></div>
-    <canvas id="petalCanvas"></canvas>
-  </div>
+  <div class="splash-card">
+    <div class="logo-box">
+      <img src="/assets/images/logos/Logo-DDC.png" alt="DDC Logo" onerror="this.onerror=null; this.src='/assets/images/icon-512.png';">
+    </div>
+    <div class="app-title">Kho Phôi Cuộn - DDC</div>
+    <div class="app-subtitle">Hệ thống Quản lý Kho Phôi Cuộn System</div>
 
-  <!-- Main Container -->
-  <div class="app-layout">
+    <div class="progress-container">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
 
-    <!-- Side Floating Control Panel -->
-    <aside class="control-panel" id="controlPanel">
-      <div class="panel-header">
-        <h3>Tùy Chỉnh Đồng Hồ</h3>
-        <button class="close-panel-btn" id="closePanelBtn">&times;</button>
-      </div>
-      <div class="panel-body">
-
-        <!-- Theme Selection -->
-        <div class="panel-group">
-          <label>Chủ Đề Flower Wreath</label>
-          <div class="theme-options">
-            <button class="theme-chip active" data-theme="purple">
-              <span class="chip-color purple"></span> Purple Flowers
-            </button>
-            <button class="theme-chip" data-theme="rose">
-              <span class="chip-color rose"></span> Rose Quartz
-            </button>
-            <button class="theme-chip" data-theme="emerald">
-              <span class="chip-color emerald"></span> Emerald Botanicals
-            </button>
-            <button class="theme-chip" data-theme="gold">
-              <span class="chip-color gold"></span> Golden Sunflower
-            </button>
-            <button class="theme-chip" data-theme="cyber">
-              <span class="chip-color cyber"></span> Cyber Neon
-            </button>
-          </div>
-        </div>
-
-        <!-- Typography Choice -->
-        <div class="panel-group">
-          <label>Font Chữ Giờ Chính</label>
-          <select id="fontSelect" class="custom-select">
-            <option value="font-serif" selected>Playfair Serif (Giống mẫu)</option>
-            <option value="font-outfit">Outfit Modern Sans</option>
-            <option value="font-cinzel">Cinzel Classic Luxury</option>
-            <option value="font-digital">Digital Tech Monospace</option>
-          </select>
-        </div>
-
-        <!-- Display Toggles -->
-        <div class="panel-group">
-          <label>Cấu hình Hiển thị</label>
-          <div class="toggle-row">
-            <span>Đường lưới Grid</span>
-            <input type="checkbox" id="gridToggle" checked class="toggle-switch">
-          </div>
-          <div class="toggle-row">
-            <span>Cánh hoa rơi (Particle Animation)</span>
-            <input type="checkbox" id="petalToggle" checked class="toggle-switch">
-          </div>
-          <div class="toggle-row">
-            <span>Đèn phản chiếu mặt kính</span>
-            <input type="checkbox" id="glareToggle" checked class="toggle-switch">
-          </div>
-        </div>
-
-        <!-- Audio Atmosphere -->
-        <div class="panel-group">
-          <label>Âm Thanh Tích Tắc</label>
-          <div class="toggle-row">
-            <span>Âm thanh đồng hồ</span>
-            <button class="sound-btn" id="soundToggleBtn">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M11 5L6 9H2v6h4l5 4V5z" />
-                <path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07" />
-              </svg>
-              <span id="soundLabel">Tắt</span>
-            </button>
-          </div>
-        </div>
-
-      </div>
-    </aside>
-
-    <!-- Center Stage: The Smartwatch Body -->
-    <main class="watch-stage">
-
-      <div class="watch-wrapper" id="watchWrapper">
-
-        <!-- Top Watch Strap -->
-        <div class="watch-strap strap-top">
-          <div class="strap-texture"></div>
-        </div>
-
-        <!-- Watch Case / Frame -->
-        <div class="watch-case" id="watchCase">
-
-          <!-- Crown Button on Right -->
-          <div class="watch-crown" id="watchCrown" title="Xoay hoặc click Crown để đổi theme">
-            <div class="crown-grooves"></div>
-          </div>
-
-          <!-- Outer Ring Shadow & Bezel -->
-          <div class="watch-bezel">
-
-            <!-- Glass Screen Container -->
-            <div class="watch-screen" id="watchScreen">
-
-              <!-- Dynamic Glare overlay -->
-              <div class="glass-glare" id="glassGlare"></div>
-
-              <!-- SVG Floral Wreath Layer -->
-              <div class="wreath-container" id="wreathContainer">
-                <svg viewBox="0 0 500 500" class="wreath-svg" id="wreathSvg">
-                  <defs>
-                    <radialGradient id="flowerGlow" cx="50%" cy="50%" r="50%">
-                      <stop offset="0%" stop-color="var(--flower-accent)" stop-opacity="0.8" />
-                      <stop offset="100%" stop-color="var(--flower-accent)" stop-opacity="0" />
-                    </radialGradient>
-                    <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
-                      <feGaussianBlur stdDeviation="2" result="blur" />
-                      <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                    </filter>
-                  </defs>
-
-                  <!-- Outer Vines & Branch Base Circular Path -->
-                  <g class="vine-branches" stroke="var(--vine-color)" stroke-width="1.5" fill="none" opacity="0.65">
-                    <circle cx="250" cy="250" r="215" stroke-dasharray="8 4 12 3" />
-                    <circle cx="250" cy="250" r="208" stroke-dasharray="15 6 4 8" opacity="0.4" />
-                  </g>
-
-                  <!-- Dynamic SVG Flowers and Leaves container -->
-                  <g class="wreath-render-group" id="wreathRenderGroup" filter="url(#softGlow)">
-                  </g>
-                </svg>
-              </div>
-
-              <!-- Watch Face Interface Content -->
-              <div class="watch-face-content minimalist-face">
-
-                <!-- Minimal Clean Grid Hairlines overlay -->
-                <div class="grid-overlay" id="gridOverlay">
-                  <div class="grid-line line-h-mid"></div>
-                  <div class="grid-line line-v-mid"></div>
-                </div>
-
-                <!-- MAIN TIME AND DATE CENTERED CONTAINER -->
-                <div class="section-mid-focused">
-
-                  <!-- Alarm Badge & Date Row -->
-                  <div class="alarm-date-row" id="alarmWidget" title="Thứ và Ngày">
-                    <div class="alarm-badge">
-                      <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
-                        <path
-                          d="M22 5.72l-4.6-3.86-1.29 1.53 4.6 3.86L22 5.72zM7.88 3.39L6.6 1.86 2 5.71l1.29 1.53 4.59-3.85zM12 4c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9-4.03-9-9-9zm0 16c-3.86 0-7-3.14-7-7s3.14-7 7-7 7 3.14 7 7-3.14 7-7 7zm-.5-11v6l5.25 3.15.75-1.23-4.5-2.67v-5.25h-1.5z" />
-                      </svg>
-                    </div>
-                    <div class="day-date-text">
-                      <span class="day-name" id="dayName">Wednesday</span>
-                      <span class="day-num" id="dayNum">29</span>
-                    </div>
-                  </div>
-
-                  <!-- Main Big Time Display -->
-                  <div class="main-time-container">
-                    <div class="main-time-val font-serif" id="mainTimeDisplay">4:14</div>
-
-                    <!-- Right Sub-Column: AM/PM & Live Seconds -->
-                    <div class="right-info-col">
-                      <div class="ampm-box" id="ampmDisplay">PM</div>
-                      <div class="seconds-box" id="secondsDisplay">53</div>
-                    </div>
-                  </div>
-
-                </div>
-
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Bottom Watch Strap -->
-        <div class="watch-strap strap-bot">
-          <div class="strap-texture"></div>
-        </div>
-
-      </div>
-
-      <!-- Typography Title Under Watch -->
-      <div class="watch-caption-title" id="captionTitle">
-        P U R P L E &nbsp;&nbsp; F L O W E R S
-      </div>
-
-    </main>
-  </div>
-
-  <!-- MODALS FOR INTERACTIVE WIDGETS -->
-
-  <!-- World Clock Modal -->
-  <div class="modal-overlay" id="worldClockModal">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h4>Chọn Thành Phố Thế Giới</h4>
-        <button class="modal-close">&times;</button>
-      </div>
-      <div class="modal-body">
-        <ul class="city-list" id="cityList">
-          <li data-city="New York" data-tz="America/New_York" class="active">New York (EDT)</li>
-          <li data-city="London" data-tz="Europe/London">London (BST)</li>
-          <li data-city="Tokyo" data-tz="Asia/Tokyo">Tokyo (JST)</li>
-          <li data-city="Paris" data-tz="Europe/Paris">Paris (CEST)</li>
-          <li data-city="Hà Nội" data-tz="Asia/Ho_Chi_Minh">Hà Nội / TP.HCM (ICT)</li>
-          <li data-city="Sydney" data-tz="Australia/Sydney">Sydney (AEST)</li>
-        </ul>
-      </div>
+    <div class="status-text">
+      <span class="status-msg" id="statusMsg">Đang nạp ứng dụng...</span>
+      <span class="status-percent" id="statusPercent">0%</span>
     </div>
   </div>
 
-  <!-- Alarm Modal -->
-  <div class="modal-overlay" id="alarmModal">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h4>Quản Lý Báo Thức</h4>
-        <button class="modal-close">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div class="alarm-item">
-          <div class="alarm-info">
-            <span class="alarm-time">07:00 AM</span>
-            <span class="alarm-days">Hàng ngày • Báo thức buổi sáng</span>
-          </div>
-          <input type="checkbox" checked class="toggle-switch">
-        </div>
-        <div class="alarm-item">
-          <div class="alarm-info">
-            <span class="alarm-time">10:14 AM</span>
-            <span class="alarm-days">Thứ 4 hàng tuần • Nhắc lịch họp</span>
-          </div>
-          <input type="checkbox" checked class="toggle-switch">
-        </div>
-      </div>
-    </div>
-  </div>
+  <script>
+    (function() {
+      const fill = document.getElementById('progressFill');
+      const msg = document.getElementById('statusMsg');
+      const percent = document.getElementById('statusPercent');
 
-  <!-- Messages Modal -->
-  <div class="modal-overlay" id="msgModal">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h4>Thông Báo Tin Nhắn (3)</h4>
-        <button class="modal-close">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div class="msg-item">
-          <div class="msg-avatar">🌸</div>
-          <div class="msg-content">
-            <h5>Rose Miller</h5>
-            <p>Đồng hồ Purple Flowers đẹp quá bạn ơi!</p>
-            <span class="msg-time">10:12 AM</span>
-          </div>
-        </div>
-        <div class="msg-item">
-          <div class="msg-avatar">⚡</div>
-          <div class="msg-content">
-            <h5>Aura Health</h5>
-            <p>Bạn đã hoàn thành 65% mục tiêu vận động hôm nay.</p>
-            <span class="msg-time">09:45 AM</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+      const steps = [
+        { p: 25, t: 'Đang khởi tạo hệ thống...' },
+        { p: 60, t: 'Kiểm tra kết nối dữ liệu...' },
+        { p: 90, t: 'Đang mở giao diện...' },
+        { p: 100, t: 'Sẵn sàng!' }
+      ];
 
-  <!-- Health & Fitness Modal -->
-  <div class="modal-overlay" id="healthModal">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h4>Chỉ Số Sức Khỏe & Vận Động</h4>
-        <button class="modal-close">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div class="health-grid">
-          <div class="health-card">
-            <span class="hc-label">Bước chân</span>
-            <span class="hc-val" id="modalStepsVal">6,540 / 10,000</span>
-            <div class="progress-bar">
-              <div class="progress-fill" style="width: 65%;"></div>
-            </div>
-          </div>
-          <div class="health-card">
-            <span class="hc-label">Nhịp tim trung bình</span>
-            <span class="hc-val">80 BPM</span>
-            <span class="hc-sub">Bình thường (60-100 BPM)</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+      let stepIdx = 0;
 
-  <!-- Sidebar & Theme Scripts -->
-  <script src="/assets/js/components/sidebar.js"></script>
-  <script src="/assets/js/home.js"></script>
-  <script src="/assets/js/flower.js"></script>
+      function updateProgress() {
+        if (stepIdx < steps.length) {
+          const step = steps[stepIdx];
+          fill.style.width = step.p + '%';
+          msg.textContent = step.t;
+          percent.textContent = step.p + '%';
+          stepIdx++;
+
+          if (step.p === 100) {
+            setTimeout(() => {
+              window.location.href = '/pages/home.html';
+            }, 300);
+          } else {
+            setTimeout(updateProgress, 220);
+          }
+        }
+      }
+
+      setTimeout(updateProgress, 80);
+    })();
+  </script>
 </body>
-
 </html>
