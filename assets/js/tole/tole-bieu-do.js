@@ -8,18 +8,6 @@
    Các hằng số cấu hình cho dashboard
 ================================================================================ */
 
-// Thay bằng ID Google Sheet của bạn (Không dùng nữa do chuyển sang Supabase)
-// const SHEET_ID = '1GgNUPIYxvfJ1eQL4As6Vs0nb10A9ZIvoFQ4r2ZYm2pU';
-// 
-// // GID cho các sheet
-// const SHEET_GID_NHAP = '425790242';          // Sheet Nhập
-// const SHEET_GID_XUAT = '353555921';         // Sheet Xuất
-// const SHEET_GID_TON = '869739970';          // Sheet Tồn
-// 
-// // URL để tải file .xlsx
-// const XLSX_URL_NHAP = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=xlsx&gid=${SHEET_GID_NHAP}`;
-// const XLSX_URL_XUAT = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=xlsx&gid=${SHEET_GID_XUAT}`;
-// const XLSX_URL_TON = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=xlsx&gid=${SHEET_GID_TON}`;
 
 /* =============================================================================
    GLOBAL VARIABLES

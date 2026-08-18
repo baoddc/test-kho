@@ -10,7 +10,7 @@ const PRECACHE_ASSETS = [
   '/assets/images/icon-512.png',
   '/assets/images/apple-touch-icon.png',
   '/pages/index.html',
-  '/pages/dang_nhap.html'
+  '/pages/index.html'
 ];
 
 // Install Event - Pre-cache core shell assets

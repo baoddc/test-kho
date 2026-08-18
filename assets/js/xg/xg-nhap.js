@@ -298,12 +298,132 @@ window.addEventListener('load', () => {
    DATA LOADING - SUPABASE
 ================================================================================ */
 
+function buildSupabaseFilters() {
+  const filters = {
+    searchColumns: [
+      'Mã chứng từ', 'Phiếu nhập', 'Mã vật tư', 'Tên vật tư',
+      'Batch', 'Cuộn ID', 'Vị trí', 'Mã công trình', 'Tên công trình', 'Ghi chú'
+    ],
+    equals: {}
+  };
+
+  const searchInputEl = document.getElementById('searchInput');
+  if (searchInputEl && searchInputEl.value.trim()) {
+    filters.searchTerm = searchInputEl.value.trim();
+  }
+
+  const fromDateEl = document.getElementById('fromDate');
+  const toDateEl = document.getElementById('toDate');
+  if (fromDateEl && fromDateEl.value) {
+    filters.fromDate = fromDateEl.value;
+    filters.dateColumn = 'Ngày nhập';
+  }
+  if (toDateEl && toDateEl.value) {
+    filters.toDate = toDateEl.value;
+    filters.dateColumn = 'Ngày nhập';
+  }
+
+  const typeMenu = document.getElementById('typeFilterMenu');
+  if (typeMenu) {
+    const selectedTypes = Array.from(typeMenu.querySelectorAll('input[type="checkbox"]:checked'))
+      .map(cb => String(cb.value).trim())
+      .filter(Boolean);
+    if (selectedTypes.length > 0) {
+      filters.equals['Loại nhập'] = selectedTypes;
+    }
+  }
+
+  const voucherMenu = document.getElementById('voucherFilterMenu');
+  if (voucherMenu) {
+    const selectedVouchers = Array.from(voucherMenu.querySelectorAll('input[type="checkbox"]:checked'))
+      .map(cb => String(cb.value).trim())
+      .filter(Boolean);
+    if (selectedVouchers.length > 0) {
+      filters.equals['Mã chứng từ'] = selectedVouchers;
+    }
+  }
+
+  return filters;
+}
+
+async function populateDistinctFilterDropdowns() {
+  try {
+    const [{ data: typesData }, { data: vouchersData }] = await Promise.all([
+      supabase.from(TABLE_NAME).select('Loại nhập').not('Loại nhập', 'is', null).limit(1000),
+      supabase.from(TABLE_NAME).select('Mã chứng từ').not('Mã chứng từ', 'is', null).limit(1000)
+    ]);
+    if (typesData) {
+      const uniqueTypes = Array.from(new Set(typesData.map(r => r['Loại nhập']).filter(Boolean)));
+      populateTypeDropdownFromValues('Loại nhập', 'typeFilterMenu', 'typeFilterBtn', 'typeFilterCount', uniqueTypes);
+    }
+    if (vouchersData) {
+      const uniqueVouchers = Array.from(new Set(vouchersData.map(r => r['Mã chứng từ']).filter(Boolean)));
+      populateTypeDropdownFromValues('Mã chứng từ', 'voucherFilterMenu', 'voucherFilterBtn', 'voucherFilterCount', uniqueVouchers);
+    }
+  } catch (e) {
+    console.warn('Could not populate distinct filter dropdowns:', e);
+  }
+}
+
+function populateTypeDropdownFromValues(headerName, menuId, btnId, countId, uniqueValuesList) {
+  const menu = document.getElementById(menuId);
+  const countEl = document.getElementById(countId);
+  if (!menu) return;
+
+  const currentlyChecked = new Set(
+    Array.from(menu.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value)
+  );
+
+  menu.innerHTML = '';
+  const idx = COLUMN_HEADERS.indexOf(headerName);
+  if (idx !== -1) menu.dataset.colIndex = String(idx);
+
+  const arr = Array.from(new Set(uniqueValuesList)).sort((a, b) => String(a).localeCompare(String(b), 'vi'));
+  const ctrl = document.createElement('div');
+  ctrl.className = 'd-flex gap-1 mb-2';
+  const selAll = document.createElement('button');
+  selAll.type = 'button'; selAll.className = 'btn btn-sm btn-link p-0'; selAll.textContent = 'Chọn tất cả';
+  const clr = document.createElement('button');
+  clr.type = 'button'; clr.className = 'btn btn-sm btn-link p-0 text-danger'; clr.textContent = 'Bỏ chọn';
+  ctrl.appendChild(selAll); ctrl.appendChild(document.createTextNode(' · ')); ctrl.appendChild(clr);
+  menu.appendChild(ctrl);
+
+  selAll.addEventListener('click', (e) => {
+    e.preventDefault();
+    menu.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
+    if (countEl) countEl.textContent = String(menu.querySelectorAll('input[type="checkbox"]:checked').length);
+    filterTable();
+  });
+  clr.addEventListener('click', (e) => {
+    e.preventDefault();
+    menu.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+    if (countEl) countEl.textContent = '0';
+    filterTable();
+  });
+
+  arr.forEach((v, i) => {
+    const id = `typeOpt_${menuId}_${i}`;
+    const wrap = document.createElement('div'); wrap.className = 'form-check';
+    const input = document.createElement('input');
+    input.className = 'form-check-input'; input.type = 'checkbox'; input.value = v; input.id = id;
+    if (currentlyChecked.has(v)) input.checked = true;
+    const label = document.createElement('label');
+    label.className = 'form-check-label'; label.htmlFor = id; label.textContent = v;
+    wrap.appendChild(input); wrap.appendChild(label); menu.appendChild(wrap);
+    input.addEventListener('change', () => {
+      if (countEl) countEl.textContent = String(menu.querySelectorAll('input[type="checkbox"]:checked').length);
+      filterTable();
+    });
+  });
+
+  if (countEl) countEl.textContent = String(currentlyChecked.size);
+}
+
 async function loadSupabaseData() {
   try {
     const loadingEl = document.getElementById('loading');
     const cachedRaw = typeof getStoredTableCache === 'function' ? getStoredTableCache(TABLE_NAME) : null;
 
-    // 1. Instant render from SWR cache (0ms delay)
     if (cachedRaw && Array.isArray(cachedRaw) && cachedRaw.length > 0) {
       window._rawSupabaseData = cachedRaw;
       tableData = [COLUMN_HEADERS, ...cachedRaw.map((row, idx) => {
@@ -325,7 +445,6 @@ async function loadSupabaseData() {
       }
     }
 
-    // 2. Fetch fresh data in background with parallel batching
     let allData;
     if (typeof fetchAllFromSupabase === 'function') {
       allData = await fetchAllFromSupabase(TABLE_NAME, '*', 'id', true);
@@ -362,11 +481,14 @@ async function loadSupabaseData() {
   } catch (error) {
     const loadingEl = document.getElementById('loading');
     if (loadingEl && (!tableData || tableData.length === 0)) {
-      loadingEl.innerHTML =
-        `Lỗi kết nối Supabase: ${error.message}<br>Kiểm tra URL và anon key trong supabase-config.js`;
+      loadingEl.innerHTML = `Lỗi kết nối Supabase: ${error.message}<br>Kiểm tra URL và anon key trong supabase-config.js`;
     }
-    console.error('Supabase error:', error);
+    console.error('Supabase error in loadSupabaseData:', error);
   }
+}
+
+async function fetchDataFromSupabase(targetPage = 1) {
+  await loadSupabaseData();
 }
 
 function setupFilterEventListeners() {
@@ -375,7 +497,7 @@ function setupFilterEventListeners() {
   const toInput = document.getElementById('toDate');
   const searchInput = document.getElementById('searchInput');
 
-  if (btnReset) {
+  if (btnReset && !btnReset.isEventListenerAttached) {
     btnReset.addEventListener('click', () => {
       if (fromInput) fromInput.value = '';
       if (toInput) toInput.value = '';
@@ -391,11 +513,21 @@ function setupFilterEventListeners() {
       });
       renderTable(tableData);
     });
+    btnReset.isEventListenerAttached = true;
   }
 
-  if (fromInput) fromInput.addEventListener('change', filterTable);
-  if (toInput) toInput.addEventListener('change', filterTable);
-  if (searchInput) searchInput.addEventListener('input', debouncedFilter);
+  if (fromInput && !fromInput.isEventListenerAttached) {
+    fromInput.addEventListener('change', () => filterTable(true));
+    fromInput.isEventListenerAttached = true;
+  }
+  if (toInput && !toInput.isEventListenerAttached) {
+    toInput.addEventListener('change', () => filterTable(true));
+    toInput.isEventListenerAttached = true;
+  }
+  if (searchInput && !searchInput.isEventListenerAttached) {
+    searchInput.addEventListener('input', debouncedFilter);
+    searchInput.isEventListenerAttached = true;
+  }
 }
 
 
@@ -638,14 +770,28 @@ function updatePaginationControls() {
 
 function goToPage(page) {
   const newPage = parseInt(page, 10);
-  if (newPage >= 1 && newPage <= totalPages) { currentPage = newPage; renderTableWithPagination(); }
+  if (newPage >= 1 && newPage <= totalPages) {
+    currentPage = newPage;
+    renderTableWithPagination();
+  }
 }
 
-function nextPage() { if (currentPage < totalPages) { currentPage++; renderTableWithPagination(); } }
-function prevPage() { if (currentPage > 1) { currentPage--; renderTableWithPagination(); } }
+function nextPage() {
+  if (currentPage < totalPages) {
+    currentPage++;
+    renderTableWithPagination();
+  }
+}
+
+function prevPage() {
+  if (currentPage > 1) {
+    currentPage--;
+    renderTableWithPagination();
+  }
+}
 
 function renderTableWithPagination() {
-  const dataToPaginate = filteredData.length > 0 ? filteredData : tableData;
+  const dataToPaginate = (filteredData && filteredData.length > 0) ? filteredData : tableData;
   const pageData = getPageData(dataToPaginate);
   renderTableData(pageData);
   updatePaginationControls();
@@ -681,26 +827,18 @@ function filterTable(resetPage = true) {
   const filtered = [tableData[0]];
   for (let i = 1; i < tableData.length; i++) {
     const row = tableData[i];
-
     if ((from || to) && dateColIndex >= 0) {
       const d = parseRowDate(row[dateColIndex]);
-      if (!d) continue;
-      if (from && d < from) continue;
-      if (to && d > to) continue;
+      if (!d || (from && d < from) || (to && d > to)) continue;
     }
-
     if (typeSelected.length > 0 && typeColIndex >= 0) {
       let tv = row[typeColIndex];
-      if (tv === undefined || tv === null) continue;
-      if (!typeSelected.includes(String(tv).trim())) continue;
+      if (tv === undefined || tv === null || !typeSelected.includes(String(tv).trim())) continue;
     }
-
     if (voucherSelected.length > 0 && voucherColIndex >= 0) {
       let vv = row[voucherColIndex];
-      if (vv === undefined || vv === null) continue;
-      if (!voucherSelected.includes(String(vv).trim())) continue;
+      if (vv === undefined || vv === null || !voucherSelected.includes(String(vv).trim())) continue;
     }
-
     if (searchVal) {
       let matchFound = false;
       for (let colIdx = 0; colIdx < row.length; colIdx++) {
@@ -712,10 +850,8 @@ function filterTable(resetPage = true) {
       }
       if (!matchFound) continue;
     }
-
     filtered.push(row);
   }
-
   renderTable(filtered, resetPage);
 }
 
@@ -1316,17 +1452,9 @@ document.addEventListener('submit', async (e) => {
 
       if (error) throw error;
 
-      if (insertedData) {
-        insertedData.forEach(row => {
-          if (!window._rawSupabaseData) window._rawSupabaseData = [];
-          window._rawSupabaseData.push(row);
-          const arr = rowToArray(row);
-          arr.originalIndex = tableData.length;
-          tableData.push(arr);
-        });
-      }
-
-      renderTable(tableData, false);
+      if (window.supabaseDataEngine) window.supabaseDataEngine.invalidateCache(TABLE_NAME);
+      await populateDistinctFilterDropdowns();
+      await fetchDataFromSupabase(currentPage);
 
       bootstrap.Modal.getInstance(document.getElementById('addDataModal'))?.hide();
       form.reset();
@@ -1401,17 +1529,10 @@ document.addEventListener('submit', async (e) => {
 
       if (error) throw error;
 
-      if (updatedData && updatedData[0]) {
-        const arr = rowToArray(updatedData[0]);
-        arr.originalIndex = selectedRowIndex;
-        tableData[selectedRowIndex] = arr;
-        if (window._rawSupabaseData) {
-          const rawIdx = window._rawSupabaseData.findIndex(r => String(r.id) === String(rowId));
-          if (rawIdx >= 0) window._rawSupabaseData[rawIdx] = updatedData[0];
-        }
-      }
+      if (window.supabaseDataEngine) window.supabaseDataEngine.invalidateCache(TABLE_NAME);
+      await populateDistinctFilterDropdowns();
+      await fetchDataFromSupabase(currentPage);
 
-      renderTable(tableData, false);
       selectedRowIndex = -1;
       document.getElementById('btnEditData').disabled = true;
       document.getElementById('btnDeleteData').disabled = true;
@@ -1480,19 +1601,12 @@ document.addEventListener('click', async (e) => {
         if (error) throw error;
       }
 
-      sortedIndexes.forEach(rowIndex => {
-        if (rowIndex <= 0 || rowIndex >= tableData.length) return;
-        const rowId = tableData[rowIndex][0];
-        tableData.splice(rowIndex, 1);
-        if (window._rawSupabaseData) {
-          const rawIdx = window._rawSupabaseData.findIndex(r => String(r.id) === String(rowId));
-          if (rawIdx >= 0) window._rawSupabaseData.splice(rawIdx, 1);
-        }
-      });
+      if (window.supabaseDataEngine) window.supabaseDataEngine.invalidateCache(TABLE_NAME);
+      await populateDistinctFilterDropdowns();
+      await fetchDataFromSupabase(currentPage);
 
       bootstrap.Modal.getInstance(document.getElementById('deleteDataModal'))?.hide();
       selectedRowIndexes = []; selectedRowIndex = -1;
-      renderTable(tableData, false);
       document.getElementById('btnEditData').disabled = true;
       document.getElementById('btnDeleteData').disabled = true;
 

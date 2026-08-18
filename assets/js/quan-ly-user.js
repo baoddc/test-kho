@@ -369,20 +369,14 @@ function computePermissionDiff(username, oldPerms, newAllowedPagesPayload) {
         
         // Nhóm XÀ GỒ
         '/pages/xg/xg-nhap.html': 'Nhập - XG',
-        '/pages/xg/xg-nhap-supabase.html': 'Nhập - XG',
         '/pages/xg/xg-xuat.html': 'Xuất - XG',
-        '/pages/xg/xg-xuat-supabase.html': 'Xuất - XG',
         '/pages/xg/xg-ton.html': 'Tồn - XG',
-        '/pages/xg/xg-ton-supabase.html': 'Tồn - XG',
         '/pages/xg/xg-bieu-do.html': 'Biểu đồ - XG',
         
         // Nhóm TOLE
         '/pages/tole/tole-nhap.html': 'Nhập - Tole',
-        '/pages/tole/tole-nhap-supabase.html': 'Nhập - Tole',
         '/pages/tole/tole-xuat.html': 'Xuất - Tole',
-        '/pages/tole/tole-xuat-supabase.html': 'Xuất - Tole',
         '/pages/tole/tole-ton.html': 'Tồn - Tole',
-        '/pages/tole/tole-ton-supabase.html': 'Tồn - Tole',
         '/pages/tole/tole-bieu-do.html': 'Biểu đồ - Tole',
         
         // Nhóm PHẾ LIỆU

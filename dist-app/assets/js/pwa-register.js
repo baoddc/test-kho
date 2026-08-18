@@ -135,7 +135,7 @@
           ">&times;</button>
           
           <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.25rem;">
-            <img src="/assets/img/Logo-DDC.png" alt="DDC Logo" style="height: 40px; width: auto; object-fit: contain;" onerror="this.style.display='none'">
+            <img src="/assets/images/logos/Logo-DDC.png" alt="DDC Logo" style="height: 40px; width: auto; object-fit: contain;" onerror="this.style.display='none'">
             <div>
               <h3 style="margin: 0; font-size: 1.2rem; font-weight: 700; color: #ffffff;">Tải Ứng Dụng DDC Kho</h3>
               <p style="margin: 0; font-size: 0.85rem; color: #94a3b8;">Hệ thống Quản lý Kho Phôi Cuộn</p>

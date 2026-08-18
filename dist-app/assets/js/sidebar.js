@@ -14,7 +14,7 @@
   if (!document.getElementById('update-checker-script')) {
     const updateScript = document.createElement('script');
     updateScript.id = 'update-checker-script';
-    updateScript.src = '/assets/js/update-checker.js';
+    updateScript.src = '/assets/js/core/update-checker.js';
     updateScript.defer = true;
     document.head.appendChild(updateScript);
   }
@@ -52,7 +52,7 @@
     }
     if (!document.querySelector('script[src*="pwa-register.js"]')) {
       const script = document.createElement('script');
-      script.src = '/assets/js/pwa-register.js';
+      script.src = '/assets/js/core/pwa-register.js';
       script.defer = true;
       document.head.appendChild(script);
     }
@@ -547,7 +547,7 @@
     header.href = '/pages/home.html';
     header.setAttribute('title', 'DDC Kho');
     header.innerHTML = `
-      <img src="/assets/img/Logo-DDC.png" alt="DDC Logo" class="sidebar-logo-img" style="height: 36px; width: auto; object-fit: contain;">
+      <img src="/assets/images/logos/Logo-DDC.png" alt="DDC Logo" class="sidebar-logo-img" style="height: 36px; width: auto; object-fit: contain;">
     `;
     sidebar.appendChild(header);
 
@@ -1277,7 +1277,7 @@
     localStorage.removeItem('userPermChecksum');
     localStorage.setItem('userForceLoggedOut', Date.now().toString());
 
-    const loginUrl = '/pages/dang_nhap.html';
+    const loginUrl = '/pages/index.html';
     try {
       if (window.top && window.top !== window) {
         window.top.location.href = loginUrl;

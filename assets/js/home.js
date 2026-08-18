@@ -461,7 +461,7 @@ window.addEventListener('load', () => {
   if (!document.getElementById('voice-assistant-script')) {
     const script = document.createElement('script');
     script.id = 'voice-assistant-script';
-    script.src = '/assets/js/voice-assistant.js';
+    script.src = '/assets/js/components/voice-assistant.js';
     document.body.appendChild(script);
   }
 });
