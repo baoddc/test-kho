@@ -1,8 +1,13 @@
 {
+  "cleanUrls": true,
   "rewrites": [
     {
+      "source": "/pages/home.html",
+      "destination": "/index.html"
+    },
+    {
       "source": "/",
-      "destination": "/pages/home.html"
+      "destination": "/index.html"
     }
   ]
 }

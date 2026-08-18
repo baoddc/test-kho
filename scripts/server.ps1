@@ -26,7 +26,7 @@ try {
 
         $rawUrl = $request.Url.LocalPath
         if ($rawUrl -eq "/" -or $rawUrl -eq "") {
-            $rawUrl = "/pages/home.html"
+            $rawUrl = "/index.html"
         }
 
         $decodedUrl = [System.Uri]::UnescapeDataString($rawUrl).TrimStart('/')

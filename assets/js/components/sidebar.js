@@ -45,7 +45,7 @@
 
   if (!isIframe && !isStandalonePage && currentPath.includes('/pages/')) {
     const targetUrl = currentPath + window.location.search + window.location.hash;
-    window.location.replace('/pages/home.html?openTab=' + encodeURIComponent(targetUrl));
+    window.location.replace('/?openTab=' + encodeURIComponent(targetUrl));
     return;
   }
 
@@ -128,7 +128,7 @@
   function checkRoutePermissionInIframe() {
     const page = window.location.pathname;
     const pageFile = page.split('/').pop();
-    if (page.endsWith('dang_nhap.html') || page === '/' || page.endsWith('/index.html') || PUBLIC_PAGES.some(p => pageFile === p || page.endsWith('/' + p))) return;
+    if (page.endsWith('dang_nhap.html') || page === '/' || page.endsWith('/index.html') || page.endsWith('/home.html') || PUBLIC_PAGES.some(p => pageFile === p || page.endsWith('/' + p))) return;
 
     if (!isPageAllowed(page)) {
       const currentUser = localStorage.getItem('currentUser');
@@ -170,7 +170,7 @@
         if (window.parent && window.parent !== window) {
           window.parent.postMessage({ type: 'PERM_REVOKED', url: page }, '*');
         } else {
-          window.location.href = '/pages/home.html';
+          window.location.href = '/';
         }
       });
 
@@ -242,9 +242,20 @@
   }
 
   function isActive(href) {
-    if (!href || href === '#') return false;
-    const path = getCurrentPage();
-    return path === href || path.endsWith(href) || href.endsWith(path.split('/').pop());
+    if (!href || href.startsWith('#') || href.startsWith('javascript:') || href === '/') return false;
+    const currentPath = getCurrentPage();
+    const isHome = currentPath === '/' || currentPath.endsWith('/home.html') || currentPath.endsWith('/index.html');
+    if (isHome) return false;
+
+    const cleanPath = currentPath.split('?')[0].split('#')[0].trim();
+    const cleanHref = href.split('?')[0].split('#')[0].trim();
+    if (!cleanPath || !cleanHref) return false;
+
+    const pathFile = cleanPath.split('/').pop();
+    const hrefFile = cleanHref.split('/').pop();
+
+    if (!pathFile || !hrefFile) return false;
+    return cleanPath === cleanHref || cleanPath.endsWith(cleanHref) || hrefFile === pathFile;
   }
 
   function isPageAllowed(href) {
@@ -254,7 +265,7 @@
     const hrefFile = cleanHref.split('/').pop();
 
     // 1. Các trang công khai (PUBLIC): Ai cũng có thể xem mà không cần đăng nhập
-    if (PUBLIC_PAGES.some(p => hrefFile === p || cleanHref.endsWith('/' + p))) {
+    if (cleanHref === '/' || cleanHref === '' || PUBLIC_PAGES.some(p => hrefFile === p || cleanHref.endsWith('/' + p))) {
       return true;
     }
 
@@ -357,7 +368,7 @@
   function checkRoutePermission() {
     const page = window.location.pathname;
     const pageFile = page.split('/').pop();
-    if (page.endsWith('dang_nhap.html') || page === '/' || page.endsWith('/index.html') || PUBLIC_PAGES.some(p => pageFile === p || page.endsWith('/' + p))) return;
+    if (page.endsWith('dang_nhap.html') || page === '/' || page.endsWith('/index.html') || page.endsWith('/home.html') || PUBLIC_PAGES.some(p => pageFile === p || page.endsWith('/' + p))) return;
 
     const currentUser = localStorage.getItem('currentUser');
     if (!currentUser) {
@@ -368,7 +379,7 @@
     if (!isPageAllowed(page)) {
       setTimeout(() => {
         showAccessDeniedModal('Rất tiếc! Tài khoản của bạn chưa được cấp quyền truy cập vào trang này.', () => {
-          window.location.href = '/pages/home.html';
+          window.location.href = '/';
         });
       }, 100);
     }
@@ -601,7 +612,7 @@
 
         if (hasActiveChild) {
           subUl.classList.add('open');
-          btn.classList.add('open', 'active');
+          btn.classList.add('open');
           btn.setAttribute('aria-expanded', 'true');
         }
 
@@ -654,7 +665,7 @@
     // Header (logo)
     const header = document.createElement('a');
     header.className = 'sidebar-header';
-    header.href = '/pages/home.html';
+    header.href = '/';
     header.setAttribute('title', 'DDC Kho');
     header.innerHTML = `
       <img src="/assets/images/logos/Logo-DDC.png" alt="DDC Logo" class="sidebar-logo-img" style="height: 36px; width: auto; object-fit: contain;">
@@ -825,7 +836,7 @@
     tabs.push({
       id: 'tab-home',
       title: 'Trang chủ',
-      url: '/pages/home.html',
+      url: '/',
       paneEl: homePane,
       tabEl: null
     });
@@ -1031,10 +1042,10 @@
 
     // Cập nhật URL trên thanh địa chỉ bằng HTML5 History API
     if (updateHistory) {
-      const targetUrl = targetTab.id === 'tab-home' ? '/pages/home.html' : targetTab.url;
+      const targetUrl = targetTab.id === 'tab-home' ? '/' : targetTab.url;
       try {
         const currentFullUrl = window.location.pathname + window.location.search + window.location.hash;
-        if (currentFullUrl !== targetUrl) {
+        if (currentFullUrl !== targetUrl && !(currentFullUrl === '/' && targetUrl === '/')) {
           window.history.pushState(
             { tabId: targetTab.id, url: targetUrl, title: targetTab.title },
             pageTitle,
@@ -1048,34 +1059,51 @@
   }
 
   function updateSidebarActiveState(url) {
-    const cleanUrlPath = url.split('?')[0];
+    // 1. Clear active state from ALL sidebar elements
+    document.querySelectorAll('.sidebar-link, .sidebar-sub-link, .sidebar-subsub-link').forEach(el => {
+      el.classList.remove('active');
+    });
 
-    document.querySelectorAll('.sidebar-link, .sidebar-sub-link, .sidebar-subsub-link').forEach(link => {
+    const isHome = !url || url === '/' || url.endsWith('/home.html') || url.endsWith('/index.html');
+    if (isHome) {
+      return;
+    }
+
+    const cleanUrlPath = url.split('?')[0].split('#')[0];
+    const targetFile = cleanUrlPath.split('/').pop();
+
+    // 2. Find matching active link
+    let activeLink = null;
+    document.querySelectorAll('.sidebar-sub-link, .sidebar-subsub-link, a.sidebar-link').forEach(link => {
       const href = link.getAttribute('href');
-      if (href && href !== '#') {
-        const cleanHrefPath = href.split('?')[0];
-        const isMatch = cleanUrlPath === cleanHrefPath ||
-          cleanUrlPath.endsWith(cleanHrefPath) ||
-          cleanHrefPath.endsWith(cleanUrlPath.split('/').pop());
+      if (!href || href.startsWith('#') || href.startsWith('javascript:') || href === '/') return;
+      const cleanHref = href.split('?')[0].split('#')[0].trim();
+      if (!cleanHref) return;
+      const hrefFile = cleanHref.split('/').pop();
+      if (!hrefFile) return;
 
-        link.classList.toggle('active', isMatch);
-
-        if (isMatch) {
-          let parent = link.parentElement;
-          while (parent && !parent.classList.contains('sidebar-nav')) {
-            if (parent.classList.contains('sidebar-group') || parent.classList.contains('sidebar-subsub-group')) {
-              parent.classList.add('open');
-              const toggleBtn = parent.previousElementSibling;
-              if (toggleBtn && (toggleBtn.classList.contains('sidebar-link') || toggleBtn.classList.contains('sidebar-sub-link'))) {
-                toggleBtn.classList.add('open');
-                toggleBtn.setAttribute('aria-expanded', 'true');
-              }
-            }
-            parent = parent.parentElement;
-          }
-        }
+      if (cleanUrlPath === cleanHref || cleanUrlPath.endsWith(cleanHref) || targetFile === hrefFile) {
+        activeLink = link;
       }
     });
+
+    // 3. Highlight matched link and its parent dropdown headers
+    if (activeLink) {
+      activeLink.classList.add('active');
+
+      let parent = activeLink.parentElement;
+      while (parent && !parent.classList.contains('sidebar-nav')) {
+        if (parent.classList.contains('sidebar-group') || parent.classList.contains('sidebar-subsub-group')) {
+          parent.classList.add('open');
+          const toggleBtn = parent.previousElementSibling;
+          if (toggleBtn && (toggleBtn.classList.contains('sidebar-link') || toggleBtn.classList.contains('sidebar-sub-link'))) {
+            toggleBtn.classList.add('open');
+            toggleBtn.setAttribute('aria-expanded', 'true');
+          }
+        }
+        parent = parent.parentElement;
+      }
+    }
   }
 
   function openTab(url, title, updateHistory = true) {
@@ -1231,8 +1259,8 @@
         link.classList.contains('sidebar-subsub-link');
       const isLogoLink = link.classList.contains('sidebar-header');
 
-      if ((isSidebarLink || isLogoLink) && href && href !== '#' && !href.startsWith('javascript:')) {
-        if (href.includes('home.html')) {
+      if ((isSidebarLink || isLogoLink) && href && !href.startsWith('#') && !href.startsWith('javascript:')) {
+        if (href === '/' || href.includes('home.html') || href.endsWith('/index.html')) {
           e.preventDefault();
           switchTab('tab-home');
           return;
@@ -1601,12 +1629,11 @@
       }
     });
 
-    if (!window.history.state) {
-      const initUrl = window.location.pathname + window.location.search;
-      try {
-        window.history.replaceState({ tabId: 'tab-home', url: initUrl, title: 'Trang chủ' }, document.title, initUrl);
-      } catch (e) {}
-    }
+    const isHome = window.location.pathname === '/' || window.location.pathname.endsWith('home.html') || window.location.pathname.endsWith('index.html');
+    const initUrl = isHome ? '/' : (window.location.pathname + window.location.search);
+    try {
+      window.history.replaceState({ tabId: 'tab-home', url: initUrl, title: 'Trang chủ' }, document.title, initUrl);
+    } catch (e) {}
   }
 
   function handleDeepLinkOnStartup() {
