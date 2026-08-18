@@ -213,7 +213,7 @@
     if (currentUser === 'bao.lt') return true;
 
     // Trang chủ mặc định luôn được phép
-    if (href.endsWith('home.html')) return true;
+    if (href === '/' || href.endsWith('/index.html') || href.endsWith('home.html')) return true;
 
     let allowedPages = [];
     try {
