@@ -258,13 +258,51 @@
     return cleanPath === cleanHref || cleanPath.endsWith(cleanHref) || hrefFile === pathFile;
   }
 
+  function isSidebarItemVisible(item) {
+    if (!item) return false;
+    const currentUser = localStorage.getItem('currentUser');
+    const href = typeof item === 'string' ? item : item.href;
+    const onlyAdmin = typeof item === 'object' ? !!item.onlyAdmin : false;
+    const cleanHref = href ? href.split('?')[0].split('#')[0].trim() : '';
+    const hrefFile = cleanHref.split('/').pop();
+    const isQuanLyUser = cleanHref.endsWith('quan-ly-user.html') || hrefFile === 'quan-ly-user.html' || (typeof item === 'object' && item.id === 'nav-quan-ly-user');
+
+    // 1. Quản lý user / onlyAdmin: chỉ hiển thị cho duy nhất tài khoản admin bao.lt
+    if (onlyAdmin || isQuanLyUser) {
+      return currentUser === 'bao.lt';
+    }
+
+    // 2. Chế độ Khách (chưa đăng nhập): Hiển thị tất cả các mục menu khác
+    if (!currentUser) {
+      return true;
+    }
+
+    // 3. Tài khoản admin bao.lt: Toàn quyền hiển thị
+    if (currentUser === 'bao.lt') {
+      return true;
+    }
+
+    // 4. Nếu item có children (nhóm cha): kiểm tra nếu có ít nhất 1 item con được hiển thị
+    if (typeof item === 'object' && Array.isArray(item.children)) {
+      return item.children.some(child => isSidebarItemVisible(child));
+    }
+
+    // 5. Tài khoản người dùng đã đăng nhập: kiểm tra theo quyền truy cập trang
+    return isPageAllowed(href);
+  }
+
   function isPageAllowed(href) {
     if (!href || href === '#' || href.startsWith('#') || href.startsWith('javascript:')) return true;
 
     const cleanHref = href.split('?')[0];
     const hrefFile = cleanHref.split('/').pop();
 
-    // 1. Các trang công khai (PUBLIC): Ai cũng có thể xem mà không cần đăng nhập
+    // 1. Quản lý user: Chỉ duy nhất admin bao.lt được phép truy cập
+    if (cleanHref.endsWith('quan-ly-user.html') || hrefFile === 'quan-ly-user.html') {
+      return localStorage.getItem('currentUser') === 'bao.lt';
+    }
+
+    // 2. Các trang công khai (PUBLIC): Ai cũng có thể xem mà không cần đăng nhập
     if (cleanHref === '/' || cleanHref === '' || PUBLIC_PAGES.some(p => hrefFile === p || cleanHref.endsWith('/' + p))) {
       return true;
     }
@@ -315,6 +353,92 @@
 
     return false;
   }
+
+  function showAuthModal() {
+    let modal = document.getElementById('auth-modal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'auth-modal';
+      modal.className = 'custom-modal-backdrop';
+      modal.innerHTML = `
+        <div class="custom-modal-content">
+          <div class="modal-premium-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              <path d="M12 8v4"></path>
+              <path d="M12 16h.01"></path>
+            </svg>
+          </div>
+          <h3 class="modal-title">Yêu cầu đăng nhập</h3>
+          <p class="modal-message">Bạn cần đăng nhập tài khoản để truy cập chức năng này và xem toàn bộ dữ liệu.</p>
+          <div class="modal-actions">
+            <button id="modal-cancel-btn" class="modal-btn btn-secondary">Đóng</button>
+            <button id="modal-login-btn" class="modal-btn btn-primary">Đăng nhập ngay</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+
+      document.getElementById('modal-login-btn').onclick = () => {
+        window.location.href = '/pages/index.html';
+      };
+
+      document.getElementById('modal-cancel-btn').onclick = () => {
+        modal.classList.remove('active');
+      };
+
+      modal.onclick = (e) => {
+        if (e.target === modal) {
+          modal.classList.remove('active');
+        }
+      };
+    }
+
+    if (!document.getElementById('auth-modal-style')) {
+      const style = document.createElement('style');
+      style.id = 'auth-modal-style';
+      style.textContent = `
+        .custom-modal-backdrop {
+          position: fixed; inset: 0; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(12px);
+          display: flex; align-items: center; justify-content: center; z-index: 99999;
+          opacity: 0; visibility: hidden; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          padding: 20px;
+        }
+        .custom-modal-backdrop.active { opacity: 1; visibility: visible; }
+        .custom-modal-content {
+          background: #1e293b; border: 1px solid rgba(255,255,255,0.1); padding: 2.5rem 2rem;
+          border-radius: 20px; width: 100%; max-width: 400px; text-align: center;
+          transform: scale(0.9) translateY(20px); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+        }
+        .custom-modal-backdrop.active .custom-modal-content { transform: scale(1) translateY(0); }
+        .modal-premium-icon {
+          width: 64px; height: 64px; background: rgba(16, 185, 129, 0.1); color: #10b981;
+          border-radius: 50%; display: flex; align-items: center; justify-content: center;
+          margin: 0 auto 1.25rem; border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+        .modal-premium-icon svg { width: 32px; height: 32px; }
+        .modal-title { font-size: 1.35rem; font-weight: 700; color: #f8fafc; margin-bottom: 0.5rem; }
+        .modal-message { color: #94a3b8; line-height: 1.5; margin-bottom: 1.75rem; font-size: 0.9rem; }
+        .modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+        .modal-btn {
+          padding: 0.75rem 1rem; border-radius: 10px; font-weight: 600; font-size: 0.9rem; cursor: pointer;
+          transition: all 0.2s ease; border: none;
+        }
+        .btn-secondary { background: rgba(255,255,255,0.08); color: #cbd5e1; border: 1px solid rgba(255,255,255,0.12); }
+        .btn-secondary:hover { background: rgba(255,255,255,0.15); color: #fff; }
+        .btn-primary { 
+          background: linear-gradient(135deg, #10b981, #059669); color: #fff;
+          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4); }
+      `;
+      document.head.appendChild(style);
+    }
+
+    setTimeout(() => modal.classList.add('active'), 10);
+  }
+  window.showAuthModal = showAuthModal;
 
   function showAccessDeniedModal(msg, onConfirm) {
     let modalEl = document.getElementById('accessDeniedModal');
@@ -492,7 +616,7 @@
   }
 
   function buildSubSubGroup(children, groupId) {
-    const allowedChildren = children.filter(c => isPageAllowed(c.href));
+    const allowedChildren = children.filter(c => isSidebarItemVisible(c));
     if (allowedChildren.length === 0) return null;
 
     const ul = document.createElement('ul');
@@ -558,7 +682,7 @@
         li.appendChild(subGroup);
         ul.appendChild(li);
       } else {
-        if (!isPageAllowed(child.href)) return;
+        if (!isSidebarItemVisible(child)) return;
 
         visibleChildCount++;
         const li = document.createElement('li');
@@ -591,7 +715,7 @@
     ul.style.margin = '0';
 
     NAV_ITEMS.forEach(item => {
-      if (item.onlyAdmin && localStorage.getItem('currentUser') !== 'bao.lt') {
+      if (!isSidebarItemVisible(item)) {
         return;
       }
 
@@ -627,7 +751,7 @@
         li.appendChild(subUl);
         ul.appendChild(li);
       } else {
-        if (!isPageAllowed(item.href)) return;
+        if (!isSidebarItemVisible(item)) return;
 
         const li = document.createElement('li');
         li.className = 'sidebar-item';

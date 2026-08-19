@@ -39,7 +39,7 @@ function showAuthModal() {
         <h3 class="modal-title">Yêu cầu đăng nhập</h3>
         <p class="modal-message">Bạn cần đăng nhập tài khoản để truy cập chức năng này và xem toàn bộ dữ liệu.</p>
         <div class="modal-actions">
-          <button id="modal-cancel-btn" class="modal-btn btn-secondary">Quay lại</button>
+          <button id="modal-cancel-btn" class="modal-btn btn-secondary">Đóng</button>
           <button id="modal-login-btn" class="modal-btn btn-primary">Đăng nhập ngay</button>
         </div>
       </div>
@@ -52,12 +52,13 @@ function showAuthModal() {
     };
 
     document.getElementById('modal-cancel-btn').onclick = () => {
-      window.location.href = '/';
+      modal.classList.remove('active');
     };
 
     modal.onclick = (e) => {
-      // Backdrop click is locked: do not close modal to prevent viewing restricted data
-      e.stopPropagation();
+      if (e.target === modal) {
+        modal.classList.remove('active');
+      }
     };
   }
 
