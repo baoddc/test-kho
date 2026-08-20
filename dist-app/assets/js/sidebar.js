@@ -23,6 +23,51 @@
   document.documentElement.setAttribute('data-bs-theme', savedTheme);
 
   // ============================================================
+  // URL NORMALIZATION HELPER
+  // ============================================================
+
+  function normalizeUrlPath(url) {
+    if (!url) return '';
+    let path = String(url);
+    try {
+      if (path.startsWith('http://') || path.startsWith('https://')) {
+        const u = new URL(path);
+        path = u.pathname;
+      }
+    } catch (e) {}
+
+    // Strip hash and query parameters
+    path = path.split('#')[0].split('?')[0].trim();
+
+    // Ensure leading slash
+    if (!path.startsWith('/')) {
+      path = '/' + path;
+    }
+
+    // Remove duplicate slashes (e.g. //pages//xg///xg-nhap)
+    path = path.replace(/\/+/g, '/');
+
+    // Strip trailing slash if longer than 1
+    if (path.length > 1 && path.endsWith('/')) {
+      path = path.slice(0, -1);
+    }
+
+    // Strip .html or .htm extension
+    if (path.endsWith('.html')) {
+      path = path.slice(0, -5);
+    } else if (path.endsWith('.htm')) {
+      path = path.slice(0, -4);
+    }
+
+    // Normalize home/index alias
+    if (path === '/index' || path === '/pages/home' || path === '/pages/index' || path === '/home') {
+      path = '/';
+    }
+
+    return path;
+  }
+
+  // ============================================================
   // IFRAME DETECTION & PREPARATION
   // ============================================================
 
@@ -36,14 +81,13 @@
 
   // Deep-linking & F5 reload handling for standalone sub-pages
   const currentPath = window.location.pathname;
-  const isStandalonePage = currentPath === '/' ||
-    currentPath.endsWith('/home.html') ||
-    currentPath.endsWith('/index.html') ||
-    currentPath.endsWith('/dang_nhap.html') ||
-    currentPath.endsWith('/flower.html') ||
-    currentPath.endsWith('/offline.html');
+  const normCurrentPath = normalizeUrlPath(currentPath);
+  const isStandalonePage = normCurrentPath === '/' ||
+    normCurrentPath.endsWith('/dang_nhap') ||
+    normCurrentPath.endsWith('/flower') ||
+    normCurrentPath.endsWith('/offline');
 
-  if (!isIframe && !isStandalonePage && currentPath.includes('/pages/')) {
+  if (!isIframe && !isStandalonePage && normCurrentPath.startsWith('/pages/')) {
     const targetUrl = currentPath + window.location.search + window.location.hash;
     window.location.replace('/?openTab=' + encodeURIComponent(targetUrl));
     return;
@@ -127,8 +171,12 @@
 
   function checkRoutePermissionInIframe() {
     const page = window.location.pathname;
-    const pageFile = page.split('/').pop();
-    if (page.endsWith('dang_nhap.html') || page === '/' || page.endsWith('/index.html') || page.endsWith('/home.html') || PUBLIC_PAGES.some(p => pageFile === p || page.endsWith('/' + p))) return;
+    const normPage = normalizeUrlPath(page);
+    const pageFile = normPage.split('/').pop();
+    if (pageFile === 'dang_nhap' || normPage === '/' || PUBLIC_PAGES.some(p => {
+      const pFile = normalizeUrlPath(p).split('/').pop();
+      return pageFile === pFile || normPage.endsWith('/' + pFile);
+    })) return;
 
     if (!isPageAllowed(page)) {
       const currentUser = localStorage.getItem('currentUser');
@@ -243,19 +291,17 @@
 
   function isActive(href) {
     if (!href || href.startsWith('#') || href.startsWith('javascript:') || href === '/') return false;
-    const currentPath = getCurrentPage();
-    const isHome = currentPath === '/' || currentPath.endsWith('/home.html') || currentPath.endsWith('/index.html');
-    if (isHome) return false;
+    const currentNorm = normalizeUrlPath(getCurrentPage());
+    if (currentNorm === '/') return false;
 
-    const cleanPath = currentPath.split('?')[0].split('#')[0].trim();
-    const cleanHref = href.split('?')[0].split('#')[0].trim();
-    if (!cleanPath || !cleanHref) return false;
+    const hrefNorm = normalizeUrlPath(href);
+    if (!hrefNorm || hrefNorm === '/') return false;
 
-    const pathFile = cleanPath.split('/').pop();
-    const hrefFile = cleanHref.split('/').pop();
+    const pathFile = currentNorm.split('/').pop();
+    const hrefFile = hrefNorm.split('/').pop();
 
     if (!pathFile || !hrefFile) return false;
-    return cleanPath === cleanHref || cleanPath.endsWith(cleanHref) || hrefFile === pathFile;
+    return currentNorm === hrefNorm || currentNorm.endsWith(hrefNorm) || hrefFile === pathFile;
   }
 
   function isSidebarItemVisible(item) {
@@ -263,9 +309,9 @@
     const currentUser = localStorage.getItem('currentUser');
     const href = typeof item === 'string' ? item : item.href;
     const onlyAdmin = typeof item === 'object' ? !!item.onlyAdmin : false;
-    const cleanHref = href ? href.split('?')[0].split('#')[0].trim() : '';
+    const cleanHref = href ? normalizeUrlPath(href) : '';
     const hrefFile = cleanHref.split('/').pop();
-    const isQuanLyUser = cleanHref.endsWith('quan-ly-user.html') || hrefFile === 'quan-ly-user.html' || (typeof item === 'object' && item.id === 'nav-quan-ly-user');
+    const isQuanLyUser = hrefFile === 'quan-ly-user' || (typeof item === 'object' && item.id === 'nav-quan-ly-user');
 
     // 1. Quản lý user / onlyAdmin: chỉ hiển thị cho duy nhất tài khoản admin bao.lt
     if (onlyAdmin || isQuanLyUser) {
@@ -294,16 +340,19 @@
   function isPageAllowed(href) {
     if (!href || href === '#' || href.startsWith('#') || href.startsWith('javascript:')) return true;
 
-    const cleanHref = href.split('?')[0];
-    const hrefFile = cleanHref.split('/').pop();
+    const normHref = normalizeUrlPath(href);
+    const hrefFile = normHref.split('/').pop();
 
     // 1. Quản lý user: Chỉ duy nhất admin bao.lt được phép truy cập
-    if (cleanHref.endsWith('quan-ly-user.html') || hrefFile === 'quan-ly-user.html') {
+    if (hrefFile === 'quan-ly-user') {
       return localStorage.getItem('currentUser') === 'bao.lt';
     }
 
     // 2. Các trang công khai (PUBLIC): Ai cũng có thể xem mà không cần đăng nhập
-    if (cleanHref === '/' || cleanHref === '' || PUBLIC_PAGES.some(p => hrefFile === p || cleanHref.endsWith('/' + p))) {
+    if (normHref === '/' || PUBLIC_PAGES.some(p => {
+      const pFile = normalizeUrlPath(p).split('/').pop();
+      return hrefFile === pFile || normHref.endsWith('/' + pFile);
+    })) {
       return true;
     }
 
@@ -330,26 +379,26 @@
       groupPerms = {};
     }
 
-    const pageFileNoExt = hrefFile.replace('.html', '').replace('-supabase', '');
+    const pageFileNoExt = hrefFile.replace('-supabase', '');
 
     // 1. Kiểm tra xem trang có nằm trực tiếp trong allowedPages hay không
     const isDirectlyAllowed = Array.isArray(allowedPages) && allowedPages.some(page => {
-      const cleanPage = page.split('?')[0];
-      if (cleanHref === cleanPage || cleanHref.endsWith(cleanPage)) return true;
+      const cleanPage = normalizeUrlPath(page);
+      if (normHref === cleanPage || normHref.endsWith(cleanPage)) return true;
 
-      const pageFile = cleanPage.split('/').pop().replace('.html', '').replace('-supabase', '');
+      const pageFile = cleanPage.split('/').pop().replace('-supabase', '');
       return pageFileNoExt === pageFile;
     });
 
     if (isDirectlyAllowed) return true;
 
     // 2. Nếu không nằm trực tiếp trong allowedPages, kiểm tra theo quyền Nhóm (canView)
-    if (cleanHref.includes('/xg/')) return !!(groupPerms.xg && groupPerms.xg.canView);
-    if (cleanHref.includes('/tole/')) return !!(groupPerms.tole && groupPerms.tole.canView);
-    if (cleanHref.includes('/5s/')) return !!(groupPerms['5s'] && groupPerms['5s'].canView);
-    if (cleanHref.includes('/pl/')) return !!(groupPerms.pl && groupPerms.pl.canView);
-    if (cleanHref.endsWith('cong-viec.html')) return !!(groupPerms.chung && groupPerms.chung.canView);
-    if (cleanHref.endsWith('quan-ly-user.html')) return !!(groupPerms.admin && groupPerms.admin.canView);
+    if (normHref.includes('/xg/')) return !!(groupPerms.xg && groupPerms.xg.canView);
+    if (normHref.includes('/tole/')) return !!(groupPerms.tole && groupPerms.tole.canView);
+    if (normHref.includes('/5s/')) return !!(groupPerms['5s'] && groupPerms['5s'].canView);
+    if (normHref.includes('/pl/')) return !!(groupPerms.pl && groupPerms.pl.canView);
+    if (hrefFile === 'cong-viec') return !!(groupPerms.chung && groupPerms.chung.canView);
+    if (hrefFile === 'quan-ly-user') return !!(groupPerms.admin && groupPerms.admin.canView);
 
     return false;
   }
@@ -491,8 +540,12 @@
 
   function checkRoutePermission() {
     const page = window.location.pathname;
-    const pageFile = page.split('/').pop();
-    if (page.endsWith('dang_nhap.html') || page === '/' || page.endsWith('/index.html') || page.endsWith('/home.html') || PUBLIC_PAGES.some(p => pageFile === p || page.endsWith('/' + p))) return;
+    const normPage = normalizeUrlPath(page);
+    const pageFile = normPage.split('/').pop();
+    if (pageFile === 'dang_nhap' || normPage === '/' || PUBLIC_PAGES.some(p => {
+      const pFile = normalizeUrlPath(p).split('/').pop();
+      return pageFile === pFile || normPage.endsWith('/' + pFile);
+    })) return;
 
     const currentUser = localStorage.getItem('currentUser');
     if (!currentUser) {
@@ -592,12 +645,17 @@
 
   function getTitleForUrl(url) {
     if (!url) return 'Trang';
-    const cleanUrl = url.split('?')[0].split('#')[0];
+    const normUrl = normalizeUrlPath(url);
+
+    if (normUrl === '/') return 'Trang chủ';
 
     function searchItems(items) {
       for (const item of items) {
-        if (item.href && (item.href.split('?')[0] === cleanUrl || cleanUrl.endsWith(item.href.split('?')[0]))) {
-          return item.label;
+        if (item.href) {
+          const itemNorm = normalizeUrlPath(item.href);
+          if (itemNorm === normUrl || (normUrl !== '/' && normUrl.endsWith(itemNorm))) {
+            return item.label;
+          }
         }
         if (item.children) {
           const found = searchItems(item.children);
@@ -610,7 +668,7 @@
     const foundTitle = searchItems(NAV_ITEMS);
     if (foundTitle) return foundTitle;
 
-    const filename = cleanUrl.split('/').pop().replace('.html', '').replace('-supabase', '');
+    const filename = normUrl.split('/').pop().replace('-supabase', '');
     const words = filename.split(/[-_]/).map(w => w.charAt(0).toUpperCase() + w.slice(1));
     return words.join(' ') || 'Chi tiết';
   }
@@ -957,13 +1015,13 @@
     document.body.appendChild(wrapper);
 
     // Register initial default tab
-    tabs.push({
+    tabs = [{
       id: 'tab-home',
       title: 'Trang chủ',
       url: '/',
       paneEl: homePane,
       tabEl: null
-    });
+    }];
 
     initTabs();
   }
@@ -1188,25 +1246,23 @@
       el.classList.remove('active');
     });
 
-    const isHome = !url || url === '/' || url.endsWith('/home.html') || url.endsWith('/index.html');
-    if (isHome) {
+    const normUrl = normalizeUrlPath(url);
+    if (!normUrl || normUrl === '/') {
       return;
     }
 
-    const cleanUrlPath = url.split('?')[0].split('#')[0];
-    const targetFile = cleanUrlPath.split('/').pop();
+    const targetFile = normUrl.split('/').pop();
 
     // 2. Find matching active link
     let activeLink = null;
     document.querySelectorAll('.sidebar-sub-link, .sidebar-subsub-link, a.sidebar-link').forEach(link => {
       const href = link.getAttribute('href');
       if (!href || href.startsWith('#') || href.startsWith('javascript:') || href === '/') return;
-      const cleanHref = href.split('?')[0].split('#')[0].trim();
-      if (!cleanHref) return;
-      const hrefFile = cleanHref.split('/').pop();
-      if (!hrefFile) return;
+      const linkNorm = normalizeUrlPath(href);
+      if (!linkNorm || linkNorm === '/') return;
+      const hrefFile = linkNorm.split('/').pop();
 
-      if (cleanUrlPath === cleanHref || cleanUrlPath.endsWith(cleanHref) || targetFile === hrefFile) {
+      if (normUrl === linkNorm || normUrl.endsWith(linkNorm) || targetFile === hrefFile) {
         activeLink = link;
       }
     });
@@ -1247,11 +1303,16 @@
       return;
     }
 
-    const normalizedUrl = url.startsWith('/') ? url : '/' + url;
+    const targetNorm = normalizeUrlPath(url);
+
+    if (targetNorm === '/') {
+      switchTab('tab-home', updateHistory);
+      return;
+    }
 
     let existingTab = tabs.find(t => {
-      const normTUrl = t.url.startsWith('/') ? t.url : '/' + t.url;
-      return normTUrl.split('?')[0] === normalizedUrl.split('?')[0];
+      if (t.id === 'tab-home') return targetNorm === '/';
+      return normalizeUrlPath(t.url) === targetNorm;
     });
 
     if (existingTab) {
@@ -1259,7 +1320,7 @@
       return;
     }
 
-    const tabId = 'tab-' + Date.now();
+    const tabId = 'tab-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
     const tabContent = document.getElementById('mainTabContent');
     const tabBar = document.getElementById('mainTabBar');
     if (!tabContent || !tabBar) return;
@@ -1268,16 +1329,25 @@
     paneEl.className = 'tab-pane';
     paneEl.id = 'pane-' + tabId;
 
+    // Ensure iframe gets a valid file path with extension if loading a bare /pages/... route
+    let iframeSrc = url;
+    if (targetNorm.startsWith('/pages/') && !url.includes('.html') && !url.includes('.htm')) {
+      const queryAndHash = (url.includes('?') ? '?' + url.split('?')[1] : '') + (url.includes('#') ? '#' + url.split('#')[1] : '');
+      iframeSrc = targetNorm + '.html' + queryAndHash;
+    }
+
     const iframe = document.createElement('iframe');
     iframe.className = 'tab-iframe';
     iframe.name = 'tab-iframe';
     iframe.setAttribute('loading', 'lazy');
-    iframe.src = url;
+    iframe.src = iframeSrc;
     iframe.setAttribute('frameborder', '0');
+
+    const resolvedTitle = title || getTitleForUrl(url);
 
     const tabObj = {
       id: tabId,
-      title: title || getTitleForUrl(url),
+      title: resolvedTitle,
       url: url,
       paneEl: paneEl,
       tabEl: null
@@ -1384,13 +1454,14 @@
       const isLogoLink = link.classList.contains('sidebar-header');
 
       if ((isSidebarLink || isLogoLink) && href && !href.startsWith('#') && !href.startsWith('javascript:')) {
-        if (href === '/' || href.includes('home.html') || href.endsWith('/index.html')) {
+        const normHref = normalizeUrlPath(href);
+        if (normHref === '/') {
           e.preventDefault();
           switchTab('tab-home');
           return;
         }
 
-        if (href.includes('/pages/') && !href.endsWith('index.html')) {
+        if (normHref.startsWith('/pages/')) {
           e.preventDefault();
 
           let title = link.querySelector('span') ? link.querySelector('span').textContent : link.textContent;
@@ -1739,10 +1810,14 @@
         }
       } else {
         const currentPath = window.location.pathname;
-        if (currentPath === '/' || currentPath.endsWith('home.html') || currentPath.endsWith('index.html')) {
+        const normPath = normalizeUrlPath(currentPath);
+        if (normPath === '/') {
           switchTab('tab-home', false);
         } else {
-          const foundTab = tabs.find(t => t.url.split('?')[0] === currentPath);
+          const foundTab = tabs.find(t => {
+            if (t.id === 'tab-home') return normPath === '/';
+            return normalizeUrlPath(t.url) === normPath;
+          });
           if (foundTab) {
             switchTab(foundTab.id, false);
           } else {
@@ -1753,11 +1828,13 @@
       }
     });
 
-    const isHome = window.location.pathname === '/' || window.location.pathname.endsWith('home.html') || window.location.pathname.endsWith('index.html');
+    const isHome = normalizeUrlPath(window.location.pathname) === '/';
     const initUrl = isHome ? '/' : (window.location.pathname + window.location.search);
-    try {
-      window.history.replaceState({ tabId: 'tab-home', url: initUrl, title: 'Trang chủ' }, document.title, initUrl);
-    } catch (e) {}
+    if (isHome) {
+      try {
+        window.history.replaceState({ tabId: 'tab-home', url: initUrl, title: 'Trang chủ' }, document.title, initUrl);
+      } catch (e) {}
+    }
   }
 
   function handleDeepLinkOnStartup() {
@@ -1792,8 +1869,8 @@
     injectSidebar();
     injectTopbar();
     wrapContent();
-    handleDeepLinkOnStartup();
     initHistoryPopstateListener();
+    handleDeepLinkOnStartup();
     initToggle();
     initLinkInterception();
     initThemeToggle();
