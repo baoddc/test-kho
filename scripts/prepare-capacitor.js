@@ -42,4 +42,23 @@ filesToCopy.forEach((fileName) => {
   }
 });
 
+// 4. Đồng bộ icon ứng dụng vào Android mipmap nếu có thư mục android
+const androidResDir = path.resolve(rootDir, 'android/app/src/main/res');
+const appIconSrc = path.join(rootDir, 'assets/images/icon-512.png');
+const appIcon192Src = path.join(rootDir, 'assets/images/icon-192.png');
+
+if (fs.existsSync(androidResDir) && fs.existsSync(appIconSrc)) {
+  const mipmapDirs = ['mipmap-hdpi', 'mipmap-mdpi', 'mipmap-xhdpi', 'mipmap-xxhdpi', 'mipmap-xxxhdpi'];
+  mipmapDirs.forEach((folder) => {
+    const targetDir = path.join(androidResDir, folder);
+    if (fs.existsSync(targetDir)) {
+      fs.copyFileSync(appIconSrc, path.join(targetDir, 'ic_launcher.png'));
+      fs.copyFileSync(appIconSrc, path.join(targetDir, 'ic_launcher_round.png'));
+      fs.copyFileSync(appIconSrc, path.join(targetDir, 'ic_launcher_foreground.png'));
+    }
+  });
+  console.log(' ↳ Đã cập nhật icon ứng dụng vào Android res/mipmap!');
+}
+
 console.log('✅ Chuẩn bị tài nguyên dist thành công!');
+
