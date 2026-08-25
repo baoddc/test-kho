@@ -28,7 +28,8 @@ Thumbs.db
 .vercel/
 .vercel
 
-# Executable & Build Artifacts
+# Build Artifacts
+dist/
 dist-app/release/
 dist-app/release-out/
 dist-app/dist/
@@ -37,5 +38,9 @@ dist-app/node_modules/
 out-app/
 out-app-*/
 downloads/
+android/app/build/
+android/.gradle/
+android/build/
+
 
 
