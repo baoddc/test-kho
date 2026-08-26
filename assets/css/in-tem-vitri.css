@@ -1,7 +1,90 @@
 /* =============================================================================
-   IN TEM VỊ TRÍ QR & BARCODE - STYLESHEET
-   Thiết kế nhãn dán kệ công nghiệp & Tối ưu in ấn A4 / Decal
+   PAGE SCROLLING & VIEWPORT OVERRIDES
 ================================================================================ */
+html, body.in-tem-page {
+  height: auto !important;
+  min-height: 100vh !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  scroll-behavior: smooth;
+}
+
+body.in-tem-page .main-wrapper {
+  height: auto !important;
+  min-height: 100vh !important;
+  overflow: visible !important;
+  display: block !important;
+}
+
+body.in-tem-page .main-content {
+  height: auto !important;
+  min-height: 100% !important;
+  overflow: visible !important;
+  display: block !important;
+}
+
+/* Modern Industrial Scrollbars */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #0d6efd;
+  border-radius: 4px;
+  border: 2px solid #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #0b5ed7;
+}
+
+/* Firefox scrollbar */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: #0d6efd #f1f5f9;
+}
+
+/* Floating Navigation Controls */
+.floating-scroll-controls {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 1050;
+  transition: all 0.3s ease;
+}
+
+.floating-btn {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  border-radius: 50% !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0.9;
+}
+
+.floating-btn:hover {
+  transform: translateY(-3px) scale(1.08);
+  opacity: 1;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35) !important;
+}
+
+.floating-btn:active {
+  transform: translateY(0) scale(0.96);
+}
 
 /* Matrix Selector */
 .rack-checkbox-matrix {
@@ -64,6 +147,18 @@
   grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
 }
 
+/* Layout 5: A4 - 12 tem mini (3x4 grid) */
+.layout-a4-grid-12 {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+/* Layout 6: QR Only Grid */
+.layout-qr-only {
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 14px;
+}
+
 /* ==================== INDUSTRIAL LABEL CARD ==================== */
 .rack-label-card {
   background: #ffffff;
@@ -78,6 +173,84 @@
   page-break-inside: avoid;
   break-inside: avoid;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+/* ==================== QR ONLY MINIMAL CARD ==================== */
+.rack-label-card.qr-only-card {
+  padding: 12px 10px 10px 10px;
+  align-items: center;
+  text-align: center;
+  border: 2.5px solid #111827;
+  border-radius: 6px;
+  min-height: auto;
+  justify-content: center;
+}
+
+.qr-only-card .qr-only-header {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #1e40af;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.qr-only-card .label-qr-canvas {
+  width: 150px;
+  height: 150px;
+  margin: 0 auto;
+  border: none;
+  padding: 0;
+}
+
+.qr-only-card .qr-only-footer {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.qr-only-card .qr-only-rack-label {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #64748b;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.qr-only-card .qr-only-rack-code {
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: #000000;
+  line-height: 1;
+  letter-spacing: -0.5px;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  margin-top: 1px;
+}
+
+/* Single QR Download Action Button */
+.single-qr-download-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 3px 7px;
+  font-size: 0.75rem;
+  border-radius: 4px;
+  opacity: 0.5;
+  background: rgba(255, 255, 255, 0.9);
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.rack-label-card:hover .single-qr-download-btn {
+  opacity: 1;
+  background: #0d6efd;
+  color: #ffffff;
+  border-color: #0d6efd;
 }
 
 /* Header */
@@ -243,7 +416,9 @@
   .sidebar,
   .topbar,
   #controlPanel,
-  #btnScrollToTop {
+  #btnScrollToTop,
+  #btnScrollToBottom,
+  .floating-scroll-controls {
     display: none !important;
   }
 
@@ -268,6 +443,20 @@
   .layout-a4-grid-2 {
     grid-template-columns: 1fr !important;
     gap: 18mm !important;
+  }
+
+  .layout-a4-grid-12 {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 4mm !important;
+  }
+
+  .layout-qr-only {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 6mm !important;
+  }
+
+  .single-qr-download-btn {
+    display: none !important;
   }
 
   .rack-label-card {

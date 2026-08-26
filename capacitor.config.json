@@ -1,9 +1,0 @@
-{
-  "appId": "com.ddc.khophoicuon",
-  "appName": "Kho Phôi DDC",
-  "webDir": "dist",
-  "bundledWebRuntime": false,
-  "server": {
-    "androidScheme": "https"
-  }
-}

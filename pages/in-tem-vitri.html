@@ -19,7 +19,7 @@
   <link rel="stylesheet" href="/assets/css/in-tem-vitri.css">
 </head>
 
-<body class="fixed-viewport">
+<body class="in-tem-page">
 
   <!-- ==================== MAIN CONTENT ==================== -->
   <div class="container-fluid main-content">
@@ -32,7 +32,10 @@
         </h4>
         <small class="text-muted">Áp dụng chung cho 28 kệ (A01-A14, B01-B14) & Kệ Grating (Kho Xà gồ & Kho Tole)</small>
       </div>
-      <div class="d-flex gap-2">
+      <div class="d-flex gap-2 flex-wrap">
+        <button id="btnExportZip" class="btn btn-success fw-bold shadow-sm d-flex align-items-center gap-2" title="Tải toàn bộ file ảnh mã QR đóng gói ZIP">
+          <i class="bi bi-file-earmark-zip-fill"></i> Tải tất cả ảnh QR (.ZIP)
+        </button>
         <button id="btnPrint" class="btn btn-primary fw-bold shadow-sm d-flex align-items-center gap-2">
           <i class="bi bi-printer-fill"></i> In Danh Sách Tem (Ctrl + P)
         </button>
@@ -65,14 +68,25 @@
               <select id="layoutSelect" class="form-select form-select-sm">
                 <option value="a4-grid-4" selected>Khổ A4 - 4 tem/trang (Chuẩn dán mặt kệ - ~13x9 cm)</option>
                 <option value="a4-grid-2">Khổ A4 - 2 tem/trang (Khổ lớn dán đầu dãy - ~18x12 cm)</option>
+                <option value="a4-grid-12">Khổ A4 - 12 tem mini (Chỉ mã QR + Tên kệ - 3x4)</option>
+                <option value="qr-only">Khổ Tem Vuông (Chỉ mã QR + Vị trí kệ - Cắt dán nhanh)</option>
                 <option value="decal-100x75">Khổ Decal nhiệt 100 x 75 mm (Máy in mã vạch)</option>
                 <option value="decal-100x150">Khổ Decal nhiệt 100 x 150 mm</option>
               </select>
             </div>
 
             <div class="mb-2">
-              <label class="form-label small fw-semibold mb-1">Loại mã hiển thị:</label>
-              <div class="d-flex gap-3">
+              <label class="form-label small fw-semibold mb-1">Chế độ & Loại mã hiển thị:</label>
+              
+              <!-- Quick QR-Only Toggle -->
+              <div class="form-check form-switch mb-2 p-2 bg-light rounded border d-flex align-items-center gap-2">
+                <input class="form-check-input ms-0 mt-0" type="checkbox" id="chkOnlyQRMode">
+                <label class="form-check-label small fw-bold text-primary cursor-pointer mb-0" for="chkOnlyQRMode">
+                  <i class="bi bi-qr-code"></i> Chế độ: Chỉ xuất mã QR (Tối giản)
+                </label>
+              </div>
+
+              <div class="d-flex gap-3 flex-wrap" id="standardCodeOptions">
                 <div class="form-check form-check-inline">
                   <input class="form-check-input" type="checkbox" id="chkShowQR" checked>
                   <label class="form-check-label small" for="chkShowQR">Mã QR</label>
@@ -126,12 +140,18 @@
     </div>
 
     <!-- Live Preview Status Bar (Screen Only) -->
-    <div class="d-flex align-items-center justify-content-between bg-white px-3 py-2 border rounded mb-3 no-print shadow-sm">
-      <div class="small text-muted">
-        <i class="bi bi-info-circle text-primary"></i> Đang hiển thị bản xem trước: <strong id="previewSummaryText">31 tem (Khổ A4 4 tem/trang)</strong>
+    <div class="d-flex align-items-center justify-content-between bg-white px-3 py-2 border rounded mb-3 no-print shadow-sm flex-wrap gap-2">
+      <div class="small text-muted d-flex align-items-center gap-2">
+        <i class="bi bi-info-circle text-primary fs-5"></i>
+        <span>Đang hiển thị bản xem trước: <strong id="previewSummaryText" class="text-primary fw-bold">31 tem (Khổ A4 4 tem/trang)</strong></span>
       </div>
-      <div>
-        <button class="btn btn-sm btn-outline-primary" id="btnScrollToTop"><i class="bi bi-arrow-up"></i> Về đầu trang</button>
+      <div class="d-flex align-items-center gap-2">
+        <button class="btn btn-sm btn-outline-primary fw-semibold" id="btnScrollToBottom">
+          <i class="bi bi-arrow-down-circle"></i> Cuộn xuống xem tem
+        </button>
+        <button class="btn btn-sm btn-outline-secondary fw-semibold" id="btnScrollToTop">
+          <i class="bi bi-arrow-up-circle"></i> Về đầu trang
+        </button>
       </div>
     </div>
 
@@ -140,6 +160,16 @@
       <!-- Label cards rendered here dynamically -->
     </div>
 
+  </div>
+
+  <!-- Floating Scroll Controls (Screen Only) -->
+  <div class="floating-scroll-controls no-print" id="floatingScrollControls">
+    <button class="btn btn-primary rounded-circle shadow-lg floating-btn" id="btnFloatScrollBottom" title="Cuộn xuống danh sách tem">
+      <i class="bi bi-arrow-down"></i>
+    </button>
+    <button class="btn btn-secondary rounded-circle shadow-lg floating-btn" id="btnFloatScrollTop" title="Cuộn lên đầu trang">
+      <i class="bi bi-arrow-up"></i>
+    </button>
   </div>
 
   <!-- ==================== SCRIPTS ==================== -->
@@ -151,6 +181,10 @@
 
   <!-- JsBarcode (Code 128 generator) -->
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+
+  <!-- JSZip & FileSaver (for exporting all QR codes into ZIP) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
   <!-- Core Services -->
   <script src="/assets/js/core/qr-scanner-service.js"></script>

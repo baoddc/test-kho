@@ -5,9 +5,7 @@
   "main": "pages/index.html",
   "scripts": {
     "start": "npx serve .",
-    "dev": "npx serve .",
-    "prepare:dist": "node scripts/prepare-capacitor.js",
-    "prepare:android": "node scripts/prepare-capacitor.js && npx cap sync android"
+    "dev": "npx serve ."
   },
   "keywords": [
     "kho",

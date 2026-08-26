@@ -1,0 +1,1048 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+/* =============================================================================
+   BASE STYLES
+   Các style co b?n cho trang
+================================================================================ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Montserrat', sans-serif;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+
+dl,
+ol,
+ul {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+ol,
+ul {
+  padding-left: 0;
+}
+
+header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 20px;
+  z-index: 1000;
+  background: #2a2b56;
+  gap: 40px;
+  backdrop-filter: blur(10px);
+}
+
+.logo {
+  font-size: 24px;
+  font-weight: bold;
+  color: #fff;
+  letter-spacing: 3px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.logo:hover {
+  color: #00d9ff;
+  text-shadow: 0 0 20px rgba(0, 217, 255, 0.5);
+}
+
+/* Hamburger Menu */
+.hamburger {
+  display: none;
+  flex-direction: column;
+  cursor: pointer;
+  gap: 5px;
+  padding: 5px;
+  z-index: 1001;
+}
+
+.hamburger span {
+  display: block;
+  width: 25px;
+  height: 3px;
+  background-color: #fff;
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+
+.hamburger.active span:nth-child(1) {
+  transform: rotate(45deg) translate(5px, 5px);
+}
+
+.hamburger.active span:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger.active span:nth-child(3) {
+  transform: rotate(-45deg) translate(5px, -5px);
+}
+
+nav ul {
+  display: flex;
+  list-style: none;
+  gap: 40px;
+}
+
+nav a {
+  color: #fff;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+nav a::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #00d9ff, #00ff88);
+  transition: width 0.3s ease;
+}
+
+nav a:hover {
+  color: #00d9ff;
+}
+
+nav a:hover::after {
+  width: 100%;
+}
+
+/* Dropdown */
+.dropdown {
+  position: relative;
+}
+
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: rgba(15, 52, 96, 0.95);
+  min-width: 150px;
+  list-style: none;
+  padding: 10px 0;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 217, 255, 0.2);
+}
+
+/* Desktop: hover */
+@media (min-width: 769px) {
+  .dropdown:hover>.dropdown-menu {
+    display: block;
+    animation: fadeIn 0.3s ease;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Mobile: click to show dropdown */
+.dropdown.active .dropdown-menu {
+  display: block;
+}
+
+.dropdown:hover>a {
+  color: #00d9ff;
+}
+
+.dropdown-menu li {
+  padding: 0;
+}
+
+.dropdown-menu a {
+  display: block;
+  padding: 10px 20px;
+  font-size: 13px;
+  white-space: nowrap;
+  transition: all 0.3s ease;
+}
+
+.dropdown-menu a:hover {
+  background: linear-gradient(90deg, rgba(0, 217, 255, 0.2), rgba(0, 255, 136, 0.1));
+  color: #00d9ff;
+  padding-left: 25px;
+}
+
+/* Dropdown submenu */
+.dropdown-submenu {
+  position: relative;
+}
+
+.dropdown-submenu>.dropdown-menu {
+  display: none;
+  position: absolute;
+  left: 100%;
+  top: 0;
+  margin-top: 0;
+  margin-left: 0;
+}
+
+/* Only show submenu on hover over the submenu item itself */
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+  animation: fadeIn 0.3s ease;
+}
+
+/* Remove triangle arrow for dropdown submenu */
+.dropdown-submenu>a::after {
+  display: none;
+}
+
+/* User Info */
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.user-info small {
+  color: #aaa;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
+
+.user-info strong {
+  color: #00d9ff;
+}
+
+.text-muted {
+  color: rgb(255 255 255 / 100%) !important;
+}
+
+.btn-logout {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  border: none;
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  letter-spacing: 0.5px;
+  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Shimmer effect */
+.btn-logout::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.btn-logout:hover::before {
+  left: 100%;
+}
+
+.btn-logout:hover {
+  background: linear-gradient(135deg, #c0392b, #922b21);
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
+  transform: translateY(-2px);
+}
+
+
+/* =============================================================================
+   CONTAINER & LAYOUT
+   Style cho container và layout chính
+================================================================================ */
+
+.main-content {
+  margin-top: 50px;
+  padding: 10px;
+  padding-bottom: 10px;
+}
+
+.container {
+  max-width: 1400px;
+}
+
+.container h2 {
+  font-size: 1.1rem;
+  margin-bottom: 0.75rem;
+}
+
+
+/* =============================================================================
+   FILTERS
+   Style cho b? l?c d? li?u
+================================================================================ */
+
+.filters {
+  position: sticky;
+  top: 20px;
+  background: transparent;
+}
+
+.filters .form-label {
+  font-size: 0.85rem;
+}
+
+#voucherFilterMenu {
+  background: #ffffff;
+}
+
+#loading {
+  color: #666;
+  font-style: italic;
+}
+
+
+/* =============================================================================
+   TABLE STYLES
+   Style cho b?ng d? li?u
+================================================================================ */
+
+.table-responsive {
+  height: calc(106vh - 200px);
+  overflow-y: auto;
+  overflow-x: auto;
+  -ms-overflow-style: auto;
+  scrollbar-width: auto;
+  cursor: auto;
+}
+
+/* Scrollbar */
+.table-responsive::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 6px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.22);
+  border-radius: 6px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.32);
+}
+
+/* Table */
+table {
+  font-size: 0.7rem;
+  table-layout: fixed;
+  width: 100%;
+  margin: 0 auto;
+}
+
+th {
+  background-color: #0d6efd;
+  color: #000 !important;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  text-align: center;
+  vertical-align: middle;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  font-size: 0.75rem;
+  padding: 0.5rem 0.4rem;
+  line-height: 1.2;
+  font-weight: 700;
+  border-bottom: 2px solid #0a58ca;
+}
+
+thead th {
+  position: sticky;
+  z-index: 10;
+}
+
+thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+#dataTable td,
+td {
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0.35rem 0.4rem;
+}
+
+/* Light mode & default odd/even row formatting and hover color */
+html[data-bs-theme="light"] #dataTable tbody tr:nth-of-type(odd) td,
+[data-bs-theme="light"] #dataTable tbody tr:nth-of-type(odd) td,
+html:not([data-bs-theme="dark"]) #dataTable tbody tr:nth-of-type(odd) td,
+html[data-bs-theme="light"] table tbody tr:nth-of-type(odd) td,
+[data-bs-theme="light"] table tbody tr:nth-of-type(odd) td,
+html:not([data-bs-theme="dark"]) table tbody tr:nth-of-type(odd) td {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+}
+
+html[data-bs-theme="light"] #dataTable tbody tr:nth-of-type(even) td,
+[data-bs-theme="light"] #dataTable tbody tr:nth-of-type(even) td,
+html:not([data-bs-theme="dark"]) #dataTable tbody tr:nth-of-type(even) td,
+html[data-bs-theme="light"] table tbody tr:nth-of-type(even) td,
+[data-bs-theme="light"] table tbody tr:nth-of-type(even) td,
+html:not([data-bs-theme="dark"]) table tbody tr:nth-of-type(even) td {
+  background-color: #e2e8f0 !important;
+  color: #000000 !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+}
+
+html[data-bs-theme="light"] #dataTable tbody tr:hover td,
+[data-bs-theme="light"] #dataTable tbody tr:hover td,
+html:not([data-bs-theme="dark"]) #dataTable tbody tr:hover td,
+html[data-bs-theme="light"] table tbody tr:hover td,
+[data-bs-theme="light"] table tbody tr:hover td,
+html:not([data-bs-theme="dark"]) table tbody tr:hover td {
+  background-color: #c7d2fe !important;
+  color: #000000 !important;
+}
+
+/* Dark mode odd/even row formatting and hover color */
+html[data-bs-theme="dark"] #dataTable tbody tr:nth-of-type(odd) td,
+[data-bs-theme="dark"] #dataTable tbody tr:nth-of-type(odd) td,
+html[data-bs-theme="dark"] table tbody tr:nth-of-type(odd) td,
+[data-bs-theme="dark"] table tbody tr:nth-of-type(odd) td {
+  background-color: #2f3655 !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+html[data-bs-theme="dark"] #dataTable tbody tr:nth-of-type(even) td,
+[data-bs-theme="dark"] #dataTable tbody tr:nth-of-type(even) td,
+html[data-bs-theme="dark"] table tbody tr:nth-of-type(even) td,
+[data-bs-theme="dark"] table tbody tr:nth-of-type(even) td {
+  background-color: #2e3657 !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+html[data-bs-theme="dark"] #dataTable tbody tr:hover td,
+[data-bs-theme="dark"] #dataTable tbody tr:hover td,
+html[data-bs-theme="dark"] table tbody tr:hover td,
+[data-bs-theme="dark"] table tbody tr:hover td {
+  background-color: #2d334d !important;
+  color: #ffffff !important;
+}
+
+
+/* =============================================================================
+   COLUMN RESIZER
+   Style cho ch?c nang thay d?i d? r?ng c?t
+================================================================================ */
+
+.col-resizer {
+  position: absolute;
+  top: 0;
+  right: -4px;
+  width: 12px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 2000;
+  opacity: 0;
+  transition: opacity 120ms linear, background 120ms linear;
+  background: transparent;
+}
+
+.col-resizer:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+thead th:hover .col-resizer {
+  opacity: 1;
+}
+
+
+/* =============================================================================
+   COLUMN WIDTHS
+   Ð?nh d? r?ng m?c d?nh cho các c?t
+================================================================================ */
+
+th:nth-child(1),
+td:nth-child(1) {
+  width: 50px;
+  min-width: 50px;
+  text-align: center;
+}
+
+th:nth-child(2),
+td:nth-child(2) {
+  width: 60px;
+  min-width: 60px;
+  text-align: center;
+}
+
+th:nth-child(3),
+td:nth-child(3) {
+  width: 120px;
+  min-width: 120px;
+  text-align: center;
+}
+
+th:nth-child(4),
+td:nth-child(4) {
+  width: 100px;
+  min-width: 100px;
+  text-align: center;
+}
+
+th:nth-child(5),
+td:nth-child(5) {
+  width: 100px;
+  min-width: 100px;
+  text-align: center;
+}
+
+th:nth-child(6),
+td:nth-child(6) {
+  width: 120px;
+  min-width: 120px;
+  text-align: center;
+}
+
+th:nth-child(7),
+td:nth-child(7) {
+  width: 120px;
+  min-width: 120px;
+  text-align: center;
+}
+
+th:nth-child(8),
+td:nth-child(8) {
+  width: 250px;
+  min-width: 200px;
+  text-align: left;
+}
+
+th:nth-child(9),
+td:nth-child(9) {
+  width: 100px;
+  min-width: 100px;
+  text-align: center;
+}
+
+th:nth-child(10),
+td:nth-child(10) {
+  width: 120px;
+  min-width: 120px;
+  text-align: center;
+}
+
+th:nth-child(11),
+td:nth-child(11) {
+  width: 100px;
+  min-width: 100px;
+  text-align: right;
+}
+
+th:nth-child(12),
+td:nth-child(12) {
+  width: 100px;
+  min-width: 100px;
+  text-align: center;
+}
+
+th:nth-child(13),
+td:nth-child(13) {
+  width: 120px;
+  min-width: 120px;
+  text-align: left;
+}
+
+th:nth-child(14),
+td:nth-child(14) {
+  width: 300px;
+  min-width: 200px;
+  text-align: left;
+}
+
+th:nth-child(15),
+td:nth-child(15) {
+  width: 200px;
+  min-width: 150px;
+  text-align: left;
+}
+
+
+
+
+/* =============================================================================
+   MODAL STYLES
+   Style cho các modal (popup)
+================================================================================ */
+
+.modal-body {
+  max-height: 65vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: auto;
+  scrollbar-color: rgba(0, 0, 0, 0.2) rgba(0, 0, 0, 0.05);
+}
+
+.modal-body::-webkit-scrollbar,
+.modal-dialog-scrollable .modal-body::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.modal-body::-webkit-scrollbar-track,
+.modal-dialog-scrollable .modal-body::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+}
+
+.modal-body::-webkit-scrollbar-thumb,
+.modal-dialog-scrollable .modal-body::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover,
+.modal-dialog-scrollable .modal-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.modal-dialog.modal-xl {
+  max-width: 90vw;
+  max-height: 90vh;
+}
+
+.modal-dialog.modal-lg {
+  max-width: 80vw;
+  max-height: 90vh;
+}
+
+.modal-content {
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  flex-shrink: 0;
+}
+
+.modal-footer {
+  flex-shrink: 0;
+}
+
+
+/* =============================================================================
+   ACTION BUTTONS
+   Style cho các nút thêm, s?a, xóa d? li?u (gi?ng card trong xg-bieu-do)
+================================================================================ */
+
+/* Base button style */
+.add-row-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Button hover effect - shimmer */
+.add-row-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.add-row-btn:hover::before {
+  left: 100%;
+}
+
+/* Add Data Button - Blue (like import cards) */
+#btnAddData {
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+}
+
+#btnAddData:hover {
+  background: linear-gradient(135deg, #2980b9, #1a5276);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+  color: #fff;
+}
+
+/* Edit Data Button - Cyan/Teal (like filter buttons) */
+#btnEditData {
+  background: linear-gradient(135deg, #00d9ff, #00b4d8);
+  color: #1a1a2e;
+  box-shadow: 0 4px 15px rgba(0, 217, 255, 0.3);
+}
+
+#btnEditData:hover {
+  background: linear-gradient(135deg, #00b4d8, #0096c7);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 217, 255, 0.4);
+  color: #1a1a2e;
+}
+
+/* Delete Data Button - Red (like export cards) */
+#btnDeleteData {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+}
+
+#btnDeleteData:hover {
+  background: linear-gradient(135deg, #c0392b, #922b21);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
+  color: #fff;
+}
+
+/* Disabled button styles */
+.add-row-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+#btnAddData:disabled {
+  background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+}
+
+#btnEditData:disabled {
+  background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+  color: #fff;
+}
+
+#btnDeleteData:disabled {
+  background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+}
+
+
+/* =============================================================================
+   FILTER & EXPORT BUTTONS
+   Style cho nút Reset và T?i file Excel
+================================================================================ */
+
+/* Base style for filter and export buttons */
+#btnResetFilter,
+#btnExport {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Shimmer effect */
+#btnResetFilter::before,
+#btnExport::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+#btnResetFilter:hover::before,
+#btnExport:hover::before {
+  left: 100%;
+}
+
+/* Reset Button - Orange/Yellow (like warning) */
+#btnResetFilter {
+  background: linear-gradient(135deg, #f39c12, #e67e22);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(243, 156, 18, 0.3);
+}
+
+#btnResetFilter:hover {
+  background: linear-gradient(135deg, #e67e22, #d35400);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(243, 156, 18, 0.4);
+  color: #fff;
+}
+
+#btnResetFilter:disabled {
+  background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Export Excel Button - Green (success) */
+#btnExport {
+  background: linear-gradient(135deg, #27ae60, #1e8449);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
+}
+
+#btnExport:hover {
+  background: linear-gradient(135deg, #1e8449, #196f3d);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(39, 174, 96, 0.4);
+  color: #fff;
+}
+
+#btnExport:disabled {
+  background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+
+/* =============================================================================
+   RESPONSIVE
+   Style cho các thi?t b? khác nhau
+================================================================================ */
+
+/* Tablet */
+@media (max-width: 992px) {
+  header {
+    padding: 10px 15px;
+    gap: 20px;
+  }
+
+  .logo {
+    font-size: 20px;
+  }
+
+  nav ul {
+    gap: 25px;
+  }
+
+  nav a {
+    font-size: 13px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  header {
+    padding: 10px 15px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .logo {
+    font-size: 18px;
+    letter-spacing: 2px;
+  }
+
+  /* Hamburger menu visible on mobile */
+  .hamburger {
+    display: flex;
+  }
+
+  /* Navigation menu - hidden by default on mobile */
+  nav {
+    display: none;
+    width: 100%;
+    order: 3;
+  }
+
+  nav.active {
+    display: block;
+  }
+
+  nav ul {
+    flex-direction: column;
+    gap: 0;
+    width: 100%;
+    padding: 10px 0;
+    background: rgba(0, 0, 0, 0.9);
+    border-radius: 8px;
+    margin-top: 10px;
+  }
+
+  nav ul li {
+    width: 100%;
+  }
+
+  nav a {
+    display: block;
+    padding: 12px 20px;
+    font-size: 14px;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  nav a:hover {
+    background: rgba(255, 193, 7, 0.1);
+    color: #ffc107;
+  }
+
+  /* Dropdown menu on mobile */
+  .dropdown-menu {
+    position: static;
+    background: rgba(0, 0, 0, 0.5);
+    box-shadow: none;
+    border-radius: 0;
+  }
+
+  .dropdown-menu a {
+    padding-left: 40px;
+    font-size: 13px;
+  }
+
+  /* User info */
+  .user-info {
+    gap: 10px;
+  }
+
+  .user-info small {
+    font-size: 11px;
+  }
+
+  .btn-logout {
+    padding: 4px 10px;
+    font-size: 11px;
+  }
+
+  /* Filters */
+  .filters {
+    position: static;
+    top: auto;
+    margin-bottom: 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 15px;
+  }
+
+  .filters h5 {
+    font-size: 1rem;
+    margin-bottom: 10px;
+  }
+
+  /* Main content */
+  .main-content {
+    margin-top: 60px;
+    padding: 10px 5px;
+  }
+
+  /* Table - allow horizontal scroll */
+  .table-responsive {
+    height: auto;
+    min-height: 300px;
+    overflow-x: auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    font-size: 0.65rem;
+  }
+
+  th,
+  td {
+    padding: 0.25rem 0.2rem;
+    white-space: nowrap;
+  }
+
+  /* Action buttons */
+  .d-flex.gap-2.mb-2 {
+    flex-wrap: wrap;
+  }
+
+  .d-flex.gap-2.mb-2 .btn {
+    flex: 1 1 auto;
+    min-width: 100px;
+  }
+
+  /* Pagination */
+  .d-flex.align-items-center.justify-content-end {
+    justify-content: center !important;
+    gap: 10px;
+  }
+
+  .d-flex.align-items-center.justify-content-end .ms-3 {
+    margin-left: 0 !important;
+    width: 100%;
+    text-align: center;
+  }
+}
+
+/* Small Mobile */
+@media (max-width: 480px) {
+  header {
+    padding: 8px 10px;
+  }
+
+  .logo {
+    font-size: 16px;
+  }
+
+  .hamburger span {
+    width: 22px;
+    height: 2px;
+  }
+
+  .filters {
+    padding: 10px;
+  }
+
+  .filters h5 {
+    font-size: 0.9rem;
+  }
+
+  .btn-sm {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+  }
+}

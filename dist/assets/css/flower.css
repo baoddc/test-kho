@@ -1,0 +1,1172 @@
+/* ==========================================================================
+   AURA WATCH OS - PURPLE FLOWERS HOME PAGE STYLESHEET
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. COLOR PALETTES & THEME VARIABLES
+   -------------------------------------------------------------------------- */
+:root {
+  /* Default Theme: Purple Flowers (Reference Match) */
+  --bg-main: #06040a;
+  --bg-card: rgba(18, 14, 28, 0.7);
+  --flower-main: #b8a5fc;
+  --flower-bright: #ebd5ff;
+  --flower-accent: #a855f7;
+  --flower-dark: #6b21a8;
+  --flower-shadow: rgba(168, 85, 247, 0.3);
+  --leaf-color: #433363;
+  --leaf-bright: #634b8e;
+  --vine-color: #2b1f45;
+
+  /* Typography & UI */
+  --text-bright: #ffffff;
+  --text-sub: rgba(255, 255, 255, 0.75);
+  --text-muted: rgba(255, 255, 255, 0.45);
+  --grid-line: rgba(255, 255, 255, 0.08);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  
+  /* Fonts */
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-cinzel: 'Cinzel', serif;
+  --font-digital: 'Courier New', Courier, monospace;
+
+  /* Dynamic Active Font */
+  --time-font: var(--font-serif);
+}
+
+/* Theme Variant 2: Rose Quartz */
+[data-active-theme="rose"] {
+  --flower-main: #fda4af;
+  --flower-bright: #fff1f2;
+  --flower-accent: #f43f5e;
+  --flower-dark: #9f1239;
+  --flower-shadow: rgba(244, 63, 94, 0.3);
+  --leaf-color: #582436;
+  --leaf-bright: #7e3650;
+  --vine-color: #3b1424;
+}
+
+/* Theme Variant 3: Emerald Botanicals */
+[data-active-theme="emerald"] {
+  --flower-main: #6ee7b7;
+  --flower-bright: #ecfdf5;
+  --flower-accent: #10b981;
+  --flower-dark: #047857;
+  --flower-shadow: rgba(16, 185, 129, 0.3);
+  --leaf-color: #1a4938;
+  --leaf-bright: #276952;
+  --vine-color: #0d2a20;
+}
+
+/* Theme Variant 4: Golden Sunflower */
+[data-active-theme="gold"] {
+  --flower-main: #fde047;
+  --flower-bright: #fefce8;
+  --flower-accent: #eab308;
+  --flower-dark: #854d0e;
+  --flower-shadow: rgba(234, 179, 8, 0.3);
+  --leaf-color: #4a3d12;
+  --leaf-bright: #6e5c1d;
+  --vine-color: #2b2308;
+}
+
+/* Theme Variant 5: Cyber Neon */
+[data-active-theme="cyber"] {
+  --flower-main: #38bdf8;
+  --flower-bright: #f0f9ff;
+  --flower-accent: #06b6d4;
+  --flower-dark: #0e7490;
+  --flower-shadow: rgba(6, 182, 212, 0.4);
+  --leaf-color: #123d54;
+  --leaf-bright: #1f5c7e;
+  --vine-color: #0a2333;
+}
+
+/* --------------------------------------------------------------------------
+   2. GLOBAL RESET & BASE STYLES
+   -------------------------------------------------------------------------- */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  user-select: none;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+  background-color: var(--bg-main);
+  color: var(--text-bright);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --------------------------------------------------------------------------
+   3. BACKGROUND AMBIENT GLOW & CANVAS
+   -------------------------------------------------------------------------- */
+.ambient-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.glow-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(140px);
+  opacity: 0.18;
+  transition: background 0.8s ease;
+}
+
+.orb-1 {
+  width: 50vw;
+  height: 50vw;
+  top: -10vw;
+  left: -10vw;
+  background: radial-gradient(circle, var(--flower-accent), transparent);
+}
+
+.orb-2 {
+  width: 45vw;
+  height: 45vw;
+  bottom: -10vw;
+  right: -10vw;
+  background: radial-gradient(circle, var(--flower-dark), transparent);
+}
+
+#petalCanvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------------------------
+   4. LAYOUT & TOP NAVIGATION
+   -------------------------------------------------------------------------- */
+.app-layout {
+  position: relative;
+  z-index: 10;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.top-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 2rem;
+  background: rgba(6, 4, 10, 0.6);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.brand-dot {
+  width: 8px;
+  height: 8px;
+  background-color: var(--flower-accent);
+  border-radius: 50%;
+  box-shadow: 0 0 10px var(--flower-accent);
+  animation: pulseDot 2s infinite ease-in-out;
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 0.4; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+.brand-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.25em;
+  color: var(--text-sub);
+}
+
+.nav-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--glass-border);
+  border-radius: 30px;
+  color: var(--text-bright);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nav-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--flower-main);
+  transform: translateY(-1px);
+}
+
+/* --------------------------------------------------------------------------
+   5. CONTROL PANEL (SIDEBAR DOCK)
+   -------------------------------------------------------------------------- */
+.control-panel {
+  position: fixed;
+  top: 0;
+  right: -360px;
+  width: 340px;
+  height: 100vh;
+  background: rgba(14, 10, 22, 0.88);
+  backdrop-filter: blur(25px);
+  border-left: 1px solid var(--glass-border);
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -15px 0 40px rgba(0, 0, 0, 0.6);
+  transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.control-panel.active {
+  right: 0;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.panel-header h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.close-panel-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.close-panel-btn:hover {
+  color: var(--text-bright);
+}
+
+.panel-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.panel-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.panel-group label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+}
+
+.theme-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.theme-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.9rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  color: var(--text-sub);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.theme-chip:hover, .theme-chip.active {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--flower-accent);
+  color: var(--text-bright);
+}
+
+.chip-color {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+}
+
+.chip-color.purple { background: #a855f7; }
+.chip-color.rose { background: #f43f5e; }
+.chip-color.emerald { background: #10b981; }
+.chip-color.gold { background: #eab308; }
+.chip-color.cyber { background: #06b6d4; }
+
+.custom-select {
+  width: 100%;
+  padding: 0.65rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  color: var(--text-bright);
+  font-size: 0.85rem;
+  outline: none;
+}
+
+.custom-select option {
+  background: #14101e;
+  color: #fff;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--text-sub);
+}
+
+.toggle-switch {
+  appearance: none;
+  width: 36px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  position: relative;
+  cursor: pointer;
+  outline: none;
+  transition: background 0.3s;
+}
+
+.toggle-switch:checked {
+  background: var(--flower-accent);
+}
+
+.toggle-switch::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.3s;
+}
+
+.toggle-switch:checked::before {
+  transform: translateX(16px);
+}
+
+.sound-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.8rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--glass-border);
+  border-radius: 6px;
+  color: var(--text-bright);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+/* --------------------------------------------------------------------------
+   6. WATCH STAGE & SMARTWATCH CASE (DYNAMIC VIEWPORT-HEIGHT SCALING)
+   -------------------------------------------------------------------------- */
+:root {
+  --watch-size: min(84vw, 62vh, 480px);
+}
+
+.app-layout {
+  position: relative;
+  z-index: 10;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.watch-stage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  height: 100%;
+  max-height: 100vh;
+  overflow: hidden;
+  position: relative;
+}
+
+.watch-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  perspective: 1000px;
+}
+
+/* Straps */
+.watch-strap {
+  width: calc(var(--watch-size) * 0.44);
+  height: calc(var(--watch-size) * 0.18);
+  background: linear-gradient(90deg, #0e0d12 0%, #1c1a24 35%, #252230 50%, #1c1a24 65%, #0e0d12 100%);
+  position: relative;
+  z-index: 1;
+  box-shadow: inset 0 0 15px rgba(0,0,0,0.8);
+}
+
+.strap-top {
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  margin-bottom: calc(var(--watch-size) * -0.05);
+}
+
+.strap-bot {
+  border-bottom-left-radius: 20px;
+  border-bottom-right-radius: 20px;
+  margin-top: calc(var(--watch-size) * -0.05);
+}
+
+.strap-texture {
+  width: 100%;
+  height: 100%;
+  background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.02) 0px, rgba(255,255,255,0.02) 2px, transparent 2px, transparent 4px);
+}
+
+/* Watch Body Case */
+.watch-case {
+  width: var(--watch-size);
+  height: var(--watch-size);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #2b2836 0%, #15131c 55%, #0a090e 100%);
+  position: relative;
+  z-index: 10;
+  box-shadow: 
+    0 25px 60px rgba(0, 0, 0, 0.9),
+    0 0 0 2px rgba(255, 255, 255, 0.05),
+    inset 0 2px 5px rgba(255, 255, 255, 0.2),
+    inset 0 -4px 10px rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.4s ease;
+}
+
+/* Watch Hardware Crown */
+.watch-crown {
+  position: absolute;
+  right: calc(var(--watch-size) * -0.035);
+  top: 50%;
+  transform: translateY(-50%);
+  width: calc(var(--watch-size) * 0.038);
+  height: calc(var(--watch-size) * 0.133);
+  background: linear-gradient(180deg, #1c1a24 0%, #363245 40%, #1a1822 100%);
+  border-radius: 4px 8px 8px 4px;
+  box-shadow: 
+    3px 0 10px rgba(0, 0, 0, 0.7),
+    inset 0 1px 2px rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  z-index: 12;
+  transition: filter 0.2s;
+}
+
+.watch-crown:hover {
+  filter: brightness(1.25);
+}
+
+.crown-grooves {
+  width: 100%;
+  height: 100%;
+  background-image: repeating-linear-gradient(180deg, rgba(0,0,0,0.6) 0px, rgba(0,0,0,0.6) 3px, transparent 3px, transparent 6px);
+  border-radius: inherit;
+}
+
+/* Watch Bezel */
+.watch-bezel {
+  width: calc(var(--watch-size) * 0.93);
+  height: calc(var(--watch-size) * 0.93);
+  border-radius: 50%;
+  background: #000;
+  padding: 3px;
+  box-shadow: inset 0 0 15px rgba(0,0,0,0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Glass Screen Surface */
+.watch-screen {
+  width: calc(var(--watch-size) * 0.916);
+  height: calc(var(--watch-size) * 0.916);
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, #0d0a14 0%, #050408 100%);
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.95);
+}
+
+/* Glass Glare Overlay */
+.glass-glare {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 40%, transparent 55%);
+  pointer-events: none;
+  z-index: 30;
+  transition: opacity 0.3s;
+}
+
+/* --------------------------------------------------------------------------
+   7. WREATH LAYER (SVG FLORAL ART)
+   -------------------------------------------------------------------------- */
+.wreath-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.wreath-svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Flower Group Container Fixed Position */
+.flower-group-item {
+  opacity: 1;
+  transform: translate(var(--fx), var(--fy)) rotate(var(--rot)) scale(var(--scale));
+}
+
+.leaf-group-item {
+  opacity: 0.3;
+  animation: continuousLeafBloom 5.5s ease-in-out infinite;
+  animation-delay: var(--rand-delay, 0s);
+}
+
+@keyframes continuousLeafBloom {
+  0% {
+    opacity: 0.2;
+    transform: translate(var(--lx), var(--ly)) rotate(var(--lrot)) scale(0.1);
+  }
+  45% {
+    opacity: 0.9;
+    transform: translate(var(--lx), var(--ly)) rotate(var(--lrot)) scale(0.6);
+  }
+  60% {
+    opacity: 0.85;
+    transform: translate(var(--lx), var(--ly)) rotate(var(--lrot)) scale(0.55);
+  }
+  88% {
+    opacity: 0.25;
+    transform: translate(var(--lx), var(--ly)) rotate(var(--lrot)) scale(0.15);
+  }
+  100% {
+    opacity: 0.2;
+    transform: translate(var(--lx), var(--ly)) rotate(var(--lrot)) scale(0.1);
+  }
+}
+
+/* Individual Petals Continuous Infinite Blooming Loop with Random Delays */
+.petal-anim-item {
+  transform-origin: 0px 0px;
+  opacity: 0.15;
+  animation: continuousPetalBloom 5.5s ease-in-out infinite;
+  animation-delay: calc(var(--rand-delay, 0s) + var(--petal-idx, 0) * 0.08s);
+}
+
+@keyframes continuousPetalBloom {
+  0% {
+    opacity: 0.15;
+    transform: rotate(calc(var(--p-rot) - 20deg)) scale(0.08, 0.18);
+    filter: blur(2px);
+  }
+  38% {
+    opacity: 1;
+    transform: rotate(calc(var(--p-rot) + 4deg)) scale(1.15, 1.15);
+    filter: blur(0px);
+  }
+  55% {
+    opacity: 1;
+    transform: rotate(var(--p-rot)) scale(1, 1);
+    filter: blur(0px);
+  }
+  85% {
+    opacity: 0.25;
+    transform: rotate(calc(var(--p-rot) - 12deg)) scale(0.15, 0.25);
+    filter: blur(1px);
+  }
+  100% {
+    opacity: 0.15;
+    transform: rotate(calc(var(--p-rot) - 20deg)) scale(0.08, 0.18);
+    filter: blur(2px);
+  }
+}
+
+.flower-petal {
+  fill: var(--flower-main);
+  transition: fill 0.8s ease;
+}
+
+.flower-petal-bright {
+  fill: var(--flower-bright);
+  transition: fill 0.8s ease;
+}
+
+.flower-center {
+  fill: var(--flower-accent);
+  transition: fill 0.8s ease;
+}
+
+.leaf-shape {
+  fill: var(--leaf-color);
+  transition: fill 0.8s ease;
+}
+
+/* --------------------------------------------------------------------------
+   8. WATCH FACE INTERFACE CONTENT & WIDGET GRID
+   -------------------------------------------------------------------------- */
+.watch-face-content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  padding: 2.2rem 3rem;
+  justify-content: space-between;
+}
+
+/* Grid Dividers Hairlines */
+.grid-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+  transition: opacity 0.3s;
+}
+
+.grid-line {
+  position: absolute;
+  background-color: var(--grid-line);
+}
+
+/* Horizontal Grid Lines */
+.line-h-top { top: 29.5%; left: 16%; width: 68%; height: 1px; }
+.line-h-mid { top: 48%; left: 12%; width: 76%; height: 1px; }
+.line-h-bot { top: 73.5%; left: 16%; width: 68%; height: 1px; }
+
+/* Vertical Grid Lines */
+.line-v-top { top: 10%; left: 50%; width: 1px; height: 19.5%; }
+.line-v-mid { top: 48%; left: 73%; width: 1px; height: 25.5%; }
+.line-v-bot { top: 73.5%; left: 49%; width: 1px; height: 16.5%; }
+
+/* --------------------------------------------------------------------------
+   9. SECTIONS & WIDGET LAYOUTS
+   -------------------------------------------------------------------------- */
+
+/* Top Section */
+.section-top {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  height: 25%;
+  padding-bottom: 0.4rem;
+}
+
+.world-clock-widget {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-center;
+  cursor: pointer;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  transition: background 0.2s;
+  margin-left: 2.8rem;
+}
+
+.world-clock-widget:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.sub-time {
+  font-size: 1.05rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: var(--text-bright);
+}
+
+.sub-label {
+  font-size: 0.8rem;
+  font-weight: 300;
+  color: var(--text-sub);
+  text-align: center;
+}
+
+.profile-widget-btn {
+  background: rgba(255, 255, 255, 0.18);
+  border: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-right: 3rem;
+  margin-bottom: 0.2rem;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.profile-widget-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+/* Minimalist Face Container */
+.watch-face-content.minimalist-face {
+  justify-content: center;
+  align-items: center;
+}
+
+.section-mid-focused {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.section-mid-focused .alarm-date-row {
+  margin-left: 0;
+  margin-bottom: 0.6rem;
+  justify-content: center;
+}
+
+.section-mid-focused .main-time-container {
+  width: 100%;
+  justify-content: center;
+  gap: 1.2rem;
+}
+
+/* Middle Section */
+.section-mid {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  height: 48%;
+  justify-content: center;
+}
+
+.alarm-date-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  margin-bottom: 0.2rem;
+  margin-left: 1.2rem;
+  width: fit-content;
+  transition: background 0.2s;
+}
+
+.alarm-date-row:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.alarm-badge {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.day-date-text {
+  display: flex;
+  gap: 0.35rem;
+  font-size: calc(var(--watch-size) * 0.045);
+  font-weight: 300;
+  color: var(--text-bright);
+}
+
+.day-num {
+  color: var(--flower-main);
+  font-weight: 400;
+}
+
+/* Main Time Display */
+.main-time-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.main-time-val {
+  font-size: calc(var(--watch-size) * 0.16);
+  font-weight: 500;
+  line-height: 0.95;
+  color: var(--text-bright);
+  letter-spacing: -0.02em;
+  font-family: var(--time-font);
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+}
+
+/* Font Classes */
+.font-serif { font-family: var(--font-serif); }
+.font-outfit { font-family: var(--font-sans); font-weight: 600; }
+.font-cinzel { font-family: var(--font-cinzel); }
+.font-digital { font-family: var(--font-digital); font-weight: 700; letter-spacing: 0.05em; }
+
+.right-info-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  width: 24%;
+  padding-right: 0.2rem;
+}
+
+.ampm-box {
+  font-size: calc(var(--watch-size) * 0.028);
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.seconds-box {
+  font-size: calc(var(--watch-size) * 0.045);
+  font-weight: 300;
+  color: var(--text-bright);
+}
+
+.msg-widget-btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.2s;
+}
+
+.msg-widget-btn:hover {
+  transform: scale(1.1);
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.msg-dot {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 6px;
+  height: 6px;
+  background-color: var(--flower-accent);
+  border-radius: 50%;
+}
+
+/* Lower Section */
+.section-bot {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  height: 26%;
+  padding-top: 0.4rem;
+}
+
+.bot-widget {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  padding: 0.3rem 0.5rem;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.bot-widget:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.widget-val {
+  font-size: 1.05rem;
+  font-weight: 400;
+  color: var(--text-bright);
+}
+
+.widget-icon {
+  color: var(--text-sub);
+  display: flex;
+  align-items: center;
+}
+
+.pulse-icon {
+  color: var(--flower-main);
+  animation: heartPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes heartPulse {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.25); opacity: 1; }
+}
+
+/* --------------------------------------------------------------------------
+   10. CAPTION TITLE UNDER SMARTWATCH
+   -------------------------------------------------------------------------- */
+.watch-caption-title {
+  margin-top: calc(var(--watch-size) * 0.035);
+  font-size: clamp(0.6rem, calc(var(--watch-size) * 0.024), 0.78rem);
+  font-weight: 500;
+  letter-spacing: 0.75em;
+  color: var(--text-muted);
+  text-align: center;
+  text-transform: uppercase;
+  transition: color 0.5s;
+}
+
+/* --------------------------------------------------------------------------
+   11. AOD (ALWAYS-ON DISPLAY) AMBIENT MODE
+   -------------------------------------------------------------------------- */
+body.aod-active .watch-screen {
+  background: #000000;
+}
+
+body.aod-active .wreath-container {
+  opacity: 0.2;
+  filter: grayscale(1);
+}
+
+body.aod-active .grid-overlay {
+  opacity: 0;
+}
+
+body.aod-active .main-time-val {
+  color: var(--flower-bright);
+  text-shadow: 0 0 25px var(--flower-accent);
+}
+
+body.aod-active .glass-glare,
+body.aod-active .ambient-bg {
+  display: none;
+}
+
+/* --------------------------------------------------------------------------
+   12. MODAL OVERLAYS
+   -------------------------------------------------------------------------- */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(10px);
+  z-index: 2100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.modal-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal-card {
+  width: 90%;
+  max-width: 400px;
+  background: #130f1e;
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+  overflow: hidden;
+  transform: translateY(20px);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-overlay.active .modal-card {
+  transform: translateY(0);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.2rem 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.modal-header h4 {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+
+.modal-close:hover {
+  color: #fff;
+}
+
+.modal-body {
+  padding: 1.25rem 1.5rem;
+}
+
+.city-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.city-list li {
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.city-list li:hover, .city-list li.active {
+  background: var(--flower-accent);
+  color: #fff;
+}
+
+.alarm-item, .msg-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.alarm-time { font-size: 1.1rem; font-weight: 600; }
+.alarm-days { font-size: 0.75rem; color: var(--text-muted); display: block; }
+
+.msg-item { gap: 0.8rem; justify-content: flex-start; }
+.msg-avatar { font-size: 1.4rem; }
+.msg-content h5 { font-size: 0.85rem; font-weight: 600; }
+.msg-content p { font-size: 0.8rem; color: var(--text-sub); margin-top: 0.1rem; }
+.msg-time { font-size: 0.7rem; color: var(--text-muted); }
+
+.health-grid { display: flex; flex-direction: column; gap: 1rem; }
+.health-card { background: rgba(255,255,255,0.04); padding: 1rem; border-radius: 10px; }
+.hc-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; }
+.hc-val { font-size: 1.3rem; font-weight: 600; display: block; margin: 0.3rem 0; }
+.hc-sub { font-size: 0.75rem; color: var(--flower-main); }
+.progress-bar { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; margin-top: 0.4rem; }
+.progress-fill { height: 100%; background: var(--flower-accent); border-radius: 10px; }
+
+/* --------------------------------------------------------------------------
+   13. RESPONSIVE BREAKPOINTS
+   -------------------------------------------------------------------------- */
+@media (max-width: 600px) {
+  .watch-case {
+    width: 340px;
+    height: 340px;
+  }
+  .watch-bezel {
+    width: 316px;
+    height: 316px;
+  }
+  .watch-screen {
+    width: 310px;
+    height: 310px;
+  }
+  .watch-strap {
+    width: 150px;
+    height: 60px;
+  }
+  .main-time-val {
+    font-size: 3.4rem;
+  }
+  .day-date-text {
+    font-size: 1rem;
+  }
+  .sub-time {
+    font-size: 0.85rem;
+  }
+  .sub-label {
+    font-size: 0.7rem;
+  }
+  .seconds-box {
+    font-size: 1rem;
+  }
+  .widget-val {
+    font-size: 0.85rem;
+  }
+  .control-panel {
+    width: 100%;
+    right: -100%;
+  }
+}
