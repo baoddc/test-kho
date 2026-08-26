@@ -5,15 +5,40 @@
 
 // Kiểm tra xem đã đăng nhập chưa, nếu chưa thì quay về trang đăng nhập
 const PUBLIC_PAGES = [
+  'home',
   'home.html',
+  'about',
   'about.html',
+  'flower',
   'flower.html',
+  'index',
   'index.html',
+  'dang_nhap',
+  'dang_nhap.html',
+  'xg-ton',
   'xg-ton.html',
+  'tole-ton',
   'tole-ton.html',
+  'vi-tri-ton',
   'vi-tri-ton.html',
+  'in-tem-vitri',
   'in-tem-vitri.html'
 ];
+
+function isPublicPage(path) {
+  if (!path) return false;
+  let clean = String(path).split('?')[0].split('#')[0].trim();
+  let seg = clean.split('/').pop() || '';
+  if (!seg || seg === '' || seg === 'pages') return true;
+
+  const normSeg = seg.toLowerCase().replace(/\.html?$/i, '');
+  if (normSeg === 'index' || normSeg === 'dang_nhap') return true;
+
+  return PUBLIC_PAGES.some(p => {
+    const normP = p.toLowerCase().replace(/\.html?$/i, '');
+    return normSeg === normP;
+  });
+}
 
 /**
  * Handle restricted access attempts for guests
@@ -130,11 +155,11 @@ function handleRestrictedAccess(e) {
 window.addEventListener('load', () => {
   if (window.self !== window.top) return;
   const currentUser = localStorage.getItem('currentUser');
-  const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+  const currentPath = window.location.pathname;
 
   if (!currentUser) {
     // 1. Check if CURRENT page is restricted
-    if (!PUBLIC_PAGES.includes(currentPage) && currentPage !== 'index.html') {
+    if (!isPublicPage(currentPath)) {
       showAuthModal(); // Immediate show on landing
       return;
     }
@@ -144,7 +169,7 @@ window.addEventListener('load', () => {
       // Support both old nav links and new sidebar links
       document.querySelectorAll('nav a, .dropdown-menu a, .sidebar-link, .sidebar-sub-link, .sidebar-subsub-link').forEach(link => {
         const href = link.getAttribute('href');
-        if (href && href.includes('/pages/') && !PUBLIC_PAGES.some(p => href.endsWith(p)) && !href.endsWith('index.html')) {
+        if (href && href.includes('/pages/') && !isPublicPage(href)) {
           link.addEventListener('click', handleRestrictedAccess);
         }
       });

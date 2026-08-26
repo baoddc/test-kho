@@ -163,13 +163,23 @@
   }
 
   const PUBLIC_PAGES = [
+    'home',
     'home.html',
+    'about',
     'about.html',
+    'flower',
     'flower.html',
+    'index',
     'index.html',
+    'dang_nhap',
+    'dang_nhap.html',
+    'xg-ton',
     'xg-ton.html',
+    'tole-ton',
     'tole-ton.html',
+    'vi-tri-ton',
     'vi-tri-ton.html',
+    'in-tem-vitri',
     'in-tem-vitri.html'
   ];
 
@@ -177,7 +187,7 @@
     const page = window.location.pathname;
     const normPage = normalizeUrlPath(page);
     const pageFile = normPage.split('/').pop();
-    if (pageFile === 'dang_nhap' || normPage === '/' || PUBLIC_PAGES.some(p => {
+    if (pageFile === 'dang_nhap' || pageFile === 'index' || normPage === '/' || PUBLIC_PAGES.some(p => {
       const pFile = normalizeUrlPath(p).split('/').pop();
       return pageFile === pFile || normPage.endsWith('/' + pFile);
     })) return;

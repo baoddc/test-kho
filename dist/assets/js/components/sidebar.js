@@ -85,7 +85,9 @@
   const isStandalonePage = normCurrentPath === '/' ||
     normCurrentPath.endsWith('/dang_nhap') ||
     normCurrentPath.endsWith('/flower') ||
-    normCurrentPath.endsWith('/offline');
+    normCurrentPath.endsWith('/offline') ||
+    normCurrentPath.endsWith('/in-tem-vitri') ||
+    normCurrentPath.endsWith('/vi-tri-ton');
 
   if (!isIframe && !isStandalonePage && normCurrentPath.startsWith('/pages/')) {
     const targetUrl = currentPath + window.location.search + window.location.hash;
@@ -161,19 +163,31 @@
   }
 
   const PUBLIC_PAGES = [
+    'home',
     'home.html',
+    'about',
     'about.html',
+    'flower',
     'flower.html',
+    'index',
     'index.html',
+    'dang_nhap',
+    'dang_nhap.html',
+    'xg-ton',
     'xg-ton.html',
-    'tole-ton.html'
+    'tole-ton',
+    'tole-ton.html',
+    'vi-tri-ton',
+    'vi-tri-ton.html',
+    'in-tem-vitri',
+    'in-tem-vitri.html'
   ];
 
   function checkRoutePermissionInIframe() {
     const page = window.location.pathname;
     const normPage = normalizeUrlPath(page);
     const pageFile = normPage.split('/').pop();
-    if (pageFile === 'dang_nhap' || normPage === '/' || PUBLIC_PAGES.some(p => {
+    if (pageFile === 'dang_nhap' || pageFile === 'index' || normPage === '/' || PUBLIC_PAGES.some(p => {
       const pFile = normalizeUrlPath(p).split('/').pop();
       return pageFile === pFile || normPage.endsWith('/' + pFile);
     })) return;
