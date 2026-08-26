@@ -198,6 +198,13 @@ window.addEventListener('load', () => {
     logo.addEventListener('click', () => { window.location.href = '/'; });
   }
 
+  if (window.inventoryLockService) {
+    window.inventoryLockService.init('xg');
+    window.inventoryLockService.onLocksChange(() => {
+      filterTable(false);
+    });
+  }
+
   loadSupabaseData();
   initSupabaseRealtime();
   setupBroadcastListener();
@@ -621,10 +628,20 @@ function renderTableData(data) {
   const fragment = document.createDocumentFragment();
   for (let i = 1; i < data.length; i++) {
     const row = document.createElement('tr');
+    const cuonId = String(data[i][7] || '').trim();
+    const lockStatus = window.inventoryLockService ? window.inventoryLockService.getLockStatus(cuonId) : { isLocked: false };
+    if (lockStatus.isLocked) {
+      row.classList.add('table-warning');
+      row.style.backgroundColor = 'rgba(255, 193, 7, 0.18)';
+    }
+
     data[i].forEach((cell, colIndex) => {
       const td = document.createElement('td');
       if (colIndex === 1) { // 'Ngày nhập' is index 1
         td.textContent = formatDate(cell);
+      } else if (colIndex === 7 && lockStatus.isLocked) {
+        const formatted = formatCellQuantityOrWeight(cell, data[0][colIndex]);
+        td.innerHTML = `${formatted} <span class="badge bg-warning text-dark ms-1" style="font-size: 0.75rem;"><i class="bi bi-hourglass-split"></i> ${lockStatus.lockedBy} đang soạn</span>`;
       } else {
         td.textContent = formatCellQuantityOrWeight(cell, data[0][colIndex]);
       }
@@ -912,10 +929,20 @@ function renderGroupedTable(data) {
       const dtr = document.createElement('tr');
       dtr.className = 'group-detail-row';
 
+      const cuonId = String(row[7] || '').trim();
+      const lockStatus = window.inventoryLockService ? window.inventoryLockService.getLockStatus(cuonId) : { isLocked: false };
+      if (lockStatus.isLocked) {
+        dtr.classList.add('table-warning');
+        dtr.style.backgroundColor = 'rgba(255, 193, 7, 0.18)';
+      }
+
       row.forEach((cell, colIndex) => {
         const td = document.createElement('td');
         if (colIndex === 1) { // 'Ngày nhập' is index 1
           td.textContent = formatDate(cell);
+        } else if (colIndex === 7 && lockStatus.isLocked) { // 'Cuộn ID'
+          const formatted = formatCellQuantityOrWeight(cell, headers[colIndex]);
+          td.innerHTML = `${formatted} <span class="badge bg-warning text-dark ms-1" style="font-size: 0.75rem;"><i class="bi bi-hourglass-split"></i> ${lockStatus.lockedBy} đang soạn</span>`;
         } else {
           td.textContent = formatCellQuantityOrWeight(cell, headers[colIndex]);
         }
