@@ -356,13 +356,111 @@ function applyCuonDeduction(cuonIdsToSubtract) {
   }
 }
 
+function applyNhapInsert(newRecords) {
+  if (!newRecords || !Array.isArray(newRecords) || newRecords.length === 0) return;
+  if (!window._rawSupabaseData) window._rawSupabaseData = [];
+
+  const existingIds = new Set(window._rawSupabaseData.map(r => String(r.id)));
+  const recordsToAdd = newRecords.filter(r => !existingIds.has(String(r.id)));
+  if (recordsToAdd.length === 0) return;
+
+  const processedNewTon = recordsToAdd.map(row => ({
+    id: row.id,
+    'Ngày nhập': row['Ngày nhập'] || '',
+    'Thời gian lưu kho': calculateStorageAge(row['Ngày nhập']),
+    'Vị trí': row['Vị trí'] || '',
+    'Mã vật tư': row['Mã vật tư'] || '',
+    'Tên vật tư': row['Tên vật tư'] || '',
+    'Batch': row['Batch'] || '',
+    'Cuộn ID': row['Cuộn ID'] || '',
+    'Số lượng (Kg)': row['Số lượng (Kg)'] || 0,
+    'Mã công trình': row['Mã công trình'] || '',
+    'Tên công trình': row['Tên công trình'] || '',
+    'Ghi chú': row['Ghi chú'] || ''
+  }));
+
+  window._rawSupabaseData = [...window._rawSupabaseData, ...processedNewTon];
+  tableData = [COLUMN_HEADERS, ...window._rawSupabaseData.map(rowToArray)];
+  if (typeof setStoredTableCache === 'function') {
+    setStoredTableCache('xg-ton', window._rawSupabaseData);
+  }
+  filterTable(false);
+}
+
+function applyNhapDelete(deletedIds) {
+  if (!deletedIds || !Array.isArray(deletedIds) || deletedIds.length === 0) return;
+  const deleteSet = new Set(deletedIds.map(id => String(id)));
+  if (!window._rawSupabaseData || window._rawSupabaseData.length === 0) return;
+
+  const prevLen = window._rawSupabaseData.length;
+  window._rawSupabaseData = window._rawSupabaseData.filter(row => !deleteSet.has(String(row.id)));
+
+  if (window._rawSupabaseData.length !== prevLen) {
+    tableData = [COLUMN_HEADERS, ...window._rawSupabaseData.map(rowToArray)];
+    if (typeof setStoredTableCache === 'function') {
+      setStoredTableCache('xg-ton', window._rawSupabaseData);
+    }
+    filterTable(false);
+  }
+}
+
+function applyNhapUpdate(updatedRecord) {
+  if (!updatedRecord || !updatedRecord.id) return;
+  if (!window._rawSupabaseData || window._rawSupabaseData.length === 0) return;
+
+  const rowIdStr = String(updatedRecord.id);
+  const idx = window._rawSupabaseData.findIndex(r => String(r.id) === rowIdStr);
+  if (idx >= 0) {
+    window._rawSupabaseData[idx] = {
+      ...window._rawSupabaseData[idx],
+      id: updatedRecord.id,
+      'Ngày nhập': updatedRecord['Ngày nhập'] || '',
+      'Thời gian lưu kho': calculateStorageAge(updatedRecord['Ngày nhập']),
+      'Vị trí': updatedRecord['Vị trí'] || '',
+      'Mã vật tư': updatedRecord['Mã vật tư'] || '',
+      'Tên vật tư': updatedRecord['Tên vật tư'] || '',
+      'Batch': updatedRecord['Batch'] || '',
+      'Cuộn ID': updatedRecord['Cuộn ID'] || '',
+      'Số lượng (Kg)': updatedRecord['Số lượng (Kg)'] || 0,
+      'Mã công trình': updatedRecord['Mã công trình'] || '',
+      'Tên công trình': updatedRecord['Tên công trình'] || '',
+      'Ghi chú': updatedRecord['Ghi chú'] || ''
+    };
+    tableData = [COLUMN_HEADERS, ...window._rawSupabaseData.map(rowToArray)];
+    if (typeof setStoredTableCache === 'function') {
+      setStoredTableCache('xg-ton', window._rawSupabaseData);
+    }
+    filterTable(false);
+  } else {
+    debouncedReloadQuietly();
+  }
+}
+
 function handleXgSyncEvent(type, payload) {
   if (type === 'XG_XUAT_INSERT') {
     const cuonIds = payload.cuonIds || [];
     if (cuonIds.length > 0) {
       applyCuonDeduction(cuonIds);
     }
-  } else if (type === 'XG_XUAT_DELETE' || type === 'XG_XUAT_UPDATE' || type === 'XG_NHAP_INSERT' || type === 'XG_NHAP_DELETE' || type === 'XG_NHAP_UPDATE') {
+  } else if (type === 'XG_NHAP_INSERT') {
+    if (payload.records && payload.records.length > 0) {
+      applyNhapInsert(payload.records);
+    } else {
+      debouncedReloadQuietly();
+    }
+  } else if (type === 'XG_NHAP_UPDATE') {
+    if (payload.record) {
+      applyNhapUpdate(payload.record);
+    } else {
+      debouncedReloadQuietly();
+    }
+  } else if (type === 'XG_NHAP_DELETE') {
+    if (payload.ids && payload.ids.length > 0) {
+      applyNhapDelete(payload.ids);
+    } else {
+      debouncedReloadQuietly();
+    }
+  } else if (type === 'XG_XUAT_DELETE' || type === 'XG_XUAT_UPDATE') {
     debouncedReloadQuietly();
   }
 }
@@ -379,8 +477,20 @@ function handleRealtimeXuatChange(payload) {
   }
 }
 
-function handleRealtimeNhapChange() {
-  debouncedReloadQuietly();
+function handleRealtimeNhapChange(payload) {
+  if (!payload || !payload.eventType) {
+    debouncedReloadQuietly();
+    return;
+  }
+  if (payload.eventType === 'INSERT' && payload.new) {
+    applyNhapInsert([payload.new]);
+  } else if (payload.eventType === 'UPDATE' && payload.new) {
+    applyNhapUpdate(payload.new);
+  } else if (payload.eventType === 'DELETE' && payload.old && payload.old.id) {
+    applyNhapDelete([payload.old.id]);
+  } else {
+    debouncedReloadQuietly();
+  }
 }
 
 const debouncedReloadQuietly = debounce(() => {
