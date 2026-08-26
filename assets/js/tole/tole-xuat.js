@@ -283,6 +283,23 @@ window.addEventListener('load', () => {
     });
   }
 
+  // Lắng nghe realtime từ các tab khác khi có phiếu xuất mới
+  if (toleChannel) {
+    toleChannel.onmessage = (e) => {
+      const { type, payload } = e.data || {};
+      if (type === 'TOLE_XUAT_INSERT' && payload && Array.isArray(payload.cuonIds)) {
+        const exportedSet = new Set(payload.cuonIds.map(id => String(id).trim().toLowerCase()));
+        if (cachedInventoryData && Array.isArray(cachedInventoryData)) {
+          cachedInventoryData = cachedInventoryData.filter(item => !exportedSet.has(String(item['Cuộn ID'] || '').trim().toLowerCase()));
+          const modal = document.getElementById('inventoryRollsModal');
+          if (modal && modal.classList.contains('show')) {
+            renderInventoryTable(cachedInventoryData, document.getElementById('inventorySearchInput')?.value || '');
+          }
+        }
+      }
+    };
+  }
+
   loadSupabaseData();
 });
 

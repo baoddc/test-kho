@@ -66,13 +66,20 @@
       if (!window.supabase || typeof window.supabase.channel !== 'function') return;
 
       try {
-        const topic = `public:inventory_locks_${this.moduleType}`;
+        const topic = `inventory_locks_sync_${this.moduleType}`;
         if (this.realtimeChannel) {
           window.supabase.removeChannel(this.realtimeChannel);
         }
 
         this.realtimeChannel = window.supabase
-          .channel(topic)
+          .channel(topic, {
+            config: {
+              broadcast: { self: false }
+            }
+          })
+          .on('broadcast', { event: 'LOCK_SYNC' }, ({ payload }) => {
+            this.handleChannelMessage(payload);
+          })
           .on('postgres_changes', {
             event: '*',
             schema: 'public',
@@ -81,7 +88,11 @@
           }, (payload) => {
             this.handlePostgresChange(payload);
           })
-          .subscribe();
+          .subscribe((status) => {
+            if (status === 'SUBSCRIBED') {
+              this.refreshLocks(false);
+            }
+          });
       } catch (err) {
         console.warn('[InventoryLockService] Supabase Realtime setup warning:', err);
       }
@@ -93,9 +104,9 @@
       const newRec = payload.new;
       const oldRec = payload.old;
 
-      if (eventType === 'DELETE' && oldRec) {
-        // Find by id or refresh
-        this.refreshLocks(true);
+      if (eventType === 'DELETE') {
+        // Tải lại khóa và cập nhật giao diện
+        this.refreshLocks(false);
       } else if ((eventType === 'INSERT' || eventType === 'UPDATE') && newRec) {
         const cuonId = String(newRec.cuon_id || '').trim();
         if (cuonId) {
@@ -125,11 +136,14 @@
       } else if (msg.type === 'LOCK_RELEASED') {
         const ids = Array.isArray(msg.cuonIds) ? msg.cuonIds : [msg.cuonId];
         ids.forEach(id => {
-          if (id) this.activeLocks.delete(String(id).trim().toLowerCase());
+          if (id) {
+            const key = String(id).trim().toLowerCase();
+            this.activeLocks.delete(key);
+          }
         });
         this.notifyListeners();
       } else if (msg.type === 'LOCK_REFRESH_REQUEST') {
-        this.refreshLocks(true);
+        this.refreshLocks(false);
       }
     }
 
@@ -214,7 +228,7 @@
         });
         this.myLockedRolls.add(key);
 
-        // Phát tin qua BroadcastChannel
+        // 1. Phát tin qua BroadcastChannel nội bộ (cùng browser profile)
         if (this.broadcastChannel) {
           this.broadcastChannel.postMessage({
             type: 'LOCK_ACQUIRED',
@@ -224,9 +238,23 @@
           });
         }
 
+        // 2. Phát tin qua Supabase WebSocket Broadcast (ngay lập tức tới Incognito & các thiết bị khác)
+        if (this.realtimeChannel) {
+          this.realtimeChannel.send({
+            type: 'broadcast',
+            event: 'LOCK_SYNC',
+            payload: {
+              type: 'LOCK_ACQUIRED',
+              cuonId: cleanId,
+              user: currentUser,
+              expiresAt: expiresAt
+            }
+          }).catch(() => {});
+        }
+
         if (shouldNotify) this.notifyListeners();
 
-        // Gửi RPC lên Supabase không đồng bộ
+        // 3. Gửi RPC lên Supabase không đồng bộ
         window.supabase.rpc('acquire_inventory_lock', {
           p_module: this.moduleType,
           p_cuon_id: cleanId,
@@ -271,13 +299,26 @@
         this.myLockedRolls.delete(key);
       });
 
-      // Phát Broadcast
+      // 1. Phát BroadcastChannel nội bộ
       if (this.broadcastChannel) {
         this.broadcastChannel.postMessage({
           type: 'LOCK_RELEASED',
           cuonIds: cleanIds,
           user: currentUser
         });
+      }
+
+      // 2. Phát tin qua Supabase WebSocket Broadcast (ngay lập tức tới Incognito & các thiết bị khác)
+      if (this.realtimeChannel) {
+        this.realtimeChannel.send({
+          type: 'broadcast',
+          event: 'LOCK_SYNC',
+          payload: {
+            type: 'LOCK_RELEASED',
+            cuonIds: cleanIds,
+            user: currentUser
+          }
+        }).catch(() => {});
       }
 
       if (shouldNotify) this.notifyListeners();
