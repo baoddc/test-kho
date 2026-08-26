@@ -166,7 +166,9 @@
     'flower.html',
     'index.html',
     'xg-ton.html',
-    'tole-ton.html'
+    'tole-ton.html',
+    'vi-tri-ton.html',
+    'in-tem-vitri.html'
   ];
 
   function checkRoutePermissionInIframe() {
@@ -620,6 +622,15 @@
           ]
         },
         { label: 'Xuất bán/Xuất trả', href: '/pages/pl/pl-phieu-in.html' },
+      ]
+    },
+    {
+      id: 'nav-vitri-qr',
+      label: 'VỊ TRÍ & TEM QR',
+      icon: `<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>`,
+      children: [
+        { label: 'In tem QR Vị trí Kệ', href: '/pages/in-tem-vitri.html' },
+        { label: 'Tra cứu Tồn theo Kệ', href: '/pages/vi-tri-ton.html' },
       ]
     },
     {
