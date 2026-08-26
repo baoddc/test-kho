@@ -259,7 +259,26 @@ window.addEventListener('load', () => {
     window.inventoryLockService.onLocksChange(() => {
       const modal = document.getElementById('inventoryRollsModal');
       if (modal && modal.classList.contains('show')) {
-        renderInventoryTable(cachedInventoryData || [], document.getElementById('inventorySearchInput')?.value || '');
+        updateInventoryTableLockStates();
+      }
+    });
+  }
+
+  // Lắng nghe đóng modal để giải phóng cuộn không được chọn
+  const invModalEl = document.getElementById('inventoryRollsModal');
+  if (invModalEl) {
+    invModalEl.addEventListener('hidden.bs.modal', () => {
+      const formRolls = new Set(
+        Array.from(document.querySelectorAll('#rollsTableBody .roll-cuon-id, #editRollsTableBody .roll-cuon-id'))
+          .map(inp => inp.value.trim().toLowerCase())
+          .filter(Boolean)
+      );
+      if (window.inventoryLockService) {
+        const myLocks = Array.from(window.inventoryLockService.myLockedRolls);
+        const toRelease = myLocks.filter(id => !formRolls.has(id));
+        if (toRelease.length > 0) {
+          window.inventoryLockService.releaseLock(toRelease, false);
+        }
       }
     });
   }
@@ -1161,10 +1180,49 @@ async function openInventoryModal(target, maVatTu = '') {
   }
 }
 
+function updateInventoryTableLockStates() {
+  const tbody = document.getElementById('inventoryTableBody');
+  if (!tbody) return;
+  tbody.querySelectorAll('tr').forEach(tr => {
+    const cb = tr.querySelector('.inventory-checkbox');
+    if (!cb) return;
+    const cuonId = cb.dataset.cuonId || '';
+    if (!cuonId) return;
+
+    const lockStatus = window.inventoryLockService ? window.inventoryLockService.getLockStatus(cuonId) : { isLocked: false };
+    const isLockedByOther = lockStatus.isLocked && !lockStatus.isMe;
+
+    cb.disabled = isLockedByOther;
+    const badgeContainer = tr.querySelector('.lock-badge-container');
+    if (badgeContainer) {
+      if (isLockedByOther) {
+        tr.classList.add('table-warning');
+        tr.style.opacity = '0.75';
+        cb.checked = false;
+        badgeContainer.innerHTML = `<span class="badge bg-warning text-dark ms-1" style="font-size: 0.75rem;" title="Đang soạn bởi ${lockStatus.lockedBy}"><i class="bi bi-lock-fill"></i> ${lockStatus.lockedBy} đang giữ</span>`;
+      } else {
+        tr.classList.remove('table-warning');
+        tr.style.opacity = '1';
+        badgeContainer.innerHTML = cb.checked ? `<span class="badge bg-primary ms-1" style="font-size: 0.75rem;"><i class="bi bi-check2-circle"></i> Đã chọn</span>` : '';
+      }
+    }
+  });
+
+  const countChecked = document.querySelectorAll('#inventoryTableBody .inventory-checkbox:checked').length;
+  const countEl = document.getElementById('inventorySelectedCount');
+  if (countEl) countEl.textContent = countChecked;
+}
+
 function renderInventoryTable(data, searchVal = '') {
   const tbody = document.getElementById('inventoryTableBody');
   if (!tbody) return;
   tbody.innerHTML = '';
+
+  const formRolls = new Set(
+    Array.from(document.querySelectorAll('#rollsTableBody .roll-cuon-id, #editRollsTableBody .roll-cuon-id'))
+      .map(inp => inp.value.trim().toLowerCase())
+      .filter(Boolean)
+  );
 
   const filtered = searchVal
     ? data.filter(row => Object.values(row).some(v => v !== null && String(v).toLowerCase().includes(searchVal.toLowerCase())))
@@ -1174,6 +1232,7 @@ function renderInventoryTable(data, searchVal = '') {
     const cuonId = String(row['Cuộn ID'] || '').trim();
     const lockStatus = window.inventoryLockService ? window.inventoryLockService.getLockStatus(cuonId) : { isLocked: false };
     const isLockedByOther = lockStatus.isLocked && !lockStatus.isMe;
+    const isSelected = formRolls.has(cuonId.toLowerCase());
 
     const tr = document.createElement('tr');
     if (isLockedByOther) {
@@ -1184,8 +1243,8 @@ function renderInventoryTable(data, searchVal = '') {
     let badgeHtml = '';
     if (isLockedByOther) {
       badgeHtml = `<span class="badge bg-warning text-dark ms-1" style="font-size: 0.75rem;" title="Đang soạn bởi ${lockStatus.lockedBy}"><i class="bi bi-lock-fill"></i> ${lockStatus.lockedBy} đang giữ</span>`;
-    } else if (lockStatus.isLocked && lockStatus.isMe) {
-      badgeHtml = `<span class="badge bg-info text-dark ms-1" style="font-size: 0.75rem;"><i class="bi bi-check-circle"></i> Bạn đang chọn</span>`;
+    } else if (isSelected) {
+      badgeHtml = `<span class="badge bg-primary ms-1" style="font-size: 0.75rem;"><i class="bi bi-check2-circle"></i> Đã chọn</span>`;
     }
 
     tr.innerHTML = `
@@ -1196,29 +1255,39 @@ function renderInventoryTable(data, searchVal = '') {
                data-ton-kg="${row['Tồn cuối (Kg)'] || 0}"
                data-ton-m="${row['Tồn cuối (m)'] || 0}"
                ${isLockedByOther ? 'disabled' : ''}
+               ${isSelected && !isLockedByOther ? 'checked' : ''}
                title="${isLockedByOther ? 'Cuộn này đang được ' + lockStatus.lockedBy + ' thao tác' : 'Chọn cuộn này'}">
       </td>
       <td>${row['Mã vật tư'] || ''}</td>
       <td>${row['Tên vật tư'] || ''}</td>
       <td>${row['Batch'] || ''}</td>
-      <td>${cuonId} ${badgeHtml}</td>
+      <td>${cuonId} <span class="lock-badge-container">${badgeHtml}</span></td>
       <td class="text-end">${parseNumericInput(row['Tồn cuối (Kg)'])?.toLocaleString('vi-VN', { maximumFractionDigits: 3 }) || ''}</td>
       <td class="text-end">${parseNumericInput(row['Tồn cuối (m)'])?.toLocaleString('vi-VN', { maximumFractionDigits: 3 }) || ''}</td>
     `;
 
     const cb = tr.querySelector('.inventory-checkbox');
-    cb.addEventListener('change', async () => {
+    cb.addEventListener('change', async (e) => {
+      e.stopPropagation();
       const checked = cb.checked;
-      if (checked && cuonId && window.inventoryLockService) {
-        const ok = await window.inventoryLockService.acquireLock(cuonId);
-        if (!ok) {
-          cb.checked = false;
-          alert(`⚠️ Cuộn "${cuonId}" vừa được người dùng khác giữ chỗ. Vui lòng chọn cuộn khác!`);
-          renderInventoryTable(cachedInventoryData || [], document.getElementById('inventorySearchInput')?.value || '');
-          return;
+      const badgeSpan = tr.querySelector('.lock-badge-container');
+      if (checked && cuonId) {
+        if (window.inventoryLockService) {
+          const ok = await window.inventoryLockService.acquireLock(cuonId, false);
+          if (!ok) {
+            cb.checked = false;
+            if (badgeSpan) badgeSpan.innerHTML = '';
+            alert(`⚠️ Cuộn "${cuonId}" vừa được người dùng khác giữ chỗ. Vui lòng chọn cuộn khác!`);
+            updateInventoryTableLockStates();
+            return;
+          }
         }
-      } else if (!checked && cuonId && window.inventoryLockService) {
-        window.inventoryLockService.releaseLock(cuonId);
+        if (badgeSpan) badgeSpan.innerHTML = `<span class="badge bg-primary ms-1" style="font-size: 0.75rem;"><i class="bi bi-check2-circle"></i> Đã chọn</span>`;
+      } else if (!checked && cuonId) {
+        if (window.inventoryLockService) {
+          window.inventoryLockService.releaseLock(cuonId, false);
+        }
+        if (badgeSpan) badgeSpan.innerHTML = '';
       }
       const countChecked = document.querySelectorAll('#inventoryTableBody .inventory-checkbox:checked').length;
       const countEl = document.getElementById('inventorySelectedCount');
@@ -1226,7 +1295,7 @@ function renderInventoryTable(data, searchVal = '') {
     });
 
     tr.addEventListener('click', (e) => {
-      if (e.target.classList.contains('inventory-checkbox') || isLockedByOther) return;
+      if (e.target.tagName === 'INPUT' || e.target.classList.contains('inventory-checkbox') || isLockedByOther) return;
       const chk = tr.querySelector('.inventory-checkbox');
       if (chk && !chk.disabled) { 
         chk.checked = !chk.checked; 
@@ -1237,14 +1306,20 @@ function renderInventoryTable(data, searchVal = '') {
     tbody.appendChild(tr);
   });
 
+  const countChecked = document.querySelectorAll('#inventoryTableBody .inventory-checkbox:checked').length;
+  const countEl = document.getElementById('inventorySelectedCount');
+  if (countEl) countEl.textContent = countChecked;
+
   // Select all checkbox
   const selectAllCb = document.getElementById('selectAllInventoryCheckbox');
   if (selectAllCb) {
     selectAllCb.checked = false;
     selectAllCb.onchange = (e) => {
       document.querySelectorAll('#inventoryTableBody .inventory-checkbox:not(:disabled)').forEach(cb => { 
-        cb.checked = e.target.checked;
-        cb.dispatchEvent(new Event('change'));
+        if (cb.checked !== e.target.checked) {
+          cb.checked = e.target.checked;
+          cb.dispatchEvent(new Event('change'));
+        }
       });
       const checked = document.querySelectorAll('#inventoryTableBody .inventory-checkbox:checked').length;
       const countEl = document.getElementById('inventorySelectedCount');

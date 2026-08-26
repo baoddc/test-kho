@@ -187,9 +187,10 @@
     /**
      * Chiếm khóa cho 1 cuộn
      * @param {string} cuonId 
+     * @param {boolean} shouldNotify - Có gọi listeners nội bộ không (mặc định true)
      * @returns {Promise<boolean>} True nếu chiếm khóa thành công
      */
-    async acquireLock(cuonId) {
+    async acquireLock(cuonId, shouldNotify = true) {
       const cleanId = String(cuonId || '').trim();
       if (!cleanId || !window.supabase) return true;
 
@@ -205,44 +206,48 @@
       }
 
       try {
-        const { data, error } = await window.supabase.rpc('acquire_inventory_lock', {
+        const expiresAt = Date.now() + 300000;
+        this.activeLocks.set(key, {
+          cuonId: cleanId,
+          lockedBy: currentUser,
+          expiresAt: expiresAt
+        });
+        this.myLockedRolls.add(key);
+
+        // Phát tin qua BroadcastChannel
+        if (this.broadcastChannel) {
+          this.broadcastChannel.postMessage({
+            type: 'LOCK_ACQUIRED',
+            cuonId: cleanId,
+            user: currentUser,
+            expiresAt: expiresAt
+          });
+        }
+
+        if (shouldNotify) this.notifyListeners();
+
+        // Gửi RPC lên Supabase không đồng bộ
+        window.supabase.rpc('acquire_inventory_lock', {
           p_module: this.moduleType,
           p_cuon_id: cleanId,
           p_user: currentUser,
-          p_ttl_seconds: 300 // 5 phút
+          p_ttl_seconds: 300
+        }).then(({ data, error }) => {
+          if (error) {
+            console.warn('[InventoryLockService] acquireLock RPC error:', error);
+          } else if (data === false) {
+            // Không chiếm được trên DB -> rollback local
+            this.activeLocks.delete(key);
+            this.myLockedRolls.delete(key);
+            this.notifyListeners();
+          }
+        }).catch(err => {
+          console.warn('[InventoryLockService] acquireLock exception:', err);
         });
 
-        if (error) {
-          console.warn('[InventoryLockService] acquireLock RPC error:', error);
-          // Fallback direct upsert nếu RPC chưa có
-          return true;
-        }
-
-        const success = data === true;
-        if (success) {
-          const expiresAt = Date.now() + 300000;
-          this.activeLocks.set(key, {
-            cuonId: cleanId,
-            lockedBy: currentUser,
-            expiresAt: expiresAt
-          });
-          this.myLockedRolls.add(key);
-
-          // Phát tin qua BroadcastChannel
-          if (this.broadcastChannel) {
-            this.broadcastChannel.postMessage({
-              type: 'LOCK_ACQUIRED',
-              cuonId: cleanId,
-              user: currentUser,
-              expiresAt: expiresAt
-            });
-          }
-
-          this.notifyListeners();
-        }
-        return success;
+        return true;
       } catch (err) {
-        console.error('[InventoryLockService] acquireLock exception:', err);
+        console.error('[InventoryLockService] acquireLock error:', err);
         return true;
       }
     }
@@ -250,8 +255,9 @@
     /**
      * Giải phóng khóa cho một hoặc nhiều cuộn
      * @param {string|string[]} cuonIds 
+     * @param {boolean} shouldNotify - Có gọi listeners nội bộ không (mặc định true)
      */
-    async releaseLock(cuonIds) {
+    async releaseLock(cuonIds, shouldNotify = true) {
       if (!cuonIds) return;
       const ids = Array.isArray(cuonIds) ? cuonIds : [cuonIds];
       const cleanIds = ids.map(id => String(id || '').trim()).filter(Boolean);
@@ -274,14 +280,14 @@
         });
       }
 
-      this.notifyListeners();
+      if (shouldNotify) this.notifyListeners();
 
       try {
-        await window.supabase.rpc('release_inventory_lock', {
+        window.supabase.rpc('release_inventory_lock', {
           p_module: this.moduleType,
           p_cuon_ids: cleanIds,
           p_user: currentUser
-        });
+        }).catch(e => console.warn('[InventoryLockService] releaseLock RPC error:', e));
       } catch (e) {
         console.warn('[InventoryLockService] releaseLock error:', e);
       }
