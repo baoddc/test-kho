@@ -1,30 +1,139 @@
 /* =============================================================================
-   COMPACT HEADER & SUMMARY CHIPS
+   TRA CỨU TỒN KHO THEO VỊ TRÍ KỆ - STYLESHEET
+   Light & Dark Theme Optimization with High Contrast
 ================================================================================ */
 
+/* Top Compact Header */
 .location-compact-header {
   border-radius: 8px;
   background-color: var(--bs-card-bg, #ffffff);
+  border: 1px solid var(--bs-border-color, #e2e8f0);
 }
 
 .compact-stat-chip {
   font-size: 0.85rem;
   line-height: 1.2;
+  background-color: var(--bs-tertiary-bg, #f8fafc);
+  border-color: var(--bs-border-color, #e2e8f0) !important;
+  color: var(--bs-body-color, #1e293b);
 }
 
+.chip-label {
+  color: var(--bs-secondary-color, #64748b);
+}
+
+.chip-unit {
+  color: var(--bs-secondary-color, #64748b);
+}
+
+.chip-divider {
+  color: var(--bs-border-color, #cbd5e1);
+}
+
+/* Metric Highlights - Light Mode */
+.stat-num-total {
+  color: #0284c7;
+}
+
+.stat-num-kg {
+  color: #16a34a;
+}
+
+.stat-num-xg {
+  color: #2563eb;
+}
+
+.stat-num-tole {
+  color: #d97706;
+}
+
+/* Metric Highlights - Dark Mode Overrides */
+[data-bs-theme="dark"] .stat-num-total {
+  color: #38bdf8 !important;
+}
+
+[data-bs-theme="dark"] .stat-num-kg {
+  color: #4ade80 !important;
+}
+
+[data-bs-theme="dark"] .stat-num-xg {
+  color: #60a5fa !important;
+}
+
+[data-bs-theme="dark"] .stat-num-tole {
+  color: #fbbf24 !important;
+}
+
+/* Navigation Tabs */
 .nav-pills .nav-link {
-  color: #495057;
+  color: var(--bs-secondary-color, #64748b);
+  background-color: var(--bs-tertiary-bg, #f1f5f9);
+  border: 1px solid var(--bs-border-color, #e2e8f0);
   border-radius: 6px;
-  padding: 6px 14px;
+  padding: 6px 16px;
   font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.nav-pills .nav-link:hover {
+  color: #0d6efd;
+  background-color: var(--bs-secondary-bg, #e2e8f0);
 }
 
 .nav-pills .nav-link.active {
-  background-color: #0d6efd;
-  color: #fff;
-  box-shadow: 0 2px 4px rgba(13, 110, 253, 0.25);
+  background-color: #0d6efd !important;
+  color: #ffffff !important;
+  border-color: #0d6efd !important;
+  box-shadow: 0 2px 6px rgba(13, 110, 253, 0.35);
 }
 
+[data-bs-theme="dark"] .nav-pills .nav-link:not(.active) {
+  color: #cbd5e1 !important;
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+[data-bs-theme="dark"] .nav-pills .nav-link:not(.active):hover {
+  color: #ffffff !important;
+  background-color: #334155 !important;
+}
+
+/* Subtitle and Section Headers */
+.table-subtitle {
+  color: var(--bs-secondary-color, #64748b);
+  font-weight: 600;
+}
+
+[data-bs-theme="dark"] .table-subtitle {
+  color: #e2e8f0 !important;
+}
+
+/* Badges for Total Weights */
+.badge-xg-total {
+  background-color: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+}
+
+.badge-tole-total {
+  background-color: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+[data-bs-theme="dark"] .badge-xg-total {
+  background-color: rgba(59, 130, 246, 0.2) !important;
+  color: #93c5fd !important;
+  border-color: rgba(59, 130, 246, 0.4) !important;
+}
+
+[data-bs-theme="dark"] .badge-tole-total {
+  background-color: rgba(245, 158, 11, 0.2) !important;
+  color: #fcd34d !important;
+  border-color: rgba(245, 158, 11, 0.4) !important;
+}
+
+/* Table Cells and Rows */
 .table th, .table td {
   white-space: nowrap;
   vertical-align: middle;
@@ -42,17 +151,40 @@
   font-size: 0.86rem;
 }
 
-/* =============================================================================
-   TABLE SCROLL CONTAINER & STICKY HEADER
-================================================================================ */
+.cell-mat-code {
+  font-weight: 600;
+  color: #2563eb;
+}
 
+.cell-quantity {
+  font-weight: 700;
+  color: #16a34a;
+}
+
+.cell-muted {
+  color: var(--bs-secondary-color, #64748b);
+}
+
+[data-bs-theme="dark"] .cell-mat-code {
+  color: #60a5fa !important;
+}
+
+[data-bs-theme="dark"] .cell-quantity {
+  color: #4ade80 !important;
+}
+
+[data-bs-theme="dark"] .cell-muted {
+  color: #94a3b8 !important;
+}
+
+/* Table Scroll Container & Sticky Header */
 .location-table-scroll {
   max-height: calc(100vh - 145px);
   min-height: 300px;
   overflow-y: auto;
   overflow-x: auto;
   border-radius: 6px;
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--bs-border-color, #dee2e6);
   position: relative;
 }
 
@@ -64,14 +196,14 @@
   position: sticky;
   top: 0;
   background-color: #f8fafc !important;
+  color: #1e293b !important;
   box-shadow: inset 0 -2px 0 #cbd5e1;
   z-index: 5;
 }
 
-/* Dark theme overrides */
 [data-bs-theme="dark"] .location-table-scroll thead th {
   background-color: #1e293b !important;
-  color: #f8fafc;
+  color: #f8fafc !important;
   box-shadow: inset 0 -2px 0 #334155;
 }
 
@@ -79,7 +211,7 @@
   border-color: #334155;
 }
 
-/* Custom modern scrollbars */
+/* Modern Scrollbars */
 .location-table-scroll::-webkit-scrollbar {
   width: 8px;
   height: 8px;

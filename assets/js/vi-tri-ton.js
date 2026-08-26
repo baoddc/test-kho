@@ -227,17 +227,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td class="text-center fw-bold text-muted">${index + 1}</td>
-        <td class="fw-bold text-primary">${item['Mã vật tư'] || ''}</td>
+        <td class="text-center fw-bold cell-muted">${index + 1}</td>
+        <td class="cell-mat-code">${item['Mã vật tư'] || ''}</td>
         <td>${item['Tên vật tư'] || ''}</td>
         <td class="fw-bold">${item['Cuộn ID'] || ''}</td>
         <td>${item['Batch'] || ''}</td>
-        <td class="text-end fw-bold text-success">${formatKg(item['Số lượng (Kg)'])}</td>
+        <td class="text-end cell-quantity">${formatKg(item['Số lượng (Kg)'])}</td>
         <td>${formatDate(item['Ngày nhập'])}</td>
         <td>${ageBadge}</td>
         <td>${item['Mã công trình'] || ''}</td>
         <td>${item['Tên công trình'] || ''}</td>
-        <td class="small text-muted">${item['Ghi chú'] || ''}</td>
+        <td class="small cell-muted">${item['Ghi chú'] || ''}</td>
       `;
       tbody.appendChild(tr);
     });

@@ -48,23 +48,21 @@
 
         <!-- Right: Inline Metric Pills -->
         <div class="d-flex align-items-center gap-2 ms-auto flex-wrap">
-          <div class="compact-stat-chip bg-body-tertiary border px-2 py-1 rounded d-flex align-items-center gap-1 shadow-sm">
-            <span class="text-muted small">Tổng:</span>
-            <span class="fw-bold text-primary" id="totalRollsCount">0</span> <small class="text-muted">cuộn</small>
-            <span class="text-muted mx-1">|</span>
-            <span class="fw-bold text-success" id="totalWeightKg">0</span> <small class="text-muted">kg</small>
+          <div class="compact-stat-chip border px-2 py-1 rounded d-flex align-items-center gap-1 shadow-sm text-nowrap">
+            <span class="chip-label small">Tổng:</span>
+            <span class="fw-bold stat-num-total" id="totalRollsCount">0</span> <small class="chip-unit">cuộn</small>
+            <span class="chip-divider mx-1">|</span>
+            <span class="fw-bold stat-num-kg" id="totalWeightKg">0</span> <small class="chip-unit">kg</small>
           </div>
 
-          <div class="compact-stat-chip bg-body-tertiary border px-2 py-1 rounded d-flex align-items-center gap-2 shadow-sm small">
-            <span class="text-primary fw-semibold" id="statXgSummary">XG: 0 cuộn (0 kg)</span>
-            <span class="text-muted">·</span>
-            <span class="text-warning-emphasis fw-semibold" id="statToleSummary">Tole: 0 cuộn (0 kg)</span>
+          <div class="compact-stat-chip border px-2 py-1 rounded d-flex align-items-center gap-2 shadow-sm small text-nowrap">
+            <span class="fw-semibold stat-num-xg" id="statXgSummary">XG: 0 cuộn (0 kg)</span>
+            <span class="chip-divider">·</span>
+            <span class="fw-semibold stat-num-tole" id="statToleSummary">Tole: 0 cuộn (0 kg)</span>
           </div>
         </div>
       </div>
     </div>
-
-
 
     <!-- Loading State -->
     <div id="loadingIndicator" class="text-center py-4">
@@ -76,7 +74,7 @@
 
     <!-- Dual Tab Navigation: Xà gồ & Tole -->
     <div class="card shadow-sm border-0" id="mainDataCard" style="display: none;">
-      <div class="card-header bg-white p-2 border-bottom">
+      <div class="card-header border-bottom py-2 px-3">
         <ul class="nav nav-pills card-header-pills" id="inventoryTab" role="tablist">
           <li class="nav-item" role="presentation">
             <button class="nav-link active fw-bold position-relative me-2" id="xg-tab" data-bs-toggle="pill" data-bs-target="#xgTabContent" type="button" role="tab">
@@ -97,12 +95,12 @@
           <!-- TAB 1: XÀ GỒ -->
           <div class="tab-pane fade show active p-3" id="xgTabContent" role="tabpanel">
             <div class="d-flex align-items-center justify-content-between mb-2">
-              <span class="text-muted small">Danh sách cuộn Xà gồ đang nằm tại kệ</span>
-              <span class="badge bg-primary-subtle text-primary fw-bold" id="xgTotalKgBadge">0 Kg</span>
+              <span class="table-subtitle small">Danh sách cuộn Xà gồ đang nằm tại kệ</span>
+              <span class="badge badge-xg-total fw-bold" id="xgTotalKgBadge">0 Kg</span>
             </div>
             <div class="table-responsive location-table-scroll">
               <table class="table table-bordered table-hover align-middle mb-0" id="xgTable">
-                <thead class="table-light">
+                <thead>
                   <tr>
                     <th style="width: 40px;">STT</th>
                     <th>Mã vật tư</th>
@@ -125,12 +123,12 @@
           <!-- TAB 2: TOLE -->
           <div class="tab-pane fade p-3" id="toleTabContent" role="tabpanel">
             <div class="d-flex align-items-center justify-content-between mb-2">
-              <span class="text-muted small">Danh sách cuộn Tole đang nằm tại kệ</span>
-              <span class="badge bg-warning-subtle text-dark fw-bold" id="toleTotalKgBadge">0 Kg</span>
+              <span class="table-subtitle small">Danh sách cuộn Tole đang nằm tại kệ</span>
+              <span class="badge badge-tole-total fw-bold" id="toleTotalKgBadge">0 Kg</span>
             </div>
             <div class="table-responsive location-table-scroll">
               <table class="table table-bordered table-hover align-middle mb-0" id="toleTable">
-                <thead class="table-light">
+                <thead>
                   <tr>
                     <th style="width: 40px;">STT</th>
                     <th>Mã vật tư</th>
