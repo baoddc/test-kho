@@ -133,6 +133,18 @@ let selectedRowIndexes = [];
 let rollCount = 0;
 let editRollCount = 0;
 
+const xgChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('xg_sync_channel') : null;
+
+function broadcastXgEvent(eventType, payload = {}) {
+  if (xgChannel) {
+    try {
+      xgChannel.postMessage({ type: eventType, ...payload, timestamp: Date.now() });
+    } catch (err) {
+      console.warn('Broadcast error:', err);
+    }
+  }
+}
+
 
 /* =============================================================================
    LOADING OVERLAY
@@ -1453,6 +1465,14 @@ document.addEventListener('submit', async (e) => {
       if (error) throw error;
 
       if (window.supabaseDataEngine) window.supabaseDataEngine.invalidateCache(TABLE_NAME);
+      if (typeof clearStoredTableCache === 'function') {
+        clearStoredTableCache('xg-ton');
+      }
+
+      broadcastXgEvent('XG_NHAP_INSERT', {
+        records: insertedData || []
+      });
+
       await populateDistinctFilterDropdowns();
       await fetchDataFromSupabase(currentPage);
 
@@ -1530,6 +1550,14 @@ document.addEventListener('submit', async (e) => {
       if (error) throw error;
 
       if (window.supabaseDataEngine) window.supabaseDataEngine.invalidateCache(TABLE_NAME);
+      if (typeof clearStoredTableCache === 'function') {
+        clearStoredTableCache('xg-ton');
+      }
+
+      broadcastXgEvent('XG_NHAP_UPDATE', {
+        record: updatedData ? updatedData[0] : null
+      });
+
       await populateDistinctFilterDropdowns();
       await fetchDataFromSupabase(currentPage);
 
@@ -1602,6 +1630,14 @@ document.addEventListener('click', async (e) => {
       }
 
       if (window.supabaseDataEngine) window.supabaseDataEngine.invalidateCache(TABLE_NAME);
+      if (typeof clearStoredTableCache === 'function') {
+        clearStoredTableCache('xg-ton');
+      }
+
+      broadcastXgEvent('XG_NHAP_DELETE', {
+        ids: idsToDelete
+      });
+
       await populateDistinctFilterDropdowns();
       await fetchDataFromSupabase(currentPage);
 
