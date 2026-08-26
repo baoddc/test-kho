@@ -1240,6 +1240,8 @@ function renderInventoryTable(data, searchVal = '') {
       tr.style.opacity = '0.75';
     }
 
+    tr.style.cursor = isLockedByOther ? 'not-allowed' : 'pointer';
+
     let badgeHtml = '';
     if (isLockedByOther) {
       badgeHtml = `<span class="badge bg-warning text-dark ms-1" style="font-size: 0.75rem;" title="Đang soạn bởi ${lockStatus.lockedBy}"><i class="bi bi-lock-fill"></i> ${lockStatus.lockedBy} đang giữ</span>`;
@@ -1272,6 +1274,7 @@ function renderInventoryTable(data, searchVal = '') {
       const checked = cb.checked;
       const badgeSpan = tr.querySelector('.lock-badge-container');
       if (checked && cuonId) {
+        if (badgeSpan) badgeSpan.innerHTML = `<span class="badge bg-primary ms-1" style="font-size: 0.75rem;"><i class="bi bi-check2-circle"></i> Đã chọn</span>`;
         if (window.inventoryLockService) {
           const ok = await window.inventoryLockService.acquireLock(cuonId, false);
           if (!ok) {
@@ -1282,12 +1285,11 @@ function renderInventoryTable(data, searchVal = '') {
             return;
           }
         }
-        if (badgeSpan) badgeSpan.innerHTML = `<span class="badge bg-primary ms-1" style="font-size: 0.75rem;"><i class="bi bi-check2-circle"></i> Đã chọn</span>`;
       } else if (!checked && cuonId) {
+        if (badgeSpan) badgeSpan.innerHTML = '';
         if (window.inventoryLockService) {
           window.inventoryLockService.releaseLock(cuonId, false);
         }
-        if (badgeSpan) badgeSpan.innerHTML = '';
       }
       const countChecked = document.querySelectorAll('#inventoryTableBody .inventory-checkbox:checked').length;
       const countEl = document.getElementById('inventorySelectedCount');
@@ -1346,19 +1348,33 @@ document.addEventListener('click', (e) => {
     const target = currentModalTarget;
 
     if (target === 'add') {
+      const existingCuonIds = new Set(
+        Array.from(document.querySelectorAll('#rollsTableBody .roll-cuon-id'))
+          .map(inp => inp.value.trim().toLowerCase())
+          .filter(Boolean)
+      );
       selectedCheckboxes.forEach(cb => {
         const maVatTu = cb.dataset.maVatTu || '';
         const cuonId = cb.dataset.cuonId || '';
         const tonKg = parseNumericInput(cb.dataset.tonKg) || 0;
         const tonM = parseNumericInput(cb.dataset.tonM) || 0;
-        addRollRow(maVatTu, cuonId, String(tonKg), String(tonM));
+        if (!existingCuonIds.has(cuonId.toLowerCase())) {
+          addRollRow(maVatTu, cuonId, String(tonKg), String(tonM));
+        }
       });
     } else if (target === 'edit') {
+      const existingCuonIds = new Set(
+        Array.from(document.querySelectorAll('#editRollsTableBody .roll-cuon-id'))
+          .map(inp => inp.value.trim().toLowerCase())
+          .filter(Boolean)
+      );
       selectedCheckboxes.forEach(cb => {
         const cuonId = cb.dataset.cuonId || '';
         const tonKg = parseNumericInput(cb.dataset.tonKg) || 0;
         const tonM = parseNumericInput(cb.dataset.tonM) || 0;
-        addEditRollRow(cuonId, String(tonKg), String(tonM));
+        if (!existingCuonIds.has(cuonId.toLowerCase())) {
+          addEditRollRow(cuonId, String(tonKg), String(tonM));
+        }
       });
     }
 
