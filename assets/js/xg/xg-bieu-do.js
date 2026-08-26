@@ -293,6 +293,7 @@ window.addEventListener('load', () => {
   }
 
   loadAllData();
+  setupDashboardRealtime();
 });
 
 async function fetchAllFromTable(tableName) {
@@ -373,11 +374,89 @@ async function loadAllData() {
 
     // 5. Ẩn loading
     document.getElementById('loading').style.display = 'none';
+    setupDashboardRealtime();
 
   } catch (error) {
     document.getElementById('loading').innerHTML =
       `Lỗi kết nối database: ${error.message}<br>Kiểm tra kết nối hoặc cấu hình Supabase.`;
     console.error(error);
+  }
+}
+
+/* =============================================================================
+   REALTIME & BROADCAST DASHBOARD SYNC
+================================================================================ */
+
+const xgChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('xg_sync_channel') : null;
+let realtimeChannel = null;
+
+function setupDashboardRealtime() {
+  if (xgChannel && !window._xgDashboardBroadcastInitialized) {
+    window._xgDashboardBroadcastInitialized = true;
+    xgChannel.onmessage = (event) => {
+      const msg = event.data;
+      if (!msg || !msg.type) return;
+      debouncedReloadDashboard();
+    };
+  }
+
+  if (window.supabase && !realtimeChannel) {
+    try {
+      realtimeChannel = window.supabase
+        .channel('public:xg_realtime_bieudo')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'xg-xuat' }, () => {
+          debouncedReloadDashboard();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'xg-nhap' }, () => {
+          debouncedReloadDashboard();
+        })
+        .subscribe();
+    } catch (err) {
+      console.warn('[xg-bieu-do] Realtime error:', err);
+    }
+  }
+}
+
+const debouncedReloadDashboard = debounce(() => {
+  reloadDashboardQuietly();
+}, 500);
+
+async function reloadDashboardQuietly() {
+  try {
+    const [rawNhap, rawXuat, rawTonResult] = await Promise.all([
+      fetchAllFromTable(TABLE_NHAP),
+      fetchAllFromTable(TABLE_XUAT),
+      fetchAllFromTable(TABLE_TON)
+    ]);
+    let rawTon = rawTonResult;
+
+    if (!rawTon || rawTon.length === 0) {
+      const exportedCuonIds = new Set(
+        rawXuat
+          .map(row => String(row['Cuộn ID'] || '').trim().toLowerCase())
+          .filter(cuonId => cuonId !== '')
+      );
+      rawTon = rawNhap.filter(row => {
+        const cuonId = String(row['Cuộn ID'] || '').trim().toLowerCase();
+        if (!cuonId) return false;
+        return !exportedCuonIds.has(cuonId);
+      });
+    }
+
+    const rowToArray = (obj, headers) => headers.map(col => obj[col] ?? '');
+    const rawNhapFiltered = rawNhap.filter(r => r && r['Mã chứng từ'] && String(r['Mã chứng từ']).trim() !== '');
+    const rawXuatFiltered = rawXuat.filter(r => r && r['Mã chứng từ'] && String(r['Mã chứng từ']).trim() !== '');
+
+    importData = [COLUMN_HEADERS_NHAP, ...rawNhapFiltered.map(r => rowToArray(r, COLUMN_HEADERS_NHAP))];
+    exportData = [COLUMN_HEADERS_XUAT, ...rawXuatFiltered.map(r => rowToArray(r, COLUMN_HEADERS_XUAT))];
+    tonData = [COLUMN_HEADERS_TON, ...rawTon.map(r => rowToArray(r, COLUMN_HEADERS_TON))];
+
+    importRollsData = importData;
+    exportRollsData = exportData;
+
+    processDataAndCreateCharts();
+  } catch (err) {
+    console.error('Silent dashboard reload error:', err);
   }
 }
 
