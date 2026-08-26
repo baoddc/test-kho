@@ -302,6 +302,24 @@ window.addEventListener('load', () => {
     logo.addEventListener('click', () => { window.location.href = '/'; });
   }
 
+  const btnScanBatchLocation = document.getElementById('btnScanBatchLocation');
+  if (btnScanBatchLocation) {
+    btnScanBatchLocation.addEventListener('click', () => {
+      if (window.qrScannerService && window.qrScannerService.openQRCameraScanner) {
+        window.qrScannerService.openQRCameraScanner((scannedRack) => {
+          const locInputs = document.querySelectorAll('#rollsTableBody .roll-vi-tri');
+          if (locInputs.length === 0 && typeof addRollRow === 'function') {
+            addRollRow('', '', scannedRack);
+          } else {
+            locInputs.forEach(input => { input.value = scannedRack; });
+          }
+        });
+      } else {
+        alert('Module quét mã QR chưa sẵn sàng.');
+      }
+    });
+  }
+
   loadSupabaseData();
 });
 
@@ -1311,14 +1329,41 @@ function addRollRow(cuonId = '', kgValue = '', viTri = '') {
   const tbody = document.getElementById('rollsTableBody');
   const tr = document.createElement('tr');
   tr.dataset.rollId = rollCount;
+
+  if (!viTri) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const vitriParam = urlParams.get('vitri') || urlParams.get('loc') || urlParams.get('location');
+    if (vitriParam) {
+      viTri = window.qrScannerService ? window.qrScannerService.parseLocationQRCode(vitriParam) : vitriParam.trim().toUpperCase();
+    }
+  }
+
   tr.innerHTML = `
     <td class="text-center roll-stt">${rollCount}</td>
     <td><input type="text" class="form-control form-control-sm roll-cuon-id" readonly placeholder="Cuộn ID" value="${cuonId}"></td>
     <td><input type="number" class="form-control form-control-sm roll-kg" step="any" min="0" inputMode="decimal" required placeholder="Nhập số kg" value="${kgValue}"></td>
-    <td><input type="text" class="form-control form-control-sm roll-vi-tri" required placeholder="Vị trí" value="${viTri}"></td>
+    <td>
+      <div class="input-group input-group-sm">
+        <input type="text" class="form-control form-control-sm roll-vi-tri" required placeholder="Vị trí" value="${viTri}">
+        <button type="button" class="btn btn-outline-secondary btn-scan-row-loc" title="Quét mã QR vị trí"><i class="bi bi-qr-code-scan"></i></button>
+      </div>
+    </td>
     <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger btn-remove-roll">X</button></td>
   `;
   tbody.appendChild(tr);
+
+  const btnScanLoc = tr.querySelector('.btn-scan-row-loc');
+  if (btnScanLoc) {
+    btnScanLoc.addEventListener('click', () => {
+      if (window.qrScannerService && window.qrScannerService.openQRCameraScanner) {
+        window.qrScannerService.openQRCameraScanner((scannedRack) => {
+          const locInput = tr.querySelector('.roll-vi-tri');
+          if (locInput) locInput.value = scannedRack;
+        });
+      }
+    });
+  }
+
   tr.querySelector('.btn-remove-roll').addEventListener('click', () => { 
     tr.remove(); 
     updateRollNumbers(); 
@@ -1361,10 +1406,28 @@ function addEditRollRow(cuonId = '', kgValue = '', viTri = '') {
     <td class="text-center edit-roll-stt">${editRollCount}</td>
     <td><input type="text" class="form-control form-control-sm edit-roll-cuon-id" readonly placeholder="Cuộn ID" value="${cuonId}"></td>
     <td><input type="number" class="form-control form-control-sm edit-roll-kg" step="any" min="0" inputMode="decimal" required placeholder="Nhập số kg" value="${kgValue}"></td>
-    <td><input type="text" class="form-control form-control-sm edit-roll-vi-tri" required placeholder="Vị trí" value="${viTri}"></td>
+    <td>
+      <div class="input-group input-group-sm">
+        <input type="text" class="form-control form-control-sm edit-roll-vi-tri" required placeholder="Vị trí" value="${viTri}">
+        <button type="button" class="btn btn-outline-secondary btn-scan-edit-row-loc" title="Quét mã QR vị trí"><i class="bi bi-qr-code-scan"></i></button>
+      </div>
+    </td>
     <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger btn-remove-edit-roll">X</button></td>
   `;
   tbody.appendChild(tr);
+
+  const btnScanEditLoc = tr.querySelector('.btn-scan-edit-row-loc');
+  if (btnScanEditLoc) {
+    btnScanEditLoc.addEventListener('click', () => {
+      if (window.qrScannerService && window.qrScannerService.openQRCameraScanner) {
+        window.qrScannerService.openQRCameraScanner((scannedRack) => {
+          const locInput = tr.querySelector('.edit-roll-vi-tri');
+          if (locInput) locInput.value = scannedRack;
+        });
+      }
+    });
+  }
+
   tr.querySelector('.btn-remove-edit-roll').addEventListener('click', () => { 
     tr.remove(); 
     updateEditRollNumbers(); 
