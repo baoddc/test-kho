@@ -213,7 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!items || items.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="10" class="text-center py-4 text-muted fst-italic">
+          <td colspan="11" class="text-center py-4 text-muted fst-italic">
             Không có cuộn ${warehouseType === 'xg' ? 'Xà gồ' : 'Tole'} nào tại kệ này.
           </td>
         </tr>
@@ -236,6 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <td>${formatDate(item['Ngày nhập'])}</td>
         <td>${ageBadge}</td>
         <td>${item['Mã công trình'] || ''}</td>
+        <td>${item['Tên công trình'] || ''}</td>
         <td class="small text-muted">${item['Ghi chú'] || ''}</td>
       `;
       tbody.appendChild(tr);

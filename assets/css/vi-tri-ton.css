@@ -71,3 +71,49 @@
     font-size: 1.15rem !important;
   }
 }
+
+/* =============================================================================
+   TABLE SCROLL CONTAINER & STICKY HEADER
+================================================================================ */
+
+.location-table-scroll {
+  max-height: calc(100vh - 270px);
+  min-height: 250px;
+  overflow-y: auto;
+  overflow-x: auto;
+  border-radius: 6px;
+  border: 1px solid #dee2e6;
+  position: relative;
+}
+
+.location-table-scroll table {
+  margin-bottom: 0 !important;
+}
+
+.location-table-scroll thead th {
+  position: sticky;
+  top: 0;
+  background-color: #f8fafc !important;
+  box-shadow: inset 0 -2px 0 #cbd5e1;
+  z-index: 5;
+}
+
+/* Custom modern scrollbars */
+.location-table-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.location-table-scroll::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.location-table-scroll::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 4px;
+}
+
+.location-table-scroll::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
