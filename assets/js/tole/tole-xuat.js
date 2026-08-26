@@ -254,6 +254,16 @@ window.addEventListener('load', () => {
   const logo = document.querySelector('.logo');
   if (logo) { logo.style.cursor = 'pointer'; logo.addEventListener('click', () => { window.location.href = '/'; }); }
 
+  if (window.inventoryLockService) {
+    window.inventoryLockService.init('tole');
+    window.inventoryLockService.onLocksChange(() => {
+      const modal = document.getElementById('inventoryRollsModal');
+      if (modal && modal.classList.contains('show')) {
+        renderInventoryTable(cachedInventoryData || [], document.getElementById('inventorySearchInput')?.value || '');
+      }
+    });
+  }
+
   loadSupabaseData();
 });
 
@@ -1161,33 +1171,69 @@ function renderInventoryTable(data, searchVal = '') {
     : data;
 
   filtered.forEach(row => {
+    const cuonId = String(row['Cuộn ID'] || '').trim();
+    const lockStatus = window.inventoryLockService ? window.inventoryLockService.getLockStatus(cuonId) : { isLocked: false };
+    const isLockedByOther = lockStatus.isLocked && !lockStatus.isMe;
+
     const tr = document.createElement('tr');
+    if (isLockedByOther) {
+      tr.classList.add('table-warning');
+      tr.style.opacity = '0.75';
+    }
+
+    let badgeHtml = '';
+    if (isLockedByOther) {
+      badgeHtml = `<span class="badge bg-warning text-dark ms-1" style="font-size: 0.75rem;" title="Đang soạn bởi ${lockStatus.lockedBy}"><i class="bi bi-lock-fill"></i> ${lockStatus.lockedBy} đang giữ</span>`;
+    } else if (lockStatus.isLocked && lockStatus.isMe) {
+      badgeHtml = `<span class="badge bg-info text-dark ms-1" style="font-size: 0.75rem;"><i class="bi bi-check-circle"></i> Bạn đang chọn</span>`;
+    }
+
     tr.innerHTML = `
       <td class="text-center">
         <input type="checkbox" class="inventory-checkbox"
                data-ma-vat-tu="${row['Mã vật tư'] || ''}"
-               data-cuon-id="${row['Cuộn ID'] || ''}"
+               data-cuon-id="${cuonId}"
                data-ton-kg="${row['Tồn cuối (Kg)'] || 0}"
                data-ton-m="${row['Tồn cuối (m)'] || 0}"
-               title="Chọn cuộn này">
+               ${isLockedByOther ? 'disabled' : ''}
+               title="${isLockedByOther ? 'Cuộn này đang được ' + lockStatus.lockedBy + ' thao tác' : 'Chọn cuộn này'}">
       </td>
       <td>${row['Mã vật tư'] || ''}</td>
       <td>${row['Tên vật tư'] || ''}</td>
       <td>${row['Batch'] || ''}</td>
-      <td>${row['Cuộn ID'] || ''}</td>
+      <td>${cuonId} ${badgeHtml}</td>
       <td class="text-end">${parseNumericInput(row['Tồn cuối (Kg)'])?.toLocaleString('vi-VN', { maximumFractionDigits: 3 }) || ''}</td>
       <td class="text-end">${parseNumericInput(row['Tồn cuối (m)'])?.toLocaleString('vi-VN', { maximumFractionDigits: 3 }) || ''}</td>
     `;
-    tr.querySelector('.inventory-checkbox').addEventListener('change', () => {
-      const checked = document.querySelectorAll('#inventoryTableBody .inventory-checkbox:checked').length;
+
+    const cb = tr.querySelector('.inventory-checkbox');
+    cb.addEventListener('change', async () => {
+      const checked = cb.checked;
+      if (checked && cuonId && window.inventoryLockService) {
+        const ok = await window.inventoryLockService.acquireLock(cuonId);
+        if (!ok) {
+          cb.checked = false;
+          alert(`⚠️ Cuộn "${cuonId}" vừa được người dùng khác giữ chỗ. Vui lòng chọn cuộn khác!`);
+          renderInventoryTable(cachedInventoryData || [], document.getElementById('inventorySearchInput')?.value || '');
+          return;
+        }
+      } else if (!checked && cuonId && window.inventoryLockService) {
+        window.inventoryLockService.releaseLock(cuonId);
+      }
+      const countChecked = document.querySelectorAll('#inventoryTableBody .inventory-checkbox:checked').length;
       const countEl = document.getElementById('inventorySelectedCount');
-      if (countEl) countEl.textContent = checked;
+      if (countEl) countEl.textContent = countChecked;
     });
+
     tr.addEventListener('click', (e) => {
-      if (e.target.classList.contains('inventory-checkbox')) return;
-      const cb = tr.querySelector('.inventory-checkbox');
-      if (cb) { cb.checked = !cb.checked; cb.dispatchEvent(new Event('change')); }
+      if (e.target.classList.contains('inventory-checkbox') || isLockedByOther) return;
+      const chk = tr.querySelector('.inventory-checkbox');
+      if (chk && !chk.disabled) { 
+        chk.checked = !chk.checked; 
+        chk.dispatchEvent(new Event('change')); 
+      }
     });
+
     tbody.appendChild(tr);
   });
 
@@ -1196,7 +1242,10 @@ function renderInventoryTable(data, searchVal = '') {
   if (selectAllCb) {
     selectAllCb.checked = false;
     selectAllCb.onchange = (e) => {
-      document.querySelectorAll('#inventoryTableBody .inventory-checkbox').forEach(cb => { cb.checked = e.target.checked; });
+      document.querySelectorAll('#inventoryTableBody .inventory-checkbox:not(:disabled)').forEach(cb => { 
+        cb.checked = e.target.checked;
+        cb.dispatchEvent(new Event('change'));
+      });
       const checked = document.querySelectorAll('#inventoryTableBody .inventory-checkbox:checked').length;
       const countEl = document.getElementById('inventorySelectedCount');
       if (countEl) countEl.textContent = checked;
@@ -1262,7 +1311,15 @@ function addRollRow(maVatTu = '', cuonId = '', kgValue = '', mValue = '') {
     <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger btn-remove-roll">X</button></td>
   `;
   tbody.appendChild(tr);
-  tr.querySelector('.btn-remove-roll').addEventListener('click', () => { tr.remove(); updateRollNumbers(); updateRollTotals(); });
+  tr.querySelector('.btn-remove-roll').addEventListener('click', () => { 
+    const cid = tr.querySelector('.roll-cuon-id')?.value.trim();
+    if (cid && window.inventoryLockService) {
+      window.inventoryLockService.releaseLock(cid);
+    }
+    tr.remove(); 
+    updateRollNumbers(); 
+    updateRollTotals(); 
+  });
   tr.querySelector('.roll-kg').addEventListener('input', updateRollTotals);
   tr.querySelector('.roll-m').addEventListener('input', updateRollTotals);
   updateRollTotals();
@@ -1407,10 +1464,27 @@ document.addEventListener('submit', async (e) => {
         'Số lượng (m)': roll.m
       }));
 
-      const { data: insertedData, error } = await supabase
-        .from(TABLE_NAME).insert(recordsToInsert).select();
+      // Gọi RPC giao dịch nguyên tử xuat_tole_atomic
+      const currentUser = (typeof localStorage !== 'undefined' && localStorage.getItem('currentUser')) || 'anonymous';
+      let insertedData = null;
 
-      if (error) throw error;
+      try {
+        const { data, error } = await supabase.rpc('xuat_tole_atomic', {
+          p_records: recordsToInsert,
+          p_user: currentUser
+        });
+        if (error) throw error;
+        insertedData = Array.isArray(data) ? data : [data];
+      } catch (rpcErr) {
+        console.warn('RPC xuat_tole_atomic failed, falling back to direct insert if RPC not found:', rpcErr);
+        if (rpcErr.message && (rpcErr.message.includes('function public.xuat_tole_atomic') || rpcErr.message.includes('does not exist'))) {
+          const { data, error } = await supabase.from(TABLE_NAME).insert(recordsToInsert).select();
+          if (error) throw error;
+          insertedData = data;
+        } else {
+          throw rpcErr;
+        }
+      }
 
       if (insertedData) {
         insertedData.forEach(row => {

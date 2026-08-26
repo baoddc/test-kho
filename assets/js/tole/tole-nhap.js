@@ -1346,6 +1346,15 @@ document.addEventListener('submit', async (e) => {
         extData[COLUMN_HEADERS[colIdx]] = inp.value || null;
       });
 
+      // Kiểm tra trùng Cuộn ID trong cùng danh sách nhập
+      const inputCuonIds = rollDataList.map(r => (r.cuonId || '').trim().toLowerCase()).filter(Boolean);
+      const duplicateInBatch = inputCuonIds.filter((item, index) => inputCuonIds.indexOf(item) !== index);
+      if (duplicateInBatch.length > 0) {
+        alert(`⚠️ Cuộn ID "${duplicateInBatch[0]}" bị nhập trùng lặp nhiều lần trong danh sách!`);
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = originalText; }
+        hideLoadingOverlay(); return;
+      }
+
       // Tạo records cho Supabase
       const recordsToInsert = rollDataList.map(roll => ({
         ...commonData,
@@ -1359,7 +1368,12 @@ document.addEventListener('submit', async (e) => {
       const { data: insertedData, error } = await supabase
         .from(TABLE_NAME).insert(recordsToInsert).select();
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23505' || (error.message && error.message.includes('unique'))) {
+          throw new Error('Một hoặc nhiều Cuộn ID đã tồn tại trong hệ thống. Vui lòng kiểm tra lại!');
+        }
+        throw error;
+      }
 
       if (insertedData) {
         insertedData.forEach(row => {
