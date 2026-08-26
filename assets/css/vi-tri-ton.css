@@ -25,16 +25,21 @@
   box-shadow: 0 2px 4px rgba(13, 110, 253, 0.25);
 }
 
+.table th, .table td {
+  white-space: nowrap;
+  vertical-align: middle;
+  padding: 6px 10px;
+}
+
 .table th {
   font-size: 0.82rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   font-weight: 700;
-  white-space: nowrap;
 }
 
 .table td {
-  font-size: 0.88rem;
+  font-size: 0.86rem;
 }
 
 /* =============================================================================
@@ -63,6 +68,17 @@
   z-index: 5;
 }
 
+/* Dark theme overrides */
+[data-bs-theme="dark"] .location-table-scroll thead th {
+  background-color: #1e293b !important;
+  color: #f8fafc;
+  box-shadow: inset 0 -2px 0 #334155;
+}
+
+[data-bs-theme="dark"] .location-table-scroll {
+  border-color: #334155;
+}
+
 /* Custom modern scrollbars */
 .location-table-scroll::-webkit-scrollbar {
   width: 8px;
@@ -74,9 +90,17 @@
   border-radius: 4px;
 }
 
+[data-bs-theme="dark"] .location-table-scroll::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+
 .location-table-scroll::-webkit-scrollbar-thumb {
   background: #94a3b8;
   border-radius: 4px;
+}
+
+[data-bs-theme="dark"] .location-table-scroll::-webkit-scrollbar-thumb {
+  background: #475569;
 }
 
 .location-table-scroll::-webkit-scrollbar-thumb:hover {

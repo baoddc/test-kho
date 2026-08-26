@@ -27,24 +27,23 @@
     <!-- Compact Top Bar: Controls & Quick Stats -->
     <div class="card shadow-sm border-0 mb-2 location-compact-header">
       <div class="card-body p-2 px-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
-        <!-- Left: Badge + Dropdown + Scanner -->
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-          <div class="d-flex align-items-center gap-1 bg-primary text-white px-2 py-1 rounded-2 shadow-sm">
-            <i class="bi bi-geo-alt-fill"></i>
-            <span class="fw-bold fs-6" id="displayRackTitle">KỆ A01</span>
-          </div>
-
-          <div class="d-flex align-items-center gap-1">
+        <!-- Left: Unified Location Selector & Scanner -->
+        <div class="d-flex align-items-center gap-2 flex-nowrap">
+          <div class="input-group input-group-sm" style="width: auto;">
+            <span class="input-group-text bg-primary text-white border-primary fw-bold px-2">
+              <i class="bi bi-geo-alt-fill me-1"></i> Vị trí:
+            </span>
             <select id="rackSelectDropdown" class="form-select form-select-sm fw-bold border-primary shadow-sm" style="min-width: 120px; height: 32px;">
               <!-- Populated by JS -->
             </select>
-            <button id="btnScanAnotherRack" class="btn btn-sm btn-outline-primary shadow-sm d-flex align-items-center gap-1" style="height: 32px;" title="Quét mã QR kệ khác">
-              <i class="bi bi-qr-code-scan"></i> <span class="d-none d-md-inline">Quét Kệ</span>
-            </button>
-            <button id="btnRefreshData" class="btn btn-sm btn-outline-secondary shadow-sm" style="height: 32px;" title="Tải lại dữ liệu">
-              <i class="bi bi-arrow-clockwise"></i>
-            </button>
           </div>
+
+          <button id="btnScanAnotherRack" class="btn btn-sm btn-outline-primary shadow-sm d-inline-flex align-items-center gap-1 text-nowrap px-2" style="height: 32px; white-space: nowrap; flex-shrink: 0;" title="Quét mã QR kệ khác">
+            <i class="bi bi-qr-code-scan"></i> <span>Quét Kệ</span>
+          </button>
+          <button id="btnRefreshData" class="btn btn-sm btn-outline-secondary shadow-sm d-inline-flex align-items-center justify-content-center" style="height: 32px; width: 34px; flex-shrink: 0;" title="Tải lại dữ liệu">
+            <i class="bi bi-arrow-clockwise"></i>
+          </button>
         </div>
 
         <!-- Right: Inline Metric Pills -->
