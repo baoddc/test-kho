@@ -106,6 +106,18 @@ let rollCount = 0;
 let editRollCount = 0;
 let currentMaVatTuFilter = '';
 
+const toleChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('tole_sync_channel') : null;
+
+function broadcastToleEvent(eventType, payload = {}) {
+  if (toleChannel) {
+    try {
+      toleChannel.postMessage({ type: eventType, ...payload, timestamp: Date.now() });
+    } catch (err) {
+      console.warn('Broadcast error:', err);
+    }
+  }
+}
+
 
 /* =============================================================================
    LOADING OVERLAY
@@ -1408,6 +1420,36 @@ document.addEventListener('submit', async (e) => {
           arr.originalIndex = tableData.length;
           tableData.push(arr);
         });
+
+        // Update local SWR cache for tole-xuat
+        if (typeof setStoredTableCache === 'function') {
+          setStoredTableCache(TABLE_NAME, window._rawSupabaseData);
+        }
+
+        // Extract exported Cuộn IDs
+        const exportedCuonIds = insertedData
+          .map(r => String(r['Cuộn ID'] || '').trim())
+          .filter(Boolean);
+
+        // Update in-memory cachedInventoryData if loaded
+        if (cachedInventoryData && Array.isArray(cachedInventoryData)) {
+          const exportedSet = new Set(exportedCuonIds.map(id => id.toLowerCase()));
+          cachedInventoryData = cachedInventoryData.filter(item => {
+            const cid = String(item['Cuộn ID'] || '').trim().toLowerCase();
+            return !exportedSet.has(cid);
+          });
+        }
+
+        // Invalidate swr_cache_tole-ton
+        if (typeof clearStoredTableCache === 'function') {
+          clearStoredTableCache('tole-ton');
+        }
+
+        // Broadcast to other tabs/iframes
+        broadcastToleEvent('TOLE_XUAT_INSERT', {
+          cuonIds: exportedCuonIds,
+          records: insertedData
+        });
       }
 
       renderTable(tableData, false);
@@ -1491,6 +1533,17 @@ document.addEventListener('submit', async (e) => {
           const rawIdx = window._rawSupabaseData.findIndex(r => String(r.id) === String(rowId));
           if (rawIdx >= 0) window._rawSupabaseData[rawIdx] = updatedData[0];
         }
+
+        if (typeof setStoredTableCache === 'function') {
+          setStoredTableCache(TABLE_NAME, window._rawSupabaseData);
+        }
+        if (typeof clearStoredTableCache === 'function') {
+          clearStoredTableCache('tole-ton');
+        }
+
+        broadcastToleEvent('TOLE_XUAT_UPDATE', {
+          record: updatedData[0]
+        });
       }
 
       renderTable(tableData, false);
@@ -1556,6 +1609,11 @@ document.addEventListener('click', async (e) => {
         .map(idx => tableData[idx][0])
         .filter(id => id !== undefined && id !== null && id !== '');
 
+      const deletedCuonIds = sortedIndexes
+        .filter(idx => idx > 0 && idx < tableData.length)
+        .map(idx => String(tableData[idx][8] || '').trim()) // index 8 is 'Cuộn ID'
+        .filter(Boolean);
+
       if (idsToDelete.length > 0) {
         const { error } = await supabase.from(TABLE_NAME).delete().in('id', idsToDelete);
         if (error) throw error;
@@ -1569,6 +1627,19 @@ document.addEventListener('click', async (e) => {
           const rawIdx = window._rawSupabaseData.findIndex(r => String(r.id) === String(rowId));
           if (rawIdx >= 0) window._rawSupabaseData.splice(rawIdx, 1);
         }
+      });
+
+      if (typeof setStoredTableCache === 'function') {
+        setStoredTableCache(TABLE_NAME, window._rawSupabaseData);
+      }
+      if (typeof clearStoredTableCache === 'function') {
+        clearStoredTableCache('tole-ton');
+      }
+
+      // Broadcast delete to restore rolls in inventory
+      broadcastToleEvent('TOLE_XUAT_DELETE', {
+        cuonIds: deletedCuonIds,
+        ids: idsToDelete
       });
 
       bootstrap.Modal.getInstance(document.getElementById('deleteDataModal'))?.hide();

@@ -134,6 +134,18 @@ let selectedRowIndexes = [];
 let rollCount = 0;
 let editRollCount = 0;
 
+const toleChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('tole_sync_channel') : null;
+
+function broadcastToleEvent(eventType, payload = {}) {
+  if (toleChannel) {
+    try {
+      toleChannel.postMessage({ type: eventType, ...payload, timestamp: Date.now() });
+    } catch (err) {
+      console.warn('Broadcast error:', err);
+    }
+  }
+}
+
 
 /* =============================================================================
    LOADING OVERLAY
@@ -1357,6 +1369,17 @@ document.addEventListener('submit', async (e) => {
           arr.originalIndex = tableData.length;
           tableData.push(arr);
         });
+
+        if (typeof setStoredTableCache === 'function') {
+          setStoredTableCache(TABLE_NAME, window._rawSupabaseData);
+        }
+        if (typeof clearStoredTableCache === 'function') {
+          clearStoredTableCache('tole-ton');
+        }
+
+        broadcastToleEvent('TOLE_NHAP_INSERT', {
+          records: insertedData || []
+        });
       }
 
       renderTable(tableData, false);
@@ -1447,6 +1470,17 @@ document.addEventListener('submit', async (e) => {
           const rawIdx = window._rawSupabaseData.findIndex(r => String(r.id) === String(rowId));
           if (rawIdx >= 0) window._rawSupabaseData[rawIdx] = updatedData[0];
         }
+
+        if (typeof setStoredTableCache === 'function') {
+          setStoredTableCache(TABLE_NAME, window._rawSupabaseData);
+        }
+        if (typeof clearStoredTableCache === 'function') {
+          clearStoredTableCache('tole-ton');
+        }
+
+        broadcastToleEvent('TOLE_NHAP_UPDATE', {
+          record: updatedData[0]
+        });
       }
 
       renderTable(tableData, false);
@@ -1526,6 +1560,17 @@ document.addEventListener('click', async (e) => {
           const rawIdx = window._rawSupabaseData.findIndex(r => String(r.id) === String(rowId));
           if (rawIdx >= 0) window._rawSupabaseData.splice(rawIdx, 1);
         }
+      });
+
+      if (typeof setStoredTableCache === 'function') {
+        setStoredTableCache(TABLE_NAME, window._rawSupabaseData);
+      }
+      if (typeof clearStoredTableCache === 'function') {
+        clearStoredTableCache('tole-ton');
+      }
+
+      broadcastToleEvent('TOLE_NHAP_DELETE', {
+        ids: idsToDelete
       });
 
       bootstrap.Modal.getInstance(document.getElementById('deleteDataModal'))?.hide();

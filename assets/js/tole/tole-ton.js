@@ -49,6 +49,9 @@ let displayedData = [];        // dữ liệu đang hiển thị
 let groupByMode = true;        // chế độ nhóm theo Mã vật tư - mặc định bật
 const GROUP_COL = 4;           // index cột Mã vật tư (0-based)
 
+const toleChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('tole_sync_channel') : null;
+let realtimeChannel = null;
+
 
 /* =============================================================================
    UTILITY FUNCTIONS
@@ -203,6 +206,8 @@ window.addEventListener('load', () => {
   }
 
   loadSupabaseData();
+  initSupabaseRealtime();
+  setupBroadcastListener();
 });
 
 
@@ -290,6 +295,7 @@ async function loadSupabaseData() {
     if (btnExport) btnExport.disabled = false;
 
     setupFilterEventListeners();
+    initSupabaseRealtime();
 
   } catch (error) {
     const loadingEl = document.getElementById('loading');
@@ -300,7 +306,268 @@ async function loadSupabaseData() {
   }
 }
 
+/* =============================================================================
+   REALTIME & BROADCAST REACTIVE INVENTORY SYNC
+================================================================================ */
+
+function setupBroadcastListener() {
+  if (!toleChannel) return;
+  toleChannel.onmessage = (event) => {
+    const msg = event.data;
+    if (!msg || !msg.type) return;
+    handleToleSyncEvent(msg.type, msg);
+  };
+}
+
+function initSupabaseRealtime() {
+  if (!window.supabase || realtimeChannel) return;
+  try {
+    realtimeChannel = window.supabase
+      .channel('public:tole_realtime_ton')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tole-xuat' }, (payload) => {
+        handleRealtimeXuatChange(payload);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tole-nhap' }, (payload) => {
+        handleRealtimeNhapChange(payload);
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('[tole-ton] Supabase Realtime connected');
+        }
+      });
+  } catch (err) {
+    console.warn('[tole-ton] Realtime subscription error:', err);
+  }
+}
+
+function applyCuonDeduction(cuonIdsToSubtract) {
+  if (!cuonIdsToSubtract || cuonIdsToSubtract.length === 0) return;
+  const subtractSet = new Set(
+    cuonIdsToSubtract.map(id => String(id || '').trim().toLowerCase()).filter(Boolean)
+  );
+  if (subtractSet.size === 0) return;
+
+  if (!window._rawSupabaseData || window._rawSupabaseData.length === 0) return;
+
+  const prevLen = window._rawSupabaseData.length;
+  window._rawSupabaseData = window._rawSupabaseData.filter(row => {
+    const cid = String(row['Cuộn ID'] || '').trim().toLowerCase();
+    return !subtractSet.has(cid);
+  });
+
+  if (window._rawSupabaseData.length !== prevLen) {
+    tableData = [COLUMN_HEADERS, ...window._rawSupabaseData.map(rowToArray)];
+    if (typeof setStoredTableCache === 'function') {
+      setStoredTableCache('tole-ton', window._rawSupabaseData);
+    }
+    filterTable(false);
+  }
+}
+
+function applyNhapInsert(newRecords) {
+  if (!newRecords || !Array.isArray(newRecords) || newRecords.length === 0) return;
+  if (!window._rawSupabaseData) window._rawSupabaseData = [];
+
+  const existingIds = new Set(window._rawSupabaseData.map(r => String(r.id)));
+  const recordsToAdd = newRecords.filter(r => !existingIds.has(String(r.id)));
+  if (recordsToAdd.length === 0) return;
+
+  const processedNewTon = recordsToAdd.map(row => ({
+    id: row.id,
+    'Ngày nhập': row['Ngày nhập'] || '',
+    'Thời gian lưu kho': calculateStorageAge(row['Ngày nhập']),
+    'Vị trí': row['Vị trí'] || '',
+    'Mã vật tư': row['Mã vật tư'] || '',
+    'Tên vật tư': row['Tên vật tư'] || '',
+    'Batch': row['Batch'] || '',
+    'Cuộn ID': row['Cuộn ID'] || '',
+    'Khối lượng (kg)': row['Số lượng (Kg)'] ?? row['Khối lượng (kg)'] ?? 0,
+    'Khối lượng (m)': row['Số lượng (m)'] ?? row['Khối lượng (m)'] ?? 0,
+    'Mã công trình': row['Mã công trình'] || '',
+    'Tên công trình': row['Tên công trình'] || '',
+    'Ghi chú': row['Ghi chú'] || ''
+  }));
+
+  window._rawSupabaseData = [...window._rawSupabaseData, ...processedNewTon];
+  tableData = [COLUMN_HEADERS, ...window._rawSupabaseData.map(rowToArray)];
+  if (typeof setStoredTableCache === 'function') {
+    setStoredTableCache('tole-ton', window._rawSupabaseData);
+  }
+  filterTable(false);
+}
+
+function applyNhapDelete(deletedIds) {
+  if (!deletedIds || !Array.isArray(deletedIds) || deletedIds.length === 0) return;
+  const deleteSet = new Set(deletedIds.map(id => String(id)));
+  if (!window._rawSupabaseData || window._rawSupabaseData.length === 0) return;
+
+  const prevLen = window._rawSupabaseData.length;
+  window._rawSupabaseData = window._rawSupabaseData.filter(row => !deleteSet.has(String(row.id)));
+
+  if (window._rawSupabaseData.length !== prevLen) {
+    tableData = [COLUMN_HEADERS, ...window._rawSupabaseData.map(rowToArray)];
+    if (typeof setStoredTableCache === 'function') {
+      setStoredTableCache('tole-ton', window._rawSupabaseData);
+    }
+    filterTable(false);
+  }
+}
+
+function applyNhapUpdate(updatedRecord) {
+  if (!updatedRecord || !updatedRecord.id) return;
+  if (!window._rawSupabaseData || window._rawSupabaseData.length === 0) return;
+
+  const rowIdStr = String(updatedRecord.id);
+  const idx = window._rawSupabaseData.findIndex(r => String(r.id) === rowIdStr);
+  if (idx >= 0) {
+    window._rawSupabaseData[idx] = {
+      ...window._rawSupabaseData[idx],
+      id: updatedRecord.id,
+      'Ngày nhập': updatedRecord['Ngày nhập'] || '',
+      'Thời gian lưu kho': calculateStorageAge(updatedRecord['Ngày nhập']),
+      'Vị trí': updatedRecord['Vị trí'] || '',
+      'Mã vật tư': updatedRecord['Mã vật tư'] || '',
+      'Tên vật tư': updatedRecord['Tên vật tư'] || '',
+      'Batch': updatedRecord['Batch'] || '',
+      'Cuộn ID': updatedRecord['Cuộn ID'] || '',
+      'Khối lượng (kg)': updatedRecord['Số lượng (Kg)'] ?? updatedRecord['Khối lượng (kg)'] ?? 0,
+      'Khối lượng (m)': updatedRecord['Số lượng (m)'] ?? updatedRecord['Khối lượng (m)'] ?? 0,
+      'Mã công trình': updatedRecord['Mã công trình'] || '',
+      'Tên công trình': updatedRecord['Tên công trình'] || '',
+      'Ghi chú': updatedRecord['Ghi chú'] || ''
+    };
+    tableData = [COLUMN_HEADERS, ...window._rawSupabaseData.map(rowToArray)];
+    if (typeof setStoredTableCache === 'function') {
+      setStoredTableCache('tole-ton', window._rawSupabaseData);
+    }
+    filterTable(false);
+  } else {
+    debouncedReloadQuietly();
+  }
+}
+
+function handleToleSyncEvent(type, payload) {
+  if (type === 'TOLE_XUAT_INSERT') {
+    const cuonIds = payload.cuonIds || [];
+    if (cuonIds.length > 0) {
+      applyCuonDeduction(cuonIds);
+    }
+  } else if (type === 'TOLE_NHAP_INSERT') {
+    if (payload.records && payload.records.length > 0) {
+      applyNhapInsert(payload.records);
+    } else {
+      debouncedReloadQuietly();
+    }
+  } else if (type === 'TOLE_NHAP_UPDATE') {
+    if (payload.record) {
+      applyNhapUpdate(payload.record);
+    } else {
+      debouncedReloadQuietly();
+    }
+  } else if (type === 'TOLE_NHAP_DELETE') {
+    if (payload.ids && payload.ids.length > 0) {
+      applyNhapDelete(payload.ids);
+    } else {
+      debouncedReloadQuietly();
+    }
+  } else if (type === 'TOLE_XUAT_DELETE' || type === 'TOLE_XUAT_UPDATE') {
+    debouncedReloadQuietly();
+  }
+}
+
+function handleRealtimeXuatChange(payload) {
+  if (!payload || !payload.eventType) return;
+  if (payload.eventType === 'INSERT') {
+    const cuonId = payload.new ? String(payload.new['Cuộn ID'] || '').trim() : '';
+    if (cuonId) {
+      applyCuonDeduction([cuonId]);
+    }
+  } else if (payload.eventType === 'DELETE' || payload.eventType === 'UPDATE') {
+    debouncedReloadQuietly();
+  }
+}
+
+function handleRealtimeNhapChange(payload) {
+  if (!payload || !payload.eventType) {
+    debouncedReloadQuietly();
+    return;
+  }
+  if (payload.eventType === 'INSERT' && payload.new) {
+    applyNhapInsert([payload.new]);
+  } else if (payload.eventType === 'UPDATE' && payload.new) {
+    applyNhapUpdate(payload.new);
+  } else if (payload.eventType === 'DELETE' && payload.old && payload.old.id) {
+    applyNhapDelete([payload.old.id]);
+  } else {
+    debouncedReloadQuietly();
+  }
+}
+
+const debouncedReloadQuietly = debounce(() => {
+  reloadInventoryDataQuietly();
+}, 400);
+
+async function reloadInventoryDataQuietly() {
+  try {
+    const fetchFunc = typeof fetchAllFromSupabase === 'function'
+      ? fetchAllFromSupabase
+      : async (tbl, col) => {
+          let rows = [], from = 0, batchSize = 1000, hasMore = true;
+          while (hasMore) {
+            const { data, error } = await supabase.from(tbl).select(col || '*').order('id', { ascending: true }).range(from, from + batchSize - 1);
+            if (error) throw error;
+            if (data && data.length > 0) { rows = rows.concat(data); if (data.length < batchSize) hasMore = false; else from += batchSize; } else hasMore = false;
+          }
+          return rows;
+        };
+
+    const [nhapAll, xuatAll] = await Promise.all([
+      fetchFunc('tole-nhap', '*'),
+      fetchFunc('tole-xuat', '"Cuộn ID"')
+    ]);
+
+    const exportedCuonIds = new Set(
+      xuatAll
+        .map(row => String(row['Cuộn ID'] || '').trim().toLowerCase())
+        .filter(cuonId => cuonId !== '')
+    );
+
+    const tonData = nhapAll.filter(row => {
+      const cuonId = String(row['Cuộn ID'] || '').trim().toLowerCase();
+      if (!cuonId) return false;
+      return !exportedCuonIds.has(cuonId);
+    });
+
+    const processedTon = tonData.map(row => ({
+      id: row.id,
+      'Ngày nhập': row['Ngày nhập'] || '',
+      'Thời gian lưu kho': calculateStorageAge(row['Ngày nhập']),
+      'Vị trí': row['Vị trí'] || '',
+      'Mã vật tư': row['Mã vật tư'] || '',
+      'Tên vật tư': row['Tên vật tư'] || '',
+      'Batch': row['Batch'] || '',
+      'Cuộn ID': row['Cuộn ID'] || '',
+      'Khối lượng (kg)': row['Số lượng (Kg)'] || 0,
+      'Khối lượng (m)': row['Số lượng (m)'] || 0,
+      'Mã công trình': row['Mã công trình'] || '',
+      'Tên công trình': row['Tên công trình'] || '',
+      'Ghi chú': row['Ghi chú'] || ''
+    }));
+
+    if (typeof setStoredTableCache === 'function') setStoredTableCache('tole-ton', processedTon);
+    window._rawSupabaseData = processedTon;
+    tableData = [COLUMN_HEADERS, ...processedTon.map(rowToArray)];
+    filterTable(false);
+
+  } catch (err) {
+    console.error('Silent tole inventory reload error:', err);
+  }
+}
+
 function setupFilterEventListeners() {
+  if (window._toleTonFilterInitialized) return;
+  window._toleTonFilterInitialized = true;
+
   const btnReset = document.getElementById('btnResetFilter');
   const searchInput = document.getElementById('searchInput');
 

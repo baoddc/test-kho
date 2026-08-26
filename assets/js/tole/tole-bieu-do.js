@@ -210,6 +210,7 @@ window.addEventListener('load', () => {
   }
 
   loadAllData();
+  setupDashboardRealtime();
 });
 
 /* =============================================================================
@@ -345,11 +346,120 @@ async function loadAllData() {
 
     processDataAndCreateCharts();
     document.getElementById('loading').style.display = 'none';
+    setupDashboardRealtime();
 
   } catch (error) {
     document.getElementById('loading').innerHTML =
       `Lỗi kết nối database: ${error.message}<br>Kiểm tra kết nối hoặc cấu hình Supabase.`;
     console.error(error);
+  }
+}
+
+/* =============================================================================
+   REALTIME & BROADCAST DASHBOARD SYNC
+================================================================================ */
+
+const toleChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('tole_sync_channel') : null;
+let realtimeChannel = null;
+
+function setupDashboardRealtime() {
+  if (toleChannel && !window._toleDashboardBroadcastInitialized) {
+    window._toleDashboardBroadcastInitialized = true;
+    toleChannel.onmessage = (event) => {
+      const msg = event.data;
+      if (!msg || !msg.type) return;
+      debouncedReloadDashboard();
+    };
+  }
+
+  if (window.supabase && !realtimeChannel) {
+    try {
+      realtimeChannel = window.supabase
+        .channel('public:tole_realtime_bieudo')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'tole-xuat' }, () => {
+          debouncedReloadDashboard();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'tole-nhap' }, () => {
+          debouncedReloadDashboard();
+        })
+        .subscribe();
+    } catch (err) {
+      console.warn('[tole-bieu-do] Realtime error:', err);
+    }
+  }
+}
+
+const debouncedReloadDashboard = debounce(() => {
+  reloadDashboardQuietly();
+}, 500);
+
+async function reloadDashboardQuietly() {
+  try {
+    let [rawNhapFetched, rawXuatFetched] = await Promise.all([
+      fetchAllFromTable(TABLE_NHAP),
+      fetchAllFromTable(TABLE_XUAT)
+    ]);
+
+    const rawNhapAll = rawNhapFetched;
+    const rawXuatAll = rawXuatFetched;
+
+    let rawNhap = rawNhapFetched.filter(r => r && r['Mã chứng từ'] && String(r['Mã chứng từ']).trim() !== '');
+    let rawXuat = rawXuatFetched.filter(r => r && r['Mã chứng từ'] && String(r['Mã chứng từ']).trim() !== '');
+
+    const exportedCuonIds = new Set(
+      rawXuatAll
+        .map(row => String(row['Cuộn ID'] || '').trim().toLowerCase())
+        .filter(cuonId => cuonId !== '')
+    );
+
+    const rawTon = rawNhapAll
+      .filter(row => {
+        const cuonId = String(row['Cuộn ID'] || '').trim().toLowerCase();
+        if (!cuonId) return false;
+        return !exportedCuonIds.has(cuonId);
+      })
+      .map(row => {
+        let storageAge = null;
+        if (row['Ngày nhập']) {
+          const dateObj = parseRowDate(row['Ngày nhập']);
+          if (dateObj && !isNaN(dateObj.getTime())) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const importDate = new Date(dateObj);
+            importDate.setHours(0, 0, 0, 0);
+            const diffDays = Math.floor((today - importDate) / (1000 * 60 * 60 * 24));
+            storageAge = diffDays >= 0 ? diffDays : null;
+          }
+        }
+        return ({
+          id: row.id,
+          'Ngày nhập': row['Ngày nhập'] || '',
+          'Thời gian lưu kho': storageAge,
+          'Vị trí': row['Vị trí'] || '',
+          'Mã vật tư': row['Mã vật tư'] || '',
+          'Tên vật tư': row['Tên vật tư'] || '',
+          'Batch': row['Batch'] || '',
+          'Cuộn ID': row['Cuộn ID'] || '',
+          'Khối lượng (kg)': row['Số lượng (Kg)'] || 0,
+          'Khối lượng (m)': row['Số lượng (m)'] || 0,
+          'Mã công trình': row['Mã công trình'] || '',
+          'Tên công trình': row['Tên công trình'] || '',
+          'Ghi chú': row['Ghi chú'] || ''
+        });
+      });
+
+    const rowToArray = (obj, headers) => headers.map(col => obj[col] ?? '');
+
+    importData = [COLUMN_HEADERS_NHAP, ...rawNhap.map(r => rowToArray(r, COLUMN_HEADERS_NHAP))];
+    exportData = [COLUMN_HEADERS_XUAT, ...rawXuat.map(r => rowToArray(r, COLUMN_HEADERS_XUAT))];
+    tonData = [COLUMN_HEADERS_TON, ...rawTon.map(r => rowToArray(r, COLUMN_HEADERS_TON))];
+
+    importRollsData = importData;
+    exportRollsData = exportData;
+
+    processDataAndCreateCharts();
+  } catch (err) {
+    console.error('Silent tole dashboard reload error:', err);
   }
 }
 
