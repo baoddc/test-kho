@@ -1,33 +1,22 @@
 /* =============================================================================
-   TRA CỨU TỒN KHO THEO VỊ TRÍ KỆ - STYLESHEET
-   Mobile-First Design & Modern Inventory Dashboard
+   COMPACT HEADER & SUMMARY CHIPS
 ================================================================================ */
 
-.location-hero-card {
-  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-  border-radius: 12px;
+.location-compact-header {
+  border-radius: 8px;
+  background-color: var(--bs-card-bg, #ffffff);
 }
 
-.location-icon-box {
-  width: 68px;
-  height: 68px;
-  min-width: 68px;
-}
-
-.stat-box {
-  background: rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(4px);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-}
-
-.letter-spacing-1 {
-  letter-spacing: 1px;
+.compact-stat-chip {
+  font-size: 0.85rem;
+  line-height: 1.2;
 }
 
 .nav-pills .nav-link {
   color: #495057;
   border-radius: 6px;
-  padding: 8px 16px;
+  padding: 6px 14px;
+  font-size: 0.9rem;
 }
 
 .nav-pills .nav-link.active {
@@ -48,37 +37,13 @@
   font-size: 0.88rem;
 }
 
-@media (max-width: 768px) {
-  .location-hero-card {
-    padding: 12px !important;
-  }
-
-  .location-icon-box {
-    width: 50px;
-    height: 50px;
-    min-width: 50px;
-  }
-
-  .location-icon-box i {
-    font-size: 1.5rem !important;
-  }
-
-  #displayRackTitle {
-    font-size: 1.6rem !important;
-  }
-
-  .stat-box span {
-    font-size: 1.15rem !important;
-  }
-}
-
 /* =============================================================================
    TABLE SCROLL CONTAINER & STICKY HEADER
 ================================================================================ */
 
 .location-table-scroll {
-  max-height: calc(100vh - 270px);
-  min-height: 250px;
+  max-height: calc(100vh - 145px);
+  min-height: 300px;
   overflow-y: auto;
   overflow-x: auto;
   border-radius: 6px;

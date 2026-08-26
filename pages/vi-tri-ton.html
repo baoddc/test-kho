@@ -22,78 +22,44 @@
 <body class="fixed-viewport">
 
   <!-- ==================== MAIN CONTENT ==================== -->
-  <div class="container-fluid main-content p-2 p-md-3">
+  <div class="container-fluid main-content p-2">
 
-    <!-- Top Action Bar (Mobile-friendly) -->
-    <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-      <div class="d-flex align-items-center gap-2">
-        <span class="badge bg-primary fs-6 px-3 py-2 rounded-pill shadow-sm">
-          <i class="bi bi-geo-alt-fill"></i> Vị Trí Kệ Kho
-        </span>
-        <h5 class="mb-0 fw-bold text-dark d-none d-sm-inline">Chi tiết tồn theo kệ</h5>
-      </div>
-
-      <div class="d-flex align-items-center gap-2">
-        <!-- Rack Selector Dropdown -->
-        <select id="rackSelectDropdown" class="form-select form-select-sm fw-bold border-primary shadow-sm" style="min-width: 140px;">
-          <!-- Populated by JS -->
-        </select>
-
-        <!-- Scan Other Rack Button -->
-        <button id="btnScanAnotherRack" class="btn btn-sm btn-outline-primary shadow-sm" title="Quét mã QR kệ khác">
-          <i class="bi bi-qr-code-scan"></i> Quét Kệ
-        </button>
-
-        <!-- Refresh Button -->
-        <button id="btnRefreshData" class="btn btn-sm btn-secondary shadow-sm" title="Tải lại dữ liệu">
-          <i class="bi bi-arrow-clockwise"></i>
-        </button>
-      </div>
-    </div>
-
-    <!-- Hero Location Status Card -->
-    <div class="card location-hero-card shadow-sm border-0 mb-3 text-white">
-      <div class="card-body p-3 p-md-4">
-        <div class="row align-items-center g-3">
-          <div class="col-md-5 col-12">
-            <div class="d-flex align-items-center gap-3">
-              <div class="location-icon-box bg-white text-primary rounded-circle p-3 d-flex align-items-center justify-content-center shadow">
-                <i class="bi bi-layers-half fs-1"></i>
-              </div>
-              <div>
-                <small class="text-uppercase text-light opacity-75 fw-bold letter-spacing-1">Đang xem vị trí</small>
-                <h2 class="mb-0 fw-black text-white" id="displayRackTitle">KỆ A01</h2>
-                <span class="badge bg-warning text-dark mt-1" id="rackCategoryBadge">Kho Xà gồ & Tole DDC</span>
-              </div>
-            </div>
+    <!-- Compact Top Bar: Controls & Quick Stats -->
+    <div class="card shadow-sm border-0 mb-2 location-compact-header">
+      <div class="card-body p-2 px-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <!-- Left: Badge + Dropdown + Scanner -->
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+          <div class="d-flex align-items-center gap-1 bg-primary text-white px-2 py-1 rounded-2 shadow-sm">
+            <i class="bi bi-geo-alt-fill"></i>
+            <span class="fw-bold fs-6" id="displayRackTitle">KỆ A01</span>
           </div>
 
-          <div class="col-md-7 col-12">
-            <div class="row g-2 text-center">
-              <div class="col-4">
-                <div class="stat-box p-2 rounded">
-                  <small class="d-block opacity-75">Tổng cuộn</small>
-                  <span class="fs-4 fw-bold" id="totalRollsCount">0</span>
-                  <small class="d-block text-warning small">cuộn tại kệ</small>
-                </div>
-              </div>
-              <div class="col-4">
-                <div class="stat-box p-2 rounded">
-                  <small class="d-block opacity-75">Tổng trọng lượng</small>
-                  <span class="fs-4 fw-bold" id="totalWeightKg">0</span>
-                  <small class="d-block text-warning small">Kg</small>
-                </div>
-              </div>
-              <div class="col-4">
-                <div class="stat-box p-2 rounded">
-                  <small class="d-block opacity-75">Phân bổ</small>
-                  <div class="small fw-semibold mt-1">
-                    <span class="text-info" id="statXgSummary">XG: 0 cuộn</span><br>
-                    <span class="text-warning" id="statToleSummary">Tole: 0 cuộn</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div class="d-flex align-items-center gap-1">
+            <select id="rackSelectDropdown" class="form-select form-select-sm fw-bold border-primary shadow-sm" style="min-width: 120px; height: 32px;">
+              <!-- Populated by JS -->
+            </select>
+            <button id="btnScanAnotherRack" class="btn btn-sm btn-outline-primary shadow-sm d-flex align-items-center gap-1" style="height: 32px;" title="Quét mã QR kệ khác">
+              <i class="bi bi-qr-code-scan"></i> <span class="d-none d-md-inline">Quét Kệ</span>
+            </button>
+            <button id="btnRefreshData" class="btn btn-sm btn-outline-secondary shadow-sm" style="height: 32px;" title="Tải lại dữ liệu">
+              <i class="bi bi-arrow-clockwise"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Right: Inline Metric Pills -->
+        <div class="d-flex align-items-center gap-2 ms-auto flex-wrap">
+          <div class="compact-stat-chip bg-body-tertiary border px-2 py-1 rounded d-flex align-items-center gap-1 shadow-sm">
+            <span class="text-muted small">Tổng:</span>
+            <span class="fw-bold text-primary" id="totalRollsCount">0</span> <small class="text-muted">cuộn</small>
+            <span class="text-muted mx-1">|</span>
+            <span class="fw-bold text-success" id="totalWeightKg">0</span> <small class="text-muted">kg</small>
+          </div>
+
+          <div class="compact-stat-chip bg-body-tertiary border px-2 py-1 rounded d-flex align-items-center gap-2 shadow-sm small">
+            <span class="text-primary fw-semibold" id="statXgSummary">XG: 0 cuộn (0 kg)</span>
+            <span class="text-muted">·</span>
+            <span class="text-warning-emphasis fw-semibold" id="statToleSummary">Tole: 0 cuộn (0 kg)</span>
           </div>
         </div>
       </div>
