@@ -577,6 +577,31 @@ function setupFilterEventListeners() {
 
   const btnReset = document.getElementById('btnResetFilter');
   const searchInput = document.getElementById('searchInput');
+  const btnScanQR = document.getElementById('btnScanQR');
+
+  // Check URL Query Param for vitri (Location Deep-link)
+  const urlParams = new URLSearchParams(window.location.search);
+  const vitriParam = urlParams.get('vitri') || urlParams.get('loc') || urlParams.get('location');
+  if (vitriParam && searchInput) {
+    const cleanRack = window.qrScannerService ? window.qrScannerService.parseLocationQRCode(vitriParam) : vitriParam.trim().toUpperCase();
+    searchInput.value = cleanRack;
+    filterTable(true);
+  }
+
+  if (btnScanQR) {
+    btnScanQR.addEventListener('click', () => {
+      if (window.qrScannerService && window.qrScannerService.openQRCameraScanner) {
+        window.qrScannerService.openQRCameraScanner((scannedRack) => {
+          if (searchInput) {
+            searchInput.value = scannedRack;
+            filterTable(true);
+          }
+        });
+      } else {
+        alert('Module quét mã QR chưa sẵn sàng.');
+      }
+    });
+  }
 
   if (btnReset) {
     btnReset.addEventListener('click', () => {
