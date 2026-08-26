@@ -42,6 +42,9 @@ let displayedData = [];        // dữ liệu đang hiển thị
 let groupByMode = true;        // chế độ nhóm theo Mã vật tư - mặc định bật
 const GROUP_COL = 4;           // index cột Mã vật tư (0-based)
 
+const xgChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('xg_sync_channel') : null;
+let realtimeChannel = null;
+
 
 /* =============================================================================
    UTILITY FUNCTIONS
@@ -196,6 +199,8 @@ window.addEventListener('load', () => {
   }
 
   loadSupabaseData();
+  initSupabaseRealtime();
+  setupBroadcastListener();
 });
 
 
@@ -282,6 +287,7 @@ async function loadSupabaseData() {
     if (btnExport) btnExport.disabled = false;
 
     setupFilterEventListeners();
+    initSupabaseRealtime();
 
   } catch (error) {
     const loadingEl = document.getElementById('loading');
@@ -292,7 +298,155 @@ async function loadSupabaseData() {
   }
 }
 
+/* =============================================================================
+   REALTIME & BROADCAST REACTIVE INVENTORY SYNC
+================================================================================ */
+
+function setupBroadcastListener() {
+  if (!xgChannel) return;
+  xgChannel.onmessage = (event) => {
+    const msg = event.data;
+    if (!msg || !msg.type) return;
+    handleXgSyncEvent(msg.type, msg);
+  };
+}
+
+function initSupabaseRealtime() {
+  if (!window.supabase || realtimeChannel) return;
+  try {
+    realtimeChannel = window.supabase
+      .channel('public:xg_realtime_ton')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'xg-xuat' }, (payload) => {
+        handleRealtimeXuatChange(payload);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'xg-nhap' }, (payload) => {
+        handleRealtimeNhapChange(payload);
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('[xg-ton] Supabase Realtime connected');
+        }
+      });
+  } catch (err) {
+    console.warn('[xg-ton] Realtime subscription error:', err);
+  }
+}
+
+function applyCuonDeduction(cuonIdsToSubtract) {
+  if (!cuonIdsToSubtract || cuonIdsToSubtract.length === 0) return;
+  const subtractSet = new Set(
+    cuonIdsToSubtract.map(id => String(id || '').trim().toLowerCase()).filter(Boolean)
+  );
+  if (subtractSet.size === 0) return;
+
+  if (!window._rawSupabaseData || window._rawSupabaseData.length === 0) return;
+
+  const prevLen = window._rawSupabaseData.length;
+  window._rawSupabaseData = window._rawSupabaseData.filter(row => {
+    const cid = String(row['Cuộn ID'] || '').trim().toLowerCase();
+    return !subtractSet.has(cid);
+  });
+
+  if (window._rawSupabaseData.length !== prevLen) {
+    tableData = [COLUMN_HEADERS, ...window._rawSupabaseData.map(rowToArray)];
+    if (typeof setStoredTableCache === 'function') {
+      setStoredTableCache('xg-ton', window._rawSupabaseData);
+    }
+    filterTable(false);
+  }
+}
+
+function handleXgSyncEvent(type, payload) {
+  if (type === 'XG_XUAT_INSERT') {
+    const cuonIds = payload.cuonIds || [];
+    if (cuonIds.length > 0) {
+      applyCuonDeduction(cuonIds);
+    }
+  } else if (type === 'XG_XUAT_DELETE' || type === 'XG_XUAT_UPDATE' || type === 'XG_NHAP_INSERT' || type === 'XG_NHAP_DELETE' || type === 'XG_NHAP_UPDATE') {
+    debouncedReloadQuietly();
+  }
+}
+
+function handleRealtimeXuatChange(payload) {
+  if (!payload || !payload.eventType) return;
+  if (payload.eventType === 'INSERT') {
+    const cuonId = payload.new ? String(payload.new['Cuộn ID'] || '').trim() : '';
+    if (cuonId) {
+      applyCuonDeduction([cuonId]);
+    }
+  } else if (payload.eventType === 'DELETE' || payload.eventType === 'UPDATE') {
+    debouncedReloadQuietly();
+  }
+}
+
+function handleRealtimeNhapChange() {
+  debouncedReloadQuietly();
+}
+
+const debouncedReloadQuietly = debounce(() => {
+  reloadInventoryDataQuietly();
+}, 400);
+
+async function reloadInventoryDataQuietly() {
+  try {
+    const fetchFunc = typeof fetchAllFromSupabase === 'function'
+      ? fetchAllFromSupabase
+      : async (tbl, col) => {
+          let rows = [], from = 0, batchSize = 1000, hasMore = true;
+          while (hasMore) {
+            const { data, error } = await supabase.from(tbl).select(col || '*').order('id', { ascending: true }).range(from, from + batchSize - 1);
+            if (error) throw error;
+            if (data && data.length > 0) { rows = rows.concat(data); if (data.length < batchSize) hasMore = false; else from += batchSize; } else hasMore = false;
+          }
+          return rows;
+        };
+
+    const [nhapAll, xuatAll] = await Promise.all([
+      fetchFunc('xg-nhap', '*'),
+      fetchFunc('xg-xuat', '"Cuộn ID"')
+    ]);
+
+    const exportedCuonIds = new Set(
+      xuatAll
+        .map(row => String(row['Cuộn ID'] || '').trim().toLowerCase())
+        .filter(cuonId => cuonId !== '')
+    );
+
+    const tonData = nhapAll.filter(row => {
+      const cuonId = String(row['Cuộn ID'] || '').trim().toLowerCase();
+      if (!cuonId) return false;
+      return !exportedCuonIds.has(cuonId);
+    });
+
+    const processedTon = tonData.map(row => ({
+      id: row.id,
+      'Ngày nhập': row['Ngày nhập'] || '',
+      'Thời gian lưu kho': calculateStorageAge(row['Ngày nhập']),
+      'Vị trí': row['Vị trí'] || '',
+      'Mã vật tư': row['Mã vật tư'] || '',
+      'Tên vật tư': row['Tên vật tư'] || '',
+      'Batch': row['Batch'] || '',
+      'Cuộn ID': row['Cuộn ID'] || '',
+      'Số lượng (Kg)': row['Số lượng (Kg)'] || 0,
+      'Mã công trình': row['Mã công trình'] || '',
+      'Tên công trình': row['Tên công trình'] || '',
+      'Ghi chú': row['Ghi chú'] || ''
+    }));
+
+    if (typeof setStoredTableCache === 'function') setStoredTableCache('xg-ton', processedTon);
+    window._rawSupabaseData = processedTon;
+    tableData = [COLUMN_HEADERS, ...processedTon.map(rowToArray)];
+    filterTable(false);
+
+  } catch (err) {
+    console.error('Silent inventory reload error:', err);
+  }
+}
+
 function setupFilterEventListeners() {
+  if (window._xgTonFilterInitialized) return;
+  window._xgTonFilterInitialized = true;
+
   const btnReset = document.getElementById('btnResetFilter');
   const searchInput = document.getElementById('searchInput');
 
