@@ -28,18 +28,18 @@
     <div class="card shadow-sm border-0 mb-2 location-compact-header">
       <div class="card-body p-2 px-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
         <!-- Left: Unified Location Selector & Scanner -->
-        <div class="d-flex align-items-center gap-2 flex-nowrap">
+        <div class="d-flex align-items-center gap-1 gap-md-2 flex-nowrap">
           <div class="input-group input-group-sm" style="width: auto;">
             <span class="input-group-text bg-primary text-white border-primary fw-bold px-2">
-              <i class="bi bi-geo-alt-fill me-1"></i> Vị trí:
+              <i class="bi bi-geo-alt-fill me-1"></i> <span class="d-none d-sm-inline">Vị trí:</span>
             </span>
-            <select id="rackSelectDropdown" class="form-select form-select-sm fw-bold border-primary shadow-sm" style="min-width: 120px; height: 32px;">
+            <select id="rackSelectDropdown" class="form-select form-select-sm fw-bold border-primary shadow-sm" style="min-width: 100px; height: 32px;">
               <!-- Populated by JS -->
             </select>
           </div>
 
           <button id="btnScanAnotherRack" class="btn btn-sm btn-outline-primary shadow-sm d-inline-flex align-items-center gap-1 text-nowrap px-2" style="height: 32px; white-space: nowrap; flex-shrink: 0;" title="Quét mã QR kệ khác">
-            <i class="bi bi-qr-code-scan"></i> <span>Quét Kệ</span>
+            <i class="bi bi-qr-code-scan"></i> <span class="d-none d-sm-inline">Quét Kệ</span>
           </button>
           <button id="btnRefreshData" class="btn btn-sm btn-outline-secondary shadow-sm d-inline-flex align-items-center justify-content-center" style="height: 32px; width: 34px; flex-shrink: 0;" title="Tải lại dữ liệu">
             <i class="bi bi-arrow-clockwise"></i>
@@ -47,15 +47,15 @@
         </div>
 
         <!-- Right: Inline Metric Pills -->
-        <div class="d-flex align-items-center gap-2 ms-auto flex-wrap">
+        <div class="d-flex align-items-center gap-1 gap-md-2 ms-auto flex-nowrap">
           <div class="compact-stat-chip border px-2 py-1 rounded d-flex align-items-center gap-1 shadow-sm text-nowrap">
-            <span class="chip-label small">Tổng:</span>
+            <span class="chip-label small d-none d-sm-inline">Tổng:</span>
             <span class="fw-bold stat-num-total" id="totalRollsCount">0</span> <small class="chip-unit">cuộn</small>
             <span class="chip-divider mx-1">|</span>
             <span class="fw-bold stat-num-kg" id="totalWeightKg">0</span> <small class="chip-unit">kg</small>
           </div>
 
-          <div class="compact-stat-chip border px-2 py-1 rounded d-flex align-items-center gap-2 shadow-sm small text-nowrap">
+          <div class="compact-stat-chip border px-2 py-1 rounded d-none d-md-flex align-items-center gap-2 shadow-sm small text-nowrap">
             <span class="fw-semibold stat-num-xg" id="statXgSummary">XG: 0 cuộn (0 kg)</span>
             <span class="chip-divider">·</span>
             <span class="fw-semibold stat-num-tole" id="statToleSummary">Tole: 0 cuộn (0 kg)</span>
@@ -74,7 +74,7 @@
 
     <!-- Dual Tab Navigation: Xà gồ & Tole -->
     <div class="card shadow-sm border-0" id="mainDataCard" style="display: none;">
-      <div class="card-header border-bottom py-2 px-3">
+      <div class="card-header border-bottom py-1 px-2 p-md-2 px-md-3">
         <ul class="nav nav-pills card-header-pills" id="inventoryTab" role="tablist">
           <li class="nav-item" role="presentation">
             <button class="nav-link active fw-bold position-relative me-2" id="xg-tab" data-bs-toggle="pill" data-bs-target="#xgTabContent" type="button" role="tab">
@@ -93,10 +93,10 @@
         <div class="tab-content" id="inventoryTabContent">
 
           <!-- TAB 1: XÀ GỒ -->
-          <div class="tab-pane fade show active p-3" id="xgTabContent" role="tabpanel">
-            <div class="d-flex align-items-center justify-content-between mb-2">
-              <span class="table-subtitle small">Danh sách cuộn Xà gồ đang nằm tại kệ</span>
-              <span class="badge badge-xg-total fw-bold" id="xgTotalKgBadge">0 Kg</span>
+          <div class="tab-pane fade show active p-1 p-md-3" id="xgTabContent" role="tabpanel">
+            <div class="d-flex align-items-center justify-content-between mb-1 mb-md-2">
+              <span class="table-subtitle small d-none d-sm-inline">Danh sách cuộn Xà gồ đang nằm tại kệ</span>
+              <span class="badge badge-xg-total fw-bold ms-auto" id="xgTotalKgBadge">0 Kg</span>
             </div>
             <div class="table-responsive location-table-scroll">
               <table class="table table-bordered table-hover align-middle mb-0" id="xgTable">
@@ -121,10 +121,10 @@
           </div>
 
           <!-- TAB 2: TOLE -->
-          <div class="tab-pane fade p-3" id="toleTabContent" role="tabpanel">
-            <div class="d-flex align-items-center justify-content-between mb-2">
-              <span class="table-subtitle small">Danh sách cuộn Tole đang nằm tại kệ</span>
-              <span class="badge badge-tole-total fw-bold" id="toleTotalKgBadge">0 Kg</span>
+          <div class="tab-pane fade p-1 p-md-3" id="toleTabContent" role="tabpanel">
+            <div class="d-flex align-items-center justify-content-between mb-1 mb-md-2">
+              <span class="table-subtitle small d-none d-sm-inline">Danh sách cuộn Tole đang nằm tại kệ</span>
+              <span class="badge badge-tole-total fw-bold ms-auto" id="toleTotalKgBadge">0 Kg</span>
             </div>
             <div class="table-responsive location-table-scroll">
               <table class="table table-bordered table-hover align-middle mb-0" id="toleTable">
