@@ -1,0 +1,73 @@
+/* =============================================================================
+   TRA CỨU TỒN KHO THEO VỊ TRÍ KỆ - STYLESHEET
+   Mobile-First Design & Modern Inventory Dashboard
+================================================================================ */
+
+.location-hero-card {
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  border-radius: 12px;
+}
+
+.location-icon-box {
+  width: 68px;
+  height: 68px;
+  min-width: 68px;
+}
+
+.stat-box {
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.letter-spacing-1 {
+  letter-spacing: 1px;
+}
+
+.nav-pills .nav-link {
+  color: #495057;
+  border-radius: 6px;
+  padding: 8px 16px;
+}
+
+.nav-pills .nav-link.active {
+  background-color: #0d6efd;
+  color: #fff;
+  box-shadow: 0 2px 4px rgba(13, 110, 253, 0.25);
+}
+
+.table th {
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.table td {
+  font-size: 0.88rem;
+}
+
+@media (max-width: 768px) {
+  .location-hero-card {
+    padding: 12px !important;
+  }
+
+  .location-icon-box {
+    width: 50px;
+    height: 50px;
+    min-width: 50px;
+  }
+
+  .location-icon-box i {
+    font-size: 1.5rem !important;
+  }
+
+  #displayRackTitle {
+    font-size: 1.6rem !important;
+  }
+
+  .stat-box span {
+    font-size: 1.15rem !important;
+  }
+}
