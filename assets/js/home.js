@@ -10,7 +10,9 @@ const PUBLIC_PAGES = [
   'flower.html',
   'index.html',
   'xg-ton.html',
-  'tole-ton.html'
+  'tole-ton.html',
+  'vi-tri-ton.html',
+  'in-tem-vitri.html'
 ];
 
 /**

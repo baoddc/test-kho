@@ -85,7 +85,9 @@
   const isStandalonePage = normCurrentPath === '/' ||
     normCurrentPath.endsWith('/dang_nhap') ||
     normCurrentPath.endsWith('/flower') ||
-    normCurrentPath.endsWith('/offline');
+    normCurrentPath.endsWith('/offline') ||
+    normCurrentPath.endsWith('/in-tem-vitri') ||
+    normCurrentPath.endsWith('/vi-tri-ton');
 
   if (!isIframe && !isStandalonePage && normCurrentPath.startsWith('/pages/')) {
     const targetUrl = currentPath + window.location.search + window.location.hash;
