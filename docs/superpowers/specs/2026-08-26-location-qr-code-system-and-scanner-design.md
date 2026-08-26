@@ -1,156 +1,168 @@
-# Thiết Kế Hệ Thống Mã QR Vị Trí Kệ & Module Quét Tồn Kho (Kho Xà Gồ & Kho Tole)
+# Thiết Kế Hệ Thống Mã QR Vị Trí Kệ Kho (A01-A14, B01-B14 & Grating) & Bộ Giải Mã Thông Minh
 
-**Ngày thiết kế:** 26/08/2026  
-**Tác giả:** Antigravity & baoddc  
-**Trạng thái:** Bản thiết kế đã duyệt (Approved Design)
-
----
-
-## 1. Bối cảnh & Mục tiêu
-
-### 1.1 Hiện trạng
-- Hệ thống quản lý kho Xà gồ (`xg-ton`, `xg-nhap`, `xg-xuat`) và kho Tole (`tole-ton`, `tole-nhap`, `tole-xuat`) đều quản lý theo trường `Vị trí` (Location).
-- Tại xưởng thực tế, các cuộn thép và xà gồ được xếp theo các dãy kệ chuẩn:
-  - **Dãy A:** Từ `A01` đến `A14` (14 kệ).
-  - **Dãy B:** Từ `B01` đến `B14` (14 kệ).
-- Công nhân và thủ kho hiện đang phải gõ thủ công vị trí hoặc tìm kiếm cuộn bằng cách gõ text, chưa có nhãn tem định danh dán trên từng kệ và chưa hỗ trợ quét mã QR để thao tác nhanh.
-
-### 1.2 Mục tiêu đề ra
-1. **Trang Tạo & In Tem QR Vị Trí Chuyên Nghiệp:** Cho phép thủ kho chọn kho (Xà gồ / Tole / Phụ liệu), chọn dải kệ `A01-A14`, `B01-B14` hoặc vị trí tùy biến, xem trước tem in và in hàng loạt khổ A4 / Tem nhiệt Decal sắc nét chuẩn công nghiệp kèm logo Thép Đại Dũng (DDC).
-2. **Cơ Chế QR Thông Minh (Smart Dual Payload):** Mã QR nhúng trực tiếp đường dẫn URL (`https://<domain>/pages/xg/xg-ton.html?vitri=A01`).
-   - Khi quét bằng bất kỳ điện thoại nào ngoài xưởng (Camera Zalo, iPhone, Android): Tự động mở trang web và lọc ra danh sách toàn bộ các cuộn tồn kèm tổng kg tại kệ đó.
-   - Khi quét bên trong Web App (Camera Scanner hoặc súng bắn mã vạch USB): Bộ giải mã tự động tách chuỗi lấy mã vị trí `A01` để tự động điền vào ô nhập liệu hoặc bộ lọc.
-3. **Module Quét QR Camera Tích Hợp (In-App HTML5 Scanner):** Tích hợp nút camera quét vị trí trên các trang `xg-ton`, `tole-ton`, `xg-nhap`, `xg-xuat`, `tole-nhap`, `tole-xuat`.
+**Ngày tạo:** 2026-08-26  
+**Dự án:** Hệ thống Quản lý Kho Thép Đại Dũng (DDC)  
+**Phạm vi áp dụng:** Kho Xà gồ (`xg-ton`), Kho Tole (`tole-ton`), Kho Phụ liệu và các phân hệ Nhập / Xuất kho.
 
 ---
 
-## 2. Kiến Trúc Giải Pháp & Cấu Trúc File
+## 1. Tổng Quan & Mục Tiêu
 
-```
-web-supabase/
-├── pages/
-│   ├── in-tem-vitri.html          # Trang tạo & in tem QR vị trí kệ
-│   ├── xg/
-│   │   ├── xg-ton.html            # Bổ sung nút camera & banner lọc vị trí URL
-│   │   ├── xg-nhap.html           # Bổ sung nút quét QR vị trí vào bảng cuộn
-│   │   └── xg-xuat.html           # Bổ sung nút quét QR vị trí
-│   └── tole/
-│       ├── tole-ton.html          # Bổ sung nút camera & banner lọc vị trí URL
-│       ├── tole-nhap.html         # Bổ sung nút quét QR vị trí vào bảng cuộn
-│       └── tole-xuat.html         # Bổ sung nút quét QR vị trí
-├── assets/
-│   ├── js/
-│   │   ├── common/
-│   │   │   └── in-tem-vitri.js    # Logic render preview, sinh mã QR + Barcode, in ấn
-│   │   ├── components/
-│   │   │   ├── qr-scanner-modal.js # Module Modal quét Camera HTML5 dùng chung
-│   │   │   └── sidebar.js         # Bổ sung menu "In Tem Vị Trí"
-│   │   ├── xg/
-│   │   │   ├── xg-ton.js          # Nhận URL param ?vitri= & tích hợp scanner
-│   │   │   ├── xg-nhap.js         # Tích hợp scan QR vị trí vào form
-│   │   │   └── xg-xuat.js         # Tích hợp scan QR vị trí
-│   │   └── tole/
-│   │       ├── tole-ton.js        # Nhận URL param ?vitri= & tích hợp scanner
-│   │       ├── tole-nhap.js       # Tích hợp scan QR vị trí vào form
-│   │       └── tole-xuat.js       # Tích hợp scan QR vị trí
-│   └── css/
-│       ├── common/
-│       │   └── in-tem-vitri.css   # CSS giao diện & @media print khổ in A4 / Decal
-│       └── components/
-│           └── qr-scanner-modal.css
+### 1.1. Hiện trạng & Bối cảnh
+* Mặt bằng kho thực tế hiện sử dụng chung cho cả hai kho **Xà gồ** và **Tole**, gồm:
+  - **28 Kệ chuẩn:** Dãy A (`A01` đến `A14`) và Dãy B (`B01` đến `B14`).
+  - **Khu vực Kệ Grating:** `GRATING` (và các phân khu grating mở rộng như `GR-01`, `GR-02`).
+* Hiện tại các thao tác nhập vị trí khi Nhập/Xuất kho hoặc tìm kiếm tồn kho đều thực hiện thủ công bằng cách gõ tay, dễ gây sai sót chính tả và mất thời gian khi kiểm kê thực tế tại xưởng.
+
+### 1.2. Mục tiêu giải pháp
+1. **Trang Tạo & In Tem QR Công Nghiệp (`pages/in-tem-vitri.html`):** Cho phép thủ kho xem trước và in ấn hàng loạt tem dán kệ khổ A4 (2 hoặc 4 tem/trang) và khổ Decal nhiệt (100x75mm / 100x150mm), chứa Logo DDC, Tên kệ chữ lớn tương phản cao, Mã QR chuẩn nét và Mã vạch Code 128.
+2. **Cơ chế QR Payload Thông minh (Smart Dual-Purpose):**
+   - **Quét bằng Camera ngoài (Zalo / iPhone / Android):** Tự động mở trang web tra cứu tổng hợp tồn kho tại vị trí đó (`pages/vi-tri-ton.html?vitri=A01`), hiển thị cả cuộn Xà gồ và Tole đang nằm trên kệ kèm tổng kg.
+   - **Quét bên trong Web App (Camera Scanner & Súng bắn mã vạch):** Tự động bóc tách mã kệ sạch (`A01`, `B02`, `GRATING`) để điền tức thì vào các trường `Vị trí` trong bảng Nhập/Xuất hoặc lọc nhanh bảng Tồn.
+3. **Module Quét Camera Trực Tiếp (`qr-scanner-service.js`):** Tích hợp nút quét camera trên các màn hình `xg-ton`, `tole-ton`, `xg-nhap`, `tole-nhap`, `xg-xuat`, `tole-xuat`.
+4. **Hỗ trợ Deep-link tham số URL:** Khi truy cập trang có query `?vitri=A01`, giao diện tự động lọc bảng theo vị trí đó.
+
+---
+
+## 2. Kiến Trúc Hệ Thống & Các Thành Phần
+
+```mermaid
+graph TD
+    A[Mã QR Dán Trên Kệ A01..A14, B01..B14, GRATING] -->|Quét bằng Camera Điện Thoại Ngoài| B[Trang Tra Cứu Vị Trí: vi-tri-ton.html?vitri=A01]
+    A -->|Quét trong Web App bằng Camera / Súng quét| C[QR Scanner Service: html5-qrcode]
+    
+    B --> D[Hiển thị Tồn Xà Gồ tại Kệ A01]
+    B --> E[Hiển thị Tồn Tole tại Kệ A01]
+    B --> F[Tổng số cuộn & Tổng khối lượng Kg]
+
+    C --> G[Điền nhanh Vị Trí vào xg-nhap / tole-nhap]
+    C --> H[Lọc nhanh tồn kho trên xg-ton / tole-ton]
+    C --> I[Xác thực vị trí bốc hàng trên xg-xuat / tole-xuat]
+
+    J[Trang In Tem: in-tem-vitri.html] -->|Tạo & In hàng loạt| A
 ```
 
 ---
 
-## 3. Thiết Kế Chi Tiết
+## 3. Thiết Kế Chi Tiết Từng Thành Phần
 
-### 3.1 Trang Tạo & In Tem Vị Trí (`pages/in-tem-vitri.html`)
+### 3.1. Trang In Tem QR Vị Trí (`pages/in-tem-vitri.html`)
 
-#### a. Bảng điều khiển cấu hình (Control Panel)
-- **Chọn phân hệ kho:** Radio/Select: Kho Xà Gồ (`xg`), Kho Tole (`tole`), Kho Phụ Liệu (`pl`).
-- **Chọn dải vị trí:**
-  - Checkbox dãy A (`A01` đến `A14`) + Checkbox dãy B (`B01` đến `B14`).
-  - Nút "Chọn tất cả" / "Bỏ chọn tất cả".
-  - Ô nhập vị trí tùy biến (cho phép gõ thêm danh sách ngăn cách bằng dấu phẩy: vd `C01, C02, BAI-01, NGOAI-SAN`).
-- **Tùy chọn mẫu tem & khổ in:**
-  - Mẫu 1: **Khổ A4 - 4 Tem/Trang** (Tem cỡ lớn 135mm x 95mm, dán mặt trước đầu kệ xưởng).
-  - Mẫu 2: **Khổ A4 - 2 Tem/Trang** (Tem siêu lớn 190mm x 135mm, quan sát từ xa).
-  - Mẫu 3: **Khổ Decal Nhiệt 100x75mm** (Chuẩn máy in tem công nghiệp).
-- **Tùy chỉnh Domain Web App:** Mặc định lấy `window.location.origin` (hoặc cho phép nhập domain cố định như `https://kho.daidung.vn`).
+#### Giao diện điều khiển (Control Panel):
+* **Chọn phạm vi kệ:**
+  - Checkbox Dãy A (`A01` - `A14`)
+  - Checkbox Dãy B (`B01` - `B14`)
+  - Checkbox Kệ Grating (`GRATING`, `GR-01`, `GR-02`)
+  - Các nút thao tác nhanh: *[Chọn tất cả]*, *[Bỏ chọn]*, *[Chọn riêng Dãy A]*, *[Chọn riêng Dãy B]*.
+  - Ô nhập thêm vị trí tùy chỉnh (ngăn cách bằng dấu phẩy).
+* **Tùy chọn hiển thị & Kích cỡ in:**
+  - **Khổ A4 - 2 tem/trang (Rất lớn, dán đầu dãy kệ):** Kích thước ~ 180x120mm.
+  - **Khổ A4 - 4 tem/trang (Lớn, dán từng ngăn kệ):** Kích thước ~ 130x90mm.
+  - **Khổ Tem Decal 100x75mm / 100x150mm:** Tương thích máy in nhiệt XP-420B / Gprinter.
+* **Cấu hình nhãn:**
+  - Tiêu đề nhãn: *"KHO XÀ GỒ & TOLE - NHÀ MÁY DDC"*
+  - Domain nhúng vào QR: Tự động nhận diện domain hiện tại (`window.location.origin`) hoặc cho phép tùy chỉnh.
 
-#### b. Thiết kế tem in (Label Design Standard)
-Mỗi con tem được đóng khung viền sắc nét, bố cục gồm:
-1. **Header:** Logo Thép Đại Dũng (DDC) bên trái, bên phải là tiêu đề phân kho: `CÔNG TY CỔ PHẦN CƠ KHÍ XÂY DỰNG THƯƠNG MẠI ĐẠI DŨNG` - `KHO XÀ GỒ / KHO TOLE`.
-2. **Khu vực Kệ (Hero Area):** Mã vị trí kệ (ví dụ: **A01**, **B14**) hiển thị với font chữ Sans-Serif siêu đậm (Bold), cỡ chữ lớn (48pt - 72pt), tương phản cao (High Contrast).
-3. **Mã QR Code:** Kích thước 250x250px độ nét cao (Canvas render), chứa đường link tra cứu nhanh.
-4. **Mã Barcode Code 128 (Phụ):** Mã vạch 1D bên dưới mã QR hỗ trợ đầu đọc barcode truyền thống.
-5. **Footer:** Hướng dẫn ngắn *"Quét mã QR để xem tồn kho hoặc nhập/xuất cuộn"*.
-
-#### c. Tối ưu CSS In Ấn (`@media print`)
-- Ẩn toàn bộ thanh công cụ, sidebar, header web.
-- Thiết lập `@page { size: A4 portrait; margin: 8mm; }`.
-- Sử dụng CSS Grid 2x2 cho khổ 4 tem/trang, tự động phân trang `page-break-inside: avoid; page-break-after: auto;`.
-- Xuất in sắc nét bằng lệnh `window.print()` (phím tắt `Ctrl + P`).
-- Tùy chọn tải toàn bộ mã QR dạng ảnh PNG (ZIP) hoặc in trực tiếp.
-
----
-
-### 3.2 Cơ Chế Deep-Link & Tra Cứu Tồn Kho Theo Kệ
-
-#### a. URL Structure
-- Kho Xà gồ: `<origin>/pages/xg/xg-ton.html?vitri=A01`
-- Kho Tole: `<origin>/pages/tole/tole-ton.html?vitri=A01`
-
-#### b. Xử lý logic trên `xg-ton.js` và `tole-ton.js`
-Khi trang được tải:
-1. Kiểm tra tham số URL: `const urlParams = new URLSearchParams(window.location.search); const targetViTri = urlParams.get('vitri') || urlParams.get('location');`
-2. Nếu có `targetViTri`:
-   - Gán giá trị vào ô tìm kiếm hoặc bộ lọc vị trí.
-   - Lọc bảng dữ liệu: Chỉ giữ lại các dòng có cột `Vị trí` trùng khớp với `targetViTri` (không phân biệt hoa thường).
-   - Hiển thị thanh thông báo nổi (Alert Badge):
-     > 📍 **Đang xem vị trí kệ: [ A01 ]** — Tổng số cuộn: **8 cuộn** | Tổng khối lượng: **24,500 Kg**  
-     > `[ Nút: Xem toàn bộ kho ]`
-   - Khi bấm "Xem toàn bộ kho", xóa query param trên URL (`history.replaceState`) và hiển thị lại toàn bộ dữ liệu.
+#### Thiết kế mẫu Tem In (Industrial Aesthetic Label):
+* **Viền tem:** Khung bo góc công nghiệp, độ dày nét 2px chống nhòe khi in laser/nhiệt.
+* **Header:** Logo Thép Đại Dũng DDC (vector SVG/PNG nét cao) + Tên phân xưởng.
+* **Khu vực trung tâm:**
+  - Tên Kệ in **Font Bold Sans-Serif siêu lớn** (ví dụ: **A01**, **B14**, **GRATING**).
+  - Khối mã **QR Code** kích thước chuẩn, độ tương phản tuyệt đối (Black on White) với mức sửa sai ECC Level M/Q.
+* **Khu vực phụ:**
+  - Mã vạch **Barcode Code 128** kèm text phụ bên dưới.
+  - Dòng hướng dẫn: *"Quét mã QR để tra cứu tồn kho hoặc quét khi Nhập / Xuất"*.
+* **Tối ưu In Ấn (`@media print`):**
+  - Tự động ẩn toàn bộ header, sidebar và thanh công cụ.
+  - Tự động căn lề chuẩn, sử dụng `break-inside: avoid; page-break-after: auto;` để tem không bị cắt ngang giữa trang.
+  - Phím tắt nhanh: `Ctrl + P` hoặc nút **[🖨️ In Danh Sách Tem]**.
 
 ---
 
-### 3.3 Module Quét Mã QR Camera (`qr-scanner-modal.js`)
+### 3.2. Trang Tra Cứu Tồn Kho Theo Vị Trí Kệ (`pages/vi-tri-ton.html`)
 
-#### a. Thư viện tích hợp
-- Sử dụng thư viện mã nguồn mở nhẹ và phổ biến: `html5-qrcode` (CDN: `https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js`).
-- Hỗ trợ đổi camera trước/sau trên điện thoại, tự động bật Flash/Đèn pin nếu trình duyệt hỗ trợ.
+Trang tra cứu độc lập, được thiết kế tối ưu hiển thị trên màn hình điện thoại (Mobile-First) khi công nhân quét mã QR tại xưởng:
 
-#### b. Bộ giải mã thông minh (Smart Location Parser)
-Hàm `parseLocationFromQr(qrText)` xử lý linh hoạt:
-- Nếu là URL: `https://domain.com/pages/xg/xg-ton.html?vitri=A01` ➔ Trích xuất ra `A01`.
-- Nếu là format tiền tố: `LOC:A01` hoặc `VITRI:A01` ➔ Trích xuất ra `A01`.
-- Nếu là text thô: `A01`, `B12` ➔ Trích xuất ra `A01`, `B12`.
-- Chuẩn hóa viết hoa và xóa khoảng trắng thừa (`trim().toUpperCase()`).
-
-#### c. Tích hợp trên các màn hình
-1. **Trang Tồn Kho (`xg-ton.html`, `tole-ton.html`):**
-   - Đặt nút icon camera `📷 Quét kệ` ngay bên cạnh ô tìm kiếm.
-   - Khi quét thành công: Điền vị trí vào ô tìm kiếm và kích hoạt hàm lọc.
-2. **Trang Nhập Kho (`xg-nhap.html`, `tole-nhap.html`):**
-   - Trong Modal "Thêm dữ liệu - Nhập nhiều cuộn":
-     + Thêm nút `📷 Quét QR vị trí` ở tiêu đề danh sách cuộn và từng dòng cuộn.
-     + Quét xong tự điền vị trí cho dòng cuộn hiện tại; có popup hỏi *"Bạn có muốn áp dụng vị trí [A01] cho tất cả các cuộn trong lô này không?"*.
-3. **Trang Xuất Kho (`xg-xuat.html`, `tole-xuat.html`):**
-   - Trong Modal xuất cuộn: Nút `📷 Quét vị trí kệ` để lọc nhanh danh sách cuộn cần xuất thuộc kệ đó.
+1. **Nhận diện tham số URL:**
+   - Đọc query param `?vitri=A01` (hoặc vị trí tương ứng).
+   - Nếu không có tham số, hiển thị thanh tìm kiếm / danh sách chọn nhanh 28 kệ.
+2. **Tổng hợp dữ liệu từ Supabase:**
+   - Truy vấn đồng thời dữ liệu tồn kho **Xà gồ** (`xg-nhap` trừ `xg-xuat`) có `Vị trí = 'A01'`.
+   - Truy vấn đồng thời dữ liệu tồn kho **Tole** (`tole-nhap` trừ `tole-xuat`) có `Vị trí = 'A01'`.
+3. **Giao diện hiển thị (Card Summary & Tabs):**
+   - **Hero Card:**
+     - Biểu tượng vị trí 📍 **KỆ A01**
+     - Tổng số cuộn đang nằm tại kệ: `N cuộn` (VD: `5 cuộn Xà gồ`, `3 cuộn Tole`).
+     - Tổng khối lượng: `XX,XXX Kg`.
+   - **Tab Chuyển Đổi:**
+     - Tab 1: **Xà gồ (N cuộn - XX Kg)**: Bảng chi tiết Mã vật tư, Tên vật tư, Cuộn ID, Batch, Số kg, Ngày nhập, Thời gian lưu kho.
+     - Tab 2: **Tole (M cuộn - YY Kg)**: Bảng chi tiết cuộn Tole tương tự.
+   - **Thao tác nhanh:**
+     - Nút *[+ Nhập kho vào kệ này]* ➔ Điều hướng sang `xg-nhap.html` hoặc `tole-nhap.html` và tự động gán vị trí.
+     - Nút *[- Xuất kho từ kệ này]* ➔ Điều hướng sang `xg-xuat.html` hoặc `tole-xuat.html`.
+     - Nút *[🔄 Làm mới]* ➔ Tải lại dữ liệu Realtime mới nhất.
 
 ---
 
-## 4. Kế Hoạch Kiểm Thử (Verification Plan)
+### 3.3. Module Quét QR Trực Tiếp Bằng Camera (`assets/js/core/qr-scanner-service.js`)
 
-1. **Kiểm thử Sinh & In Tem (`in-tem-vitri.html`):**
-   - Kiểm tra hiển thị đủ 28 tem kệ (`A01-A14` và `B01-B14`).
-   - Kiểm tra thêm kệ tùy chỉnh (`C01`, `NGOAI-SAN`).
-   - Kiểm tra in thử khổ A4 (4 tem/trang, 2 tem/trang) trên Chrome/Edge Print Preview không bị tràn trang.
-2. **Kiểm thử Deep-link Tra cứu:**
-   - Mở thử link `/pages/xg/xg-ton.html?vitri=A01` ➔ Kiểm tra bảng chỉ hiển thị cuộn ở kệ A01, banner tổng số lượng và kg hiển thị chính xác.
-   - Mở thử link `/pages/tole/tole-ton.html?vitri=B05` ➔ Kiểm tra dữ liệu kho tole lọc đúng kệ B05.
-3. **Kiểm thử Quét Camera (HTML5 QR Scanner):**
-   - Mở modal quét camera trên điện thoại và laptop.
-   - Quét mã QR URL và mã QR text thô ➔ Kiểm tra kết quả trả về đúng mã vị trí.
-4. **Kiểm thử Nhập/Xuất kho:**
-   - Quét QR vị trí khi thêm cuộn trong `xg-nhap` và `tole-nhap` ➔ Kiểm tra dữ liệu được lưu đúng vào Supabase.
+Module dùng chung toàn hệ thống, đóng gói chức năng mở Camera quét QR:
+
+* **Thư viện tích hợp:** `html5-qrcode` (CDN gọn nhẹ, hỗ trợ chọn Camera trước/sau, bật Flash trên điện thoại).
+* **Bộ giải mã thông minh (Smart Payload Decoder):**
+  ```javascript
+  function parseLocationQRCode(rawText) {
+    if (!rawText) return '';
+    const text = String(rawText).trim();
+    // 1. Kiểm tra nếu là URL có tham số vitri hoặc location
+    try {
+      if (text.includes('?') && (text.startsWith('http://') || text.startsWith('https://') || text.startsWith('/'))) {
+        const url = new URL(text, window.location.origin);
+        const vitri = url.searchParams.get('vitri') || url.searchParams.get('loc') || url.searchParams.get('location');
+        if (vitri) return decodeURIComponent(vitri).trim().toUpperCase();
+      }
+    } catch (e) {}
+    // 2. Kiểm tra chuỗi text thuần (ví dụ: A01, B12, GRATING)
+    return text.toUpperCase();
+  }
+  ```
+* **UI Modal Camera Scanner:**
+  - Modal Bootstrap chuẩn giao diện tối (Dark mode scanner) với khung ngắm quét laser động.
+  - Tự động phát âm thanh "bíp" nhẹ và rung nhẹ (Vibrate API) khi quét thành công.
+  - Nút chuyển Camera sau / trước và nút Bật đèn Flash (nếu thiết bị hỗ trợ).
+
+---
+
+### 3.4. Tích Hợp Vào Các Màn Hình Hiện Hữu
+
+| Màn hình | Vị trí tích hợp | Hành vi khi quét QR kệ |
+| :--- | :--- | :--- |
+| **`xg-ton.html` & `tole-ton.html`** | Icon 📷 cạnh ô Search + Tự động nhận `?vitri=...` | Điền mã kệ vào ô lọc và tự động lọc danh sách cuộn thuộc kệ đó |
+| **`xg-nhap.html` & `tole-nhap.html`** | Icon 📷 tại cột "Vị trí" trong Modal Nhập cuộn | Điền mã kệ vào dòng cuộn đang chọn (có nút chọn "Áp dụng cho tất cả các dòng") |
+| **`xg-xuat.html` & `tole-xuat.html`** | Icon 📷 lọc vị trí bốc cuộn | Lọc nhanh các cuộn đang có ở kệ để chọn xuất |
+| **`assets/js/components/sidebar.js`** | Menu Tiện ích / Kho | Thêm mục **"In Tem Vị Trí QR"** và **"Tra Cứu Vị Trí Kệ"** |
+
+---
+
+## 4. Kế Hoạch Kiểm Thử & Xác Minh (Verification Plan)
+
+### 4.1. Kiểm thử Tạo & In Tem:
+- [ ] Mở `pages/in-tem-vitri.html`, kiểm tra danh sách 28 kệ `A01-A14`, `B01-B14` và `GRATING`.
+- [ ] Chọn các khổ in (A4 2 tem, A4 4 tem, Decal nhiệt), bấm Print Preview xem trước layout không bị vỡ/tràn trang.
+- [ ] Dùng điện thoại thật quét thử mã QR trên màn hình xem có trỏ đúng đường link không.
+
+### 4.2. Kiểm thử Tra Cứu Vị Trí Kệ (`vi-tri-ton.html`):
+- [ ] Truy cập `pages/vi-tri-ton.html?vitri=A01` -> Kiểm tra hiển thị đúng các cuộn Xà gồ và Tole đang có vị trí `A01`.
+- [ ] Kiểm tra tính chính xác của tổng số cuộn và tổng Kg.
+
+### 4.3. Kiểm thử Tích hợp Camera Scanner:
+- [ ] Mở modal Nhập kho trên `xg-nhap.html`, bấm nút Camera quét mã QR kệ -> Vị trí được điền chính xác vào ô nhập liệu.
+- [ ] Mở `xg-ton.html`, bấm nút Camera quét mã QR kệ -> Bảng tồn tự động lọc đúng vị trí.
+
+---
+
+## 5. Kết Luận
+Bản thiết kế này đáp ứng trọn vẹn 100% yêu cầu:
+- Chuẩn hóa 28 vị trí kệ `A01-A14`, `B01-B14` và kệ `GRATING` dùng chung cho 2 kho Xà gồ & Tole.
+- Cung cấp giải pháp in ấn tem chuyên nghiệp dán trực tiếp tại xưởng.
+- Liên kết liền mạch giữa quét mã QR ngoài thực địa với hệ thống dữ liệu Web App Supabase.
