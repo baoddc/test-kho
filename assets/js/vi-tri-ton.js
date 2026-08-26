@@ -23,11 +23,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnScanAnotherRack = document.getElementById('btnScanAnotherRack');
   const btnRefreshData = document.getElementById('btnRefreshData');
 
-  const btnNavNhapXg = document.getElementById('btnNavNhapXg');
-  const btnNavNhapTole = document.getElementById('btnNavNhapTole');
-  const btnNavXuatXg = document.getElementById('btnNavXuatXg');
-  const btnNavXuatTole = document.getElementById('btnNavXuatTole');
-
   // Standard Racks List
   const standardRacks = (window.qrScannerService && window.qrScannerService.getAllStandardRacks)
     ? window.qrScannerService.getAllStandardRacks()
@@ -80,16 +75,12 @@ document.addEventListener('DOMContentLoaded', () => {
     url.searchParams.set('vitri', currentRack);
     window.history.pushState({}, '', url);
 
-    updateNavLinks();
+    updateDisplayTitle();
     loadRackInventory(currentRack);
   }
 
-  function updateNavLinks() {
+  function updateDisplayTitle() {
     if (displayRackTitle) displayRackTitle.textContent = `KỆ ${currentRack}`;
-    if (btnNavNhapXg) btnNavNhapXg.href = `/pages/xg/xg-nhap.html?vitri=${encodeURIComponent(currentRack)}`;
-    if (btnNavNhapTole) btnNavNhapTole.href = `/pages/tole/tole-nhap.html?vitri=${encodeURIComponent(currentRack)}`;
-    if (btnNavXuatXg) btnNavXuatXg.href = `/pages/xg/xg-xuat.html?vitri=${encodeURIComponent(currentRack)}`;
-    if (btnNavXuatTole) btnNavXuatTole.href = `/pages/tole/tole-xuat.html?vitri=${encodeURIComponent(currentRack)}`;
   }
 
   // Utilities
@@ -272,6 +263,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initial Load
   initRackDropdown();
-  updateNavLinks();
+  updateDisplayTitle();
   loadRackInventory(currentRack);
 });
