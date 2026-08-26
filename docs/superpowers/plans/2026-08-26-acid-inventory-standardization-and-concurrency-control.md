@@ -255,11 +255,8 @@ END;
 $$;
 ```
 
-- [ ] **Step 2: Commit Task 1**
-```bash
-git add scripts/setup_acid_inventory_concurrency.sql
-git commit -m "feat(sql): add schema, constraints, and atomic RPC functions for ACID inventory"
-```
+- [x] **Step 1: Viết script SQL `scripts/setup_acid_inventory_concurrency.sql`**
+- [x] **Step 2: Commit Task 1**
 
 ---
 
@@ -277,13 +274,9 @@ git commit -m "feat(sql): add schema, constraints, and atomic RPC functions for 
   - `getLockedRolls()`: Map<string, { user: string, expiresAt: number }>
   - `onLocksChange(callback)`: subscription for UI updates
 
-- [ ] **Step 1: Tạo `assets/js/core/inventory-lock-service.js`**
-- [ ] **Step 2: Nhúng script `inventory-lock-service.js` vào các file HTML**
-- [ ] **Step 3: Commit Task 2**
-```bash
-git add assets/js/core/inventory-lock-service.js pages/xg/*.html pages/tole/*.html
-git commit -m "feat(core): implement inventory lock service with realtime presence"
-```
+- [x] **Step 1: Tạo `assets/js/core/inventory-lock-service.js`**
+- [x] **Step 2: Nhúng script `inventory-lock-service.js` vào các file HTML**
+- [x] **Step 3: Commit Task 2**
 
 ---
 
@@ -298,20 +291,10 @@ git commit -m "feat(core): implement inventory lock service with realtime presen
 - Consumes: `window.inventoryLockService`, `xuat_xg_atomic` RPC
 - Produces: UI Lock badges, disabled checkboxes, atomic export with rollback, realtime inventory deduction
 
-- [ ] **Step 1: Cập nhật `xg-xuat.js`**
-  - Trong Modal chọn cuộn tồn kho: Kết nối `inventoryLockService`, disable checkbox cuộn đang bị khóa, hiển thị Badge vàng `⏳ [User] đang giữ`.
-  - Khi tick chọn cuộn: Gọi `acquireLock`. Khi bỏ chọn hoặc đóng modal: Gọi `releaseLock`.
-  - Trong hàm submit `addDataForm`: Gọi `supabase.rpc('xuat_xg_atomic', { p_records: recordsToInsert, p_user: currentUser })`. Xử lý hiển thị lỗi và rollback nếu có xung đột.
-- [ ] **Step 2: Cập nhật `xg-ton.js`**
-  - Đăng ký `inventoryLockService.onLocksChange`: Đổi màu nền dòng amber `#fff8e1` và hiển thị badge `⏳ Đang soạn bởi [user]`.
-  - Lắng nghe `XG_XUAT_INSERT` và `XG_XUAT_DELETE` để trừ / hoàn cuộn tức thì trong `_rawSupabaseData` và re-render bảng `tableData` mà không mất vị trí scroll / filter.
-- [ ] **Step 3: Cập nhật `xg-nhap.js`**
-  - Kiểm tra trùng lặp `Cuộn ID` ở client và xử lý lỗi Unique Index từ Supabase.
-- [ ] **Step 4: Commit Task 3**
-```bash
-git add assets/js/xg/xg-xuat.js assets/js/xg/xg-ton.js assets/js/xg/xg-nhap.js
-git commit -m "feat(xg): integrate 2-tier concurrency lock and atomic ACID export for XG"
-```
+- [x] **Step 1: Cập nhật `xg-xuat.js`**
+- [x] **Step 2: Cập nhật `xg-ton.js`**
+- [x] **Step 3: Cập nhật `xg-nhap.js`**
+- [x] **Step 4: Commit Task 3**
 
 ---
 
@@ -326,20 +309,10 @@ git commit -m "feat(xg): integrate 2-tier concurrency lock and atomic ACID expor
 - Consumes: `window.inventoryLockService`, `xuat_tole_atomic` RPC
 - Produces: TOLE UI Lock badges, disabled checkboxes, atomic export with rollback, realtime inventory deduction
 
-- [ ] **Step 1: Cập nhật `tole-xuat.js`**
-  - Tích hợp `inventoryLockService` cho module `tole`.
-  - Trong modal chọn cuộn: Disable checkbox các cuộn bị khóa, hiển thị Badge `⏳ [User] đang giữ`.
-  - Submit qua `supabase.rpc('xuat_tole_atomic', { p_records: recordsToInsert, p_user: currentUser })`.
-- [ ] **Step 2: Cập nhật `tole-ton.js`**
-  - Hiển thị badge và highlight dòng cuộn đang bị khóa.
-  - Lắng nghe `TOLE_XUAT_INSERT` và `TOLE_XUAT_DELETE` để trừ / hoàn tồn tức thì.
-- [ ] **Step 3: Cập nhật `tole-nhap.js`**
-  - Kiểm tra trùng lặp `Cuộn ID` và xử lý an toàn.
-- [ ] **Step 4: Commit Task 4**
-```bash
-git add assets/js/tole/tole-xuat.js assets/js/tole/tole-ton.js assets/js/tole/tole-nhap.js
-git commit -m "feat(tole): integrate 2-tier concurrency lock and atomic ACID export for TOLE"
-```
+- [x] **Step 1: Cập nhật `tole-xuat.js`**
+- [x] **Step 2: Cập nhật `tole-ton.js`**
+- [x] **Step 3: Cập nhật `tole-nhap.js`**
+- [x] **Step 4: Commit Task 4**
 
 ---
 
@@ -348,9 +321,9 @@ git commit -m "feat(tole): integrate 2-tier concurrency lock and atomic ACID exp
 **Files:**
 - Test: Multi-tab & Multi-user Concurrency testing across XG and TOLE pages.
 
-- [ ] **Step 1: Test Khóa mềm & Live Presence (Tab A chọn cuộn -> Tab B kiểm tra badge & disable checkbox)**
-- [ ] **Step 2: Test Giải phóng khóa (Tab A bỏ chọn / đóng popup -> Tab B mở lại checkbox)**
-- [ ] **Step 3: Test Xuất kho thành công & Trừ tồn tức thì (Tab A xuất -> Tab B thấy tồn giảm 0ms)**
-- [ ] **Step 4: Test Xung đột Race Condition & Atomic Rollback (Giả lập xuất trùng -> Xác nhận rollback 100%)**
-- [ ] **Step 5: Test Hoàn tồn khi xóa phiếu xuất**
-- [ ] **Step 6: Tạo Walkthrough Artifact & Báo cáo kết quả**
+- [x] **Step 1: Test Khóa mềm & Live Presence (Tab A chọn cuộn -> Tab B kiểm tra badge & disable checkbox)**
+- [x] **Step 2: Test Giải phóng khóa (Tab A bỏ chọn / đóng popup -> Tab B mở lại checkbox)**
+- [x] **Step 3: Test Xuất kho thành công & Trừ tồn tức thì (Tab A xuất -> Tab B thấy tồn giảm 0ms)**
+- [x] **Step 4: Test Xung đột Race Condition & Atomic Rollback (Giả lập xuất trùng -> Xác nhận rollback 100%)**
+- [x] **Step 5: Test Hoàn tồn khi xóa phiếu xuất**
+- [x] **Step 6: Tạo Walkthrough Artifact & Báo cáo kết quả**
