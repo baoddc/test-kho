@@ -180,7 +180,9 @@
     'vi-tri-ton',
     'vi-tri-ton.html',
     'in-tem-vitri',
-    'in-tem-vitri.html'
+    'in-tem-vitri.html',
+    'hse',
+    'hse.html'
   ];
 
   function checkRoutePermissionInIframe() {
