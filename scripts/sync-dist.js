@@ -24,6 +24,7 @@ function runSync() {
   const rootDir = path.join(__dirname, '..');
   const distDir = path.join(rootDir, 'dist');
   const distAppDir = path.join(rootDir, 'dist-app');
+  const publicDir = path.join(rootDir, 'public');
 
   console.log('[Sync Script] 🚀 Starting full synchronization...');
 
@@ -49,7 +50,19 @@ function runSync() {
     syncFile(path.join(rootDir, file), path.join(distDir, file));
   });
 
-  // 2. Sync to dist-app
+  // 2. Sync to public (for Vercel deployment)
+  console.log('[Sync Script] Syncing to public/...');
+  syncDirectory(path.join(rootDir, 'assets'), path.join(publicDir, 'assets'));
+  syncDirectory(path.join(rootDir, 'pages'), path.join(publicDir, 'pages'));
+  syncDirectory(path.join(rootDir, 'home'), path.join(publicDir, 'home'));
+  syncDirectory(path.join(rootDir, 'dang_nhap'), path.join(publicDir, 'dang_nhap'));
+  syncDirectory(path.join(rootDir, 'login'), path.join(publicDir, 'login'));
+
+  staticFiles.forEach(file => {
+    syncFile(path.join(rootDir, file), path.join(publicDir, file));
+  });
+
+  // 3. Sync to dist-app
   console.log('[Sync Script] Syncing to dist-app/...');
   syncDirectory(path.join(rootDir, 'assets'), path.join(distAppDir, 'assets'));
   syncDirectory(path.join(rootDir, 'pages'), path.join(distAppDir, 'pages'));

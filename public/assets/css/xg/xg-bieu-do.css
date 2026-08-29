@@ -1,0 +1,1515 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+/* =============================================================================
+   BASE STYLES
+   Các style cơ bản cho trang dashboard
+================================================================================ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Montserrat', sans-serif;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  min-height: 100vh;
+}
+
+dl,
+ol,
+ul {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+ol,
+ul {
+  padding-left: 0;
+}
+
+/* ==================== HEADER STYLES ==================== */
+header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 20px;
+  z-index: 1000;
+  background: rgb(82 76 159 / 30%);
+  gap: 40px;
+  backdrop-filter: blur(10px);
+}
+
+.logo {
+  font-size: 24px;
+  font-weight: bold;
+  color: #fff;
+  letter-spacing: 3px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.logo:hover {
+  color: #00d9ff;
+  text-shadow: 0 0 20px rgba(0, 217, 255, 0.5);
+}
+
+/* Hamburger Menu */
+.hamburger {
+  display: none;
+  flex-direction: column;
+  cursor: pointer;
+  gap: 5px;
+  padding: 5px;
+  z-index: 1001;
+}
+
+.hamburger span {
+  display: block;
+  width: 25px;
+  height: 3px;
+  background-color: #fff;
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+
+.hamburger.active span:nth-child(1) {
+  transform: rotate(45deg) translate(5px, 5px);
+}
+
+.hamburger.active span:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger.active span:nth-child(3) {
+  transform: rotate(-45deg) translate(5px, -5px);
+}
+
+nav ul {
+  display: flex;
+  list-style: none;
+  gap: 40px;
+}
+
+nav a {
+  color: #fff;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+nav a::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #00d9ff, #00ff88);
+  transition: width 0.3s ease;
+}
+
+nav a:hover {
+  color: #00d9ff;
+}
+
+nav a:hover::after {
+  width: 100%;
+}
+
+/* Dropdown */
+.dropdown {
+  position: relative;
+}
+
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: rgba(15, 52, 96, 0.95);
+  min-width: 150px;
+  list-style: none;
+  padding: 10px 0;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 217, 255, 0.2);
+}
+
+/* Desktop: hover */
+@media (min-width: 769px) {
+  .dropdown:hover>.dropdown-menu {
+    display: block;
+    animation: fadeIn 0.3s ease;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Mobile: click to show dropdown */
+.dropdown.active .dropdown-menu {
+  display: block;
+}
+
+.dropdown:hover>a {
+  color: #00d9ff;
+}
+
+.dropdown-menu li {
+  padding: 0;
+}
+
+.dropdown-menu a {
+  display: block;
+  padding: 10px 20px;
+  font-size: 13px;
+  white-space: nowrap;
+  transition: all 0.3s ease;
+}
+
+.dropdown-menu a:hover {
+  background: linear-gradient(90deg, rgba(0, 217, 255, 0.2), rgba(0, 255, 136, 0.1));
+  color: #00d9ff;
+  padding-left: 25px;
+}
+
+/* Dropdown submenu */
+.dropdown-submenu {
+  position: relative;
+}
+
+.dropdown-submenu>.dropdown-menu {
+  display: none;
+  position: absolute;
+  left: 100%;
+  top: 0;
+  margin-top: 0;
+  margin-left: 0;
+}
+
+/* Only show submenu on hover over the submenu item itself */
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+  animation: fadeIn 0.3s ease;
+}
+
+/* Remove triangle arrow for dropdown submenu */
+.dropdown-submenu>a::after {
+  display: none;
+}
+
+/* User Info */
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.user-info small {
+  color: #aaa;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
+
+.user-info strong {
+  color: #00d9ff;
+}
+
+html[data-bs-theme="dark"] .text-muted,
+[data-bs-theme="dark"] .text-muted {
+  color: #ffffff !important;
+}
+
+html[data-bs-theme="light"] .text-muted,
+[data-bs-theme="light"] .text-muted {
+  color: #000000 !important;
+}
+
+.btn-logout {
+  background: transparent;
+  border: 1px solid #e74c3c;
+  color: #e74c3c;
+  padding: 5px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  letter-spacing: 0.5px;
+}
+
+.btn-logout:hover {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+}
+
+/* =============================================================================
+   MAIN CONTENT
+   Style cho container và layout chính
+================================================================================ */
+
+.mb-4 {
+  margin-bottom: 12px !important;
+}
+
+.main-content {
+  margin-top: 70px;
+  padding: 10px;
+  padding-bottom: 30px;
+}
+
+.page-title {
+  color: #fff;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 0px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  border-bottom: 0px solid transparent;
+  background: linear-gradient(90deg, #00d9ff, #00ff88, #00d9ff) border-box;
+  -webkit-background-clip: text;
+  background-clip: text;
+  text-shadow: 0 0 30px rgba(0, 217, 255, 0.3);
+}
+
+/* =============================================================================
+   SUMMARY CARDS
+   Style cho các thẻ thống kê tổng quan
+================================================================================ */
+
+.summary-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  overflow: hidden;
+}
+
+.summary-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transition: left 0.5s ease;
+}
+
+.summary-card:hover::before {
+  left: 100%;
+}
+
+.summary-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+}
+
+.card-import {
+  border-left: 4px solid #3498db;
+}
+
+.card-import .card-icon {
+  color: #3498db;
+  background: rgba(52, 152, 219, 0.15);
+}
+
+.card-import:hover {
+  border-left-color: #3498db;
+  box-shadow: 0 15px 40px rgba(52, 152, 219, 0.3);
+}
+
+.card-export {
+  border-left: 4px solid #e74c3c;
+}
+
+.card-export .card-icon {
+  color: #e74c3c;
+  background: rgba(231, 76, 60, 0.15);
+}
+
+.card-export:hover {
+  border-left-color: #e74c3c;
+  box-shadow: 0 15px 40px rgba(231, 76, 60, 0.3);
+}
+
+.card-inventory {
+  border-left: 4px solid #2ecc71;
+}
+
+.card-inventory .card-icon {
+  color: #2ecc71;
+  background: rgba(46, 204, 113, 0.15);
+}
+
+.card-inventory:hover {
+  border-left-color: #2ecc71;
+  box-shadow: 0 15px 40px rgba(46, 204, 113, 0.3);
+}
+
+.card-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.card-content {
+  flex: 1;
+}
+
+.card-content h6 {
+  color: #aaa;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+}
+
+.card-value {
+  color: #ffffff;
+  font-size: 1.8rem;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.card-unit {
+  color: #888;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+/* =============================================================================
+   IMPORT TYPE CHILD CARDS
+   Style cho các thẻ con của Tổng nhập
+================================================================================ */
+
+/* Base style for import type cards (child cards) */
+.card-import-type {
+  background: linear-gradient(135deg, rgba(52, 152, 219, 0.08), rgba(52, 152, 219, 0.02));
+  border-radius: 12px;
+  padding: 15px;
+  display: flex;
+  align-items: center;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(52, 152, 219, 0.15);
+  transition: all 0.3s ease;
+  min-height: 80px;
+}
+
+.card-import-type:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(52, 152, 219, 0.2);
+  border-color: rgba(52, 152, 219, 0.3);
+}
+
+.card-import-type .card-content {
+  flex: 1;
+  text-align: center;
+}
+
+.card-import-type .card-content h6 {
+  color: #3498db;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+}
+
+.card-import-type .card-value {
+  color: #ffffff;
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.card-import-type .card-unit {
+  color: #888;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Specific colors for each import type */
+
+/* Nhà cung cấp - Light blue */
+.card-import-ncc {
+  border-left: 3px solid #5dade2;
+}
+
+.card-import-ncc:hover {
+  box-shadow: 0 10px 25px rgba(93, 173, 226, 0.25);
+}
+
+/* Xưởng sản xuất - Medium blue */
+.card-import-xuong {
+  border-left: 3px solid #3498db;
+}
+
+.card-import-xuong:hover {
+  box-shadow: 0 10px 25px rgba(52, 152, 219, 0.25);
+}
+
+/* Gia công ngoài - Dark blue */
+.card-import-gia-cong {
+  border-left: 3px solid #2980b9;
+}
+
+.card-import-gia-cong:hover {
+  box-shadow: 0 10px 25px rgba(41, 128, 185, 0.25);
+}
+
+/* Công trình - Navy blue */
+.card-import-cong-trinh {
+  border-left: 3px solid #1a5276;
+}
+
+.card-import-cong-trinh:hover {
+  box-shadow: 0 10px 25px rgba(26, 82, 118, 0.25);
+}
+
+/* =============================================================================
+   EXPORT TYPE CHILD CARDS
+   Style cho các thẻ con của Tổng xuất
+================================================================================ */
+
+/* Base style for export type cards (child cards) */
+.card-export-type {
+  background: linear-gradient(135deg, rgba(231, 76, 60, 0.08), rgba(231, 76, 60, 0.02));
+  border-radius: 12px;
+  padding: 15px;
+  display: flex;
+  align-items: center;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(231, 76, 60, 0.15);
+  transition: all 0.3s ease;
+  min-height: 80px;
+}
+
+.card-export-type:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(231, 76, 60, 0.2);
+  border-color: rgba(231, 76, 60, 0.3);
+}
+
+.card-export-type .card-content {
+  flex: 1;
+  text-align: center;
+}
+
+.card-export-type .card-content h6 {
+  color: #e74c3c;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+}
+
+.card-export-type .card-value {
+  color: #ffffff;
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.card-export-type .card-unit {
+  color: #888;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Specific colors for each export type */
+
+/* Xưởng sản xuất - Light red */
+.card-export-xuong {
+  border-left: 3px solid #ec7063;
+}
+
+.card-export-xuong:hover {
+  box-shadow: 0 10px 25px rgba(236, 112, 99, 0.25);
+}
+
+/* Điều chuyển - Medium red */
+.card-export-dieu-chuyen {
+  border-left: 3px solid #e74c3c;
+}
+
+.card-export-dieu-chuyen:hover {
+  box-shadow: 0 10px 25px rgba(231, 76, 60, 0.25);
+}
+
+/* Gia công ngoài - Dark red */
+.card-export-gia-cong {
+  border-left: 3px solid #c0392b;
+}
+
+.card-export-gia-cong:hover {
+  box-shadow: 0 10px 25px rgba(192, 57, 43, 0.25);
+}
+
+/* Công trình - Navy red */
+.card-export-cong-trinh {
+  border-left: 3px solid #922b21;
+}
+
+.card-export-cong-trinh:hover {
+  box-shadow: 0 10px 25px rgba(146, 43, 33, 0.25);
+}
+
+/* =============================================================================
+   CHART CARDS
+   Style cho các thẻ biểu đồ
+================================================================================ */
+
+.chart-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+  border-radius: 16px;
+  padding: 20px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  height: 100%;
+  transition: all 0.3s ease;
+}
+
+.chart-card:hover {
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+  border-color: rgba(0, 217, 255, 0.3);
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.chart-header h5 {
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  margin: 0;
+}
+
+.chart-legend {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #aaa;
+  font-size: 0.8rem;
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.chart-body {
+  position: relative;
+  height: 300px;
+}
+
+#pieChart {
+  max-height: 280px;
+}
+
+/* =============================================================================
+   LOADING
+   Style cho loading indicator
+================================================================================ */
+
+#loading {
+  text-align: center;
+  padding: 40px;
+  color: #00d9ff;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+/* FILTER CARD */
+.filter-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03));
+  border-radius: 16px;
+  padding: 0;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.filter-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px 20px;
+  background: linear-gradient(90deg, rgba(0, 217, 255, 0.15), rgba(0, 255, 136, 0.1));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  color: #0077ff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.filter-body {
+  display: flex;
+  align-items: flex-end;
+  gap: 15px;
+  padding: 20px;
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  flex: 1;
+  min-width: 180px;
+}
+
+.filter-group .form-control {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.filter-group .form-control:focus {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(0, 217, 255, 0.5);
+  box-shadow: 0 0 0 3px rgba(0, 217, 255, 0.15);
+  outline: none;
+}
+
+.filter-label {
+  display: block;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.filter-separator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.3);
+  padding: 0 5px;
+}
+
+.filter-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+}
+
+.btn-filter-apply {
+  background: linear-gradient(135deg, #00d9ff, #00b4d8);
+  color: #1a1a2e;
+}
+
+.btn-filter-apply:hover {
+  background: linear-gradient(135deg, #00b4d8, #0096c7);
+  box-shadow: 0 4px 15px rgba(0, 217, 255, 0.4);
+  transform: translateY(-2px);
+}
+
+.btn-filter-reset {
+  background: rgba(255, 255, 255, 0.1);
+  color: #aaa;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-filter-reset:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* =============================================================================
+   RESPONSIVE
+   Style cho các thiết bị khác nhau
+================================================================================ */
+
+/* Tablet */
+@media (max-width: 992px) {
+  header {
+    padding: 10px 15px;
+    gap: 20px;
+  }
+
+  .logo {
+    font-size: 20px;
+  }
+
+  nav ul {
+    gap: 25px;
+  }
+
+  nav a {
+    font-size: 13px;
+  }
+
+  .summary-card {
+    margin-bottom: 15px;
+  }
+
+  .card-value {
+    font-size: 1.5rem;
+  }
+
+  .chart-body {
+    height: 250px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  header {
+    padding: 10px 15px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .logo {
+    font-size: 18px;
+    letter-spacing: 2px;
+  }
+
+  /* Hamburger menu visible on mobile */
+  .hamburger {
+    display: flex;
+  }
+
+  /* Navigation menu - hidden by default on mobile */
+  nav {
+    display: none;
+    width: 100%;
+    order: 3;
+  }
+
+  nav.active {
+    display: block;
+  }
+
+  nav ul {
+    flex-direction: column;
+    gap: 0;
+    width: 100%;
+    padding: 10px 0;
+    background: rgba(15, 52, 96, 0.95);
+    border-radius: 8px;
+    margin-top: 10px;
+  }
+
+  nav ul li {
+    width: 100%;
+  }
+
+  nav a {
+    display: block;
+    padding: 12px 20px;
+    font-size: 14px;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  nav a:hover {
+    background: rgba(0, 217, 255, 0.1);
+    color: #00d9ff;
+  }
+
+  nav a::after {
+    display: none;
+  }
+
+  /* Dropdown menu on mobile */
+  .dropdown-menu {
+    position: static;
+    background: rgba(0, 0, 0, 0.5);
+    box-shadow: none;
+    border-radius: 0;
+    border: none;
+  }
+
+  .dropdown-menu a {
+    padding-left: 40px;
+    font-size: 13px;
+  }
+
+  /* User info */
+  .user-info {
+    gap: 10px;
+  }
+
+  .user-info small {
+    font-size: 11px;
+  }
+
+  .btn-logout {
+    padding: 4px 10px;
+    font-size: 11px;
+  }
+
+  /* Main content */
+  .main-content {
+    margin-top: 80px;
+    padding: 15px 10px;
+  }
+
+  .page-title {
+    font-size: 1.2rem;
+    text-align: center;
+  }
+
+  /* Summary cards */
+  .summary-card {
+    padding: 15px;
+    gap: 15px;
+  }
+
+  .card-icon {
+    width: 50px;
+    height: 50px;
+  }
+
+  .card-value {
+    font-size: 1.3rem;
+  }
+
+  /* Chart */
+  .chart-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .chart-header h5 {
+    font-size: 0.9rem;
+  }
+
+  .chart-body {
+    height: 220px;
+  }
+}
+
+/* Small Mobile */
+@media (max-width: 480px) {
+  header {
+    padding: 8px 10px;
+  }
+
+  .logo {
+    font-size: 16px;
+  }
+
+  .btn-filter-apply:hover {
+    background: linear-gradient(135deg, #00b4d8, #0096c7);
+    box-shadow: 0 4px 15px rgba(0, 217, 255, 0.4);
+    transform: translateY(-2px);
+  }
+
+  .btn-filter-reset {
+    background: rgba(255, 255, 255, 0.1);
+    color: #aaa;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .btn-filter-reset:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+}
+
+  /* =============================================================================
+   RESPONSIVE
+   Style cho các thiết bị khác nhau
+================================================================================ */
+
+  /* Tablet */
+  @media (max-width: 992px) {
+    header {
+      padding: 10px 15px;
+      gap: 20px;
+    }
+
+    .logo {
+      font-size: 20px;
+    }
+
+    nav ul {
+      gap: 25px;
+    }
+
+    nav a {
+      font-size: 13px;
+    }
+
+    .summary-card {
+      margin-bottom: 15px;
+    }
+
+    .card-value {
+      font-size: 1.5rem;
+    }
+
+    .chart-body {
+      height: 250px;
+    }
+  }
+
+  /* Mobile */
+  @media (max-width: 768px) {
+    header {
+      padding: 10px 15px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .logo {
+      font-size: 18px;
+      letter-spacing: 2px;
+    }
+
+    /* Hamburger menu visible on mobile */
+    .hamburger {
+      display: flex;
+    }
+
+    /* Navigation menu - hidden by default on mobile */
+    nav {
+      display: none;
+      width: 100%;
+      order: 3;
+    }
+
+    nav.active {
+      display: block;
+    }
+
+    nav ul {
+      flex-direction: column;
+      gap: 0;
+      width: 100%;
+      padding: 10px 0;
+      background: rgba(15, 52, 96, 0.95);
+      border-radius: 8px;
+      margin-top: 10px;
+    }
+
+    nav ul li {
+      width: 100%;
+    }
+
+    nav a {
+      display: block;
+      padding: 12px 20px;
+      font-size: 14px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    nav a:hover {
+      background: rgba(0, 217, 255, 0.1);
+      color: #00d9ff;
+    }
+
+    nav a::after {
+      display: none;
+    }
+
+    /* Dropdown menu on mobile */
+    .dropdown-menu {
+      position: static;
+      background: rgba(0, 0, 0, 0.5);
+      box-shadow: none;
+      border-radius: 0;
+      border: none;
+    }
+
+    .dropdown-menu a {
+      padding-left: 40px;
+      font-size: 13px;
+    }
+
+    /* User info */
+    .user-info {
+      gap: 10px;
+    }
+
+    .user-info small {
+      font-size: 11px;
+    }
+
+    .btn-logout {
+      padding: 4px 10px;
+      font-size: 11px;
+    }
+
+    /* Main content */
+    .main-content {
+      margin-top: 80px;
+      padding: 15px 10px;
+    }
+
+    .page-title {
+      font-size: 1.2rem;
+      text-align: center;
+    }
+
+    /* Summary cards */
+    .summary-card {
+      padding: 15px;
+      gap: 15px;
+    }
+
+    .card-icon {
+      width: 50px;
+      height: 50px;
+    }
+
+    .card-value {
+      font-size: 1.3rem;
+    }
+
+    /* Chart */
+    .chart-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .chart-header h5 {
+      font-size: 0.9rem;
+    }
+
+    .chart-body {
+      height: 220px;
+    }
+  }
+
+  /* Small Mobile */
+  @media (max-width: 480px) {
+    header {
+      padding: 8px 10px;
+    }
+
+    .logo {
+      font-size: 16px;
+    }
+
+    .hamburger span {
+      width: 22px;
+      height: 2px;
+    }
+
+    .chart-legend {
+      gap: 10px;
+    }
+
+    .legend-item {
+      font-size: 0.7rem;
+    }
+  }
+
+  /* ==================== LIGHT THEME OVERRIDES ==================== */
+  html[data-bs-theme="light"],
+  html[data-bs-theme="light"] body,
+  [data-bs-theme="light"] body {
+    background: #f1f5f9 !important;
+    color: #000000 !important;
+  }
+
+  /* Page title contrast */
+  html[data-bs-theme="light"] .page-title,
+  [data-bs-theme="light"] .page-title {
+    color: #000000 !important;
+    background: linear-gradient(90deg, #1e3a8a, #0d9488, #1e3a8a) border-box;
+    -webkit-background-clip: text;
+    background-clip: text;
+    text-shadow: none;
+  }
+
+  /* Filter Card */
+  html[data-bs-theme="light"] .filter-card,
+  [data-bs-theme="light"] .filter-card {
+    background: #ffffff !important;
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
+  }
+
+  html[data-bs-theme="light"] .filter-header,
+  [data-bs-theme="light"] .filter-header {
+    background: rgba(99, 102, 241, 0.06) !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+    color: #000000 !important;
+  }
+
+  html[data-bs-theme="light"] .filter-label,
+  [data-bs-theme="light"] .filter-label {
+    color: #000000 !important;
+  }
+
+  html[data-bs-theme="light"] .filter-group .form-control,
+  [data-bs-theme="light"] .filter-group .form-control {
+    background-color: #ffffff !important;
+    border: 1px solid rgba(0, 0, 0, 0.15) !important;
+    color: #000000 !important;
+  }
+
+  html[data-bs-theme="light"] .filter-separator,
+  [data-bs-theme="light"] .filter-separator {
+    color: #000000 !important;
+  }
+
+  html[data-bs-theme="light"] .btn-filter-reset,
+  [data-bs-theme="light"] .btn-filter-reset {
+    background: #f1f5f9 !important;
+    color: #000000 !important;
+    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  }
+
+  html[data-bs-theme="light"] .btn-filter-reset:hover,
+  [data-bs-theme="light"] .btn-filter-reset:hover {
+    background: #e2e8f0 !important;
+    color: #000000 !important;
+  }
+
+  /* Summary Cards (KPIs) - Light Mode with Black Text */
+  html[data-bs-theme="light"] .summary-card,
+  [data-bs-theme="light"] .summary-card {
+    background: #ffffff !important;
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+  }
+
+  html[data-bs-theme="light"] .summary-card::before,
+  [data-bs-theme="light"] .summary-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.04), transparent);
+    transition: left 0.5s ease;
+  }
+
+  html[data-bs-theme="light"] .summary-card:hover::before,
+  [data-bs-theme="light"] .summary-card:hover::before {
+    left: 100%;
+  }
+
+  html[data-bs-theme="light"] .summary-card:hover,
+  [data-bs-theme="light"] .summary-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1) !important;
+  }
+
+  /* 4px Left Accent Borders */
+  html[data-bs-theme="light"] .card-inventory,
+  [data-bs-theme="light"] .card-inventory {
+    border-left: 4px solid #2ecc71 !important;
+  }
+
+  html[data-bs-theme="light"] .card-import,
+  [data-bs-theme="light"] .card-import {
+    border-left: 4px solid #3498db !important;
+  }
+
+  html[data-bs-theme="light"] .card-export,
+  [data-bs-theme="light"] .card-export {
+    border-left: 4px solid #e74c3c !important;
+  }
+
+  /* Icon Badges */
+  html[data-bs-theme="light"] .card-inventory .card-icon,
+  [data-bs-theme="light"] .card-inventory .card-icon {
+    color: #16a34a !important;
+    background: rgba(34, 197, 94, 0.15) !important;
+  }
+
+  html[data-bs-theme="light"] .card-import .card-icon,
+  [data-bs-theme="light"] .card-import .card-icon {
+    color: #2563eb !important;
+    background: rgba(59, 130, 246, 0.15) !important;
+  }
+
+  html[data-bs-theme="light"] .card-export .card-icon,
+  [data-bs-theme="light"] .card-export .card-icon {
+    color: #dc2626 !important;
+    background: rgba(239, 68, 68, 0.15) !important;
+  }
+
+  /* Child KPI Cards under Đầu Kỳ */
+  html[data-bs-theme="light"] .card-kpi-turnover,
+  [data-bs-theme="light"] .card-kpi-turnover {
+    background: rgba(155, 89, 182, 0.12) !important;
+    border: 1px solid rgba(155, 89, 182, 0.25) !important;
+    border-left: 4px solid #9b59b6 !important;
+  }
+
+  html[data-bs-theme="light"] .card-kpi-dsi,
+  [data-bs-theme="light"] .card-kpi-dsi {
+    background: rgba(26, 188, 156, 0.12) !important;
+    border: 1px solid rgba(26, 188, 156, 0.25) !important;
+    border-left: 4px solid #1abc9c !important;
+  }
+
+  html[data-bs-theme="light"] .card-kpi-stockage,
+  [data-bs-theme="light"] .card-kpi-stockage {
+    background: rgba(52, 152, 219, 0.12) !important;
+    border: 1px solid rgba(52, 152, 219, 0.25) !important;
+    border-left: 4px solid #3498db !important;
+  }
+
+  /* Specific colors for each import type */
+  html[data-bs-theme="light"] .card-import-ncc,
+  [data-bs-theme="light"] .card-import-ncc {
+    background: rgba(93, 173, 226, 0.12) !important;
+    border: 1px solid rgba(93, 173, 226, 0.25) !important;
+    border-left: 3px solid #5dade2 !important;
+  }
+
+  html[data-bs-theme="light"] .card-import-xuong,
+  [data-bs-theme="light"] .card-import-xuong {
+    background: rgba(52, 152, 219, 0.12) !important;
+    border: 1px solid rgba(52, 152, 219, 0.25) !important;
+    border-left: 3px solid #3498db !important;
+  }
+
+  html[data-bs-theme="light"] .card-import-gia-cong,
+  [data-bs-theme="light"] .card-import-gia-cong {
+    background: rgba(41, 128, 185, 0.12) !important;
+    border: 1px solid rgba(41, 128, 185, 0.25) !important;
+    border-left: 3px solid #2980b9 !important;
+  }
+
+  html[data-bs-theme="light"] .card-import-cong-trinh,
+  [data-bs-theme="light"] .card-import-cong-trinh {
+    background: rgba(26, 82, 118, 0.12) !important;
+    border: 1px solid rgba(26, 82, 118, 0.25) !important;
+    border-left: 3px solid #1a5276 !important;
+  }
+
+  /* Specific colors for each export type */
+  html[data-bs-theme="light"] .card-export-xuong,
+  [data-bs-theme="light"] .card-export-xuong {
+    background: rgba(236, 112, 99, 0.12) !important;
+    border: 1px solid rgba(236, 112, 99, 0.25) !important;
+    border-left: 3px solid #ec7063 !important;
+  }
+
+  html[data-bs-theme="light"] .card-export-dieu-chuyen,
+  [data-bs-theme="light"] .card-export-dieu-chuyen {
+    background: rgba(231, 76, 60, 0.12) !important;
+    border: 1px solid rgba(231, 76, 60, 0.25) !important;
+    border-left: 3px solid #e74c3c !important;
+  }
+
+  html[data-bs-theme="light"] .card-export-gia-cong,
+  [data-bs-theme="light"] .card-export-gia-cong {
+    background: rgba(192, 57, 43, 0.12) !important;
+    border: 1px solid rgba(192, 57, 43, 0.25) !important;
+    border-left: 3px solid #c0392b !important;
+  }
+
+  html[data-bs-theme="light"] .card-export-cong-trinh,
+  [data-bs-theme="light"] .card-export-cong-trinh {
+    background: rgba(146, 43, 33, 0.12) !important;
+    border: 1px solid rgba(146, 43, 33, 0.25) !important;
+    border-left: 3px solid #922b21 !important;
+  }
+
+  /* Black Text Overrides */
+  html[data-bs-theme="light"] .card-content h6,
+  html[data-bs-theme="light"] .card-import-type .card-content h6,
+  html[data-bs-theme="light"] .card-export-type .card-content h6,
+  [data-bs-theme="light"] .card-content h6,
+  [data-bs-theme="light"] .card-import-type .card-content h6,
+  [data-bs-theme="light"] .card-export-type .card-content h6 {
+    color: #000000 !important;
+    font-weight: 700 !important;
+  }
+
+  html[data-bs-theme="light"] .card-value,
+  html[data-bs-theme="light"] .card-import-type .card-value,
+  html[data-bs-theme="light"] .card-export-type .card-value,
+  [data-bs-theme="light"] .card-value,
+  [data-bs-theme="light"] .card-import-type .card-value,
+  [data-bs-theme="light"] .card-export-type .card-value {
+    color: #000000 !important;
+    font-weight: 800 !important;
+  }
+
+  html[data-bs-theme="light"] .card-unit,
+  [data-bs-theme="light"] .card-unit {
+    color: #000000 !important;
+    font-weight: 600 !important;
+  }
+
+  /* Chart Cards */
+  html[data-bs-theme="light"] .chart-card,
+  [data-bs-theme="light"] .chart-card {
+    background: #ffffff !important;
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+  }
+
+  html[data-bs-theme="light"] .chart-card:hover,
+  [data-bs-theme="light"] .chart-card:hover {
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1) !important;
+    border-color: rgba(99, 102, 241, 0.2) !important;
+  }
+
+  html[data-bs-theme="light"] .chart-header,
+  [data-bs-theme="light"] .chart-header {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+  }
+
+  html[data-bs-theme="light"] .chart-header h5,
+  [data-bs-theme="light"] .chart-header h5 {
+    color: #000000 !important;
+  }
+
+  html[data-bs-theme="light"] .legend-item,
+  [data-bs-theme="light"] .legend-item {
+    color: #000000 !important;
+  }
+
+  html[data-bs-theme="light"] #pieChartSelect,
+  [data-bs-theme="light"] #pieChartSelect {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border: 1px solid rgba(0, 0, 0, 0.15) !important;
+  }
+
+  html[data-bs-theme="light"] #loading,
+  [data-bs-theme="light"] #loading {
+    color: #000000 !important;
+  }
+
+  /* ==================== DARK THEME OVERRIDES ==================== */
+  html[data-bs-theme="dark"],
+  html[data-bs-theme="dark"] body,
+  [data-bs-theme="dark"] body {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%) !important;
+    color: #ffffff !important;
+  }
+
+  html[data-bs-theme="dark"] .page-title,
+  [data-bs-theme="dark"] .page-title {
+    color: #ffffff !important;
+  }
+
+  html[data-bs-theme="dark"] .filter-header,
+  [data-bs-theme="dark"] .filter-header,
+  html[data-bs-theme="dark"] .filter-label,
+  [data-bs-theme="dark"] .filter-label {
+    color: #ffffff !important;
+  }
+
+  html[data-bs-theme="dark"] .card-content h6,
+  [data-bs-theme="dark"] .card-content h6,
+  html[data-bs-theme="dark"] .card-import-type .card-content h6,
+  [data-bs-theme="dark"] .card-import-type .card-content h6,
+  html[data-bs-theme="dark"] .card-export-type .card-content h6,
+  [data-bs-theme="dark"] .card-export-type .card-content h6 {
+    color: #ffffff !important;
+  }
+
+  html[data-bs-theme="dark"] .card-value,
+  [data-bs-theme="dark"] .card-value,
+  html[data-bs-theme="dark"] .card-import-type .card-value,
+  [data-bs-theme="dark"] .card-import-type .card-value,
+  html[data-bs-theme="dark"] .card-export-type .card-value,
+  [data-bs-theme="dark"] .card-export-type .card-value {
+    color: #ffffff !important;
+  }
+
+  html[data-bs-theme="dark"] .card-unit,
+  [data-bs-theme="dark"] .card-unit {
+    color: #ffffff !important;
+  }
+
+  html[data-bs-theme="dark"] .chart-header h5,
+  [data-bs-theme="dark"] .chart-header h5,
+  html[data-bs-theme="dark"] .legend-item,
+  [data-bs-theme="dark"] .legend-item {
+    color: #ffffff !important;
+  }
+
+  html[data-bs-theme="dark"] #pieChartSelect,
+  [data-bs-theme="dark"] #pieChartSelect {
+    background-color: #1e3a5f !important;
+    color: #ffffff !important;
+  }
+
+  html[data-bs-theme="dark"] #loading,
+  [data-bs-theme="dark"] #loading {
+    color: #ffffff !important;
+  }

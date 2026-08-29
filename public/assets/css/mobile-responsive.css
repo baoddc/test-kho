@@ -1,0 +1,264 @@
+/* =============================================================================
+   MOBILE RESPONSIVE & TOUCH OPTIMIZATIONS
+   Thiết lập tối ưu hóa cho màn hình điện thoại di động và máy tính bảng
+   ============================================================================= */
+
+/* -----------------------------------------------------------------------------
+   1. TOUCH & ANTI-ZOOM FOR INPUTS
+   ----------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  /* Ngăn ngừa tự động zoom trên iOS Safari khi tap vào input/select */
+  input[type="text"],
+  input[type="password"],
+  input[type="number"],
+  input[type="date"],
+  input[type="datetime-local"],
+  input[type="search"],
+  select,
+  textarea {
+    font-size: 16px !important;
+    min-height: 42px;
+    border-radius: 8px;
+  }
+
+  button,
+  .btn,
+  .login__button {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* -----------------------------------------------------------------------------
+   2. DATA TABLES HORIZONTAL SCROLLING & FULL COLUMN WIDTH ON MOBILE
+   ----------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  .table-responsive,
+  .data-table-container,
+  .table-wrapper,
+  .table-container {
+    width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 1rem;
+    border-radius: 8px;
+  }
+
+  /* Bắt buộc bảng mở rộng chiều rộng tự nhiên của các cột, không bị ép co hẹp */
+  table.table,
+  .data-table,
+  #dataTable {
+    width: max-content !important;
+    min-width: 100% !important;
+    table-layout: auto !important;
+  }
+
+  /* Hiển thị đầy đủ chữ và số trên 1 dòng, không bị cắt hay xuống dòng ép cột */
+  table th,
+  table td,
+  #dataTable th,
+  #dataTable td {
+    white-space: nowrap !important;
+    padding: 10px 14px !important;
+    font-size: 0.85rem !important;
+    max-width: none !important;
+    width: auto !important;
+  }
+
+  /* Nút thao tác trong bảng */
+  table .btn-sm,
+  table .action-btn {
+    padding: 5px 10px !important;
+    font-size: 0.78rem !important;
+    min-height: 32px;
+    white-space: nowrap !important;
+  }
+}
+
+/* -----------------------------------------------------------------------------
+   3. RESPONSIVE TOOLBARS & FILTER BARS
+   ----------------------------------------------------------------------------- */
+@media (max-width: 640px) {
+  .filter-bar,
+  .toolbar,
+  .search-container,
+  .action-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+
+  .filter-group,
+  .search-box,
+  .btn-group {
+    width: 100% !important;
+  }
+
+  .filter-group input,
+  .filter-group select,
+  .search-box input {
+    width: 100% !important;
+  }
+
+  .action-buttons,
+  .button-group {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 8px !important;
+  }
+
+  .action-buttons button,
+  .button-group button {
+    width: 100% !important;
+  }
+}
+
+/* -----------------------------------------------------------------------------
+   4. MODALS & POPUPS MOBILE OPTIMIZATION
+   ----------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  .modal-dialog {
+    margin: 10px auto !important;
+    max-width: 95vw !important;
+  }
+
+  .modal-content {
+    border-radius: 12px !important;
+    padding: 12px !important;
+  }
+
+  .modal-header {
+    padding: 12px 16px !important;
+  }
+
+  .modal-body {
+    padding: 12px 16px !important;
+    max-height: 75vh;
+    overflow-y: auto;
+  }
+
+  .modal-footer {
+    padding: 12px 16px !important;
+    flex-direction: column-reverse !important;
+    gap: 8px;
+  }
+
+  .modal-footer button {
+    width: 100% !important;
+    margin: 0 !important;
+  }
+}
+
+/* -----------------------------------------------------------------------------
+   5. VOICE ASSISTANT MOBILE WIDGET
+   ----------------------------------------------------------------------------- */
+@media (max-width: 576px) {
+  .va-widget {
+    bottom: 16px !important;
+    right: 16px !important;
+  }
+
+  .va-trigger-btn {
+    width: 50px !important;
+    height: 50px !important;
+  }
+
+  .va-panel {
+    width: calc(100vw - 32px) !important;
+    right: 16px !important;
+    left: 16px !important;
+    bottom: 76px !important;
+    max-height: 60vh !important;
+  }
+}
+
+/* -----------------------------------------------------------------------------
+   6. SMALL MOBILE SCREENS (< 380px)
+   ----------------------------------------------------------------------------- */
+@media (max-width: 380px) {
+  body {
+    font-size: 14px;
+  }
+
+  h1, .h1 { font-size: 1.4rem !important; }
+  h2, .h2 { font-size: 1.25rem !important; }
+  h3, .h3 { font-size: 1.1rem !important; }
+
+  .main-content {
+    padding: 8px !important;
+  }
+}
+
+/* -----------------------------------------------------------------------------
+   7. SPACE-SAVING TABLE TOOLBAR & COLLAPSIBLE BUTTONS
+   ----------------------------------------------------------------------------- */
+.table-toolbar-compact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 8px;
+}
+
+.table-space-saver {
+  transition: all 0.25s ease-in-out;
+}
+
+.table-space-saver.is-collapsed {
+  display: none !important;
+}
+
+.btn-space-toggle {
+  font-size: 0.78rem !important;
+  padding: 3px 10px !important;
+  border-radius: 6px;
+  background: rgba(13, 110, 253, 0.15);
+  border: 1px solid rgba(13, 110, 253, 0.3);
+  color: #0d6efd;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+[data-bs-theme="dark"] .btn-space-toggle {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #60a5fa;
+}
+
+.btn-space-toggle:hover {
+  background: rgba(13, 110, 253, 0.25);
+  transform: translateY(-1px);
+}
+
+/* Compact button layout on small screens */
+@media (max-width: 768px) {
+  .compact-action-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+  
+  .compact-action-bar .btn {
+    flex: 1 1 auto;
+    min-width: 70px;
+    padding: 6px 8px;
+    font-size: 0.78rem;
+  }
+}
+
