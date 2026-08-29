@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', function () {
    // Kiểm tra xem đã đăng nhập rồi chưa
    const currentUser = localStorage.getItem('currentUser');
    if (currentUser) {
-      window.location.href = 'home.html';
+      window.location.href = '/';
       return;
    }
 
@@ -395,6 +395,6 @@ function completeLogin(username, accountObj = null) {
       localStorage.setItem('userPermChecksum', checksum);
    }
 
-   window.location.href = 'home.html';
+   window.location.href = '/';
 }
 

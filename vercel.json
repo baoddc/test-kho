@@ -1,33 +1,35 @@
 {
   "cleanUrls": true,
-  "rewrites": [
+  "redirects": [
+    {
+      "source": "/home",
+      "destination": "/",
+      "permanent": false
+    },
     {
       "source": "/pages/home",
-      "destination": "/index.html"
+      "destination": "/",
+      "permanent": false
     },
     {
       "source": "/pages/home.html",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/home",
-      "destination": "/index.html"
+      "destination": "/",
+      "permanent": false
     },
     {
       "source": "/dang_nhap",
-      "destination": "/pages/index.html"
+      "destination": "/pages/index",
+      "permanent": false
     },
     {
       "source": "/dang-nhap",
-      "destination": "/pages/index.html"
+      "destination": "/pages/index",
+      "permanent": false
     },
     {
       "source": "/login",
-      "destination": "/pages/index.html"
-    },
-    {
-      "source": "/",
-      "destination": "/index.html"
+      "destination": "/pages/index",
+      "permanent": false
     }
   ]
 }
