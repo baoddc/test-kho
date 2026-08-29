@@ -3,11 +3,23 @@
    Khởi tạo ứng dụng khi trang được tải
 ================================================================================ */
 
+function redirectToHome() {
+   try {
+      if (window.top && window.top !== window) {
+         window.top.location.href = '/';
+      } else {
+         window.location.replace('/');
+      }
+   } catch (e) {
+      window.location.href = '/';
+   }
+}
+
 document.addEventListener('DOMContentLoaded', function () {
    // Kiểm tra xem đã đăng nhập rồi chưa
    const currentUser = localStorage.getItem('currentUser');
    if (currentUser) {
-      window.location.href = '/';
+      redirectToHome();
       return;
    }
 
@@ -395,6 +407,6 @@ function completeLogin(username, accountObj = null) {
       localStorage.setItem('userPermChecksum', checksum);
    }
 
-   window.location.href = '/';
+   redirectToHome();
 }
 
