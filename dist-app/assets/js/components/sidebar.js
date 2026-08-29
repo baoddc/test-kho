@@ -496,53 +496,100 @@
   window.showAuthModal = showAuthModal;
 
   function showAccessDeniedModal(msg, onConfirm) {
-    let modalEl = document.getElementById('accessDeniedModal');
-    if (!modalEl) {
-      modalEl = document.createElement('div');
-      modalEl.id = 'accessDeniedModal';
-      modalEl.className = 'modal fade';
-      modalEl.setAttribute('tabindex', '-1');
-      modalEl.setAttribute('aria-hidden', 'true');
-      modalEl.innerHTML = `
-        <div class="modal-dialog modal-dialog-centered modal-sm">
-          <div class="modal-content text-center p-4" style="background-color: #1e293b; color: #f8fafc; border: 1px solid #334155; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);">
-            <div class="mb-3 text-warning">
-              <svg viewBox="0 0 24 24" width="56" height="56" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto; display: block;">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-              </svg>
-            </div>
-            <h5 class="fw-bold mb-2" style="color: #f8fafc; font-size: 1.15rem;">Không có quyền truy cập</h5>
-            <p id="accessDeniedMsg" class="text-muted small mb-4" style="color: #94a3b8 !important; line-height: 1.5;">${msg || 'Rất tiếc! Bạn không có quyền truy cập trang này.'}</p>
-            <div>
-              <button type="button" id="btnConfirmAccessDenied" class="btn btn-primary px-3 py-2 fw-semibold" style="border-radius: 8px; width: 100%; font-size: 0.9rem;">
-                Đồng ý / Quay về Trang chủ
-              </button>
-            </div>
+    let modal = document.getElementById('accessDeniedModal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'accessDeniedModal';
+      modal.className = 'custom-modal-backdrop';
+      modal.innerHTML = `
+        <div class="custom-modal-content">
+          <div class="modal-warning-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+              <line x1="12" y1="9" x2="12" y2="13"></line>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+          </div>
+          <h3 class="modal-title">Không có quyền truy cập</h3>
+          <p id="accessDeniedMsg" class="modal-message"></p>
+          <div class="modal-actions" style="grid-template-columns: 1fr;">
+            <button id="btnConfirmAccessDenied" class="modal-btn btn-warning-primary">
+              <span>Đã hiểu / Quay lại</span>
+            </button>
           </div>
         </div>
       `;
-      document.body.appendChild(modalEl);
-    } else {
-      const msgEl = modalEl.querySelector('#accessDeniedMsg');
-      if (msgEl) msgEl.textContent = msg || 'Rất tiếc! Bạn không có quyền truy cập trang này.';
+      document.body.appendChild(modal);
     }
 
-    const btnConfirm = modalEl.querySelector('#btnConfirmAccessDenied');
-    
-    // Check if bootstrap is available
-    if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
-      const bsModal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
-      btnConfirm.onclick = () => {
-        bsModal.hide();
+    const msgEl = modal.querySelector('#accessDeniedMsg');
+    if (msgEl) {
+      msgEl.textContent = msg || 'Rất tiếc! Tài khoản của bạn chưa được cấp quyền truy cập vào trang này.';
+    }
+
+    if (!document.getElementById('access-denied-modal-style')) {
+      const style = document.createElement('style');
+      style.id = 'access-denied-modal-style';
+      style.textContent = `
+        .custom-modal-backdrop {
+          position: fixed; inset: 0; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(12px);
+          display: flex; align-items: center; justify-content: center; z-index: 99999;
+          opacity: 0; visibility: hidden; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          padding: 20px;
+        }
+        .custom-modal-backdrop.active { opacity: 1; visibility: visible; }
+        .custom-modal-content {
+          background: #1e293b; border: 1px solid rgba(255,255,255,0.1); padding: 2.5rem 2rem;
+          border-radius: 20px; width: 100%; max-width: 400px; text-align: center;
+          transform: scale(0.9) translateY(20px); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+        }
+        .custom-modal-backdrop.active .custom-modal-content { transform: scale(1) translateY(0); }
+        .modal-warning-icon {
+          width: 64px; height: 64px; background: rgba(245, 158, 11, 0.12); color: #f59e0b;
+          border-radius: 50%; display: flex; align-items: center; justify-content: center;
+          margin: 0 auto 1.25rem; border: 1px solid rgba(245, 158, 11, 0.25);
+          box-shadow: 0 0 20px rgba(245, 158, 11, 0.15);
+        }
+        .modal-warning-icon svg { width: 32px; height: 32px; }
+        .modal-title { font-size: 1.35rem; font-weight: 700; color: #f8fafc; margin-bottom: 0.5rem; }
+        .modal-message { color: #94a3b8; line-height: 1.5; margin-bottom: 1.75rem; font-size: 0.9rem; }
+        .modal-actions { display: grid; gap: 0.75rem; }
+        .modal-btn {
+          padding: 0.75rem 1rem; border-radius: 10px; font-weight: 600; font-size: 0.9rem; cursor: pointer;
+          transition: all 0.2s ease; border: none;
+        }
+        .btn-warning-primary {
+          background: linear-gradient(135deg, #f59e0b, #d97706); color: #ffffff;
+          box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35); width: 100%;
+        }
+        .btn-warning-primary:hover {
+          transform: translateY(-1px); box-shadow: 0 6px 18px rgba(245, 158, 11, 0.45);
+          background: linear-gradient(135deg, #fbbf24, #f59e0b);
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    const btnConfirm = modal.querySelector('#btnConfirmAccessDenied');
+    if (btnConfirm) {
+      btnConfirm.onclick = (e) => {
+        e.preventDefault();
+        modal.classList.remove('active');
         if (typeof onConfirm === 'function') onConfirm();
       };
-      bsModal.show();
-    } else {
-      alert(msg || 'Rất tiếc! Bạn không có quyền truy cập trang này.');
-      if (typeof onConfirm === 'function') onConfirm();
     }
+
+    modal.onclick = (e) => {
+      if (e.target === modal) {
+        modal.classList.remove('active');
+        if (typeof onConfirm === 'function') onConfirm();
+      }
+    };
+
+    setTimeout(() => modal.classList.add('active'), 10);
   }
+  window.showAccessDeniedModal = showAccessDeniedModal;
 
   function checkRoutePermission() {
     const page = window.location.pathname;
