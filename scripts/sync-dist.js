@@ -34,6 +34,7 @@ function runSync() {
 
   const staticFiles = [
     'index.html',
+    'home.html',
     'offline.html',
     'manifest.json',
     'sw.js',
