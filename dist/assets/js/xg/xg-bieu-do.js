@@ -62,35 +62,7 @@ const COLUMN_HEADERS_TON = [
   'Ghi chú'
 ];
 
-// Hàm helper đọc toàn bộ dữ liệu từ 1 bảng Supabase
-async function fetchAllFromTable(tableName) {
-  let allData = [];
-  let from = 0;
-  const batchSize = 1000;
-  let hasMore = true;
 
-  while (hasMore) {
-    const { data, error } = await supabase
-      .from(tableName)
-      .select('*')
-      .order('id', { ascending: true })
-      .range(from, from + batchSize - 1);
-
-    if (error) throw error;
-
-    if (data && data.length > 0) {
-      allData = allData.concat(data);
-      if (data.length < batchSize) {
-        hasMore = false;
-      } else {
-        from += batchSize;
-      }
-    } else {
-      hasMore = false;
-    }
-  }
-  return allData;
-}
 
 /* =============================================================================
    GLOBAL VARIABLES
@@ -136,6 +108,16 @@ let filterToDate = null;
    Các hàm tiện ích
 ================================================================================ */
 
+// Utility: debounce
+function debounce(func, wait) {
+  let timeout;
+  return function(...args) {
+    const later = () => { clearTimeout(timeout); func(...args); };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
 // Normalize text: remove accents and convert to lowercase for matching
 function cleanText(str) {
   return String(str || '')
@@ -160,15 +142,21 @@ function findColIndex(headers, possibleNames) {
 // Parse ngày tháng từ các định dạng khác nhau
 function parseRowDate(raw) {
   if (raw === undefined || raw === null || raw === '') return null;
+  if (raw instanceof Date) return raw;
 
   // Excel serial number
   if (typeof raw === 'number') {
     return new Date((raw - 25569) * 86400 * 1000);
   }
 
-  // String format: dd/mm/yyyy or dd-mm-yyyy or mm/dd/yyyy
+  // String format: YYYY-MM-DD or DD/MM/YYYY or DD-MM-YYYY or MM/DD/YYYY
   if (typeof raw === 'string') {
-    const m = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+    const iso = raw.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+    if (iso) {
+      return new Date(parseInt(iso[1], 10), parseInt(iso[2], 10) - 1, parseInt(iso[3], 10));
+    }
+
+    const m = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
     if (m) {
       let p1 = parseInt(m[1], 10);
       let p2 = parseInt(m[2], 10);
@@ -472,11 +460,11 @@ function calculateInventoryBegin() {
   const fromDateInput = document.getElementById('fromDate')?.value;
 
   if (fromDateInput) {
-    fromDate = new Date(fromDateInput);
+    fromDate = parseRowDate(fromDateInput);
   } else {
     fromDate = getDefaultFromDate();
   }
-  fromDate.setHours(0, 0, 0, 0);
+  if (fromDate) fromDate.setHours(0, 0, 0, 0);
 
   if (tonData && tonData.length > 1) {
     const tonHeaders = tonData[0] || [];
@@ -502,6 +490,7 @@ function calculateInventoryBegin() {
       const dateValue = row[dateColIndex];
       const date = parseRowDate(dateValue);
       if (!date) continue;
+      date.setHours(0, 0, 0, 0);
 
       // SUMIF: date <= fromDate (nếu có lọc), hoặc date <= hiện tại (nếu không lọc)
       const compareDate = new Date(fromDate);
@@ -581,12 +570,12 @@ function calculateInventoryEnd() {
   const toDateInput = document.getElementById('toDate')?.value;
 
   if (toDateInput) {
-    toDate = new Date(toDateInput);
+    toDate = parseRowDate(toDateInput);
   } else {
     const today = new Date();
     toDate = today;
   }
-  toDate.setHours(23, 59, 59, 999);
+  if (toDate) toDate.setHours(23, 59, 59, 999);
 
   if (tonData && tonData.length > 1) {
     const tonHeaders = tonData[0] || [];
@@ -612,6 +601,7 @@ function calculateInventoryEnd() {
       const dateValue = row[dateColIndex];
       const date = parseRowDate(dateValue);
       if (!date) continue;
+      date.setHours(0, 0, 0, 0);
 
       if (date <= toDate) {
         const quantity = parseNumericInput(row[qtyColIndex]);
@@ -659,8 +649,8 @@ function calculateRollMetrics() {
   const fromDateInput = document.getElementById('fromDate')?.value;
   const toDateInput = document.getElementById('toDate')?.value;
 
-  const fromDate = fromDateInput ? new Date(fromDateInput) : null;
-  const toDate = toDateInput ? new Date(toDateInput) : null;
+  const fromDate = parseRowDate(fromDateInput);
+  const toDate = parseRowDate(toDateInput);
 
   if (fromDate) fromDate.setHours(0, 0, 0, 0);
   
@@ -698,6 +688,7 @@ function calculateRollMetrics() {
     if (!rollId) continue;
     const dateIn = parseRowDate(row[nhapDateColIdx]);
     if (!dateIn) continue;
+    dateIn.setHours(0, 0, 0, 0);
     const weight = parseNumericInput(row[nhapWeightColIdx]);
 
     if (dateIn < earliestDate) earliestDate = dateIn;
@@ -725,6 +716,7 @@ function calculateRollMetrics() {
       if (!rollId) continue;
       const dateOut = parseRowDate(row[xuatDateColIdx]);
       if (!dateOut) continue;
+      dateOut.setHours(0, 0, 0, 0);
       const weight = parseNumericInput(row[xuatWeightColIdx]);
 
       exportsMap[rollId] = { dateOut, weight, rollId };
@@ -1692,8 +1684,8 @@ function isDateInRange(date) {
   const fromDateInput = document.getElementById('fromDate')?.value;
   const toDateInput = document.getElementById('toDate')?.value;
 
-  const fromDate = fromDateInput ? new Date(fromDateInput) : null;
-  const toDate = toDateInput ? new Date(toDateInput) : null;
+  const fromDate = parseRowDate(fromDateInput);
+  const toDate = parseRowDate(toDateInput);
 
   // Set time to start/end of day for accurate comparison
   if (fromDate) {
@@ -1715,8 +1707,8 @@ function applyDateFilter() {
   const fromDateInput = document.getElementById('fromDate')?.value;
   const toDateInput = document.getElementById('toDate')?.value;
 
-  filterFromDate = fromDateInput ? new Date(fromDateInput) : null;
-  filterToDate = toDateInput ? new Date(toDateInput) : null;
+  filterFromDate = parseRowDate(fromDateInput);
+  filterToDate = parseRowDate(toDateInput);
 
   // Reprocess data with filters
   processDataAndCreateCharts();
@@ -1724,8 +1716,10 @@ function applyDateFilter() {
 
 // Reset filter
 function resetDateFilter() {
-  document.getElementById('fromDate').value = '';
-  document.getElementById('toDate').value = '';
+  const fromEl = document.getElementById('fromDate');
+  const toEl = document.getElementById('toDate');
+  if (fromEl) fromEl.value = '';
+  if (toEl) toEl.value = '';
   filterFromDate = null;
   filterToDate = null;
 
@@ -1734,71 +1728,11 @@ function resetDateFilter() {
 }
 
 /* =============================================================================
-   HAMBURGER MENU & MOBILE NAVIGATION
-   Xử lý menu hamburger và điều hướng trên mobile
+   FILTER EVENTS & NAVIGATION
+   Xử lý sự kiện bộ lọc và điều hướng
 ================================================================================ */
 
-document.addEventListener('DOMContentLoaded', () => {
-  const hamburger = document.getElementById('hamburger');
-  const mainNav = document.getElementById('mainNav');
-  const dropdown5S = document.getElementById('5SDropdown');
-  const xgDropdown = document.getElementById('xgDropdown');
-
-  // Hamburger menu toggle
-  if (hamburger && mainNav) {
-    hamburger.addEventListener('click', (e) => {
-      e.preventDefault();
-      // hamburger.classList.toggle('active');
-      // mainNav.classList.toggle('active');
-    });
-  }
-
-  // Dropdown click for mobile - 5S
-  if (dropdown5S) {
-    const dropdownToggle = dropdown5S.querySelector('.dropdown-toggle');
-    if (dropdownToggle) {
-      dropdownToggle.addEventListener('click', (e) => {
-        // Only on mobile
-        if (window.innerWidth <= 768) {
-          e.preventDefault();
-          // dropdown5S.classList.toggle('active');
-        }
-      });
-    }
-  }
-
-  // Dropdown click for mobile
-  if (xgDropdown) {
-    const dropdownToggle = xgDropdown.querySelector('.dropdown-toggle');
-    if (dropdownToggle) {
-      dropdownToggle.addEventListener('click', (e) => {
-        // Only on mobile
-        if (window.innerWidth <= 768) {
-          e.preventDefault();
-          // xgDropdown.classList.toggle('active');
-        }
-      });
-    }
-  }
-
-  // Close menu when clicking outside
-  document.addEventListener('click', (e) => {
-    if (window.innerWidth <= 768) {
-      if (mainNav && !mainNav.contains(e.target) && !hamburger.contains(e.target)) {
-        mainNav.classList.remove('active');
-        hamburger.classList.remove('active');
-      }
-    }
-  });
-
-  // Handle window resize
-  window.addEventListener('resize', () => {
-    if (window.innerWidth > 768 && mainNav) {
-      mainNav.classList.remove('active');
-      hamburger.classList.remove('active');
-    }
-  });
-
+function initFilterAndNavigationEvents() {
   // Date filter event listeners
   const btnApplyFilter = document.getElementById('btnApplyFilter');
   const btnResetFilter = document.getElementById('btnResetFilter');
@@ -1810,7 +1744,26 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnResetFilter) {
     btnResetFilter.addEventListener('click', resetDateFilter);
   }
-});
+
+  const fromDateEl = document.getElementById('fromDate');
+  const toDateEl = document.getElementById('toDate');
+  if (fromDateEl) {
+    fromDateEl.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') applyDateFilter();
+    });
+  }
+  if (toDateEl) {
+    toDateEl.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') applyDateFilter();
+    });
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initFilterAndNavigationEvents);
+} else {
+  initFilterAndNavigationEvents();
+}
 
 // Helper to get theme-aware colors for Chart.js
 function getChartThemeColors() {
