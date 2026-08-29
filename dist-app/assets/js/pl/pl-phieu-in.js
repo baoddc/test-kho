@@ -2001,7 +2001,7 @@ async function submitAddData() {
 // DATA LOADING
 // =============================================================================
 
-async function loadGoogleSheet() {
+async function loadGoogleSheet(resetPage = false) {
   try {
     const cachedData = typeof getStoredTableCache === 'function' ? getStoredTableCache('pl-phieu-in') : null;
 
@@ -2052,7 +2052,7 @@ async function loadGoogleSheet() {
     if (cachedData && Array.isArray(cachedData) && cachedData.length > 0) {
       rawSupabaseData = cachedData;
       tableData = processRows(cachedData);
-      renderTable();
+      renderTable(tableData, resetPage);
       renderAddDataForm();
       if (tableData.length > 1) populateFormWithLatestData();
     }
@@ -2074,7 +2074,7 @@ async function loadGoogleSheet() {
     rawSupabaseData = freshData;
     tableData = processRows(freshData);
 
-    renderTable();
+    renderTable(tableData, resetPage);
     renderAddDataForm();
     if (tableData.length > 1) {
       populateFormWithLatestData();
@@ -2645,55 +2645,37 @@ function updateSelectedRows() {
 }
 
 function setupModalPermissions(modalEl) {
-  const perms = (typeof getUserPermissions === 'function')
-    ? getUserPermissions('pl')
-    : { canAdd: true, canEdit: true, canDelete: true, isAdmin: true };
+  const currentUser = localStorage.getItem('currentUser');
+  const isAdmin = currentUser === 'bao.lt';
 
-  if (!modalEl) return perms.isAdmin;
+  if (!modalEl) return isAdmin;
 
-  const modalId = (modalEl.id || '').toLowerCase();
-  let hasPerm = perms.isAdmin;
-
-  if (modalId.includes('delete')) {
-    hasPerm = perms.isAdmin || perms.canDelete;
-  } else if (modalId.includes('add')) {
-    hasPerm = perms.isAdmin || perms.canAdd;
-  } else if (modalId.includes('edit')) {
-    hasPerm = perms.isAdmin || perms.canEdit;
-  } else {
-    hasPerm = perms.isAdmin || perms.canEdit || perms.canAdd;
-  }
-
-  // Vô hiệu hóa tất cả các input, select, textarea trong modal nếu không có quyền
+  // Vô hiệu hóa tất cả các input, select, textarea trong modal nếu không phải admin
   const inputs = modalEl.querySelectorAll('input, select, textarea');
   inputs.forEach(input => {
-    input.disabled = !hasPerm;
+    input.disabled = !isAdmin;
   });
 
   // Ẩn/hiện các nút hành động trong modal
-  const submitBtns = modalEl.querySelectorAll('button[type="submit"], #btnEditAddRowModal, #btnAddRowModal');
+  // Nút Submit (Thêm, Cập nhật, In phiếu, v.v.)
+  const submitBtns = modalEl.querySelectorAll('button[type="submit"], #btnConfirmDelete, #btnEditAddRowModal, #btnAddRowModal');
   submitBtns.forEach(btn => {
-    btn.style.display = hasPerm ? '' : 'none';
+    btn.style.display = isAdmin ? '' : 'none';
   });
-
-  const btnConfirmDelete = modalEl.querySelector('#btnConfirmDelete');
-  if (btnConfirmDelete) {
-    btnConfirmDelete.style.display = (perms.isAdmin || perms.canDelete) ? '' : 'none';
-  }
 
   // Ẩn các nút "Xóa" dòng trong modal
   const removeBtns = modalEl.querySelectorAll('.btn-remove-edit-row, .btn-remove-row');
   removeBtns.forEach(btn => {
-    btn.style.display = hasPerm ? '' : 'none';
+    btn.style.display = isAdmin ? '' : 'none';
   });
 
-  // Ẩn các nút "Thêm mặt hàng mới" trong dropdown
+  // Ẩn các nút "Thêm mặt hàng mới" trong dropdown (nếu modal có dropdown)
   const addNewItemBtns = modalEl.querySelectorAll('.btn-add-new-item');
   addNewItemBtns.forEach(btn => {
-    btn.style.display = hasPerm ? '' : 'none';
+    btn.style.display = isAdmin ? '' : 'none';
   });
 
-  return hasPerm;
+  return isAdmin;
 }
 
 /* =============================================================================

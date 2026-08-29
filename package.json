@@ -5,7 +5,8 @@
   "main": "pages/index.html",
   "scripts": {
     "start": "npx serve .",
-    "dev": "npx serve ."
+    "dev": "npx serve .",
+    "build": "node scripts/sync-dist.js"
   },
   "keywords": [
     "kho",

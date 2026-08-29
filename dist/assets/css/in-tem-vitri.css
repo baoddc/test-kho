@@ -1,0 +1,468 @@
+/* =============================================================================
+   PAGE SCROLLING & VIEWPORT OVERRIDES
+================================================================================ */
+html, body.in-tem-page {
+  height: auto !important;
+  min-height: 100vh !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  scroll-behavior: smooth;
+}
+
+body.in-tem-page .main-wrapper {
+  height: auto !important;
+  min-height: 100vh !important;
+  overflow: visible !important;
+  display: block !important;
+}
+
+body.in-tem-page .main-content {
+  height: auto !important;
+  min-height: 100% !important;
+  overflow: visible !important;
+  display: block !important;
+}
+
+/* Modern Industrial Scrollbars */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #0d6efd;
+  border-radius: 4px;
+  border: 2px solid #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #0b5ed7;
+}
+
+/* Firefox scrollbar */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: #0d6efd #f1f5f9;
+}
+
+/* Floating Navigation Controls */
+.floating-scroll-controls {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 1050;
+  transition: all 0.3s ease;
+}
+
+.floating-btn {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  border-radius: 50% !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0.9;
+}
+
+.floating-btn:hover {
+  transform: translateY(-3px) scale(1.08);
+  opacity: 1;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35) !important;
+}
+
+.floating-btn:active {
+  transform: translateY(0) scale(0.96);
+}
+
+/* Matrix Selector */
+.rack-checkbox-matrix {
+  max-height: 180px;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
+  gap: 6px;
+}
+
+.rack-badge-check {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  background: #fff;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s ease-in-out;
+}
+
+.rack-badge-check:hover {
+  background: #e9ecef;
+  border-color: #0d6efd;
+}
+
+.rack-badge-check input:checked + span {
+  color: #0d6efd;
+  font-weight: bold;
+}
+
+/* ==================== LABELS CONTAINER (SCREEN VIEW) ==================== */
+.labels-container {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 30px;
+}
+
+/* Layout 1: A4 - 4 tem/trang (2x2 grid) */
+.layout-a4-grid-4 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* Layout 2: A4 - 2 tem/trang (1x2 grid) */
+.layout-a4-grid-2 {
+  grid-template-columns: 1fr;
+}
+
+/* Layout 3: Decal 100x75mm */
+.layout-decal-100x75 {
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+}
+
+/* Layout 4: Decal 100x150mm */
+.layout-decal-100x150 {
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+}
+
+/* Layout 5: A4 - 12 tem mini (3x4 grid) */
+.layout-a4-grid-12 {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+/* Layout 6: QR Only Grid */
+.layout-qr-only {
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 14px;
+}
+
+/* ==================== INDUSTRIAL LABEL CARD ==================== */
+.rack-label-card {
+  background: #ffffff;
+  border: 3px solid #1a1a1a;
+  border-radius: 8px;
+  padding: 12px 14px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  page-break-inside: avoid;
+  break-inside: avoid;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+/* ==================== QR ONLY MINIMAL CARD ==================== */
+.rack-label-card.qr-only-card {
+  padding: 12px 10px 10px 10px;
+  align-items: center;
+  text-align: center;
+  border: 2.5px solid #111827;
+  border-radius: 6px;
+  min-height: auto;
+  justify-content: center;
+}
+
+.qr-only-card .qr-only-header {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #1e40af;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.qr-only-card .label-qr-canvas {
+  width: 150px;
+  height: 150px;
+  margin: 0 auto;
+  border: none;
+  padding: 0;
+}
+
+.qr-only-card .qr-only-footer {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.qr-only-card .qr-only-rack-label {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #64748b;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.qr-only-card .qr-only-rack-code {
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: #000000;
+  line-height: 1;
+  letter-spacing: -0.5px;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  margin-top: 1px;
+}
+
+/* Single QR Download Action Button */
+.single-qr-download-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 3px 7px;
+  font-size: 0.75rem;
+  border-radius: 4px;
+  opacity: 0.5;
+  background: rgba(255, 255, 255, 0.9);
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.rack-label-card:hover .single-qr-download-btn {
+  opacity: 1;
+  background: #0d6efd;
+  color: #ffffff;
+  border-color: #0d6efd;
+}
+
+/* Header */
+.label-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2px solid #212529;
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+}
+
+.label-logo {
+  height: 32px;
+  max-width: 100px;
+  object-fit: contain;
+}
+
+.label-company-info {
+  text-align: right;
+  line-height: 1.15;
+}
+
+.label-company-name {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #0d47a1;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.label-warehouse-name {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #333;
+}
+
+/* Body / Center */
+.label-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 4px 0;
+}
+
+.label-rack-code-box {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.label-rack-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.label-rack-code {
+  font-size: 3.2rem;
+  font-weight: 900;
+  color: #000000;
+  line-height: 1;
+  letter-spacing: -1px;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  margin: 2px 0;
+}
+
+.label-qr-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.label-qr-canvas {
+  width: 125px;
+  height: 125px;
+  border: 1px solid #dee2e6;
+  padding: 3px;
+  background: #fff;
+  border-radius: 4px;
+}
+
+.label-qr-canvas img,
+.label-qr-canvas canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+/* Footer & Barcode */
+.label-footer {
+  border-top: 1.5px dashed #6c757d;
+  padding-top: 6px;
+  margin-top: 6px;
+  text-align: center;
+}
+
+.label-barcode-svg {
+  max-width: 100%;
+  height: 38px;
+  margin: 0 auto;
+  display: block;
+}
+
+.label-instruction {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #495057;
+  margin-top: 3px;
+}
+
+.label-url-text {
+  font-size: 0.62rem;
+  color: #6c757d;
+  word-break: break-all;
+  font-family: monospace;
+}
+
+/* Specific Sizes per Layout */
+.layout-a4-grid-2 .rack-label-card {
+  min-height: 360px;
+  padding: 20px;
+}
+
+.layout-a4-grid-2 .label-rack-code {
+  font-size: 4.8rem;
+}
+
+.layout-a4-grid-2 .label-qr-canvas {
+  width: 160px;
+  height: 160px;
+}
+
+.layout-a4-grid-2 .label-barcode-svg {
+  height: 48px;
+}
+
+/* =============================================================================
+   PRINT STYLESHEET (@media print)
+================================================================================ */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 12pt;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .no-print,
+  .sidebar,
+  .topbar,
+  #controlPanel,
+  #btnScrollToTop,
+  #btnScrollToBottom,
+  .floating-scroll-controls {
+    display: none !important;
+  }
+
+  .main-content {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  .labels-container {
+    display: grid !important;
+    gap: 12mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  .layout-a4-grid-4 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .layout-a4-grid-2 {
+    grid-template-columns: 1fr !important;
+    gap: 18mm !important;
+  }
+
+  .layout-a4-grid-12 {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 4mm !important;
+  }
+
+  .layout-qr-only {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 6mm !important;
+  }
+
+  .single-qr-download-btn {
+    display: none !important;
+  }
+
+  .rack-label-card {
+    border: 3px solid #000000 !important;
+    box-shadow: none !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+}
