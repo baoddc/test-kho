@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ddc-kho-v1';
+const CACHE_NAME = 'ddc-kho-v2';
 
 // Key static assets to pre-cache on install
 const PRECACHE_ASSETS = [
