@@ -27,10 +27,13 @@ function runSync() {
 
   console.log('[Sync Script] 🚀 Starting full synchronization...');
 
-  // 1. Sync assets & pages to dist
+  // 1. Sync assets, pages, home, dang_nhap, login to dist
   console.log('[Sync Script] Syncing to dist/...');
   syncDirectory(path.join(rootDir, 'assets'), path.join(distDir, 'assets'));
   syncDirectory(path.join(rootDir, 'pages'), path.join(distDir, 'pages'));
+  syncDirectory(path.join(rootDir, 'home'), path.join(distDir, 'home'));
+  syncDirectory(path.join(rootDir, 'dang_nhap'), path.join(distDir, 'dang_nhap'));
+  syncDirectory(path.join(rootDir, 'login'), path.join(distDir, 'login'));
 
   const staticFiles = [
     'index.html',
@@ -50,6 +53,9 @@ function runSync() {
   console.log('[Sync Script] Syncing to dist-app/...');
   syncDirectory(path.join(rootDir, 'assets'), path.join(distAppDir, 'assets'));
   syncDirectory(path.join(rootDir, 'pages'), path.join(distAppDir, 'pages'));
+  syncDirectory(path.join(rootDir, 'home'), path.join(distAppDir, 'home'));
+  syncDirectory(path.join(rootDir, 'dang_nhap'), path.join(distAppDir, 'dang_nhap'));
+  syncDirectory(path.join(rootDir, 'login'), path.join(distAppDir, 'login'));
 
   const staticAppFiles = [
     'index.html',

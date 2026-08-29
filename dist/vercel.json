@@ -1,21 +1,3 @@
 {
-  "cleanUrls": true,
-  "rewrites": [
-    {
-      "source": "/home",
-      "destination": "/pages/home"
-    },
-    {
-      "source": "/dang_nhap",
-      "destination": "/pages/index"
-    },
-    {
-      "source": "/dang-nhap",
-      "destination": "/pages/index"
-    },
-    {
-      "source": "/login",
-      "destination": "/pages/index"
-    }
-  ]
+  "cleanUrls": true
 }
