@@ -1,35 +1,20 @@
 {
   "cleanUrls": true,
-  "redirects": [
+  "routes": [
     {
-      "source": "/home",
-      "destination": "/",
-      "permanent": false
+      "src": "^/home/?$",
+      "status": 307,
+      "headers": { "Location": "/" }
     },
     {
-      "source": "/pages/home",
-      "destination": "/",
-      "permanent": false
+      "src": "^/pages/home(\\.html)?/?$",
+      "status": 307,
+      "headers": { "Location": "/" }
     },
     {
-      "source": "/pages/home.html",
-      "destination": "/",
-      "permanent": false
-    },
-    {
-      "source": "/dang_nhap",
-      "destination": "/pages/index",
-      "permanent": false
-    },
-    {
-      "source": "/dang-nhap",
-      "destination": "/pages/index",
-      "permanent": false
-    },
-    {
-      "source": "/login",
-      "destination": "/pages/index",
-      "permanent": false
+      "src": "^/(dang_nhap|dang-nhap|login)/?$",
+      "status": 307,
+      "headers": { "Location": "/pages/index" }
     }
   ]
 }
