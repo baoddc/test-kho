@@ -334,23 +334,13 @@
       return currentUser === 'bao.lt';
     }
 
-    // 2. Chế độ Khách (chưa đăng nhập): Hiển thị tất cả các mục menu khác
-    if (!currentUser) {
-      return true;
-    }
-
-    // 3. Tài khoản admin bao.lt: Toàn quyền hiển thị
-    if (currentUser === 'bao.lt') {
-      return true;
-    }
-
-    // 4. Nếu item có children (nhóm cha): kiểm tra nếu có ít nhất 1 item con được hiển thị
+    // 2. Nếu item có children (nhóm cha): kiểm tra nếu có ít nhất 1 item con được hiển thị
     if (typeof item === 'object' && Array.isArray(item.children)) {
       return item.children.some(child => isSidebarItemVisible(child));
     }
 
-    // 5. Tài khoản người dùng đã đăng nhập: kiểm tra theo quyền truy cập trang
-    return isPageAllowed(href);
+    // 3. Hiển thị tất cả các mục menu còn lại cho tất cả người dùng (cả Khách và User thường)
+    return true;
   }
 
   function isPageAllowed(href) {
