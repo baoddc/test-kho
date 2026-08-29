@@ -1,20 +1,21 @@
 {
   "cleanUrls": true,
-  "routes": [
+  "rewrites": [
     {
-      "src": "^/home/?$",
-      "status": 307,
-      "headers": { "Location": "/" }
+      "source": "/home",
+      "destination": "/pages/home"
     },
     {
-      "src": "^/pages/home(\\.html)?/?$",
-      "status": 307,
-      "headers": { "Location": "/" }
+      "source": "/dang_nhap",
+      "destination": "/pages/index"
     },
     {
-      "src": "^/(dang_nhap|dang-nhap|login)/?$",
-      "status": 307,
-      "headers": { "Location": "/pages/index" }
+      "source": "/dang-nhap",
+      "destination": "/pages/index"
+    },
+    {
+      "source": "/login",
+      "destination": "/pages/index"
     }
   ]
 }
