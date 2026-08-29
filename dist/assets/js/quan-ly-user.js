@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const currentUser = localStorage.getItem('currentUser');
     if (!currentUser || currentUser !== 'bao.lt') {
         alert('Rất tiếc! Chỉ tài khoản Quản trị viên (bao.lt) mới có quyền truy cập trang này.');
-        window.location.href = 'home.html';
+        window.location.href = '/';
         return;
     }
 

@@ -584,7 +584,7 @@
         return;
       }
       if (norm.includes('trang chu') || norm.includes('ve trang chu')) {
-        handleNavigation('/pages/home.html', "Trang chủ");
+        handleNavigation('/', "Trang chủ");
         return;
       }
       if (norm.includes('gioi thieu') || norm.includes('ve gioi thieu')) {
