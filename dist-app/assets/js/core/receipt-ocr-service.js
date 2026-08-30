@@ -11,14 +11,19 @@
   const STORAGE_KEY = 'gemini_ocr_api_key';
   const CACHED_MODEL_KEY = 'gemini_cached_model_name';
 
+  // Danh sách candidate models theo thứ tự ưu tiên độ ổn định và quota cao nhất
   const CANDIDATE_MODELS = [
-    'gemini-2.0-flash',
-    'gemini-1.5-flash-latest',
-    'gemini-1.5-flash',
+    'gemini-3.5-flash',
+    'gemini-3.5-flash-lite',
+    'gemini-3.6-flash',
+    'gemini-3.1-flash-lite',
+    'gemini-flash-lite-latest',
     'gemini-2.5-flash',
-    'gemini-1.5-flash-8b',
-    'gemini-1.5-pro',
-    'gemini-pro'
+    'gemini-3.7-flash',
+    'gemini-flash-latest',
+    'gemini-2.5-pro',
+    'gemini-1.5-flash',
+    'gemini-2.0-flash'
   ];
 
   const ReceiptOcrService = {
@@ -56,7 +61,7 @@
      */
     resolveWorkingModel: async function (apiKey) {
       const cached = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(CACHED_MODEL_KEY) : null;
-      if (cached) return cached;
+      if (cached && CANDIDATE_MODELS.includes(cached)) return cached;
 
       try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey.trim())}`;
@@ -85,7 +90,7 @@
         console.warn('ListModels failed, fallback to default candidate:', err);
       }
 
-      return 'gemini-2.0-flash';
+      return 'gemini-3.5-flash';
     },
 
     /**
@@ -126,7 +131,7 @@
     },
 
     /**
-     * Gọi Gemini Vision API để bóc tách thông tin phiếu xuất kho (hỗ trợ nhiều dòng mặt hàng)
+     * Gọi Gemini Vision API để bóc tách thông tin phiếu xuất kho (Tự động luân chuyển model nếu bị 429 Quota Exceeded)
      */
     callGeminiVision: async function (base64Data, mimeType, apiKey) {
       const prompt = `
@@ -167,97 +172,128 @@ Format JSON mong đợi:
 }
 `;
 
-      const modelName = await this.resolveWorkingModel(apiKey);
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey.trim())}`;
+      // Xác định danh sách model cần thử theo thứ tự ưu tiên
+      const primaryModel = await this.resolveWorkingModel(apiKey);
+      const modelsToTry = [primaryModel, ...CANDIDATE_MODELS.filter(m => m !== primaryModel)];
 
-      const requestBody = {
-        contents: [
-          {
-            parts: [
-              { text: prompt },
-              {
-                inline_data: {
-                  mime_type: mimeType || 'image/jpeg',
-                  data: base64Data
-                }
-              }
-            ]
-          }
-        ],
-        generationConfig: {
-          temperature: 0.1,
-          topP: 0.95,
-          responseMimeType: 'application/json'
-        }
-      };
+      let lastError = null;
 
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
-      });
-
-      if (!response.ok) {
-        let errMsg = `Lỗi API (${response.status}): ${response.statusText}`;
+      for (const modelName of modelsToTry) {
         try {
-          const errJson = await response.json();
-          if (errJson.error && errJson.error.message) {
-            errMsg = errJson.error.message;
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey.trim())}`;
+
+          const requestBody = {
+            contents: [
+              {
+                parts: [
+                  { text: prompt },
+                  {
+                    inline_data: {
+                      mime_type: mimeType || 'image/jpeg',
+                      data: base64Data
+                    }
+                  }
+                ]
+              }
+            ],
+            generationConfig: {
+              temperature: 0.1,
+              topP: 0.95,
+              responseMimeType: 'application/json'
+            }
+          };
+
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody)
+          });
+
+          if (!response.ok) {
+            let errMsg = `Lỗi API (${response.status}): ${response.statusText}`;
+            try {
+              const errJson = await response.json();
+              if (errJson.error && errJson.error.message) {
+                errMsg = errJson.error.message;
+              }
+            } catch (_) { }
+
+            // Nếu model bị 429 Quota Exceeded, 404 không tồn tại hoặc 503 tạm thời quá tải, tự động chuyển sang model kế tiếp
+            if (response.status === 429 || response.status === 404 || response.status === 503 || response.status === 500) {
+              console.warn(`[OCR AI Fallback] Model "${modelName}" trả về HTTP ${response.status} (${errMsg}). Đang tự động thử model kế tiếp...`);
+              lastError = new Error(`[${modelName}] ${errMsg}`);
+              continue;
+            }
+
+            throw new Error(errMsg);
           }
-        } catch (_) {}
-        throw new Error(errMsg);
+
+          const resData = await response.json();
+          const rawText = resData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          if (!rawText) {
+            throw new Error(`Không nhận được dữ liệu phản hồi từ model "${modelName}".`);
+          }
+
+          // Parse JSON an toàn
+          let cleaned = rawText.trim();
+          if (cleaned.startsWith('```json')) cleaned = cleaned.replace(/^```json/, '').replace(/```$/, '').trim();
+          else if (cleaned.startsWith('```')) cleaned = cleaned.replace(/^```/, '').replace(/```$/, '').trim();
+
+          const parsed = JSON.parse(cleaned);
+
+          // Cập nhật model hoạt động tốt vào sessionStorage
+          if (typeof sessionStorage !== 'undefined') {
+            sessionStorage.setItem(CACHED_MODEL_KEY, modelName);
+          }
+
+          // Chuẩn hóa danh sách items
+          let itemsList = [];
+          if (Array.isArray(parsed.items) && parsed.items.length > 0) {
+            itemsList = parsed.items.map((it, idx) => ({
+              stt: it.stt || (idx + 1),
+              maVatTu: String(it.maVatTu || '').trim(),
+              tenVatTu: String(it.tenVatTu || '').trim(),
+              batch: String(it.batch || '').trim()
+            })).filter(it => it.maVatTu || it.tenVatTu || it.batch);
+          }
+
+          // Fallback nếu AI trả về trường đơn lẻ
+          if (itemsList.length === 0) {
+            itemsList = [{
+              stt: 1,
+              maVatTu: String(parsed.maVatTu || '').trim(),
+              tenVatTu: String(parsed.tenVatTu || '').trim(),
+              batch: String(parsed.batch || '').trim()
+            }];
+          }
+
+          // Đảm bảo tuân thủ các quy tắc bất biến
+          return {
+            ngayXuat: this.normalizeDate(parsed.ngayXuat) || new Date().toISOString().split('T')[0],
+            phieuXuat: String(parsed.phieuXuat || '').trim(),
+            maChungTu: 'PX',
+            loaiXuat: String(parsed.loaiXuat || 'Xưởng sản xuất').trim(),
+            maCongTrinh: String(parsed.maCongTrinh || '').trim(),
+            tenCongTrinh: String(parsed.tenCongTrinh || '').trim(),
+            items: itemsList,
+            // Giữ các trường tương thích ngược cấp 1 cho item đầu tiên
+            maVatTu: itemsList[0]?.maVatTu || '',
+            tenVatTu: itemsList[0]?.tenVatTu || '',
+            batch: itemsList[0]?.batch || '',
+            soLuongKg: null,
+            ghiChu: '',
+            usedModel: modelName
+          };
+
+        } catch (err) {
+          console.warn(`[OCR AI Fallback] Model "${modelName}" gặp lỗi:`, err);
+          lastError = err;
+          continue;
+        }
       }
 
-      const resData = await response.json();
-      const rawText = resData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      if (!rawText) {
-        throw new Error('Không nhận được dữ liệu phản hồi từ AI Vision.');
-      }
-
-      // Parse JSON an toàn
-      let cleaned = rawText.trim();
-      if (cleaned.startsWith('```json')) cleaned = cleaned.replace(/^```json/, '').replace(/```$/, '').trim();
-      else if (cleaned.startsWith('```')) cleaned = cleaned.replace(/^```/, '').replace(/```$/, '').trim();
-
-      const parsed = JSON.parse(cleaned);
-
-      // Chuẩn hóa danh sách items
-      let itemsList = [];
-      if (Array.isArray(parsed.items) && parsed.items.length > 0) {
-        itemsList = parsed.items.map((it, idx) => ({
-          stt: it.stt || (idx + 1),
-          maVatTu: String(it.maVatTu || '').trim(),
-          tenVatTu: String(it.tenVatTu || '').trim(),
-          batch: String(it.batch || '').trim()
-        })).filter(it => it.maVatTu || it.tenVatTu || it.batch);
-      }
-
-      // Fallback nếu AI trả về trường đơn lẻ
-      if (itemsList.length === 0) {
-        itemsList = [{
-          stt: 1,
-          maVatTu: String(parsed.maVatTu || '').trim(),
-          tenVatTu: String(parsed.tenVatTu || '').trim(),
-          batch: String(parsed.batch || '').trim()
-        }];
-      }
-
-      // Đảm bảo tuân thủ các quy tắc bất biến
-      return {
-        ngayXuat: this.normalizeDate(parsed.ngayXuat) || new Date().toISOString().split('T')[0],
-        phieuXuat: String(parsed.phieuXuat || '').trim(),
-        maChungTu: 'PX',
-        loaiXuat: String(parsed.loaiXuat || 'Xưởng sản xuất').trim(),
-        maCongTrinh: String(parsed.maCongTrinh || '').trim(),
-        tenCongTrinh: String(parsed.tenCongTrinh || '').trim(),
-        items: itemsList,
-        // Giữ các trường tương thích ngược cấp 1 cho item đầu tiên
-        maVatTu: itemsList[0]?.maVatTu || '',
-        tenVatTu: itemsList[0]?.tenVatTu || '',
-        batch: itemsList[0]?.batch || '',
-        soLuongKg: null,
-        ghiChu: ''
-      };
+      // Nếu tất cả các model đều thất bại
+      throw lastError || new Error('Tất cả các model AI đều không khả dụng hoặc đã vượt hạn mức quota. Vui lòng thử lại sau giây lát.');
     },
 
     /**
@@ -314,7 +350,7 @@ Format JSON mong đợi:
         try {
           const json = await listRes.json();
           if (json.error && json.error.message) msg = json.error.message;
-        } catch (_) {}
+        } catch (_) { }
         throw new Error(msg);
       }
 
@@ -329,7 +365,7 @@ Format JSON mong đợi:
       }
 
       // Chọn model tốt nhất
-      let selectedModel = 'gemini-2.0-flash';
+      let selectedModel = 'gemini-3.5-flash';
       for (const cand of CANDIDATE_MODELS) {
         if (supported.includes(cand)) {
           selectedModel = cand;
