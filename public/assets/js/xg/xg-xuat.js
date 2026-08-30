@@ -1893,11 +1893,11 @@ function updateInventoryTableLockStates() {
         tr.classList.add('table-warning');
         tr.style.opacity = '0.75';
         cb.checked = false;
-        badgeContainer.innerHTML = `<span class="badge bg-warning text-dark ms-1" style="font-size: 0.75rem;" title="Đang soạn bởi ${lockStatus.lockedBy}"><i class="bi bi-lock-fill"></i> ${lockStatus.lockedBy} đang giữ</span>`;
+        badgeContainer.innerHTML = `<span class="badge bg-warning text-dark px-2 py-1 ms-1 shadow-sm" style="font-size: 0.78rem; border: 1px solid #d97706; font-weight: 600;" title="Cuộn đang được tài khoản [${lockStatus.lockedBy}] chọn xuất"><i class="bi bi-person-fill-lock me-1"></i>${lockStatus.lockedBy} đang giữ</span>`;
       } else {
         tr.classList.remove('table-warning');
         tr.style.opacity = '1';
-        badgeContainer.innerHTML = cb.checked ? `<span class="badge bg-primary ms-1" style="font-size: 0.75rem;"><i class="bi bi-check2-circle"></i> Đã chọn</span>` : '';
+        badgeContainer.innerHTML = cb.checked ? `<span class="badge bg-primary px-2 py-1 ms-1 shadow-sm" style="font-size: 0.78rem;"><i class="bi bi-check2-circle me-1"></i>Bạn đang giữ</span>` : '';
       }
     }
   });
@@ -1962,9 +1962,9 @@ function renderInventoryTable(data, searchVal = '') {
 
     let lockBadge = '';
     if (isLockedByOther) {
-      lockBadge = `<span class="badge bg-warning text-dark ms-1" style="font-size: 0.75rem;" title="Đang soạn bởi ${lockStatus.lockedBy}"><i class="bi bi-lock-fill"></i> ${lockStatus.lockedBy} đang giữ</span>`;
+      lockBadge = `<span class="badge bg-warning text-dark px-2 py-1 ms-1 shadow-sm" style="font-size: 0.78rem; border: 1px solid #d97706; font-weight: 600;" title="Cuộn đang được tài khoản [${lockStatus.lockedBy}] chọn xuất"><i class="bi bi-person-fill-lock me-1"></i>${lockStatus.lockedBy} đang giữ</span>`;
     } else if (isAlreadyInForm) {
-      lockBadge = `<span class="badge bg-success ms-1" style="font-size: 0.75rem;">Đã có trong phiếu</span>`;
+      lockBadge = `<span class="badge bg-success px-2 py-1 ms-1 shadow-sm" style="font-size: 0.78rem;"><i class="bi bi-check-lg me-1"></i>Đã có trong phiếu</span>`;
     }
 
     tr.innerHTML = `
