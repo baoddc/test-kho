@@ -1028,14 +1028,14 @@ function generateItemCardHTML(item, index, totalItems) {
 
   let rollsRowsHTML = '';
   if (rolls.length === 0) {
-    rollsRowsHTML = `<tr><td colspan="4" class="text-center text-muted py-2 fst-italic" style="font-size: 0.75rem;">Chưa có cuộn nào. Bấm "+ Chọn cuộn từ kho" hoặc "+ Nhập tay"</td></tr>`;
+    rollsRowsHTML = `<tr><td colspan="4" class="text-center text-muted py-2 fst-italic" style="font-size: 0.75rem;">Chưa có cuộn nào. Vui lòng bấm "+ Chọn cuộn từ kho"</td></tr>`;
   } else {
     rolls.forEach((r, rIdx) => {
       rollsRowsHTML += `
         <tr data-roll-id="${r.id}">
           <td class="text-center">${rIdx + 1}</td>
           <td>
-            <input type="text" class="form-control form-control-sm item-roll-cuon-id font-monospace" value="${r.cuonId || ''}" placeholder="Cuộn ID" data-item-idx="${index}" data-roll-idx="${rIdx}">
+            <input type="text" class="form-control form-control-sm item-roll-cuon-id font-monospace bg-light" value="${r.cuonId || ''}" placeholder="Cuộn ID" readonly data-item-idx="${index}" data-roll-idx="${rIdx}" style="cursor: not-allowed;">
           </td>
           <td>
             <input type="text" class="form-control form-control-sm item-roll-kg fw-bold text-end" value="${r.kg ? formatNumericValue(r.kg) : ''}" placeholder="Số kg" data-item-idx="${index}" data-roll-idx="${rIdx}" required>
@@ -1090,9 +1090,6 @@ function generateItemCardHTML(item, index, totalItems) {
           <div class="d-flex gap-1">
             <button type="button" class="btn btn-sm btn-primary py-1 px-2 btn-item-pick-inv" data-item-idx="${index}">
               <i class="bi bi-box-seam"></i> + Chọn cuộn từ kho
-            </button>
-            <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 btn-item-add-manual" data-item-idx="${index}">
-              + Nhập tay
             </button>
           </div>
         </div>
@@ -1191,30 +1188,7 @@ function renderItemCards() {
       });
     }
 
-    // Button: Nhập tay cuộn
-    const btnAddManual = cardEl.querySelector('.btn-item-add-manual');
-    if (btnAddManual) {
-      btnAddManual.addEventListener('click', () => {
-        if (!item.rolls) item.rolls = [];
-        item.rolls.push({
-          id: Math.random().toString(36).slice(2),
-          cuonId: '',
-          kg: ''
-        });
-        renderItemCards();
-      });
-    }
-
     // Roll row event listeners
-    cardEl.querySelectorAll('.item-roll-cuon-id').forEach(inp => {
-      inp.addEventListener('input', (e) => {
-        const rIdx = parseInt(e.target.dataset.rollIdx, 10);
-        if (item.rolls && item.rolls[rIdx]) {
-          item.rolls[rIdx].cuonId = e.target.value.trim();
-        }
-      });
-    });
-
     cardEl.querySelectorAll('.item-roll-kg').forEach(inp => {
       inp.addEventListener('input', (e) => {
         const rIdx = parseInt(e.target.dataset.rollIdx, 10);
