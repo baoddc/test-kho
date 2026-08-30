@@ -153,51 +153,36 @@
               <!-- Common fields section -->
               <div class="card mb-3">
                 <div class="card-header bg-primary text-white py-2">
-                  <h6 class="mb-0">Thông tin chung</h6>
+                  <h6 class="mb-0"><i class="bi bi-info-circle me-1"></i> Thông tin chung phiếu xuất</h6>
                 </div>
                 <div class="card-body">
                   <div id="addDataCommonFields" class="row g-2">
-                    <!-- Common inputs generated dynamically -->
+                    <!-- Common inputs: Mã chứng từ (PX), Ngày xuất, Phiếu xuất, Loại xuất, Mã CT, Tên CT -->
                   </div>
                 </div>
               </div>
 
-              <!-- Rolls section -->
-              <div class="card mb-3">
+              <!-- Multi-Item Section -->
+              <div class="card mb-3 border-success shadow-sm">
                 <div class="card-header bg-success text-white py-2 d-flex justify-content-between align-items-center">
-                  <h6 class="mb-0">Danh sách cuộn</h6>
-                  <button type="button" class="btn btn-sm btn-light" id="btnAddRoll">
-                    + Thêm cuộn
+                  <h6 class="mb-0"><i class="bi bi-box-seam me-1"></i> Danh sách mặt hàng & cuộn xuất</h6>
+                  <button type="button" class="btn btn-sm btn-light fw-bold" id="btnAddItemCard">
+                    <i class="bi bi-plus-circle"></i> + Thêm mặt hàng
                   </button>
                 </div>
-                <div class="card-body p-0">
-                  <div id="rollsContainer" class="table-responsive" style="max-height: 250px;">
-                    <table class="table table-bordered table-sm mb-0" id="rollsTable">
-                      <thead class="table-light">
-                        <tr>
-                          <th style="width: 50px;">STT</th>
-                          <th>Mã vật tư <span class="text-danger">*</span></th>
-                          <th>Cuộn ID</th>
-                          <th>Số kg <span class="text-danger">*</span></th>
-                          <th style="width: 80px;">Thao tác</th>
-                        </tr>
-                      </thead>
-                      <tbody id="rollsTableBody">
-                        <!-- Roll rows will be added here -->
-                      </tbody>
-                      <tfoot>
-                        <tr class="table-info d-none">
-                          <td colspan="3" class="text-end fw-bold">Tổng số cuộn:</td>
-                          <td class="fw-bold" id="totalRollsCount">0</td>
-                          <td></td>
-                        </tr>
-                        <tr class="table-warning">
-                          <td colspan="3" class="text-end fw-bold">Tổng kg:</td>
-                          <td class="fw-bold" id="totalKg">0</td>
-                          <td></td>
-                        </tr>
-                      </tfoot>
-                    </table>
+                <div class="card-body p-2" id="itemsContainerWrapper">
+                  <div id="itemsContainer">
+                    <!-- Dynamic Item Cards will be rendered here -->
+                  </div>
+
+                  <!-- Global Totals for all items in receipt -->
+                  <div class="p-2 bg-light rounded border d-flex justify-content-between align-items-center flex-wrap gap-2 mt-2">
+                    <span class="fw-bold text-secondary small">TỔNG TOÀN BỘ PHIẾU XUẤT:</span>
+                    <div class="d-flex gap-4">
+                      <span class="small">Tổng số mặt hàng: <strong id="globalItemsCount" class="text-primary">1</strong></span>
+                      <span class="small">Tổng số cuộn: <strong id="globalRollsCount" class="text-primary">0</strong></span>
+                      <span class="small">Tổng khối lượng: <strong id="globalTotalKg" class="text-success fs-6">0</strong> kg</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -205,18 +190,18 @@
               <!-- Additional fields section -->
               <div class="card">
                 <div class="card-header bg-secondary text-white py-2">
-                  <h6 class="mb-0">Thông tin bổ sung</h6>
+                  <h6 class="mb-0"><i class="bi bi-card-text me-1"></i> Ghi chú & Thông tin bổ sung</h6>
                 </div>
                 <div class="card-body">
                   <div id="addDataAdditionalFields" class="row g-2">
-                    <!-- Additional inputs generated dynamically -->
+                    <!-- Ghi chú generated dynamically -->
                   </div>
                 </div>
               </div>
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-              <button type="submit" class="btn btn-primary">Thêm</button>
+              <button type="submit" class="btn btn-primary" id="btnSubmitAddData">Thêm dữ liệu</button>
             </div>
           </form>
         </div>

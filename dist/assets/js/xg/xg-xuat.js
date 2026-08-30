@@ -854,6 +854,7 @@ function setupModalPermissions(modalEl) {
   // Chỉ disable các trường nhập liệu cụ thể của form dữ liệu
   const formInputs = modalEl.querySelectorAll(
     '#addDataCommonFields input, #addDataCommonFields select, #addDataAdditionalFields input, #addDataAdditionalFields select, ' +
+    '#itemsContainer input, #itemsContainer select, ' +
     '#editDataCommonFields input, #editDataCommonFields select, #editDataAdditionalFields input, #editDataAdditionalFields select, ' +
     '#rollsTableBody input, #editRollsTableBody input'
   );
@@ -874,7 +875,10 @@ function setupModalPermissions(modalEl) {
   const btnAddRollEl = modalEl.querySelector('#btnAddRoll, #btnEditAddRoll');
   if (btnAddRollEl) btnAddRollEl.style.display = hasPerm ? '' : 'none';
 
-  modalEl.querySelectorAll('.btn-remove-roll, .btn-remove-edit-roll').forEach(btn => {
+  const btnAddItemCard = modalEl.querySelector('#btnAddItemCard');
+  if (btnAddItemCard) btnAddItemCard.style.display = hasPerm ? '' : 'none';
+
+  modalEl.querySelectorAll('.btn-remove-roll, .btn-remove-edit-roll, .btn-remove-item-card, .btn-item-pick-inv, .btn-item-add-manual, .btn-remove-item-roll').forEach(btn => {
     btn.style.display = hasPerm ? '' : 'none';
   });
 
@@ -971,6 +975,276 @@ function buildFormField(colName, colIdx, currentVal, container, namePrefix) {
    RECEIPT OCR IMAGE SCANNER & AUTOFILL HANDLERS
 ================================================================================ */
 
+let multiItemsData = []; // Array of { id, maVatTu, tenVatTu, batch, rolls: [{ id, cuonId, kg }] }
+let currentItemTargetIndex = 0; // Index of item card picking from inventory
+
+function formatNumericValue(val) {
+  const n = parseNumericInput(val);
+  if (n === null) return '0';
+  return n.toLocaleString('vi-VN', { minimumFractionDigits: 0, maximumFractionDigits: 3 });
+}
+
+function updateMultiItemTotals() {
+  let globalRolls = 0;
+  let globalKg = 0;
+
+  multiItemsData.forEach((item, idx) => {
+    let itemKg = 0;
+    let itemRollCount = 0;
+    (item.rolls || []).forEach(r => {
+      const kg = parseNumericInput(r.kg);
+      if (kg !== null && kg > 0) {
+        itemKg += kg;
+        itemRollCount++;
+      }
+    });
+
+    globalRolls += itemRollCount;
+    globalKg += itemKg;
+
+    // Update item card footer counters in DOM if present
+    const cardEl = document.querySelector(`.item-card[data-item-idx="${idx}"]`);
+    if (cardEl) {
+      const rollCountEl = cardEl.querySelector('.item-rolls-count');
+      const itemKgEl = cardEl.querySelector('.item-total-kg');
+      if (rollCountEl) rollCountEl.textContent = itemRollCount;
+      if (itemKgEl) itemKgEl.textContent = formatNumericValue(itemKg);
+    }
+  });
+
+  const globalItemsCountEl = document.getElementById('globalItemsCount');
+  const globalRollsCountEl = document.getElementById('globalRollsCount');
+  const globalTotalKgEl = document.getElementById('globalTotalKg');
+
+  if (globalItemsCountEl) globalItemsCountEl.textContent = multiItemsData.length;
+  if (globalRollsCountEl) globalRollsCountEl.textContent = globalRolls;
+  if (globalTotalKgEl) globalTotalKgEl.textContent = formatNumericValue(globalKg);
+}
+
+function generateItemCardHTML(item, index, totalItems) {
+  const isOnlyItem = totalItems <= 1;
+  const rolls = item.rolls || [];
+  const totalItemKg = rolls.reduce((sum, r) => sum + (parseNumericInput(r.kg) || 0), 0);
+
+  let rollsRowsHTML = '';
+  if (rolls.length === 0) {
+    rollsRowsHTML = `<tr><td colspan="4" class="text-center text-muted py-2 fst-italic" style="font-size: 0.75rem;">Chưa có cuộn nào. Bấm "+ Chọn cuộn từ kho" hoặc "+ Nhập tay"</td></tr>`;
+  } else {
+    rolls.forEach((r, rIdx) => {
+      rollsRowsHTML += `
+        <tr data-roll-id="${r.id}">
+          <td class="text-center">${rIdx + 1}</td>
+          <td>
+            <input type="text" class="form-control form-control-sm item-roll-cuon-id font-monospace" value="${r.cuonId || ''}" placeholder="Cuộn ID" data-item-idx="${index}" data-roll-idx="${rIdx}">
+          </td>
+          <td>
+            <input type="text" class="form-control form-control-sm item-roll-kg fw-bold text-end" value="${r.kg ? formatNumericValue(r.kg) : ''}" placeholder="Số kg" data-item-idx="${index}" data-roll-idx="${rIdx}" required>
+          </td>
+          <td class="text-center">
+            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 btn-remove-item-roll" data-item-idx="${index}" data-roll-idx="${rIdx}" title="Xóa cuộn">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+  }
+
+  const titleText = item.maVatTu || item.tenVatTu || item.batch
+    ? `${item.maVatTu || ''} ${item.batch ? `(Lô: ${item.batch})` : ''} - ${item.tenVatTu || ''}`.trim()
+    : 'Mục mới';
+
+  return `
+    <div class="item-card mb-3" data-item-idx="${index}" id="itemCard_${item.id}">
+      <div class="item-card-header">
+        <div class="d-flex align-items-center gap-2">
+          <span class="item-card-badge">Mục #${index + 1}</span>
+          <span class="fw-bold text-primary small item-card-header-title text-truncate" style="max-width: 450px;" title="${titleText}">${titleText}</span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          ${!isOnlyItem ? `
+            <button type="button" class="btn btn-xs btn-outline-danger btn-remove-item-card" data-item-idx="${index}" title="Xóa mục hàng này">
+              <i class="bi bi-trash"></i> Xóa mục
+            </button>
+          ` : ''}
+        </div>
+      </div>
+      <div class="item-card-body">
+        <div class="row g-2 mb-2">
+          <div class="col-12 col-md-4">
+            <label class="form-label small fw-bold">Mã vật tư <span class="text-danger">*</span></label>
+            <input type="text" class="form-control form-control-sm fw-bold item-ma-vt" value="${item.maVatTu || ''}" placeholder="VD: 10001189" data-item-idx="${index}" required>
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="form-label small fw-bold">Tên vật tư <span class="text-danger">*</span></label>
+            <input type="text" class="form-control form-control-sm fw-bold item-ten-vt" value="${item.tenVatTu || ''}" placeholder="VD: Thép phôi kẽm Z275 G450" data-item-idx="${index}" required>
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="form-label small fw-bold">Lô / Batch <span class="text-danger">*</span></label>
+            <input type="text" class="form-control form-control-sm fw-bold item-batch" value="${item.batch || ''}" placeholder="VD: 1.8X351VN" data-item-idx="${index}" required>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-1 flex-wrap gap-2">
+          <span class="small fw-bold text-success"><i class="bi bi-layers-fill"></i> Danh sách cuộn xuất của Mục #${index + 1}:</span>
+          <div class="d-flex gap-1">
+            <button type="button" class="btn btn-sm btn-primary py-1 px-2 btn-item-pick-inv" data-item-idx="${index}">
+              <i class="bi bi-box-seam"></i> + Chọn cuộn từ kho
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 btn-item-add-manual" data-item-idx="${index}">
+              + Nhập tay
+            </button>
+          </div>
+        </div>
+
+        <div class="table-responsive border rounded" style="max-height: 180px; height: auto;">
+          <table class="table table-sm table-bordered table-hover mb-0">
+            <thead class="table-light sticky-top">
+              <tr>
+                <th style="width: 45px;">STT</th>
+                <th>Cuộn ID</th>
+                <th style="width: 150px;" class="text-end">Số lượng (Kg) <span class="text-danger">*</span></th>
+                <th style="width: 60px;">Xóa</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rollsRowsHTML}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="d-flex justify-content-end gap-3 mt-2 small text-muted">
+          <span>Số cuộn mục #${index + 1}: <strong class="text-primary item-rolls-count">${rolls.length}</strong></span>
+          <span>Khối lượng mục #${index + 1}: <strong class="text-success item-total-kg">${formatNumericValue(totalItemKg)}</strong> kg</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderItemCards() {
+  const container = document.getElementById('itemsContainer');
+  if (!container) return;
+
+  container.innerHTML = '';
+
+  multiItemsData.forEach((item, idx) => {
+    const cardWrapper = document.createElement('div');
+    cardWrapper.innerHTML = generateItemCardHTML(item, idx, multiItemsData.length);
+    const cardEl = cardWrapper.firstElementChild;
+
+    // Inputs: Mã VT, Tên VT, Batch
+    const maVtInp = cardEl.querySelector('.item-ma-vt');
+    const tenVtInp = cardEl.querySelector('.item-ten-vt');
+    const batchInp = cardEl.querySelector('.item-batch');
+    const titleEl = cardEl.querySelector('.item-card-header-title');
+
+    function updateTitle() {
+      const t = item.maVatTu || item.tenVatTu || item.batch
+        ? `${item.maVatTu || ''} ${item.batch ? `(Lô: ${item.batch})` : ''} - ${item.tenVatTu || ''}`.trim()
+        : 'Mục mới';
+      if (titleEl) {
+        titleEl.textContent = t;
+        titleEl.title = t;
+      }
+    }
+
+    if (maVtInp) {
+      maVtInp.addEventListener('input', (e) => {
+        item.maVatTu = e.target.value.trim();
+        updateTitle();
+      });
+    }
+
+    if (tenVtInp) {
+      tenVtInp.addEventListener('input', (e) => {
+        item.tenVatTu = e.target.value.trim();
+        updateTitle();
+      });
+    }
+
+    if (batchInp) {
+      batchInp.addEventListener('input', (e) => {
+        item.batch = e.target.value.trim();
+        updateTitle();
+      });
+    }
+
+    // Button: Xóa mục
+    const btnRemoveCard = cardEl.querySelector('.btn-remove-item-card');
+    if (btnRemoveCard) {
+      btnRemoveCard.addEventListener('click', () => {
+        if (multiItemsData.length > 1) {
+          multiItemsData.splice(idx, 1);
+          renderItemCards();
+        }
+      });
+    }
+
+    // Button: Chọn cuộn từ kho
+    const btnPickInv = cardEl.querySelector('.btn-item-pick-inv');
+    if (btnPickInv) {
+      btnPickInv.addEventListener('click', () => {
+        currentItemTargetIndex = idx;
+        const maVatTu = (item.maVatTu || '').trim();
+        openInventoryModal('add_item', maVatTu);
+      });
+    }
+
+    // Button: Nhập tay cuộn
+    const btnAddManual = cardEl.querySelector('.btn-item-add-manual');
+    if (btnAddManual) {
+      btnAddManual.addEventListener('click', () => {
+        if (!item.rolls) item.rolls = [];
+        item.rolls.push({
+          id: Math.random().toString(36).slice(2),
+          cuonId: '',
+          kg: ''
+        });
+        renderItemCards();
+      });
+    }
+
+    // Roll row event listeners
+    cardEl.querySelectorAll('.item-roll-cuon-id').forEach(inp => {
+      inp.addEventListener('input', (e) => {
+        const rIdx = parseInt(e.target.dataset.rollIdx, 10);
+        if (item.rolls && item.rolls[rIdx]) {
+          item.rolls[rIdx].cuonId = e.target.value.trim();
+        }
+      });
+    });
+
+    cardEl.querySelectorAll('.item-roll-kg').forEach(inp => {
+      inp.addEventListener('input', (e) => {
+        const rIdx = parseInt(e.target.dataset.rollIdx, 10);
+        if (item.rolls && item.rolls[rIdx]) {
+          item.rolls[rIdx].kg = e.target.value;
+          updateMultiItemTotals();
+        }
+      });
+    });
+
+    cardEl.querySelectorAll('.btn-remove-item-roll').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const rIdx = parseInt(btn.dataset.rollIdx, 10);
+        if (item.rolls && item.rolls[rIdx]) {
+          const cid = item.rolls[rIdx].cuonId;
+          if (cid && window.inventoryLockService) {
+            window.inventoryLockService.releaseLock(cid);
+          }
+          item.rolls.splice(rIdx, 1);
+          renderItemCards();
+        }
+      });
+    });
+
+    container.appendChild(cardEl);
+  });
+
+  updateMultiItemTotals();
+}
+
 function triggerAutofillHighlight(element) {
   if (!element) return;
   element.classList.remove('field-highlight-autofill');
@@ -1053,58 +1327,49 @@ function populateFieldsFromOcr(data) {
     }
   }
 
-  // 5. Mã vật tư (name="col_5" hoặc #addDataMaVatTu)
-  const maVatTuInput = document.getElementById('addDataMaVatTu') || form.querySelector('[name="col_5"]');
-  if (maVatTuInput && data.maVatTu) {
-    maVatTuInput.value = data.maVatTu;
-    triggerAutofillHighlight(maVatTuInput);
-
-    // Kích hoạt nút Thêm cuộn
-    const btnAddRoll = document.getElementById('btnAddRoll');
-    if (btnAddRoll) {
-      btnAddRoll.disabled = false;
-    }
-  }
-
-  // 6. Tên vật tư (name="col_6")
-  if (data.tenVatTu) {
-    const tenVatTuInput = form.querySelector('[name="col_6"]');
-    if (tenVatTuInput) {
-      tenVatTuInput.value = data.tenVatTu;
-      triggerAutofillHighlight(tenVatTuInput);
-    }
-  }
-
-  // 7. Batch (name="col_7")
-  if (data.batch) {
-    const batchInput = form.querySelector('[name="col_7"]');
-    if (batchInput) {
-      batchInput.value = data.batch;
-      triggerAutofillHighlight(batchInput);
-    }
-  }
-
-  // 8. Mã công trình (name="add_ext_10" hoặc suffix 10)
+  // 5. Mã công trình (name="col_10" hoặc "add_ext_10")
   if (data.maCongTrinh) {
-    const maCtInput = form.querySelector('[name="add_ext_10"]') || form.querySelector('[name$="10"]');
+    const maCtInput = form.querySelector('[name="col_10"]') || form.querySelector('[name="add_ext_10"]') || form.querySelector('[name$="10"]');
     if (maCtInput) {
       maCtInput.value = data.maCongTrinh;
       triggerAutofillHighlight(maCtInput);
     }
   }
 
-  // 9. Tên công trình (name="add_ext_11" hoặc suffix 11)
+  // 6. Tên công trình (name="col_11" hoặc "add_ext_11")
   if (data.tenCongTrinh) {
-    const tenCtInput = form.querySelector('[name="add_ext_11"]') || form.querySelector('[name$="11"]');
+    const tenCtInput = form.querySelector('[name="col_11"]') || form.querySelector('[name="add_ext_11"]') || form.querySelector('[name$="11"]');
     if (tenCtInput) {
       tenCtInput.value = data.tenCongTrinh;
       triggerAutofillHighlight(tenCtInput);
     }
   }
 
-  // 10. Ghi chú (name="add_ext_12") & Số lượng (Kg): Giữ trống
-  const ghiChuInput = form.querySelector('[name="add_ext_12"]') || form.querySelector('[name$="12"]');
+  // 7. Ghi chú (name="add_ext_12") & Số lượng (Kg): Giữ trống
+  const ghiChuInput = form.querySelector('[name="add_ext_12"]') || form.querySelector('[name="col_12"]');
   if (ghiChuInput) ghiChuInput.value = '';
+
+  // 8. Tự động sinh các thẻ mặt hàng (Multi-Item Cards) từ ảnh
+  if (Array.isArray(data.items) && data.items.length > 0) {
+    multiItemsData = data.items.map(it => ({
+      id: Math.random().toString(36).slice(2),
+      maVatTu: it.maVatTu || '',
+      tenVatTu: it.tenVatTu || '',
+      batch: it.batch || '',
+      rolls: []
+    }));
+  } else {
+    multiItemsData = [{
+      id: Math.random().toString(36).slice(2),
+      maVatTu: data.maVatTu || '',
+      tenVatTu: data.tenVatTu || '',
+      batch: data.batch || '',
+      rolls: []
+    }];
+  }
+
+  renderItemCards();
+  document.querySelectorAll('.item-card').forEach(card => triggerAutofillHighlight(card));
 }
 
 async function handleReceiptImageProcess(file, label = '') {
@@ -1329,47 +1594,58 @@ function openAddDataModal() {
   commonFieldsContainer.innerHTML = '';
   additionalFieldsContainer.innerHTML = '';
 
-  const rollsTableBody = document.getElementById('rollsTableBody');
-  if (rollsTableBody) rollsTableBody.innerHTML = '';
-  rollCount = 0;
-  updateRollTotals();
-
-  const quantityColIndex = findQuantityColumnIndex();
-  // Cột chung: Mã CT(1), Ngày(2), Phiếu(3), Loại(4), Mã VT(5), Tên VT(6), Batch(7)
-  const commonColIndices = [1, 2, 3, 4, 5, 6, 7];
+  // Common: Mã CT(1), Ngày(2), Phiếu(3), Loại(4), Mã CT công trình(10), Tên CT(11)
+  const commonColIndices = [1, 2, 3, 4, 10, 11];
   commonColIndices.forEach(colIdx => {
     buildFormField(COLUMN_HEADERS[colIdx], colIdx, undefined, commonFieldsContainer, 'col_');
   });
 
-  // Additional: Mã CT công trình(10), Tên CT(11), Ghi chú(12)
-  const additionalColIndices = [];
-  for (let i = quantityColIndex + 1; i < COLUMN_HEADERS.length; i++) {
-    if (!HIDDEN_COLUMNS.includes(COLUMN_HEADERS[i])) additionalColIndices.push(i);
+  // Mặc định Mã chứng từ là "PX"
+  const maChungTuSelect = commonFieldsContainer.querySelector('[name="col_1"]');
+  if (maChungTuSelect) {
+    let pxOpt = Array.from(maChungTuSelect.options).find(opt => opt.value === 'PX');
+    if (!pxOpt) {
+      pxOpt = document.createElement('option');
+      pxOpt.value = 'PX';
+      pxOpt.textContent = 'PX';
+      maChungTuSelect.appendChild(pxOpt);
+    }
+    maChungTuSelect.value = 'PX';
   }
+
+  // Additional: Ghi chú(12)
+  const additionalColIndices = [12];
   additionalColIndices.forEach(colIdx => {
     buildFormField(COLUMN_HEADERS[colIdx], colIdx, undefined, additionalFieldsContainer, 'add_ext_');
   });
 
-  modalEl.dataset.quantityColIndex = String(quantityColIndex);
-  modalEl.dataset.additionalColIndices = JSON.stringify(additionalColIndices);
-
   currentModalTarget = 'add';
 
-  const btnAddRoll = document.getElementById('btnAddRoll');
-  if (btnAddRoll) {
-    const maVatTuInput = document.getElementById('addDataMaVatTu');
-    btnAddRoll.disabled = maVatTuInput ? !maVatTuInput.value.trim() : false;
-    btnAddRoll.onclick = () => {
-      const maVatTu = document.getElementById('addDataMaVatTu')?.value.trim() || '';
-      openInventoryModal('add', maVatTu);
-    };
+  // Khởi tạo 1 thẻ mặt hàng mặc định
+  multiItemsData = [{
+    id: Math.random().toString(36).slice(2),
+    maVatTu: '',
+    tenVatTu: '',
+    batch: '',
+    rolls: []
+  }];
+  renderItemCards();
 
-    // Enable/disable btn khi nhập mã vật tư
-    if (maVatTuInput) {
-      maVatTuInput.addEventListener('input', () => {
-        btnAddRoll.disabled = !maVatTuInput.value.trim();
+  const btnAddItemCard = document.getElementById('btnAddItemCard');
+  if (btnAddItemCard) {
+    btnAddItemCard.onclick = () => {
+      multiItemsData.push({
+        id: Math.random().toString(36).slice(2),
+        maVatTu: '',
+        tenVatTu: '',
+        batch: '',
+        rolls: []
       });
-    }
+      renderItemCards();
+      const lastItem = multiItemsData[multiItemsData.length - 1];
+      const newCard = document.getElementById(`itemCard_${lastItem.id}`);
+      if (newCard) newCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    };
   }
 
   new bootstrap.Modal(modalEl).show();
@@ -1418,9 +1694,10 @@ function openEditDataModal() {
 
   // Add existing roll
   const existingKg = rowData[quantityColIndex] ? String(parseNumericInput(rowData[quantityColIndex]) || '') : '';
-  const cuonIdIdx = COLUMN_HEADERS.indexOf('Cuộn ID');
-  const existingCuonId = cuonIdIdx >= 0 ? String(rowData[cuonIdIdx] || '').trim() : '';
-  addEditRollRow(existingCuonId, existingKg);
+  const existingCuonId = rowData[8] ? String(rowData[8]) : '';
+  if (existingKg) {
+    addEditRollRow(existingCuonId, existingKg);
+  }
 
   const additionalColIndices = [];
   for (let i = quantityColIndex + 1; i < COLUMN_HEADERS.length; i++) {
@@ -1437,15 +1714,12 @@ function openEditDataModal() {
 
   const btnEditAddRoll = document.getElementById('btnEditAddRoll');
   if (btnEditAddRoll) {
-    const maVatTuInput = document.getElementById('editDataMaVatTu');
-    btnEditAddRoll.disabled = maVatTuInput ? !maVatTuInput.value.trim() : false;
+    const maVatTu = rowData[5] || '';
+    btnEditAddRoll.disabled = !maVatTu;
     btnEditAddRoll.onclick = () => {
-      const maVatTu = document.getElementById('editDataMaVatTu')?.value.trim() || '';
-      openInventoryModal('edit', maVatTu);
+      const currentMaVatTu = modalEl.querySelector('[name="col_5"]')?.value.trim() || maVatTu;
+      openInventoryModal('edit', currentMaVatTu);
     };
-    if (maVatTuInput) {
-      maVatTuInput.addEventListener('input', () => { btnEditAddRoll.disabled = !maVatTuInput.value.trim(); });
-    }
   }
 
   new bootstrap.Modal(modalEl).show();
@@ -1455,17 +1729,9 @@ function openEditDataModal() {
 // ===== DELETE DATA MODAL =====
 
 function openDeleteDataModal() {
-  window._savedScrollPosition = saveScrollPosition();
-  window._savedFilterState = saveFilterState();
-  updateSelectedRows();
-
-  if (selectedRowIndexes.length === 0) { alert('Vui lòng chọn ít nhất một dòng để xóa'); return; }
-
-  const modalBody = document.querySelector('#deleteDataModal .modal-body p');
-  if (modalBody) {
-    modalBody.textContent = selectedRowIndexes.length === 1
-      ? 'Bạn có chắc chắn muốn xóa dòng dữ liệu này? Hành động này không thể hoàn tác.'
-      : `Bạn có chắc chắn muốn xóa ${selectedRowIndexes.length} dòng dữ liệu đã chọn? Hành động này không thể hoàn tác.`;
+  if (selectedRowIndex < 0 || selectedRowIndex >= tableData.length) {
+    alert('Vui lòng chọn một dòng để xóa');
+    return;
   }
 
   const modalEl = document.getElementById('deleteDataModal');
@@ -1617,86 +1883,94 @@ function renderInventoryTable(data, searchVal = '') {
   if (!tbody) return;
   tbody.innerHTML = '';
 
-  const formRolls = new Set(
-    Array.from(document.querySelectorAll('#rollsTableBody .roll-cuon-id, #editRollsTableBody .roll-cuon-id'))
-      .map(inp => inp.value.trim().toLowerCase())
-      .filter(Boolean)
-  );
+  const formRolls = new Set();
+  if (currentModalTarget === 'add_item' || currentModalTarget === 'add') {
+    multiItemsData.forEach(item => {
+      (item.rolls || []).forEach(r => {
+        if (r.cuonId) formRolls.add(String(r.cuonId).trim().toLowerCase());
+      });
+    });
+  } else if (currentModalTarget === 'edit') {
+    document.querySelectorAll('#editRollsTableBody .roll-cuon-id').forEach(inp => {
+      const v = inp.value.trim().toLowerCase();
+      if (v) formRolls.add(v);
+    });
+  }
 
-  const filtered = searchVal
-    ? data.filter(row => Object.values(row).some(v => v !== null && String(v).toLowerCase().includes(searchVal.toLowerCase())))
-    : data;
+  let filtered = data;
+  if (searchVal) {
+    const s = searchVal.toLowerCase();
+    filtered = data.filter(r => 
+      String(r['Mã vật tư'] || '').toLowerCase().includes(s) ||
+      String(r['Tên vật tư'] || '').toLowerCase().includes(s) ||
+      String(r['Batch'] || '').toLowerCase().includes(s) ||
+      String(r['Cuộn ID'] || '').toLowerCase().includes(s)
+    );
+  }
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Không có cuộn nào khả dụng</td></tr>';
+    return;
+  }
 
   filtered.forEach(row => {
-    const cuonId = String(row['Cuộn ID'] || '').trim();
+    const cuonId = String(row['Cuộn ID'] || '');
+    const maVatTu = String(row['Mã vật tư'] || '');
+    const tenVatTu = String(row['Tên vật tư'] || '');
+    const batch = String(row['Batch'] || '');
+    const tonKg = row['Tồn cuối (Kg)'] || 0;
+    const isAlreadyInForm = formRolls.has(cuonId.trim().toLowerCase());
+
     const lockStatus = window.inventoryLockService ? window.inventoryLockService.getLockStatus(cuonId) : { isLocked: false };
     const isLockedByOther = lockStatus.isLocked && !lockStatus.isMe;
-    const isSelected = formRolls.has(cuonId.toLowerCase());
 
     const tr = document.createElement('tr');
+    if (isAlreadyInForm) tr.classList.add('table-success');
     if (isLockedByOther) {
       tr.classList.add('table-warning');
       tr.style.opacity = '0.75';
     }
 
-    tr.style.cursor = isLockedByOther ? 'not-allowed' : 'pointer';
-
-    let badgeHtml = '';
+    let lockBadge = '';
     if (isLockedByOther) {
-      badgeHtml = `<span class="badge bg-warning text-dark ms-1" style="font-size: 0.75rem;" title="Đang soạn bởi ${lockStatus.lockedBy}"><i class="bi bi-lock-fill"></i> ${lockStatus.lockedBy} đang giữ</span>`;
-    } else if (isSelected) {
-      badgeHtml = `<span class="badge bg-primary ms-1" style="font-size: 0.75rem;"><i class="bi bi-check2-circle"></i> Đã chọn</span>`;
+      lockBadge = `<span class="badge bg-warning text-dark ms-1" style="font-size: 0.75rem;" title="Đang soạn bởi ${lockStatus.lockedBy}"><i class="bi bi-lock-fill"></i> ${lockStatus.lockedBy} đang giữ</span>`;
+    } else if (isAlreadyInForm) {
+      lockBadge = `<span class="badge bg-success ms-1" style="font-size: 0.75rem;">Đã có trong phiếu</span>`;
     }
 
     tr.innerHTML = `
       <td class="text-center">
-        <input type="checkbox" class="inventory-checkbox"
-               data-ma-vat-tu="${row['Mã vật tư'] || ''}"
-               data-cuon-id="${cuonId}"
-               data-ton-kg="${row['Tồn cuối (Kg)'] || 0}"
-               ${isLockedByOther ? 'disabled' : ''}
-               ${isSelected && !isLockedByOther ? 'checked' : ''}
-               title="${isLockedByOther ? 'Cuộn này đang được ' + lockStatus.lockedBy + ' thao tác' : 'Chọn cuộn này'}">
+        <input type="checkbox" class="form-check-input inventory-checkbox" 
+          data-cuon-id="${cuonId}" 
+          data-ma-vattu="${maVatTu}" 
+          data-ton-kg="${tonKg}"
+          ${isAlreadyInForm ? 'checked' : ''}
+          ${isLockedByOther ? 'disabled' : ''}>
       </td>
-      <td>${row['Mã vật tư'] || ''}</td>
-      <td>${row['Tên vật tư'] || ''}</td>
-      <td>${row['Batch'] || ''}</td>
-      <td>${cuonId} <span class="lock-badge-container">${badgeHtml}</span></td>
-      <td class="text-end">${parseNumericInput(row['Tồn cuối (Kg)'])?.toLocaleString('vi-VN', { maximumFractionDigits: 3 }) || ''}</td>
+      <td class="font-monospace fw-bold">${cuonId} <span class="lock-badge-container">${lockBadge}</span></td>
+      <td>${maVatTu}</td>
+      <td>${tenVatTu}</td>
+      <td>${batch}</td>
+      <td class="text-end fw-bold">${typeof formatNumber === 'function' ? formatNumber(tonKg) : tonKg}</td>
+      <td class="text-center">
+        <span class="badge ${tonKg > 0 ? 'bg-success' : 'bg-secondary'}">${tonKg > 0 ? 'Còn tồn' : 'Hết'}</span>
+      </td>
     `;
 
-    const cb = tr.querySelector('.inventory-checkbox');
-    cb.addEventListener('change', async (e) => {
-      e.stopPropagation();
-      const checked = cb.checked;
-      const badgeSpan = tr.querySelector('.lock-badge-container');
-      if (checked && cuonId) {
-        if (badgeSpan) badgeSpan.innerHTML = `<span class="badge bg-primary ms-1" style="font-size: 0.75rem;"><i class="bi bi-check2-circle"></i> Đã chọn</span>`;
-        if (window.inventoryLockService) {
-          const ok = await window.inventoryLockService.acquireLock(cuonId, false);
-          if (!ok) {
-            cb.checked = false;
-            if (badgeSpan) badgeSpan.innerHTML = '';
-            alert(`⚠️ Cuộn "${cuonId}" vừa được người dùng khác giữ chỗ. Vui lòng chọn cuộn khác!`);
-            updateInventoryTableLockStates();
-            return;
-          }
-        }
-      } else if (!checked && cuonId) {
-        if (badgeSpan) badgeSpan.innerHTML = '';
-        if (window.inventoryLockService) {
-          window.inventoryLockService.releaseLock(cuonId, false);
+    const chk = tr.querySelector('.inventory-checkbox');
+    chk.addEventListener('change', (e) => {
+      if (window.inventoryLockService) {
+        if (e.target.checked) {
+          window.inventoryLockService.acquireLock(cuonId);
+        } else {
+          window.inventoryLockService.releaseLock(cuonId);
         }
       }
-      const countChecked = document.querySelectorAll('#inventoryTableBody .inventory-checkbox:checked').length;
-      const countEl = document.getElementById('inventorySelectedCount');
-      if (countEl) countEl.textContent = countChecked;
+      updateInventoryTableLockStates();
     });
 
     tr.addEventListener('click', (e) => {
-      if (e.target.tagName === 'INPUT' || e.target.classList.contains('inventory-checkbox') || isLockedByOther) return;
-      const chk = tr.querySelector('.inventory-checkbox');
-      if (chk && !chk.disabled) { 
+      if (e.target.tagName !== 'INPUT' && !chk.disabled) {
         chk.checked = !chk.checked; 
         chk.dispatchEvent(new Event('change')); 
       }
@@ -1704,27 +1978,6 @@ function renderInventoryTable(data, searchVal = '') {
 
     tbody.appendChild(tr);
   });
-
-  const countChecked = document.querySelectorAll('#inventoryTableBody .inventory-checkbox:checked').length;
-  const countEl = document.getElementById('inventorySelectedCount');
-  if (countEl) countEl.textContent = countChecked;
-
-  // Select all checkbox
-  const selectAllCb = document.getElementById('selectAllInventoryCheckbox');
-  if (selectAllCb) {
-    selectAllCb.checked = false;
-    selectAllCb.onchange = (e) => {
-      document.querySelectorAll('#inventoryTableBody .inventory-checkbox:not(:disabled)').forEach(cb => { 
-        if (cb.checked !== e.target.checked) {
-          cb.checked = e.target.checked;
-          cb.dispatchEvent(new Event('change'));
-        }
-      });
-      const checkedCount = document.querySelectorAll('#inventoryTableBody .inventory-checkbox:checked').length;
-      const cntEl = document.getElementById('inventorySelectedCount');
-      if (cntEl) cntEl.textContent = checkedCount;
-    };
-  }
 }
 
 // Inventory search
@@ -1744,20 +1997,26 @@ document.addEventListener('click', (e) => {
 
     const target = currentModalTarget;
 
-    if (target === 'add') {
-      const existingCuonIds = new Set(
-        Array.from(document.querySelectorAll('#rollsTableBody .roll-cuon-id'))
-          .map(inp => inp.value.trim().toLowerCase())
-          .filter(Boolean)
-      );
-      selectedCheckboxes.forEach(cb => {
-        const maVatTu = cb.dataset.maVatTu || '';
-        const cuonId = cb.dataset.cuonId || '';
-        const tonKg = parseNumericInput(cb.dataset.tonKg) || 0;
-        if (!existingCuonIds.has(cuonId.toLowerCase())) {
-          addRollRow(maVatTu, cuonId, String(tonKg));
-        }
-      });
+    if (target === 'add_item' || target === 'add') {
+      const item = multiItemsData[currentItemTargetIndex] || multiItemsData[0];
+      if (item) {
+        if (!item.rolls) item.rolls = [];
+        const existingCuonIds = new Set(
+          item.rolls.map(r => String(r.cuonId || '').trim().toLowerCase()).filter(Boolean)
+        );
+        selectedCheckboxes.forEach(cb => {
+          const cuonId = cb.dataset.cuonId || '';
+          const tonKg = parseNumericInput(cb.dataset.tonKg) || 0;
+          if (!existingCuonIds.has(cuonId.toLowerCase())) {
+            item.rolls.push({
+              id: Math.random().toString(36).slice(2),
+              cuonId: cuonId,
+              kg: String(tonKg)
+            });
+          }
+        });
+        renderItemCards();
+      }
     } else if (target === 'edit') {
       const existingCuonIds = new Set(
         Array.from(document.querySelectorAll('#editRollsTableBody .roll-cuon-id'))
@@ -1875,30 +2134,9 @@ document.addEventListener('submit', async (e) => {
       e.preventDefault();
       const form = e.target;
       const submitBtn = form.querySelector('button[type="submit"]');
-      const originalText = submitBtn ? submitBtn.textContent : 'Thêm';
+      const originalText = submitBtn ? submitBtn.textContent : 'Thêm dữ liệu';
       if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Đang thêm...'; }
       showLoadingOverlay('Đang thêm dữ liệu...');
-
-      const rollDataList = [];
-      document.querySelectorAll('#rollsTableBody tr').forEach(row => {
-        const kgInput = row.querySelector('.roll-kg');
-        if (kgInput && kgInput.value) {
-          const parsed = parseNumericInput(kgInput.value);
-          if (parsed !== null && parsed > 0) {
-            rollDataList.push({
-              kg: parsed,
-              maVatTu: row.querySelector('.roll-ma-vt')?.value.trim() || '',
-              cuonId: row.querySelector('.roll-cuon-id')?.value.trim() || ''
-            });
-          }
-        }
-      });
-
-      if (rollDataList.length === 0) {
-        alert('Vui lòng nhập ít nhất một cuộn với số kg > 0');
-        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = originalText; }
-        hideLoadingOverlay(); return;
-      }
 
       const commonData = {};
       form.querySelectorAll('#addDataCommonFields input[name^="col_"], #addDataCommonFields select[name^="col_"]').forEach(inp => {
@@ -1912,13 +2150,34 @@ document.addEventListener('submit', async (e) => {
         extData[COLUMN_HEADERS[colIdx]] = inp.value || null;
       });
 
-      const recordsToInsert = rollDataList.map(roll => ({
-        ...commonData,
-        ...extData,
-        'Mã vật tư': roll.maVatTu || commonData['Mã vật tư'] || null,
-        'Cuộn ID': roll.cuonId || null,
-        'Số lượng (Kg)': roll.kg
-      }));
+      // Gom toàn bộ cuộn từ tất cả các thẻ mặt hàng
+      const recordsToInsert = [];
+      multiItemsData.forEach(item => {
+        const maVatTu = (item.maVatTu || '').trim();
+        const tenVatTu = (item.tenVatTu || '').trim();
+        const batch = (item.batch || '').trim();
+
+        (item.rolls || []).forEach(roll => {
+          const parsedKg = parseNumericInput(roll.kg);
+          if (parsedKg !== null && parsedKg > 0) {
+            recordsToInsert.push({
+              ...commonData,
+              ...extData,
+              'Mã vật tư': maVatTu || null,
+              'Tên vật tư': tenVatTu || null,
+              'Batch': batch || null,
+              'Cuộn ID': roll.cuonId || null,
+              'Số lượng (Kg)': parsedKg
+            });
+          }
+        });
+      });
+
+      if (recordsToInsert.length === 0) {
+        alert('Vui lòng chọn từ kho hoặc nhập ít nhất một cuộn với số kg > 0');
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = originalText; }
+        hideLoadingOverlay(); return;
+      }
 
       // Gọi RPC giao dịch nguyên tử xuat_xg_atomic
       const currentUser = (typeof localStorage !== 'undefined' && localStorage.getItem('currentUser')) || 'anonymous';

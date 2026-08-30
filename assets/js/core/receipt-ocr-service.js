@@ -126,7 +126,7 @@
     },
 
     /**
-     * Gọi Gemini Vision API để bóc tách thông tin phiếu xuất kho
+     * Gọi Gemini Vision API để bóc tách thông tin phiếu xuất kho (hỗ trợ nhiều dòng mặt hàng)
      */
     callGeminiVision: async function (base64Data, mimeType, apiKey) {
       const prompt = `
@@ -135,16 +135,17 @@ Hãy phân tích hình ảnh PHIẾU XUẤT KHO (GOODS ISSUE NOTE) được cung
 
 Quy tắc bóc tách:
 1. ngayXuat: Tìm ngày xuất hiển thị trên phiếu (thường nằm ngay trên 'Số phiếu' hoặc mục ngày, dạng dd/mm/yyyy, ví dụ '31/08/2026' -> trả về '2026-08-31').
-2. phieuXuat: Lấy số sau 'Số phiếu (No.):' (ví dụ '4900137998').
+2. phieuXuat: Lấy số sau 'Số phiếu (No.):' (ví dụ '4900137996').
 3. maChungTu: Luôn trả về "PX".
 4. loaiXuat: Lấy từ 'Đơn vị nhận (Receiving Party):' (ví dụ 'Xưởng sản xuất') hoặc 'Loại giao dịch (Movement type):' (ví dụ '261-Xuất vật tư cho LSX'). Ưu tiên dạng tên đơn vị nhận như 'Xưởng sản xuất'.
-5. maVatTu: Lấy từ cột 'Mã hàng / Material' trong bảng chi tiết (ví dụ '10002377').
-6. tenVatTu: Lấy từ cột 'Tên hàng / Material Description' (ví dụ 'Phôi tôn mạ 1.0x1200 Z275 G450').
-7. batch: Lấy từ cột 'Lô / Batch' (ví dụ 'PHN-VN').
-8. maCongTrinh: Lấy phần mã phía trước trong mục 'Đối tượng chi phí (Cost Object):' (ví dụ '10626-056.01').
-9. tenCongTrinh: Lấy phần tên công trình phía sau mã trong mục 'Đối tượng chi phí (Cost Object):' (ví dụ 'DG TN APF ĐỒNG NAI').
-10. soLuongKg: Luôn trả về null.
-11. ghiChu: Luôn trả về chuỗi rỗng "".
+5. maCongTrinh: Lấy phần mã phía trước trong mục 'Đối tượng chi phí (Cost Object):' (ví dụ '10626-056.01').
+6. tenCongTrinh: Lấy phần tên công trình phía sau mã trong mục 'Đối tượng chi phí (Cost Object):' (ví dụ 'DG TN APF ĐỒNG NAI').
+7. items: Quét toàn bộ các dòng hàng trong bảng chi tiết (cột Stt, Mã hàng, Tên hàng, Lô, Số lượng). Với MỖI DÒNG trong bảng, trích xuất 1 phần tử gồm:
+   - stt: Số thứ tự dòng (1, 2, 3...)
+   - maVatTu: Cột 'Mã hàng / Material' (ví dụ '10001189')
+   - tenVatTu: Cột 'Tên hàng / Material Description' (ví dụ 'Thép phôi kẽm Z275 G450')
+   - batch: Cột 'Lô / Batch' (ví dụ '1.8X351VN' hoặc '2.5X350VN')
+8. ghiChu: Luôn trả về chuỗi rỗng "".
 
 Format JSON mong đợi:
 {
@@ -152,12 +153,16 @@ Format JSON mong đợi:
   "phieuXuat": "...",
   "maChungTu": "PX",
   "loaiXuat": "...",
-  "maVatTu": "...",
-  "tenVatTu": "...",
-  "batch": "...",
   "maCongTrinh": "...",
   "tenCongTrinh": "...",
-  "soLuongKg": null,
+  "items": [
+    {
+      "stt": 1,
+      "maVatTu": "...",
+      "tenVatTu": "...",
+      "batch": "..."
+    }
+  ],
   "ghiChu": ""
 }
 `;
@@ -216,17 +221,40 @@ Format JSON mong đợi:
 
       const parsed = JSON.parse(cleaned);
 
+      // Chuẩn hóa danh sách items
+      let itemsList = [];
+      if (Array.isArray(parsed.items) && parsed.items.length > 0) {
+        itemsList = parsed.items.map((it, idx) => ({
+          stt: it.stt || (idx + 1),
+          maVatTu: String(it.maVatTu || '').trim(),
+          tenVatTu: String(it.tenVatTu || '').trim(),
+          batch: String(it.batch || '').trim()
+        })).filter(it => it.maVatTu || it.tenVatTu || it.batch);
+      }
+
+      // Fallback nếu AI trả về trường đơn lẻ
+      if (itemsList.length === 0) {
+        itemsList = [{
+          stt: 1,
+          maVatTu: String(parsed.maVatTu || '').trim(),
+          tenVatTu: String(parsed.tenVatTu || '').trim(),
+          batch: String(parsed.batch || '').trim()
+        }];
+      }
+
       // Đảm bảo tuân thủ các quy tắc bất biến
       return {
         ngayXuat: this.normalizeDate(parsed.ngayXuat) || new Date().toISOString().split('T')[0],
         phieuXuat: String(parsed.phieuXuat || '').trim(),
         maChungTu: 'PX',
         loaiXuat: String(parsed.loaiXuat || 'Xưởng sản xuất').trim(),
-        maVatTu: String(parsed.maVatTu || '').trim(),
-        tenVatTu: String(parsed.tenVatTu || '').trim(),
-        batch: String(parsed.batch || '').trim(),
         maCongTrinh: String(parsed.maCongTrinh || '').trim(),
         tenCongTrinh: String(parsed.tenCongTrinh || '').trim(),
+        items: itemsList,
+        // Giữ các trường tương thích ngược cấp 1 cho item đầu tiên
+        maVatTu: itemsList[0]?.maVatTu || '',
+        tenVatTu: itemsList[0]?.tenVatTu || '',
+        batch: itemsList[0]?.batch || '',
         soLuongKg: null,
         ghiChu: ''
       };
