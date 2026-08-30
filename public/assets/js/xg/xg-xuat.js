@@ -300,6 +300,7 @@ window.addEventListener('load', () => {
   }
 
   loadSupabaseData();
+  initReceiptOcrHandlers();
 });
 
 
@@ -954,6 +955,365 @@ function buildFormField(colName, colIdx, currentVal, container, namePrefix) {
 }
 
 
+/* =============================================================================
+   RECEIPT OCR IMAGE SCANNER & AUTOFILL HANDLERS
+================================================================================ */
+
+function triggerAutofillHighlight(element) {
+  if (!element) return;
+  element.classList.remove('field-highlight-autofill');
+  void element.offsetWidth; // trigger reflow
+  element.classList.add('field-highlight-autofill');
+}
+
+function resetOcrDropzoneUI() {
+  const preview = document.getElementById('ocrPreviewContainer');
+  const loading = document.getElementById('ocrLoadingOverlay');
+  const content = document.querySelector('.ocr-dropzone-content');
+  const fileInput = document.getElementById('receiptImageInput');
+  const cameraInput = document.getElementById('receiptCameraInput');
+
+  if (preview) preview.style.display = 'none';
+  if (loading) loading.style.display = 'none';
+  if (content) content.style.display = 'flex';
+  if (fileInput) fileInput.value = '';
+  if (cameraInput) cameraInput.value = '';
+}
+
+function populateFieldsFromOcr(data) {
+  if (!data) return;
+  const form = document.getElementById('addDataForm');
+  if (!form) return;
+
+  // 1. Mã chứng từ (name="col_1"): Mặc định là "PX"
+  const maChungTuSelect = form.querySelector('[name="col_1"]');
+  if (maChungTuSelect) {
+    let pxOpt = Array.from(maChungTuSelect.options).find(opt => opt.value === 'PX');
+    if (!pxOpt) {
+      pxOpt = document.createElement('option');
+      pxOpt.value = 'PX';
+      pxOpt.textContent = 'PX';
+      maChungTuSelect.appendChild(pxOpt);
+    }
+    maChungTuSelect.value = 'PX';
+    triggerAutofillHighlight(maChungTuSelect);
+  }
+
+  // 2. Ngày xuất (name="col_2")
+  if (data.ngayXuat) {
+    const ngayXuatInput = form.querySelector('[name="col_2"]');
+    if (ngayXuatInput) {
+      ngayXuatInput.value = data.ngayXuat;
+      triggerAutofillHighlight(ngayXuatInput);
+    }
+  }
+
+  // 3. Phiếu xuất (name="col_3")
+  if (data.phieuXuat) {
+    const phieuXuatInput = form.querySelector('[name="col_3"]');
+    if (phieuXuatInput) {
+      phieuXuatInput.value = data.phieuXuat;
+      triggerAutofillHighlight(phieuXuatInput);
+    }
+  }
+
+  // 4. Loại xuất (name="col_4")
+  if (data.loaiXuat) {
+    const loaiXuatSelect = form.querySelector('[name="col_4"]');
+    if (loaiXuatSelect) {
+      let matched = false;
+      const targetLower = data.loaiXuat.toLowerCase();
+      for (const opt of loaiXuatSelect.options) {
+        if (opt.value && (targetLower.includes(opt.value.toLowerCase()) || opt.value.toLowerCase().includes(targetLower))) {
+          loaiXuatSelect.value = opt.value;
+          matched = true;
+          break;
+        }
+      }
+      if (!matched && data.loaiXuat) {
+        const customOpt = document.createElement('option');
+        customOpt.value = data.loaiXuat;
+        customOpt.textContent = data.loaiXuat;
+        loaiXuatSelect.appendChild(customOpt);
+        loaiXuatSelect.value = data.loaiXuat;
+      }
+      triggerAutofillHighlight(loaiXuatSelect);
+    }
+  }
+
+  // 5. Mã vật tư (name="col_5" hoặc #addDataMaVatTu)
+  const maVatTuInput = document.getElementById('addDataMaVatTu') || form.querySelector('[name="col_5"]');
+  if (maVatTuInput && data.maVatTu) {
+    maVatTuInput.value = data.maVatTu;
+    triggerAutofillHighlight(maVatTuInput);
+
+    // Kích hoạt nút Thêm cuộn
+    const btnAddRoll = document.getElementById('btnAddRoll');
+    if (btnAddRoll) {
+      btnAddRoll.disabled = false;
+    }
+  }
+
+  // 6. Tên vật tư (name="col_6")
+  if (data.tenVatTu) {
+    const tenVatTuInput = form.querySelector('[name="col_6"]');
+    if (tenVatTuInput) {
+      tenVatTuInput.value = data.tenVatTu;
+      triggerAutofillHighlight(tenVatTuInput);
+    }
+  }
+
+  // 7. Batch (name="col_7")
+  if (data.batch) {
+    const batchInput = form.querySelector('[name="col_7"]');
+    if (batchInput) {
+      batchInput.value = data.batch;
+      triggerAutofillHighlight(batchInput);
+    }
+  }
+
+  // 8. Mã công trình (name="add_ext_10" hoặc suffix 10)
+  if (data.maCongTrinh) {
+    const maCtInput = form.querySelector('[name="add_ext_10"]') || form.querySelector('[name$="10"]');
+    if (maCtInput) {
+      maCtInput.value = data.maCongTrinh;
+      triggerAutofillHighlight(maCtInput);
+    }
+  }
+
+  // 9. Tên công trình (name="add_ext_11" hoặc suffix 11)
+  if (data.tenCongTrinh) {
+    const tenCtInput = form.querySelector('[name="add_ext_11"]') || form.querySelector('[name$="11"]');
+    if (tenCtInput) {
+      tenCtInput.value = data.tenCongTrinh;
+      triggerAutofillHighlight(tenCtInput);
+    }
+  }
+
+  // 10. Ghi chú (name="add_ext_12") & Số lượng (Kg): Giữ trống
+  const ghiChuInput = form.querySelector('[name="add_ext_12"]') || form.querySelector('[name$="12"]');
+  if (ghiChuInput) ghiChuInput.value = '';
+}
+
+async function handleReceiptImageProcess(file, label = '') {
+  if (!file) return;
+  if (!file.type.startsWith('image/')) {
+    alert('Vui lòng chọn hoặc dán file hình ảnh hợp lệ (PNG, JPG, JPEG, WEBP).');
+    return;
+  }
+
+  const loadingOverlay = document.getElementById('ocrLoadingOverlay');
+  const previewContainer = document.getElementById('ocrPreviewContainer');
+  const previewThumb = document.getElementById('ocrPreviewThumb');
+  const fileNameText = document.getElementById('ocrFileNameText');
+  const dropzoneContent = document.querySelector('.ocr-dropzone-content');
+
+  if (loadingOverlay) loadingOverlay.style.display = 'flex';
+
+  try {
+    if (!window.ReceiptOcrService) {
+      throw new Error('Chưa nạp module ReceiptOcrService.');
+    }
+
+    const result = await window.ReceiptOcrService.processImage(file);
+
+    if (result.needsApiKey) {
+      if (loadingOverlay) loadingOverlay.style.display = 'none';
+      const settingsModal = document.getElementById('ocrSettingsModal');
+      if (settingsModal) {
+        new bootstrap.Modal(settingsModal).show();
+      }
+      alert('Bạn cần nhập Gemini API Key (miễn phí từ Google) để tự động quét và phân tích phiếu xuất kho.');
+      return;
+    }
+
+    if (!result.success) {
+      throw new Error(result.error || 'Quét ảnh thất bại');
+    }
+
+    // Điền dữ liệu vào form
+    populateFieldsFromOcr(result.data);
+
+    // Hiển thị preview
+    if (previewContainer && previewThumb) {
+      previewThumb.src = result.dataUrl || URL.createObjectURL(file);
+      if (fileNameText) {
+        fileNameText.textContent = label || file.name || 'Ảnh phiếu xuất kho';
+      }
+      if (dropzoneContent) dropzoneContent.style.display = 'none';
+      previewContainer.style.display = 'flex';
+    }
+
+  } catch (err) {
+    console.error('OCR Error:', err);
+    alert('Không thể trích xuất dữ liệu từ ảnh: ' + (err.message || err));
+  } finally {
+    if (loadingOverlay) loadingOverlay.style.display = 'none';
+  }
+}
+
+function initReceiptOcrHandlers() {
+  const dropzone = document.getElementById('imageOcrDropzone');
+  const fileInput = document.getElementById('receiptImageInput');
+  const cameraInput = document.getElementById('receiptCameraInput');
+  const btnUpload = document.getElementById('btnUploadReceipt');
+  const btnCamera = document.getElementById('btnCameraReceipt');
+  const btnClear = document.getElementById('btnClearOcrImage');
+  const btnSettings = document.getElementById('btnOcrSettings');
+
+  if (btnUpload && fileInput) {
+    btnUpload.addEventListener('click', (e) => {
+      e.stopPropagation();
+      fileInput.click();
+    });
+  }
+
+  if (btnCamera && cameraInput) {
+    btnCamera.addEventListener('click', (e) => {
+      e.stopPropagation();
+      cameraInput.click();
+    });
+  }
+
+  if (fileInput) {
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files?.[0];
+      if (file) handleReceiptImageProcess(file, file.name);
+    });
+  }
+
+  if (cameraInput) {
+    cameraInput.addEventListener('change', (e) => {
+      const file = e.target.files?.[0];
+      if (file) handleReceiptImageProcess(file, 'Ảnh chụp từ camera');
+    });
+  }
+
+  if (btnClear) {
+    btnClear.addEventListener('click', (e) => {
+      e.stopPropagation();
+      resetOcrDropzoneUI();
+    });
+  }
+
+  if (btnSettings) {
+    btnSettings.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const modalEl = document.getElementById('ocrSettingsModal');
+      if (modalEl) {
+        const inputKey = document.getElementById('geminiApiKeyInput');
+        if (inputKey && window.ReceiptOcrService) {
+          inputKey.value = window.ReceiptOcrService.getApiKey() || '';
+        }
+        const statusDiv = document.getElementById('apiKeyTestStatus');
+        if (statusDiv) statusDiv.innerHTML = '';
+        new bootstrap.Modal(modalEl).show();
+      }
+    });
+  }
+
+  // Drag & drop handlers
+  if (dropzone) {
+    dropzone.addEventListener('click', (e) => {
+      if (e.target.closest('#btnClearOcrImage') || e.target.closest('#btnOcrSettings') || e.target.closest('#btnCameraReceipt') || e.target.closest('#btnUploadReceipt')) return;
+      if (fileInput) fileInput.click();
+    });
+
+    ['dragenter', 'dragover'].forEach(evt => {
+      dropzone.addEventListener(evt, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.classList.add('dragover');
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(evt => {
+      dropzone.addEventListener(evt, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.classList.remove('dragover');
+      });
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropzone.classList.remove('dragover');
+      const dt = e.dataTransfer;
+      const file = dt?.files?.[0];
+      if (file) handleReceiptImageProcess(file, file.name);
+    });
+  }
+
+  // Global Ctrl + V paste handler when addDataModal is open
+  window.addEventListener('paste', (e) => {
+    const addDataModal = document.getElementById('addDataModal');
+    if (!addDataModal || !addDataModal.classList.contains('show')) return;
+
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type && items[i].type.startsWith('image/')) {
+        const file = items[i].getAsFile();
+        if (file) {
+          e.preventDefault();
+          handleReceiptImageProcess(file, 'Ảnh dán từ clipboard (Ctrl+V)');
+          break;
+        }
+      }
+    }
+  });
+
+  // Settings modal logic
+  const btnToggleVis = document.getElementById('btnToggleApiKeyVisibility');
+  const apiKeyInput = document.getElementById('geminiApiKeyInput');
+  if (btnToggleVis && apiKeyInput) {
+    btnToggleVis.addEventListener('click', () => {
+      apiKeyInput.type = apiKeyInput.type === 'password' ? 'text' : 'password';
+      btnToggleVis.innerHTML = apiKeyInput.type === 'password' ? '<i class="bi bi-eye"></i>' : '<i class="bi bi-eye-slash"></i>';
+    });
+  }
+
+  const btnSaveKey = document.getElementById('btnSaveApiKey');
+  if (btnSaveKey && apiKeyInput) {
+    btnSaveKey.addEventListener('click', () => {
+      if (window.ReceiptOcrService) {
+        window.ReceiptOcrService.setApiKey(apiKeyInput.value.trim());
+      }
+      bootstrap.Modal.getInstance(document.getElementById('ocrSettingsModal'))?.hide();
+      alert('Đã lưu cấu hình Gemini API Key thành công!');
+    });
+  }
+
+  const btnTestKey = document.getElementById('btnTestApiKey');
+  if (btnTestKey && apiKeyInput) {
+    btnTestKey.addEventListener('click', async () => {
+      const key = apiKeyInput.value.trim();
+      const statusDiv = document.getElementById('apiKeyTestStatus');
+      if (!key) {
+        if (statusDiv) statusDiv.innerHTML = '<span class="text-danger fw-bold">Vui lòng nhập API Key để kiểm tra.</span>';
+        return;
+      }
+
+      btnTestKey.disabled = true;
+      btnTestKey.textContent = 'Đang kiểm tra...';
+      if (statusDiv) statusDiv.innerHTML = '<span class="text-primary">Đang kết nối tới Google Gemini API...</span>';
+
+      try {
+        await window.ReceiptOcrService.testApiKey(key);
+        if (statusDiv) statusDiv.innerHTML = '<span class="text-success fw-bold">✅ Kết nối thành công! API Key hợp lệ.</span>';
+      } catch (err) {
+        if (statusDiv) statusDiv.innerHTML = `<span class="text-danger fw-bold">❌ Kết nối thất bại: ${err.message}</span>`;
+      } finally {
+        btnTestKey.disabled = false;
+        btnTestKey.textContent = 'Kiểm tra kết nối';
+      }
+    });
+  }
+}
+
+
 // ===== ADD DATA MODAL =====
 
 function openAddDataModal() {
@@ -963,6 +1323,7 @@ function openAddDataModal() {
   const modalEl = document.getElementById('addDataModal');
   if (!modalEl) return;
   setupModalPermissions(modalEl);
+  resetOcrDropzoneUI();
 
   const commonFieldsContainer = document.getElementById('addDataCommonFields');
   const additionalFieldsContainer = document.getElementById('addDataAdditionalFields');

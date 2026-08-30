@@ -96,6 +96,60 @@
           </div>
           <form id="addDataForm">
             <div class="modal-body">
+              <!-- OCR Receipt Scanner Dropzone -->
+              <div class="card mb-3 border-primary shadow-sm">
+                <div class="card-body p-2">
+                  <div id="imageOcrDropzone" class="ocr-dropzone">
+                    <div class="ocr-dropzone-content">
+                      <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-camera-fill ocr-dropzone-icon"></i>
+                        <div class="ocr-dropzone-text">
+                          <div class="title">📸 Nhập tự động từ ảnh Phiếu Xuất Kho</div>
+                          <div class="subtitle">
+                            Kéo thả ảnh, chụp từ camera hoặc nhấn <span class="ocr-kbd-badge">Ctrl + V</span> để dán ảnh
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="ocr-actions">
+                        <input type="file" id="receiptImageInput" accept="image/*" class="d-none">
+                        <input type="file" id="receiptCameraInput" accept="image/*" capture="environment" class="d-none">
+                        
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="btnUploadReceipt" title="Chọn file ảnh">
+                          <i class="bi bi-image"></i> Chọn ảnh
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-success" id="btnCameraReceipt" title="Chụp ảnh bằng camera">
+                          <i class="bi bi-camera"></i> Chụp ảnh
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="btnOcrSettings" title="Cấu hình API Key AI">
+                          <i class="bi bi-gear"></i>
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Preview container when image processed -->
+                    <div id="ocrPreviewContainer" class="ocr-preview-container">
+                      <div class="d-flex align-items-center gap-2">
+                        <img id="ocrPreviewThumb" src="" alt="Thumbnail" class="ocr-preview-img">
+                        <div class="text-start">
+                          <div class="small fw-bold text-success" id="ocrStatusText"><i class="bi bi-check-circle-fill"></i> Đã điền thông tin từ ảnh thành công!</div>
+                          <div class="text-muted small" id="ocrFileNameText" style="font-size: 0.72rem; color: #475569 !important;"></div>
+                        </div>
+                      </div>
+                      <button type="button" class="btn btn-sm btn-outline-danger" id="btnClearOcrImage" title="Xóa ảnh & quét lại">
+                        <i class="bi bi-x-lg"></i>
+                      </button>
+                    </div>
+
+                    <!-- Processing loading overlay -->
+                    <div id="ocrLoadingOverlay" class="ocr-loading-overlay">
+                      <div class="spinner-border text-primary spinner-border-sm" role="status"></div>
+                      <div class="small fw-bold text-primary">Đang quét và phân tích phiếu xuất kho...</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <!-- Common fields section -->
               <div class="card mb-3">
                 <div class="card-header bg-primary text-white py-2">
@@ -309,6 +363,42 @@
         </div>
       </div>
     </div>
+
+    <!-- OCR API Key Settings Modal -->
+    <div class="modal fade" id="ocrSettingsModal" tabindex="-1" aria-hidden="true" style="z-index: 1065;">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0" style="border-radius: 12px; overflow: hidden;">
+          <div class="modal-header bg-primary text-white py-2">
+            <h6 class="modal-title mb-0"><i class="bi bi-gear-fill me-1"></i> Cấu hình Gemini Vision AI Key</h6>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body py-3">
+            <p class="small mb-2 text-secondary">
+              Để nhận diện chính xác 100% tiếng Việt, bảng và số liệu trên phiếu xuất kho, bạn có thể nhập <strong>Gemini API Key</strong> (hoàn toàn miễn phí từ Google).
+            </p>
+            <div class="mb-3">
+              <label for="geminiApiKeyInput" class="form-label small fw-bold text-dark">Gemini API Key:</label>
+              <div class="input-group input-group-sm">
+                <input type="password" id="geminiApiKeyInput" class="form-control font-monospace" placeholder="AIzaSy...">
+                <button class="btn btn-outline-secondary" type="button" id="btnToggleApiKeyVisibility">
+                  <i class="bi bi-eye"></i>
+                </button>
+              </div>
+              <div class="form-text small mt-1">
+                Chưa có key? Lấy miễn phí tại: <a href="https://aistudio.google.com/app/apikey" target="_blank" class="fw-bold text-primary">Google AI Studio</a>. Key được lưu an toàn trong trình duyệt của bạn.
+              </div>
+            </div>
+            <div id="apiKeyTestStatus" class="small mb-0"></div>
+          </div>
+          <div class="modal-footer py-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="btnTestApiKey">Kiểm tra kết nối</button>
+            <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Đóng</button>
+            <button type="button" class="btn btn-sm btn-primary" id="btnSaveApiKey">Lưu cấu hình</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- ==================== SCRIPTS ==================== -->
@@ -332,6 +422,7 @@
   <script src="/assets/js/core/supabase-data-engine.js?v=2.0.3"></script>
   <script src="/assets/js/core/inventory-lock-service.js?v=2.0.3"></script>
   <script src="/assets/js/core/qr-scanner-service.js?v=2.0.3"></script>
+  <script src="/assets/js/core/receipt-ocr-service.js?v=2.0.3"></script>
 
   <!-- Supabase version of xg-xuat -->
   <script src="/assets/js/xg/xg-xuat.js?v=2.0.3"></script>
