@@ -264,24 +264,50 @@ window.addEventListener('load', () => {
     });
   }
 
-  // Lắng nghe đóng modal để giải phóng cuộn không được chọn
+  // Lắng nghe đóng modal tồn kho để giải phóng cuộn không được chọn
   const invModalEl = document.getElementById('inventoryRollsModal');
   if (invModalEl) {
     invModalEl.addEventListener('hidden.bs.modal', () => {
-      const formRolls = new Set(
-        Array.from(document.querySelectorAll('#rollsTableBody .roll-cuon-id, #editRollsTableBody .roll-cuon-id'))
-          .map(inp => inp.value.trim().toLowerCase())
-          .filter(Boolean)
-      );
+      const formRolls = new Set();
+      multiItemsData.forEach(item => {
+        (item.rolls || []).forEach(r => {
+          if (r.cuonId) formRolls.add(String(r.cuonId).trim().toLowerCase());
+        });
+      });
+      document.querySelectorAll('#editRollsTableBody .roll-cuon-id').forEach(inp => {
+        const v = inp.value.trim().toLowerCase();
+        if (v) formRolls.add(v);
+      });
       if (window.inventoryLockService) {
         const myLocks = Array.from(window.inventoryLockService.myLockedRolls);
-        const toRelease = myLocks.filter(id => !formRolls.has(id));
+        const toRelease = myLocks.filter(id => !formRolls.has(String(id).trim().toLowerCase()));
         if (toRelease.length > 0) {
           window.inventoryLockService.releaseLock(toRelease, false);
         }
       }
     });
   }
+
+  // Lắng nghe đóng addDataModal để giải phóng toàn bộ cuộn đang giữ nếu hủy thêm phiếu
+  const addModalEl = document.getElementById('addDataModal');
+  if (addModalEl) {
+    addModalEl.addEventListener('hidden.bs.modal', () => {
+      if (window.inventoryLockService) {
+        const toRelease = [];
+        multiItemsData.forEach(item => {
+          (item.rolls || []).forEach(r => {
+            if (r.cuonId) toRelease.push(r.cuonId);
+          });
+        });
+        if (toRelease.length > 0) {
+          window.inventoryLockService.releaseLock(toRelease, false);
+        }
+      }
+    });
+  }
+
+  // Khởi tạo các sự kiện quét ảnh OCR
+  initReceiptOcrHandlers();
 
   // Lắng nghe realtime từ các tab khác khi có phiếu xuất mới
   if (toleChannel) {
@@ -955,6 +981,602 @@ function buildFormField(colName, colIdx, currentVal, container, namePrefix) {
 }
 
 
+/* =============================================================================
+   RECEIPT OCR IMAGE SCANNER & AUTOFILL HANDLERS
+================================================================================ */
+
+let multiItemsData = []; // Array of { id, maVatTu, tenVatTu, batch, rolls: [{ id, cuonId, kg, m }] }
+let currentItemTargetIndex = 0; // Index of item card picking from inventory
+
+function formatNumericValue(val) {
+  const n = parseNumericInput(val);
+  if (n === null) return '0';
+  return n.toLocaleString('vi-VN', { minimumFractionDigits: 0, maximumFractionDigits: 3 });
+}
+
+function updateMultiItemTotals() {
+  let globalRolls = 0;
+  let globalKg = 0;
+
+  multiItemsData.forEach((item, idx) => {
+    let itemKg = 0;
+    let itemRollCount = 0;
+    (item.rolls || []).forEach(r => {
+      const kg = parseNumericInput(r.kg);
+      if (kg !== null && kg > 0) {
+        itemKg += kg;
+        itemRollCount++;
+      }
+    });
+
+    globalRolls += itemRollCount;
+    globalKg += itemKg;
+
+    // Update item card footer counters in DOM if present
+    const cardEl = document.querySelector(`.item-card[data-item-idx="${idx}"]`);
+    if (cardEl) {
+      const rollCountEl = cardEl.querySelector('.item-rolls-count');
+      const itemKgEl = cardEl.querySelector('.item-total-kg');
+      if (rollCountEl) rollCountEl.textContent = itemRollCount;
+      if (itemKgEl) itemKgEl.textContent = formatNumericValue(itemKg);
+    }
+  });
+
+  const globalItemsCountEl = document.getElementById('globalItemsCount');
+  const globalRollsCountEl = document.getElementById('globalRollsCount');
+  const globalTotalKgEl = document.getElementById('globalTotalKg');
+
+  if (globalItemsCountEl) globalItemsCountEl.textContent = multiItemsData.length;
+  if (globalRollsCountEl) globalRollsCountEl.textContent = globalRolls;
+  if (globalTotalKgEl) globalTotalKgEl.textContent = formatNumericValue(globalKg);
+}
+
+function generateItemCardHTML(item, index, totalItems) {
+  const isOnlyItem = totalItems <= 1;
+  const rolls = item.rolls || [];
+  const totalItemKg = rolls.reduce((sum, r) => sum + (parseNumericInput(r.kg) || 0), 0);
+
+  let rollsRowsHTML = '';
+  if (rolls.length === 0) {
+    rollsRowsHTML = `<tr><td colspan="5" class="text-center text-muted py-2 fst-italic" style="font-size: 0.75rem;">Chưa có cuộn nào. Vui lòng bấm "+ Chọn cuộn từ kho"</td></tr>`;
+  } else {
+    rolls.forEach((r, rIdx) => {
+      rollsRowsHTML += `
+        <tr data-roll-id="${r.id}">
+          <td class="text-center">${rIdx + 1}</td>
+          <td>
+            <input type="text" class="form-control form-control-sm item-roll-cuon-id font-monospace bg-light" value="${r.cuonId || ''}" placeholder="Cuộn ID" readonly data-item-idx="${index}" data-roll-idx="${rIdx}" style="cursor: not-allowed;">
+          </td>
+          <td>
+            <input type="text" class="form-control form-control-sm item-roll-kg fw-bold text-end bg-light" value="${r.kg ? formatNumericValue(r.kg) : ''}" placeholder="Số kg" readonly data-item-idx="${index}" data-roll-idx="${rIdx}" style="cursor: not-allowed;" required>
+          </td>
+          <td>
+            <input type="text" class="form-control form-control-sm item-roll-m text-end bg-light" value="${r.m ? formatNumericValue(r.m) : ''}" placeholder="Số mét" readonly data-item-idx="${index}" data-roll-idx="${rIdx}" style="cursor: not-allowed;">
+          </td>
+          <td class="text-center">
+            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 btn-remove-item-roll" data-item-idx="${index}" data-roll-idx="${rIdx}" title="Xóa cuộn">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+  }
+
+  const titleText = item.maVatTu || item.tenVatTu || item.batch
+    ? `${item.maVatTu || ''} ${item.batch ? `(Lô: ${item.batch})` : ''} - ${item.tenVatTu || ''}`.trim()
+    : 'Mục mới';
+
+  return `
+    <div class="item-card mb-3" data-item-idx="${index}" id="itemCard_${item.id}">
+      <div class="item-card-header">
+        <div class="d-flex align-items-center gap-2">
+          <span class="item-card-badge">Mục #${index + 1}</span>
+          <span class="fw-bold text-primary small item-card-header-title text-truncate" style="max-width: 450px;" title="${titleText}">${titleText}</span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          ${!isOnlyItem ? `
+            <button type="button" class="btn btn-xs btn-outline-danger btn-remove-item-card" data-item-idx="${index}" title="Xóa mục hàng này">
+              <i class="bi bi-trash"></i> Xóa mục
+            </button>
+          ` : ''}
+        </div>
+      </div>
+      <div class="item-card-body">
+        <div class="row g-2 mb-2">
+          <div class="col-12 col-md-4">
+            <label class="form-label small fw-bold">Mã vật tư <span class="text-danger">*</span></label>
+            <input type="text" class="form-control form-control-sm fw-bold item-ma-vt" value="${item.maVatTu || ''}" placeholder="VD: 10001189" data-item-idx="${index}" required>
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="form-label small fw-bold">Tên vật tư <span class="text-danger">*</span></label>
+            <input type="text" class="form-control form-control-sm fw-bold item-ten-vt" value="${item.tenVatTu || ''}" placeholder="VD: Thép phôi kẽm Z275 G450" data-item-idx="${index}" required>
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="form-label small fw-bold">Lô / Batch <span class="text-danger">*</span></label>
+            <input type="text" class="form-control form-control-sm fw-bold item-batch" value="${item.batch || ''}" placeholder="VD: 1.8X351VN" data-item-idx="${index}" required>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-1 flex-wrap gap-2">
+          <span class="small fw-bold text-success"><i class="bi bi-layers-fill"></i> Danh sách cuộn xuất của Mục #${index + 1}:</span>
+          <div class="d-flex gap-1">
+            <button type="button" class="btn btn-sm btn-primary py-1 px-2 btn-item-pick-inv" data-item-idx="${index}">
+              <i class="bi bi-box-seam"></i> + Chọn cuộn từ kho
+            </button>
+          </div>
+        </div>
+
+        <div class="table-responsive border rounded" style="max-height: 180px; height: auto;">
+          <table class="table table-sm table-bordered table-hover mb-0">
+            <thead class="table-light sticky-top">
+              <tr>
+                <th style="width: 45px;">STT</th>
+                <th>Cuộn ID</th>
+                <th style="width: 140px;" class="text-end">Số lượng (Kg) <span class="text-danger">*</span></th>
+                <th style="width: 120px;" class="text-end">Số lượng (m)</th>
+                <th style="width: 60px;">Xóa</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rollsRowsHTML}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="d-flex justify-content-end gap-3 mt-2 small text-muted">
+          <span>Số cuộn mục #${index + 1}: <strong class="text-primary item-rolls-count">${rolls.length}</strong></span>
+          <span>Khối lượng mục #${index + 1}: <strong class="text-success item-total-kg">${formatNumericValue(totalItemKg)}</strong> kg</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderItemCards() {
+  const container = document.getElementById('itemsContainer');
+  if (!container) return;
+
+  container.innerHTML = '';
+
+  multiItemsData.forEach((item, idx) => {
+    const cardWrapper = document.createElement('div');
+    cardWrapper.innerHTML = generateItemCardHTML(item, idx, multiItemsData.length);
+    const cardEl = cardWrapper.firstElementChild;
+
+    // Inputs: Mã VT, Tên VT, Batch
+    const maVtInp = cardEl.querySelector('.item-ma-vt');
+    const tenVtInp = cardEl.querySelector('.item-ten-vt');
+    const batchInp = cardEl.querySelector('.item-batch');
+    const titleEl = cardEl.querySelector('.item-card-header-title');
+
+    function updateTitle() {
+      const t = item.maVatTu || item.tenVatTu || item.batch
+        ? `${item.maVatTu || ''} ${item.batch ? `(Lô: ${item.batch})` : ''} - ${item.tenVatTu || ''}`.trim()
+        : 'Mục mới';
+      if (titleEl) {
+        titleEl.textContent = t;
+        titleEl.title = t;
+      }
+    }
+
+    if (maVtInp) {
+      maVtInp.addEventListener('input', (e) => {
+        item.maVatTu = e.target.value.trim();
+        updateTitle();
+      });
+    }
+
+    if (tenVtInp) {
+      tenVtInp.addEventListener('input', (e) => {
+        item.tenVatTu = e.target.value.trim();
+        updateTitle();
+      });
+    }
+
+    if (batchInp) {
+      batchInp.addEventListener('input', (e) => {
+        item.batch = e.target.value.trim();
+        updateTitle();
+      });
+    }
+
+    // Button: Xóa mục
+    const btnRemoveCard = cardEl.querySelector('.btn-remove-item-card');
+    if (btnRemoveCard) {
+      btnRemoveCard.addEventListener('click', () => {
+        if (multiItemsData.length > 1) {
+          if (window.inventoryLockService && item.rolls) {
+            item.rolls.forEach(r => {
+              if (r.cuonId) window.inventoryLockService.releaseLock(r.cuonId, false);
+            });
+          }
+          multiItemsData.splice(idx, 1);
+          renderItemCards();
+        }
+      });
+    }
+
+    // Button: Chọn cuộn từ kho
+    const btnPickInv = cardEl.querySelector('.btn-item-pick-inv');
+    if (btnPickInv) {
+      btnPickInv.addEventListener('click', () => {
+        currentItemTargetIndex = idx;
+        const maVatTu = (item.maVatTu || '').trim();
+        const batch = (item.batch || '').trim();
+        openInventoryModal('add_item', maVatTu, batch);
+      });
+    }
+
+    // Roll row event listeners
+    cardEl.querySelectorAll('.item-roll-kg').forEach(inp => {
+      inp.addEventListener('input', (e) => {
+        const rIdx = parseInt(e.target.dataset.rollIdx, 10);
+        if (item.rolls && item.rolls[rIdx]) {
+          item.rolls[rIdx].kg = e.target.value;
+          updateMultiItemTotals();
+        }
+      });
+    });
+
+    cardEl.querySelectorAll('.item-roll-m').forEach(inp => {
+      inp.addEventListener('input', (e) => {
+        const rIdx = parseInt(e.target.dataset.rollIdx, 10);
+        if (item.rolls && item.rolls[rIdx]) {
+          item.rolls[rIdx].m = e.target.value;
+          updateMultiItemTotals();
+        }
+      });
+    });
+
+    cardEl.querySelectorAll('.btn-remove-item-roll').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const rIdx = parseInt(btn.dataset.rollIdx, 10);
+        if (item.rolls && item.rolls[rIdx]) {
+          const cid = item.rolls[rIdx].cuonId;
+          if (cid && window.inventoryLockService) {
+            window.inventoryLockService.releaseLock(cid);
+          }
+          item.rolls.splice(rIdx, 1);
+          renderItemCards();
+        }
+      });
+    });
+
+    container.appendChild(cardEl);
+  });
+
+  updateMultiItemTotals();
+}
+
+function triggerAutofillHighlight(element) {
+  if (!element) return;
+  element.classList.remove('field-highlight-autofill');
+  void element.offsetWidth; // trigger reflow
+  element.classList.add('field-highlight-autofill');
+}
+
+function resetOcrDropzoneUI() {
+  const preview = document.getElementById('ocrPreviewContainer');
+  const loading = document.getElementById('ocrLoadingOverlay');
+  const content = document.querySelector('.ocr-dropzone-content');
+  const fileInput = document.getElementById('receiptImageInput');
+  const cameraInput = document.getElementById('receiptCameraInput');
+
+  if (preview) preview.style.display = 'none';
+  if (loading) loading.style.display = 'none';
+  if (content) content.style.display = 'flex';
+  if (fileInput) fileInput.value = '';
+  if (cameraInput) cameraInput.value = '';
+}
+
+function populateFieldsFromOcr(data) {
+  if (!data) return;
+  const form = document.getElementById('addDataForm');
+  if (!form) return;
+
+  // 1. Mã chứng từ (name="col_1"): Mặc định là "PX"
+  const maChungTuSelect = form.querySelector('[name="col_1"]');
+  if (maChungTuSelect) {
+    let pxOpt = Array.from(maChungTuSelect.options).find(opt => opt.value === 'PX');
+    if (!pxOpt) {
+      pxOpt = document.createElement('option');
+      pxOpt.value = 'PX';
+      pxOpt.textContent = 'PX';
+      maChungTuSelect.appendChild(pxOpt);
+    }
+    maChungTuSelect.value = 'PX';
+    triggerAutofillHighlight(maChungTuSelect);
+  }
+
+  // 2. Ngày xuất (name="col_2")
+  if (data.ngayXuat) {
+    const ngayXuatInput = form.querySelector('[name="col_2"]');
+    if (ngayXuatInput) {
+      ngayXuatInput.value = data.ngayXuat;
+      triggerAutofillHighlight(ngayXuatInput);
+    }
+  }
+
+  // 3. Phiếu xuất (name="col_3")
+  if (data.phieuXuat) {
+    const phieuXuatInput = form.querySelector('[name="col_3"]');
+    if (phieuXuatInput) {
+      phieuXuatInput.value = data.phieuXuat;
+      triggerAutofillHighlight(phieuXuatInput);
+    }
+  }
+
+  // 4. Loại xuất (name="col_4")
+  if (data.loaiXuat) {
+    const loaiXuatSelect = form.querySelector('[name="col_4"]');
+    if (loaiXuatSelect) {
+      let matched = false;
+      const targetLower = data.loaiXuat.toLowerCase();
+      for (const opt of loaiXuatSelect.options) {
+        if (opt.value && (targetLower.includes(opt.value.toLowerCase()) || opt.value.toLowerCase().includes(targetLower))) {
+          loaiXuatSelect.value = opt.value;
+          matched = true;
+          break;
+        }
+      }
+      if (!matched && data.loaiXuat) {
+        const customOpt = document.createElement('option');
+        customOpt.value = data.loaiXuat;
+        customOpt.textContent = data.loaiXuat;
+        loaiXuatSelect.appendChild(customOpt);
+        loaiXuatSelect.value = data.loaiXuat;
+      }
+      triggerAutofillHighlight(loaiXuatSelect);
+    }
+  }
+
+  // 5. Mã công trình (name="col_11" hoặc "add_ext_11" theo schema tole-xuat)
+  const maCtInput = form.querySelector('[name="col_11"]') || form.querySelector('[name="add_ext_11"]') || form.querySelector('[name$="11"]');
+  if (maCtInput && data.maCongTrinh) {
+    maCtInput.value = data.maCongTrinh;
+    triggerAutofillHighlight(maCtInput);
+  }
+
+  // 6. Tên công trình (name="col_12" hoặc "add_ext_12" theo schema tole-xuat)
+  const tenCtInput = form.querySelector('[name="col_12"]') || form.querySelector('[name="add_ext_12"]') || form.querySelector('[name$="12"]');
+  if (tenCtInput && data.tenCongTrinh) {
+    tenCtInput.value = data.tenCongTrinh;
+    triggerAutofillHighlight(tenCtInput);
+  }
+
+  // 7. Ghi chú: Giữ trống
+  const ghiChuInput = form.querySelector('[name="add_ext_13"]') || form.querySelector('[name="col_13"]');
+  if (ghiChuInput) ghiChuInput.value = '';
+
+  // 8. Tự động sinh các thẻ mặt hàng (Multi-Item Cards) từ ảnh
+  if (Array.isArray(data.items) && data.items.length > 0) {
+    multiItemsData = data.items.map(it => ({
+      id: Math.random().toString(36).slice(2),
+      maVatTu: it.maVatTu || '',
+      tenVatTu: it.tenVatTu || '',
+      batch: it.batch || '',
+      rolls: []
+    }));
+  } else {
+    multiItemsData = [{
+      id: Math.random().toString(36).slice(2),
+      maVatTu: data.maVatTu || '',
+      tenVatTu: data.tenVatTu || '',
+      batch: data.batch || '',
+      rolls: []
+    }];
+  }
+
+  renderItemCards();
+  document.querySelectorAll('.item-card').forEach(card => triggerAutofillHighlight(card));
+}
+
+async function handleReceiptImageProcess(file, label = '') {
+  if (!file) return;
+  if (!file.type.startsWith('image/')) {
+    alert('Vui lòng chọn hoặc dán file hình ảnh hợp lệ (PNG, JPG, JPEG, WEBP).');
+    return;
+  }
+
+  const loadingOverlay = document.getElementById('ocrLoadingOverlay');
+  const previewContainer = document.getElementById('ocrPreviewContainer');
+  const previewThumb = document.getElementById('ocrPreviewThumb');
+  const fileNameText = document.getElementById('ocrFileNameText');
+  const dropzoneContent = document.querySelector('.ocr-dropzone-content');
+
+  if (loadingOverlay) loadingOverlay.style.display = 'flex';
+
+  try {
+    if (!window.ReceiptOcrService) {
+      throw new Error('Chưa nạp module ReceiptOcrService.');
+    }
+
+    const result = await window.ReceiptOcrService.processImage(file);
+
+    if (result.needsApiKey) {
+      if (loadingOverlay) loadingOverlay.style.display = 'none';
+      const settingsModal = document.getElementById('ocrSettingsModal');
+      if (settingsModal) {
+        new bootstrap.Modal(settingsModal).show();
+      }
+      alert('Bạn cần nhập Gemini API Key (miễn phí từ Google) để tự động quét và phân tích phiếu xuất kho.');
+      return;
+    }
+
+    if (!result.success) {
+      throw new Error(result.error || 'Quét ảnh thất bại');
+    }
+
+    // Điền dữ liệu vào form
+    populateFieldsFromOcr(result.data);
+
+    // Hiển thị preview
+    if (previewContainer && previewThumb) {
+      previewThumb.src = result.dataUrl || URL.createObjectURL(file);
+      if (fileNameText) {
+        fileNameText.textContent = label || file.name || 'Ảnh phiếu xuất kho';
+      }
+      if (dropzoneContent) dropzoneContent.style.display = 'none';
+      previewContainer.style.display = 'flex';
+    }
+
+  } catch (err) {
+    console.error('OCR Error:', err);
+    alert('Không thể trích xuất dữ liệu từ ảnh: ' + (err.message || err));
+  } finally {
+    if (loadingOverlay) loadingOverlay.style.display = 'none';
+  }
+}
+
+function initReceiptOcrHandlers() {
+  const dropzone = document.getElementById('imageOcrDropzone');
+  const fileInput = document.getElementById('receiptImageInput');
+  const cameraInput = document.getElementById('receiptCameraInput');
+  const btnUpload = document.getElementById('btnUploadReceipt');
+  const btnCamera = document.getElementById('btnCameraReceipt');
+  const btnClear = document.getElementById('btnClearOcrImage');
+  const btnSettings = document.getElementById('btnOcrSettings');
+
+  if (fileInput) {
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files?.[0];
+      if (file) handleReceiptImageProcess(file, file.name);
+    });
+  }
+
+  if (cameraInput) {
+    cameraInput.addEventListener('change', (e) => {
+      const file = e.target.files?.[0];
+      if (file) handleReceiptImageProcess(file, 'Ảnh chụp từ camera');
+    });
+  }
+
+  if (btnClear) {
+    btnClear.addEventListener('click', (e) => {
+      e.stopPropagation();
+      resetOcrDropzoneUI();
+    });
+  }
+
+  if (btnSettings) {
+    btnSettings.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const modalEl = document.getElementById('ocrSettingsModal');
+      if (modalEl) {
+        const inputKey = document.getElementById('geminiApiKeyInput');
+        if (inputKey && window.ReceiptOcrService) {
+          inputKey.value = window.ReceiptOcrService.getApiKey() || '';
+        }
+        const statusDiv = document.getElementById('apiKeyTestStatus');
+        if (statusDiv) statusDiv.innerHTML = '';
+        new bootstrap.Modal(modalEl).show();
+      }
+    });
+  }
+
+  // Drag & drop handlers
+  if (dropzone) {
+    dropzone.addEventListener('click', (e) => {
+      if (e.target.closest('#btnClearOcrImage') || e.target.closest('#btnOcrSettings') || e.target.closest('#btnCameraReceipt') || e.target.closest('#btnUploadReceipt') || e.target.closest('label') || e.target.closest('button')) return;
+      if (fileInput) fileInput.click();
+    });
+
+    ['dragenter', 'dragover'].forEach(evt => {
+      dropzone.addEventListener(evt, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.classList.add('dragover');
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(evt => {
+      dropzone.addEventListener(evt, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.classList.remove('dragover');
+      });
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropzone.classList.remove('dragover');
+      const dt = e.dataTransfer;
+      const file = dt?.files?.[0];
+      if (file) handleReceiptImageProcess(file, file.name);
+    });
+  }
+
+  // Global Ctrl + V paste handler when addDataModal is open
+  window.addEventListener('paste', (e) => {
+    const addDataModal = document.getElementById('addDataModal');
+    if (!addDataModal || !addDataModal.classList.contains('show')) return;
+
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type && items[i].type.startsWith('image/')) {
+        const file = items[i].getAsFile();
+        if (file) {
+          e.preventDefault();
+          handleReceiptImageProcess(file, 'Ảnh dán từ clipboard (Ctrl+V)');
+          break;
+        }
+      }
+    }
+  });
+
+  // Settings modal logic
+  const btnToggleVis = document.getElementById('btnToggleApiKeyVisibility');
+  const apiKeyInput = document.getElementById('geminiApiKeyInput');
+  if (btnToggleVis && apiKeyInput) {
+    btnToggleVis.addEventListener('click', () => {
+      apiKeyInput.type = apiKeyInput.type === 'password' ? 'text' : 'password';
+      btnToggleVis.innerHTML = apiKeyInput.type === 'password' ? '<i class="bi bi-eye"></i>' : '<i class="bi bi-eye-slash"></i>';
+    });
+  }
+
+  const btnSaveKey = document.getElementById('btnSaveApiKey');
+  if (btnSaveKey && apiKeyInput) {
+    btnSaveKey.addEventListener('click', () => {
+      if (window.ReceiptOcrService) {
+        window.ReceiptOcrService.setApiKey(apiKeyInput.value.trim());
+      }
+      bootstrap.Modal.getInstance(document.getElementById('ocrSettingsModal'))?.hide();
+      alert('Đã lưu cấu hình Gemini API Key thành công!');
+    });
+  }
+
+  const btnTestKey = document.getElementById('btnTestApiKey');
+  if (btnTestKey && apiKeyInput) {
+    btnTestKey.addEventListener('click', async () => {
+      const key = apiKeyInput.value.trim();
+      const statusDiv = document.getElementById('apiKeyTestStatus');
+      if (!key) {
+        if (statusDiv) statusDiv.innerHTML = '<span class="text-danger fw-bold">Vui lòng nhập API Key để kiểm tra.</span>';
+        return;
+      }
+
+      btnTestKey.disabled = true;
+      btnTestKey.textContent = 'Đang kiểm tra...';
+      if (statusDiv) statusDiv.innerHTML = '<span class="text-primary">Đang kết nối tới Google Gemini API...</span>';
+
+      try {
+        const testRes = await window.ReceiptOcrService.testApiKey(key);
+        if (statusDiv) statusDiv.innerHTML = `<span class="text-success fw-bold">✅ Kết nối thành công! Đã kích hoạt model: <code>${testRes.model}</code></span>`;
+      } catch (err) {
+        if (statusDiv) statusDiv.innerHTML = `<span class="text-danger fw-bold">❌ Kết nối thất bại: ${err.message}</span>`;
+      } finally {
+        btnTestKey.disabled = false;
+        btnTestKey.textContent = 'Kiểm tra kết nối';
+      }
+    });
+  }
+}
+
+
 // ===== ADD DATA MODAL =====
 
 function openAddDataModal() {
@@ -964,6 +1586,7 @@ function openAddDataModal() {
   const modalEl = document.getElementById('addDataModal');
   if (!modalEl) return;
   setupModalPermissions(modalEl);
+  resetOcrDropzoneUI();
 
   const commonFieldsContainer = document.getElementById('addDataCommonFields');
   const additionalFieldsContainer = document.getElementById('addDataAdditionalFields');
@@ -971,47 +1594,58 @@ function openAddDataModal() {
   commonFieldsContainer.innerHTML = '';
   additionalFieldsContainer.innerHTML = '';
 
-  const rollsTableBody = document.getElementById('rollsTableBody');
-  if (rollsTableBody) rollsTableBody.innerHTML = '';
-  rollCount = 0;
-  updateRollTotals();
-
-  const quantityColIndex = findQuantityColumnIndex();
-  // Cột chung: Mã CT(1), Ngày(2), Phiếu(3), Loại(4), Mã VT(5), Tên VT(6), Batch(7)
-  const commonColIndices = [1, 2, 3, 4, 5, 6, 7];
+  // Common: Mã CT(1), Ngày(2), Phiếu(3), Loại(4), Mã CT công trình(11), Tên CT(12)
+  const commonColIndices = [1, 2, 3, 4, 11, 12];
   commonColIndices.forEach(colIdx => {
     buildFormField(COLUMN_HEADERS[colIdx], colIdx, undefined, commonFieldsContainer, 'col_');
   });
 
-  // Additional: Mã CT công trình(10), Tên CT(11), Ghi chú(12)
-  const additionalColIndices = [];
-  for (let i = quantityColIndex + 1; i < COLUMN_HEADERS.length; i++) {
-    if (!HIDDEN_COLUMNS.includes(COLUMN_HEADERS[i]) && COLUMN_HEADERS[i] !== 'Số lượng (m)') additionalColIndices.push(i);
+  // Mặc định Mã chứng từ là "PX"
+  const maChungTuSelect = commonFieldsContainer.querySelector('[name="col_1"]');
+  if (maChungTuSelect) {
+    let pxOpt = Array.from(maChungTuSelect.options).find(opt => opt.value === 'PX');
+    if (!pxOpt) {
+      pxOpt = document.createElement('option');
+      pxOpt.value = 'PX';
+      pxOpt.textContent = 'PX';
+      maChungTuSelect.appendChild(pxOpt);
+    }
+    maChungTuSelect.value = 'PX';
   }
+
+  // Additional: Ghi chú(13)
+  const additionalColIndices = [13];
   additionalColIndices.forEach(colIdx => {
     buildFormField(COLUMN_HEADERS[colIdx], colIdx, undefined, additionalFieldsContainer, 'add_ext_');
   });
 
-  modalEl.dataset.quantityColIndex = String(quantityColIndex);
-  modalEl.dataset.additionalColIndices = JSON.stringify(additionalColIndices);
-
   currentModalTarget = 'add';
 
-  const btnAddRoll = document.getElementById('btnAddRoll');
-  if (btnAddRoll) {
-    const maVatTuInput = document.getElementById('addDataMaVatTu');
-    btnAddRoll.disabled = maVatTuInput ? !maVatTuInput.value.trim() : false;
-    btnAddRoll.onclick = () => {
-      const maVatTu = document.getElementById('addDataMaVatTu')?.value.trim() || '';
-      openInventoryModal('add', maVatTu);
-    };
+  // Khởi tạo 1 thẻ mặt hàng mặc định
+  multiItemsData = [{
+    id: Math.random().toString(36).slice(2),
+    maVatTu: '',
+    tenVatTu: '',
+    batch: '',
+    rolls: []
+  }];
+  renderItemCards();
 
-    // Enable/disable btn khi nhập mã vật tư
-    if (maVatTuInput) {
-      maVatTuInput.addEventListener('input', () => {
-        btnAddRoll.disabled = !maVatTuInput.value.trim();
+  const btnAddItemCard = document.getElementById('btnAddItemCard');
+  if (btnAddItemCard) {
+    btnAddItemCard.onclick = () => {
+      multiItemsData.push({
+        id: Math.random().toString(36).slice(2),
+        maVatTu: '',
+        tenVatTu: '',
+        batch: '',
+        rolls: []
       });
-    }
+      renderItemCards();
+      const lastItem = multiItemsData[multiItemsData.length - 1];
+      const newCard = document.getElementById(`itemCard_${lastItem.id}`);
+      if (newCard) newCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    };
   }
 
   new bootstrap.Modal(modalEl).show();
@@ -1080,15 +1714,13 @@ function openEditDataModal() {
 
   const btnEditAddRoll = document.getElementById('btnEditAddRoll');
   if (btnEditAddRoll) {
-    const maVatTuInput = document.getElementById('editDataMaVatTu');
-    btnEditAddRoll.disabled = maVatTuInput ? !maVatTuInput.value.trim() : false;
+    const maVatTu = rowData[5] || '';
+    btnEditAddRoll.disabled = !maVatTu;
     btnEditAddRoll.onclick = () => {
-      const maVatTu = document.getElementById('editDataMaVatTu')?.value.trim() || '';
-      openInventoryModal('edit', maVatTu);
+      const currentMaVatTu = modalEl.querySelector('[name="col_5"]')?.value.trim() || maVatTu;
+      const currentBatch = modalEl.querySelector('[name="col_7"]')?.value.trim() || rowData[7] || '';
+      openInventoryModal('edit', currentMaVatTu, currentBatch);
     };
-    if (maVatTuInput) {
-      maVatTuInput.addEventListener('input', () => { btnEditAddRoll.disabled = !maVatTuInput.value.trim(); });
-    }
   }
 
   new bootstrap.Modal(modalEl).show();
@@ -1127,12 +1759,31 @@ function openDeleteDataModal() {
    INVENTORY MODAL - Chọn cuộn từ Tồn Kho (Supabase)
 ================================================================================ */
 
-async function openInventoryModal(target, maVatTu = '') {
+async function openInventoryModal(target, maVatTu = '', batch = '') {
   currentModalTarget = target;
   currentMaVatTuFilter = maVatTu;
 
   const inventoryModal = document.getElementById('inventoryRollsModal');
   if (!inventoryModal) return;
+
+  // Hiển thị thông tin đang lọc trên tiêu đề Modal
+  const filterInfoEl = document.getElementById('inventoryFilterInfo');
+  if (filterInfoEl) {
+    const filters = [];
+    if (maVatTu) filters.push(`Mã VT: <strong>${maVatTu}</strong>`);
+    if (batch) filters.push(`Lô (Batch): <strong>${batch}</strong>`);
+    if (filters.length > 0) {
+      filterInfoEl.innerHTML = `Đang lọc: ${filters.join(' | ')}`;
+      filterInfoEl.style.display = 'block';
+    } else {
+      filterInfoEl.innerHTML = '';
+      filterInfoEl.style.display = 'none';
+    }
+  }
+
+  // Clear search input
+  const searchInput = document.getElementById('inventorySearchInput');
+  if (searchInput) searchInput.value = '';
 
   // Reset selection
   const tbody = document.getElementById('inventoryTableBody');
@@ -1143,6 +1794,8 @@ async function openInventoryModal(target, maVatTu = '') {
 
   const selectedCountEl = document.getElementById('inventorySelectedCount');
   if (selectedCountEl) selectedCountEl.textContent = '0';
+  const selectedKgEl = document.getElementById('inventorySelectedKg');
+  if (selectedKgEl) selectedKgEl.textContent = '0';
 
   new bootstrap.Modal(inventoryModal).show();
 
@@ -1152,7 +1805,7 @@ async function openInventoryModal(target, maVatTu = '') {
     const batchSize = 1000;
     let hasMore = true;
 
-    // Tải phân trang dữ liệu tole-nhap và lọc ở Database nếu có maVatTu
+    // Tải phân trang dữ liệu tole-nhap và lọc ở Database nếu có maVatTu / batch
     while (hasMore) {
       let query = supabase
         .from(TON_TABLE_NAME)
@@ -1160,6 +1813,9 @@ async function openInventoryModal(target, maVatTu = '') {
       
       if (maVatTu) {
         query = query.ilike('Mã vật tư', `%${maVatTu}%`);
+      }
+      if (batch) {
+        query = query.ilike('Batch', `%${batch}%`);
       }
       
       query = query.order('id', { ascending: true })
@@ -1203,6 +1859,12 @@ async function openInventoryModal(target, maVatTu = '') {
       tonData = tonData.filter(row => String(row['Mã vật tư'] || '').toLowerCase().includes(maVatTuLower));
     }
 
+    // Lọc theo Batch / Lô (nếu có)
+    if (batch) {
+      const batchLower = batch.toLowerCase();
+      tonData = tonData.filter(row => String(row['Batch'] || '').toLowerCase().includes(batchLower));
+    }
+
     // Sắp xếp theo mã vật tư
     tonData.sort((a, b) => String(a['Mã vật tư'] || '').localeCompare(String(b['Mã vật tư'] || ''), 'vi'));
 
@@ -1214,7 +1876,25 @@ async function openInventoryModal(target, maVatTu = '') {
     }));
 
     cachedInventoryData = processedTon;
-    renderInventoryTable(processedTon, document.getElementById('inventorySearchInput')?.value || '');
+
+    // Lấy các cuộn ID hợp lệ đang nằm trong phiếu xuất hiện tại
+    const currentFormRolls = [];
+    multiItemsData.forEach(item => {
+      (item.rolls || []).forEach(r => {
+        if (r.cuonId) currentFormRolls.push(r.cuonId);
+      });
+    });
+    if (currentModalTarget === 'edit') {
+      document.querySelectorAll('#editRollsTableBody .roll-cuon-id').forEach(inp => {
+        if (inp.value.trim()) currentFormRolls.push(inp.value.trim());
+      });
+    }
+
+    if (window.inventoryLockService) {
+      await window.inventoryLockService.cleanOrphanLocks(currentFormRolls);
+      await window.inventoryLockService.refreshLocks(true);
+    }
+    renderInventoryTable(processedTon, '');
     if (loadingDiv) loadingDiv.style.display = 'none';
 
   } catch (err) {
@@ -1226,6 +1906,9 @@ async function openInventoryModal(target, maVatTu = '') {
 function updateInventoryTableLockStates() {
   const tbody = document.getElementById('inventoryTableBody');
   if (!tbody) return;
+  let countChecked = 0;
+  let totalSelectedKg = 0;
+
   tbody.querySelectorAll('tr').forEach(tr => {
     const cb = tr.querySelector('.inventory-checkbox');
     if (!cb) return;
@@ -1236,24 +1919,72 @@ function updateInventoryTableLockStates() {
     const isLockedByOther = lockStatus.isLocked && !lockStatus.isMe;
 
     cb.disabled = isLockedByOther;
+    if (cb.checked) {
+      countChecked++;
+      const kg = parseNumericInput(cb.dataset.tonKg) || 0;
+      totalSelectedKg += kg;
+    }
+
     const badgeContainer = tr.querySelector('.lock-badge-container');
     if (badgeContainer) {
       if (isLockedByOther) {
         tr.classList.add('table-warning');
+        tr.classList.remove('table-primary');
         tr.style.opacity = '0.75';
         cb.checked = false;
-        badgeContainer.innerHTML = `<span class="badge bg-warning text-dark ms-1" style="font-size: 0.75rem;" title="Đang soạn bởi ${lockStatus.lockedBy}"><i class="bi bi-lock-fill"></i> ${lockStatus.lockedBy} đang giữ</span>`;
+        const currentUser = (typeof localStorage !== 'undefined' && localStorage.getItem('currentUser')) || 'anonymous';
+        const canForceUnlock = (String(currentUser).toLowerCase() === 'admin' || String(currentUser).toLowerCase() === 'bao.lt' || String(lockStatus.lockedBy).toLowerCase() === String(currentUser).toLowerCase());
+        badgeContainer.innerHTML = `
+          <span class="badge bg-warning text-dark px-2 py-1 shadow-sm" style="font-size: 0.78rem; border: 1px solid #d97706; font-weight: 600;" title="Cuộn đang được tài khoản [${lockStatus.lockedBy}] chọn xuất">
+            <i class="bi bi-person-fill-lock me-1"></i>${lockStatus.lockedBy} đang giữ
+          </span>
+          ${canForceUnlock ? `
+            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 ms-1 btn-force-unlock" data-cuon-id="${cuonId}" title="Mở khóa cuộn này">
+              <i class="bi bi-unlock-fill"></i> Mở
+            </button>
+          ` : ''}
+        `;
+        const btnUnlock = badgeContainer.querySelector('.btn-force-unlock');
+        if (btnUnlock) {
+          btnUnlock.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            btnUnlock.disabled = true;
+            btnUnlock.textContent = '...';
+            await window.inventoryLockService.releaseLock(cuonId);
+            await window.inventoryLockService.refreshLocks(false);
+            updateInventoryTableLockStates();
+          });
+        }
       } else {
         tr.classList.remove('table-warning');
         tr.style.opacity = '1';
-        badgeContainer.innerHTML = cb.checked ? `<span class="badge bg-primary ms-1" style="font-size: 0.75rem;"><i class="bi bi-check2-circle"></i> Đã chọn</span>` : '';
+        if (cb.checked || (lockStatus.isLocked && lockStatus.isMe)) {
+          tr.classList.add('table-primary');
+          badgeContainer.innerHTML = `<span class="badge bg-primary px-2 py-1 shadow-sm" style="font-size: 0.78rem;"><i class="bi bi-check2-circle me-1"></i>Bạn đang giữ</span>`;
+        } else {
+          tr.classList.remove('table-primary');
+          const tonKg = parseFloat(cb.dataset.tonKg) || 0;
+          badgeContainer.innerHTML = `<span class="badge ${tonKg > 0 ? 'bg-success' : 'bg-secondary'}">${tonKg > 0 ? 'Còn tồn' : 'Hết'}</span>`;
+        }
       }
     }
   });
 
-  const countChecked = document.querySelectorAll('#inventoryTableBody .inventory-checkbox:checked').length;
   const countEl = document.getElementById('inventorySelectedCount');
+  const kgEl = document.getElementById('inventorySelectedKg');
   if (countEl) countEl.textContent = countChecked;
+  if (kgEl) kgEl.textContent = formatNumericValue(totalSelectedKg);
+
+  // Update header checkbox state
+  const selectAllCb = document.getElementById('selectAllInventoryCheckbox');
+  const allEnabledCheckboxes = tbody.querySelectorAll('.inventory-checkbox:not(:disabled)');
+  if (selectAllCb) {
+    if (allEnabledCheckboxes.length > 0) {
+      selectAllCb.checked = Array.from(allEnabledCheckboxes).every(cb => cb.checked);
+    } else {
+      selectAllCb.checked = false;
+    }
+  }
 }
 
 function renderInventoryTable(data, searchVal = '') {
@@ -1261,88 +1992,125 @@ function renderInventoryTable(data, searchVal = '') {
   if (!tbody) return;
   tbody.innerHTML = '';
 
-  const formRolls = new Set(
-    Array.from(document.querySelectorAll('#rollsTableBody .roll-cuon-id, #editRollsTableBody .roll-cuon-id'))
-      .map(inp => inp.value.trim().toLowerCase())
-      .filter(Boolean)
-  );
+  const formRolls = new Set();
+  if (currentModalTarget === 'add_item' || currentModalTarget === 'add') {
+    multiItemsData.forEach(item => {
+      (item.rolls || []).forEach(r => {
+        if (r.cuonId) formRolls.add(String(r.cuonId).trim().toLowerCase());
+      });
+    });
+  } else if (currentModalTarget === 'edit') {
+    document.querySelectorAll('#editRollsTableBody .roll-cuon-id').forEach(inp => {
+      const v = inp.value.trim().toLowerCase();
+      if (v) formRolls.add(v);
+    });
+  }
 
-  const filtered = searchVal
-    ? data.filter(row => Object.values(row).some(v => v !== null && String(v).toLowerCase().includes(searchVal.toLowerCase())))
-    : data;
+  let filtered = data;
+  if (searchVal) {
+    const s = searchVal.toLowerCase();
+    filtered = data.filter(r => 
+      String(r['Mã vật tư'] || '').toLowerCase().includes(s) ||
+      String(r['Tên vật tư'] || '').toLowerCase().includes(s) ||
+      String(r['Batch'] || '').toLowerCase().includes(s) ||
+      String(r['Cuộn ID'] || '').toLowerCase().includes(s)
+    );
+  }
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-3">Không có cuộn nào khả dụng</td></tr>';
+    updateInventoryTableLockStates();
+    return;
+  }
 
   filtered.forEach(row => {
-    const cuonId = String(row['Cuộn ID'] || '').trim();
+    const cuonId = String(row['Cuộn ID'] || '');
+    const maVatTu = String(row['Mã vật tư'] || '');
+    const tenVatTu = String(row['Tên vật tư'] || '');
+    const batch = String(row['Batch'] || '');
+    const tonKg = row['Tồn cuối (Kg)'] || 0;
+    const tonM = row['Tồn cuối (m)'] || 0;
+    const isAlreadyInForm = formRolls.has(cuonId.trim().toLowerCase());
+
     const lockStatus = window.inventoryLockService ? window.inventoryLockService.getLockStatus(cuonId) : { isLocked: false };
     const isLockedByOther = lockStatus.isLocked && !lockStatus.isMe;
-    const isSelected = formRolls.has(cuonId.toLowerCase());
 
     const tr = document.createElement('tr');
-    if (isLockedByOther) {
+    if (isAlreadyInForm || (lockStatus.isLocked && lockStatus.isMe)) {
+      tr.classList.add('table-primary');
+    } else if (isLockedByOther) {
       tr.classList.add('table-warning');
       tr.style.opacity = '0.75';
     }
 
-    tr.style.cursor = isLockedByOther ? 'not-allowed' : 'pointer';
+    let statusContent = '';
+    const currentUser = (typeof localStorage !== 'undefined' && localStorage.getItem('currentUser')) || 'anonymous';
+    const canForceUnlock = (String(currentUser).toLowerCase() === 'admin' || String(currentUser).toLowerCase() === 'bao.lt' || String(lockStatus.lockedBy).toLowerCase() === String(currentUser).toLowerCase());
 
-    let badgeHtml = '';
     if (isLockedByOther) {
-      badgeHtml = `<span class="badge bg-warning text-dark ms-1" style="font-size: 0.75rem;" title="Đang soạn bởi ${lockStatus.lockedBy}"><i class="bi bi-lock-fill"></i> ${lockStatus.lockedBy} đang giữ</span>`;
-    } else if (isSelected) {
-      badgeHtml = `<span class="badge bg-primary ms-1" style="font-size: 0.75rem;"><i class="bi bi-check2-circle"></i> Đã chọn</span>`;
+      statusContent = `
+        <span class="badge bg-warning text-dark px-2 py-1 shadow-sm" style="font-size: 0.78rem; border: 1px solid #d97706; font-weight: 600;" title="Cuộn đang được tài khoản [${lockStatus.lockedBy}] chọn xuất">
+          <i class="bi bi-person-fill-lock me-1"></i>${lockStatus.lockedBy} đang giữ
+        </span>
+        ${canForceUnlock ? `
+          <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 ms-1 btn-force-unlock" data-cuon-id="${cuonId}" title="Mở khóa cuộn này">
+            <i class="bi bi-unlock-fill"></i> Mở
+          </button>
+        ` : ''}
+      `;
+    } else if (isAlreadyInForm || (lockStatus.isLocked && lockStatus.isMe)) {
+      statusContent = `<span class="badge bg-primary px-2 py-1 shadow-sm" style="font-size: 0.78rem;"><i class="bi bi-check2-circle me-1"></i>Bạn đang giữ</span>`;
+    } else {
+      statusContent = `<span class="badge ${tonKg > 0 ? 'bg-success' : 'bg-secondary'}">${tonKg > 0 ? 'Còn tồn' : 'Hết'}</span>`;
     }
 
     tr.innerHTML = `
       <td class="text-center">
-        <input type="checkbox" class="inventory-checkbox"
-               data-ma-vat-tu="${row['Mã vật tư'] || ''}"
-               data-cuon-id="${cuonId}"
-               data-ton-kg="${row['Tồn cuối (Kg)'] || 0}"
-               data-ton-m="${row['Tồn cuối (m)'] || 0}"
-               ${isLockedByOther ? 'disabled' : ''}
-               ${isSelected && !isLockedByOther ? 'checked' : ''}
-               title="${isLockedByOther ? 'Cuộn này đang được ' + lockStatus.lockedBy + ' thao tác' : 'Chọn cuộn này'}">
+        <input type="checkbox" class="form-check-input inventory-checkbox" 
+          data-cuon-id="${cuonId}" 
+          data-ma-vattu="${maVatTu}" 
+          data-ton-kg="${tonKg}"
+          data-ton-m="${tonM}"
+          ${(isAlreadyInForm || (lockStatus.isLocked && lockStatus.isMe)) ? 'checked' : ''}
+          ${isLockedByOther ? 'disabled' : ''}>
       </td>
-      <td>${row['Mã vật tư'] || ''}</td>
-      <td>${row['Tên vật tư'] || ''}</td>
-      <td>${row['Batch'] || ''}</td>
-      <td>${cuonId} <span class="lock-badge-container">${badgeHtml}</span></td>
-      <td class="text-end">${parseNumericInput(row['Tồn cuối (Kg)'])?.toLocaleString('vi-VN', { maximumFractionDigits: 3 }) || ''}</td>
-      <td class="text-end">${parseNumericInput(row['Tồn cuối (m)'])?.toLocaleString('vi-VN', { maximumFractionDigits: 3 }) || ''}</td>
+      <td class="fw-bold">${maVatTu}</td>
+      <td>${tenVatTu}</td>
+      <td>${batch}</td>
+      <td class="font-monospace fw-bold text-primary">${cuonId}</td>
+      <td class="text-end fw-bold">${typeof formatNumber === 'function' ? formatNumber(tonKg) : tonKg}</td>
+      <td class="text-end fw-bold">${typeof formatNumber === 'function' ? formatNumber(tonM) : tonM}</td>
+      <td class="text-center">
+        <span class="lock-badge-container">${statusContent}</span>
+      </td>
     `;
 
-    const cb = tr.querySelector('.inventory-checkbox');
-    cb.addEventListener('change', async (e) => {
-      e.stopPropagation();
-      const checked = cb.checked;
-      const badgeSpan = tr.querySelector('.lock-badge-container');
-      if (checked && cuonId) {
-        if (badgeSpan) badgeSpan.innerHTML = `<span class="badge bg-primary ms-1" style="font-size: 0.75rem;"><i class="bi bi-check2-circle"></i> Đã chọn</span>`;
-        if (window.inventoryLockService) {
-          const ok = await window.inventoryLockService.acquireLock(cuonId, false);
-          if (!ok) {
-            cb.checked = false;
-            if (badgeSpan) badgeSpan.innerHTML = '';
-            alert(`⚠️ Cuộn "${cuonId}" vừa được người dùng khác giữ chỗ. Vui lòng chọn cuộn khác!`);
-            updateInventoryTableLockStates();
-            return;
-          }
-        }
-      } else if (!checked && cuonId) {
-        if (badgeSpan) badgeSpan.innerHTML = '';
-        if (window.inventoryLockService) {
-          window.inventoryLockService.releaseLock(cuonId, false);
+    const btnUnlock = tr.querySelector('.btn-force-unlock');
+    if (btnUnlock) {
+      btnUnlock.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        btnUnlock.disabled = true;
+        btnUnlock.textContent = '...';
+        await window.inventoryLockService.releaseLock(cuonId);
+        await window.inventoryLockService.refreshLocks(false);
+        updateInventoryTableLockStates();
+      });
+    }
+
+    const chk = tr.querySelector('.inventory-checkbox');
+    chk.addEventListener('change', (e) => {
+      if (window.inventoryLockService) {
+        if (e.target.checked) {
+          window.inventoryLockService.acquireLock(cuonId);
+        } else {
+          window.inventoryLockService.releaseLock(cuonId);
         }
       }
-      const countChecked = document.querySelectorAll('#inventoryTableBody .inventory-checkbox:checked').length;
-      const countEl = document.getElementById('inventorySelectedCount');
-      if (countEl) countEl.textContent = countChecked;
+      updateInventoryTableLockStates();
     });
 
     tr.addEventListener('click', (e) => {
-      if (e.target.tagName === 'INPUT' || e.target.classList.contains('inventory-checkbox') || isLockedByOther) return;
-      const chk = tr.querySelector('.inventory-checkbox');
-      if (chk && !chk.disabled) { 
+      if (e.target.tagName !== 'INPUT' && !chk.disabled) {
         chk.checked = !chk.checked; 
         chk.dispatchEvent(new Event('change')); 
       }
@@ -1351,27 +2119,31 @@ function renderInventoryTable(data, searchVal = '') {
     tbody.appendChild(tr);
   });
 
-  const countChecked = document.querySelectorAll('#inventoryTableBody .inventory-checkbox:checked').length;
-  const countEl = document.getElementById('inventorySelectedCount');
-  if (countEl) countEl.textContent = countChecked;
-
-  // Select all checkbox
-  const selectAllCb = document.getElementById('selectAllInventoryCheckbox');
-  if (selectAllCb) {
-    selectAllCb.checked = false;
-    selectAllCb.onchange = (e) => {
-      document.querySelectorAll('#inventoryTableBody .inventory-checkbox:not(:disabled)').forEach(cb => { 
-        if (cb.checked !== e.target.checked) {
-          cb.checked = e.target.checked;
-          cb.dispatchEvent(new Event('change'));
-        }
-      });
-      const checked = document.querySelectorAll('#inventoryTableBody .inventory-checkbox:checked').length;
-      const countEl = document.getElementById('inventorySelectedCount');
-      if (countEl) countEl.textContent = checked;
-    };
-  }
+  updateInventoryTableLockStates();
 }
+
+// Select all checkbox in inventory table
+document.addEventListener('change', (e) => {
+  if (e.target && e.target.id === 'selectAllInventoryCheckbox') {
+    const isChecked = e.target.checked;
+    const tbody = document.getElementById('inventoryTableBody');
+    if (!tbody) return;
+    tbody.querySelectorAll('.inventory-checkbox:not(:disabled)').forEach(cb => {
+      if (cb.checked !== isChecked) {
+        cb.checked = isChecked;
+        const cuonId = cb.dataset.cuonId;
+        if (window.inventoryLockService && cuonId) {
+          if (isChecked) {
+            window.inventoryLockService.acquireLock(cuonId);
+          } else {
+            window.inventoryLockService.releaseLock(cuonId);
+          }
+        }
+      }
+    });
+    updateInventoryTableLockStates();
+  }
+});
 
 // Inventory search
 document.addEventListener('input', (e) => {
@@ -1390,21 +2162,28 @@ document.addEventListener('click', (e) => {
 
     const target = currentModalTarget;
 
-    if (target === 'add') {
-      const existingCuonIds = new Set(
-        Array.from(document.querySelectorAll('#rollsTableBody .roll-cuon-id'))
-          .map(inp => inp.value.trim().toLowerCase())
-          .filter(Boolean)
-      );
-      selectedCheckboxes.forEach(cb => {
-        const maVatTu = cb.dataset.maVatTu || '';
-        const cuonId = cb.dataset.cuonId || '';
-        const tonKg = parseNumericInput(cb.dataset.tonKg) || 0;
-        const tonM = parseNumericInput(cb.dataset.tonM) || 0;
-        if (!existingCuonIds.has(cuonId.toLowerCase())) {
-          addRollRow(maVatTu, cuonId, String(tonKg), String(tonM));
-        }
-      });
+    if (target === 'add_item' || target === 'add') {
+      const item = multiItemsData[currentItemTargetIndex] || multiItemsData[0];
+      if (item) {
+        if (!item.rolls) item.rolls = [];
+        const existingCuonIds = new Set(
+          item.rolls.map(r => String(r.cuonId || '').trim().toLowerCase()).filter(Boolean)
+        );
+        selectedCheckboxes.forEach(cb => {
+          const cuonId = cb.dataset.cuonId || '';
+          const tonKg = parseNumericInput(cb.dataset.tonKg) || 0;
+          const tonM = parseNumericInput(cb.dataset.tonM) || 0;
+          if (!existingCuonIds.has(cuonId.toLowerCase())) {
+            item.rolls.push({
+              id: Math.random().toString(36).slice(2),
+              cuonId: cuonId,
+              kg: String(tonKg),
+              m: String(tonM)
+            });
+          }
+        });
+        renderItemCards();
+      }
     } else if (target === 'edit') {
       const existingCuonIds = new Set(
         Array.from(document.querySelectorAll('#editRollsTableBody .roll-cuon-id'))
@@ -1496,12 +2275,21 @@ function addEditRollRow(cuonId = '', kgValue = '', mValue = '') {
   tr.dataset.rollId = editRollCount;
   tr.innerHTML = `
     <td class="text-center edit-roll-stt">${editRollCount}</td>
+    <td><input type="text" class="form-control form-control-sm edit-roll-cuon-id font-monospace bg-light" readonly value="${cuonId}"></td>
     <td><input type="number" class="form-control form-control-sm edit-roll-kg" readonly step="any" min="0" inputMode="decimal" required placeholder="Nhập số kg" value="${kgValue}"></td>
-    <td><input type="number" class="form-control form-control-sm edit-roll-m" readonly step="any" min="0" inputMode="decimal" required placeholder="Nhập số m" value="${mValue}"></td>
+    <td><input type="number" class="form-control form-control-sm edit-roll-m" readonly step="any" min="0" inputMode="decimal" placeholder="Nhập số m" value="${mValue}"></td>
     <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger btn-remove-edit-roll">X</button></td>
   `;
   tbody.appendChild(tr);
-  tr.querySelector('.btn-remove-edit-roll').addEventListener('click', () => { tr.remove(); updateEditRollNumbers(); updateEditRollTotals(); });
+  tr.querySelector('.btn-remove-edit-roll').addEventListener('click', () => { 
+    const cid = tr.querySelector('.edit-roll-cuon-id')?.value.trim();
+    if (cid && window.inventoryLockService) {
+      window.inventoryLockService.releaseLock(cid);
+    }
+    tr.remove(); 
+    updateEditRollNumbers(); 
+    updateEditRollTotals(); 
+  });
   tr.querySelector('.edit-roll-kg').addEventListener('input', updateEditRollTotals);
   tr.querySelector('.edit-roll-m').addEventListener('input', updateEditRollTotals);
   updateEditRollTotals();
@@ -1549,33 +2337,9 @@ document.addEventListener('submit', async (e) => {
       e.preventDefault();
       const form = e.target;
       const submitBtn = form.querySelector('button[type="submit"]');
-      const originalText = submitBtn ? submitBtn.textContent : 'Thêm';
+      const originalText = submitBtn ? submitBtn.textContent : 'Thêm dữ liệu';
       if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Đang thêm...'; }
       showLoadingOverlay('Đang thêm dữ liệu...');
-
-      const rollDataList = [];
-      document.querySelectorAll('#rollsTableBody tr').forEach(row => {
-        const kgInput = row.querySelector('.roll-kg');
-        const mInput = row.querySelector('.roll-m');
-        if (kgInput && kgInput.value) {
-          const parsedKg = parseNumericInput(kgInput.value);
-          const parsedM = mInput && mInput.value ? parseNumericInput(mInput.value) : 0;
-          if (parsedKg !== null && parsedKg > 0) {
-            rollDataList.push({
-              kg: parsedKg,
-              m: parsedM || 0,
-              maVatTu: row.querySelector('.roll-ma-vt')?.value.trim() || '',
-              cuonId: row.querySelector('.roll-cuon-id')?.value.trim() || ''
-            });
-          }
-        }
-      });
-
-      if (rollDataList.length === 0) {
-        alert('Vui lòng nhập ít nhất một cuộn với số kg > 0');
-        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = originalText; }
-        hideLoadingOverlay(); return;
-      }
 
       const commonData = {};
       form.querySelectorAll('#addDataCommonFields input[name^="col_"], #addDataCommonFields select[name^="col_"]').forEach(inp => {
@@ -1589,14 +2353,36 @@ document.addEventListener('submit', async (e) => {
         extData[COLUMN_HEADERS[colIdx]] = inp.value || null;
       });
 
-      const recordsToInsert = rollDataList.map(roll => ({
-        ...commonData,
-        ...extData,
-        'Mã vật tư': roll.maVatTu || commonData['Mã vật tư'] || null,
-        'Cuộn ID': roll.cuonId || null,
-        'Số lượng (Kg)': roll.kg,
-        'Số lượng (m)': roll.m
-      }));
+      // Gom toàn bộ cuộn từ tất cả các thẻ mặt hàng
+      const recordsToInsert = [];
+      multiItemsData.forEach(item => {
+        const maVatTu = (item.maVatTu || '').trim();
+        const tenVatTu = (item.tenVatTu || '').trim();
+        const batch = (item.batch || '').trim();
+
+        (item.rolls || []).forEach(roll => {
+          const parsedKg = parseNumericInput(roll.kg);
+          const parsedM = parseNumericInput(roll.m) || 0;
+          if (parsedKg !== null && parsedKg > 0) {
+            recordsToInsert.push({
+              ...commonData,
+              ...extData,
+              'Mã vật tư': maVatTu || null,
+              'Tên vật tư': tenVatTu || null,
+              'Batch': batch || null,
+              'Cuộn ID': roll.cuonId || null,
+              'Số lượng (Kg)': parsedKg,
+              'Số lượng (m)': parsedM
+            });
+          }
+        });
+      });
+
+      if (recordsToInsert.length === 0) {
+        alert('Vui lòng chọn từ kho ít nhất một cuộn với số kg > 0');
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = originalText; }
+        hideLoadingOverlay(); return;
+      }
 
       // Gọi RPC giao dịch nguyên tử xuat_tole_atomic
       const currentUser = (typeof localStorage !== 'undefined' && localStorage.getItem('currentUser')) || 'anonymous';

@@ -96,55 +96,93 @@
           </div>
           <form id="addDataForm">
             <div class="modal-body">
-              <!-- Common fields section -->
-              <div class="card mb-3">
-                <div class="card-header bg-primary text-white py-2">
-                  <h6 class="mb-0">Thông tin chung</h6>
-                </div>
-                <div class="card-body">
-                  <div id="addDataCommonFields" class="row g-2">
-                    <!-- Common inputs generated dynamically -->
+              <!-- OCR Receipt Scanner Dropzone -->
+              <div class="card mb-3 border-primary shadow-sm">
+                <div class="card-body p-2">
+                  <div id="imageOcrDropzone" class="ocr-dropzone">
+                    <div class="ocr-dropzone-content">
+                      <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-camera-fill ocr-dropzone-icon"></i>
+                        <div class="ocr-dropzone-text">
+                          <div class="title">📸 Nhập tự động từ ảnh Phiếu Xuất Kho</div>
+                          <div class="subtitle">
+                            Kéo thả ảnh, chụp từ camera hoặc nhấn <span class="ocr-kbd-badge">Ctrl + V</span> để dán ảnh
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="ocr-actions">
+                        <input type="file" id="receiptImageInput" accept="image/*" class="d-none">
+                        <input type="file" id="receiptCameraInput" accept="image/*" capture="environment" class="d-none">
+                        
+                        <label for="receiptImageInput" class="btn btn-sm btn-outline-primary mb-0 d-inline-flex align-items-center gap-1" id="btnUploadReceipt" title="Chọn file ảnh" style="cursor: pointer;">
+                          <i class="bi bi-image"></i> Chọn ảnh
+                        </label>
+                        <label for="receiptCameraInput" class="btn btn-sm btn-outline-success mb-0 d-inline-flex align-items-center gap-1" id="btnCameraReceipt" title="Chụp ảnh bằng camera" style="cursor: pointer;">
+                          <i class="bi bi-camera"></i> Chụp ảnh
+                        </label>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="btnOcrSettings" title="Cấu hình API Key AI">
+                          <i class="bi bi-gear"></i>
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Preview container when image processed -->
+                    <div id="ocrPreviewContainer" class="ocr-preview-container">
+                      <div class="d-flex align-items-center gap-2">
+                        <img id="ocrPreviewThumb" src="" alt="Thumbnail" class="ocr-preview-img">
+                        <div class="text-start">
+                          <div class="small fw-bold text-success" id="ocrStatusText"><i class="bi bi-check-circle-fill"></i> Đã điền thông tin từ ảnh thành công!</div>
+                          <div class="text-muted small" id="ocrFileNameText" style="font-size: 0.72rem; color: #475569 !important;"></div>
+                        </div>
+                      </div>
+                      <button type="button" class="btn btn-sm btn-outline-danger" id="btnClearOcrImage" title="Xóa ảnh & quét lại">
+                        <i class="bi bi-x-lg"></i>
+                      </button>
+                    </div>
+
+                    <!-- Processing loading overlay -->
+                    <div id="ocrLoadingOverlay" class="ocr-loading-overlay">
+                      <div class="spinner-border text-primary spinner-border-sm" role="status"></div>
+                      <div class="small fw-bold text-primary">Đang quét và phân tích phiếu xuất kho...</div>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <!-- Rolls section -->
+              <!-- Common fields section -->
               <div class="card mb-3">
+                <div class="card-header bg-primary text-white py-2">
+                  <h6 class="mb-0"><i class="bi bi-info-circle me-1"></i> Thông tin chung phiếu xuất</h6>
+                </div>
+                <div class="card-body">
+                  <div id="addDataCommonFields" class="row g-2">
+                    <!-- Common inputs: Mã chứng từ (PX), Ngày xuất, Phiếu xuất, Loại xuất, Mã CT, Tên CT -->
+                  </div>
+                </div>
+              </div>
+
+              <!-- Multi-Item Section -->
+              <div class="card mb-3 border-success shadow-sm">
                 <div class="card-header bg-success text-white py-2 d-flex justify-content-between align-items-center">
-                  <h6 class="mb-0">Danh sách cuộn</h6>
-                  <button type="button" class="btn btn-sm btn-light" id="btnAddRoll">
-                    + Thêm cuộn
+                  <h6 class="mb-0"><i class="bi bi-box-seam me-1"></i> Danh sách mặt hàng & cuộn xuất</h6>
+                  <button type="button" class="btn btn-sm btn-light fw-bold" id="btnAddItemCard">
+                    <i class="bi bi-plus-circle"></i> + Thêm mặt hàng
                   </button>
                 </div>
-                <div class="card-body p-0">
-                  <div id="rollsContainer" class="table-responsive" style="max-height: 250px;">
-                    <table class="table table-bordered table-sm mb-0" id="rollsTable">
-                      <thead class="table-light">
-                        <tr>
-                          <th style="width: 50px;">STT</th>
-                          <th>Mã vật tư <span class="text-danger">*</span></th>
-                          <th>Cuộn ID</th>
-                          <th>Số kg <span class="text-danger">*</span></th>
-                          <th>Số mét <span class="text-danger">*</span></th>
-                          <th style="width: 80px;">Thao tác</th>
-                        </tr>
-                      </thead>
-                      <tbody id="rollsTableBody">
-                        <!-- Roll rows will be added here -->
-                      </tbody>
-                      <tfoot>
-                        <tr class="table-info d-none">
-                          <td colspan="4" class="text-end fw-bold">Tổng số cuộn:</td>
-                          <td class="fw-bold" id="totalRollsCount">0</td>
-                          <td></td>
-                        </tr>
-                        <tr class="table-warning">
-                          <td colspan="4" class="text-end fw-bold">Tổng kg / Tổng mét:</td>
-                          <td class="fw-bold"><span id="totalKg">0 kg</span> / <span id="totalM">0 m</span></td>
-                          <td></td>
-                        </tr>
-                      </tfoot>
-                    </table>
+                <div class="card-body p-2" id="itemsContainerWrapper">
+                  <div id="itemsContainer">
+                    <!-- Dynamic Item Cards will be rendered here -->
+                  </div>
+
+                  <!-- Global Totals for all items in receipt -->
+                  <div class="p-2 bg-light rounded border d-flex justify-content-between align-items-center flex-wrap gap-2 mt-2">
+                    <span class="fw-bold text-secondary small">TỔNG TOÀN BỘ PHIẾU XUẤT:</span>
+                    <div class="d-flex gap-4">
+                      <span class="small">Tổng số mặt hàng: <strong id="globalItemsCount" class="text-primary">1</strong></span>
+                      <span class="small">Tổng số cuộn: <strong id="globalRollsCount" class="text-primary">0</strong></span>
+                      <span class="small">Tổng khối lượng: <strong id="globalTotalKg" class="text-success fs-6">0</strong> kg</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -152,18 +190,18 @@
               <!-- Additional fields section -->
               <div class="card">
                 <div class="card-header bg-secondary text-white py-2">
-                  <h6 class="mb-0">Thông tin bổ sung</h6>
+                  <h6 class="mb-0"><i class="bi bi-card-text me-1"></i> Ghi chú & Thông tin bổ sung</h6>
                 </div>
                 <div class="card-body">
                   <div id="addDataAdditionalFields" class="row g-2">
-                    <!-- Additional inputs generated dynamically -->
+                    <!-- Ghi chú generated dynamically -->
                   </div>
                 </div>
               </div>
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-              <button type="submit" class="btn btn-primary">Thêm</button>
+              <button type="submit" class="btn btn-primary" id="btnSubmitAddData">Thêm dữ liệu</button>
             </div>
           </form>
         </div>
@@ -196,7 +234,7 @@
               <div class="card mb-3">
                 <div class="card-header bg-success text-white py-2 d-flex justify-content-between align-items-center">
                   <h6 class="mb-0">Danh sách cuộn</h6>
-                  <button type="button" id="btnEditAddRoll" class="btn btn-sm btn-light">+ Thêm cuộn</button>
+                  <button type="button" id="btnEditAddRoll" class="btn btn-sm btn-light">+ Chọn cuộn từ kho</button>
                 </div>
                 <div class="card-body p-0">
                   <div id="editRollsContainer" class="table-responsive" style="max-height: 250px;">
@@ -204,8 +242,9 @@
                       <thead class="table-light">
                         <tr>
                           <th style="width: 50px;">STT</th>
+                          <th>Cuộn ID</th>
                           <th>Số kg <span class="text-danger">*</span></th>
-                          <th>Số mét <span class="text-danger">*</span></th>
+                          <th>Số mét</th>
                           <th style="width: 80px;">Thao tác</th>
                         </tr>
                       </thead>
@@ -214,12 +253,12 @@
                       </tbody>
                       <tfoot>
                         <tr class="table-info d-none">
-                          <td colspan="2" class="text-end fw-bold">Tổng số cuộn:</td>
+                          <td colspan="3" class="text-end fw-bold">Tổng số cuộn:</td>
                           <td class="fw-bold" id="editTotalRollsCount">0</td>
                           <td></td>
                         </tr>
                         <tr class="table-warning">
-                          <td colspan="2" class="text-end fw-bold">Tổng kg / Tổng mét:</td>
+                          <td colspan="3" class="text-end fw-bold">Tổng kg / Tổng mét:</td>
                           <td class="fw-bold"><span id="editTotalKg">0 kg</span> / <span id="editTotalM">0 m</span></td>
                           <td></td>
                         </tr>
@@ -275,7 +314,10 @@
       <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
         <div class="modal-content">
           <div class="modal-header bg-info text-white">
-            <h5 class="modal-title">Chọn cuộn vật tư từ Tồn Kho</h5>
+            <div>
+              <h5 class="modal-title mb-0">Chọn cuộn vật tư từ Tồn Kho</h5>
+              <div id="inventoryFilterInfo" class="small text-white-50 mt-1" style="display: none;"></div>
+            </div>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body p-0">
@@ -289,12 +331,13 @@
                     <th style="width: 50px;" class="text-center">
                       <input type="checkbox" id="selectAllInventoryCheckbox" title="Chọn tất cả hiển thị">
                     </th>
-                    <th>Mã vật tư</th>
+                    <th style="width: 120px;">Mã vật tư</th>
                     <th>Tên vật tư</th>
-                    <th>Batch</th>
-                    <th>Cuộn ID</th>
-                    <th class="text-end">Tồn cuối (Kg)</th>
-                    <th class="text-end">Tồn cuối (m)</th>
+                    <th style="width: 110px;">Batch</th>
+                    <th style="width: 220px;">Cuộn ID</th>
+                    <th style="width: 120px;" class="text-end">Tồn cuối (Kg)</th>
+                    <th style="width: 110px;" class="text-end">Tồn cuối (m)</th>
+                    <th style="width: 180px;" class="text-center">Trạng thái / Giữ chỗ</th>
                   </tr>
                 </thead>
                 <tbody id="inventoryTableBody">
@@ -305,13 +348,47 @@
             </div>
           </div>
           <div class="modal-footer">
-            <div class="text-muted small me-auto">Đã chọn: <strong id="inventorySelectedCount">0</strong> cuộn</div>
+            <div class="text-muted small me-auto d-flex align-items-center gap-3">
+              <span>Đã chọn: <strong id="inventorySelectedCount" class="text-primary fs-6">0</strong> cuộn</span>
+              <span class="border-start ps-3">Tổng khối lượng: <strong id="inventorySelectedKg" class="text-success fs-6">0</strong> kg</span>
+            </div>
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
             <button type="button" class="btn btn-primary" id="btnConfirmInventorySelection">Đồng ý</button>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- OCR API Key Settings Modal -->
+    <div class="modal fade" id="ocrSettingsModal" tabindex="-1" aria-hidden="true" style="z-index: 1065;">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0" style="border-radius: 12px; overflow: hidden;">
+          <div class="modal-header bg-primary text-white py-2">
+            <h6 class="modal-title mb-0"><i class="bi bi-gear-fill me-1"></i> Cấu hình Gemini Vision AI Key</h6>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body py-3">
+            <div class="mb-3">
+              <label for="geminiApiKeyInput" class="form-label small fw-bold">Google Gemini API Key <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <input type="password" class="form-control font-monospace" id="geminiApiKeyInput" placeholder="AIzaSy...">
+                <button class="btn btn-outline-secondary" type="button" id="btnToggleApiKeyVisibility">
+                  <i class="bi bi-eye"></i>
+                </button>
+              </div>
+              <div class="form-text small text-muted">Key được lưu an toàn trong trình duyệt (LocalStorage) của bạn.</div>
+            </div>
+            <div id="apiKeyTestStatus" class="small mb-0"></div>
+          </div>
+          <div class="modal-footer py-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="btnTestApiKey">Kiểm tra kết nối</button>
+            <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Đóng</button>
+            <button type="button" class="btn btn-sm btn-primary" id="btnSaveApiKey">Lưu cấu hình</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- ==================== SCRIPTS ==================== -->
@@ -331,13 +408,14 @@
   <script src="/assets/js/home.js"></script>
 
   <!-- Supabase config (URL + anon key) -->
-  <script src="/assets/js/core/supabase-config.js?v=2.0.3"></script>
-  <script src="/assets/js/core/supabase-data-engine.js?v=2.0.3"></script>
-  <script src="/assets/js/core/inventory-lock-service.js?v=2.0.3"></script>
-  <script src="/assets/js/core/qr-scanner-service.js?v=2.0.3"></script>
+  <script src="/assets/js/core/supabase-config.js?v=2.0.5"></script>
+  <script src="/assets/js/core/supabase-data-engine.js?v=2.0.5"></script>
+  <script src="/assets/js/core/inventory-lock-service.js?v=2.0.5"></script>
+  <script src="/assets/js/core/qr-scanner-service.js?v=2.0.5"></script>
+  <script src="/assets/js/core/receipt-ocr-service.js?v=2.0.5"></script>
 
   <!-- Supabase version of tole-xuat -->
-  <script src="/assets/js/tole/tole-xuat.js?v=2.0.3"></script>
+  <script src="/assets/js/tole/tole-xuat.js?v=2.0.5"></script>
 
   <!-- Bootstrap JS (for dropdown) -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
