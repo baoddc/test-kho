@@ -115,12 +115,12 @@
                         <input type="file" id="receiptImageInput" accept="image/*" class="d-none">
                         <input type="file" id="receiptCameraInput" accept="image/*" capture="environment" class="d-none">
                         
-                        <button type="button" class="btn btn-sm btn-outline-primary" id="btnUploadReceipt" title="Chọn file ảnh">
+                        <label for="receiptImageInput" class="btn btn-sm btn-outline-primary mb-0 d-inline-flex align-items-center gap-1" id="btnUploadReceipt" title="Chọn file ảnh" style="cursor: pointer;">
                           <i class="bi bi-image"></i> Chọn ảnh
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-success" id="btnCameraReceipt" title="Chụp ảnh bằng camera">
+                        </label>
+                        <label for="receiptCameraInput" class="btn btn-sm btn-outline-success mb-0 d-inline-flex align-items-center gap-1" id="btnCameraReceipt" title="Chụp ảnh bằng camera" style="cursor: pointer;">
                           <i class="bi bi-camera"></i> Chụp ảnh
-                        </button>
+                        </label>
                         <button type="button" class="btn btn-sm btn-outline-secondary" id="btnOcrSettings" title="Cấu hình API Key AI">
                           <i class="bi bi-gear"></i>
                         </button>

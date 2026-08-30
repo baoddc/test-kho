@@ -851,7 +851,19 @@ function setupModalPermissions(modalEl) {
     hasPerm = perms.isAdmin || perms.canEdit || perms.canAdd;
   }
 
-  modalEl.querySelectorAll('input, select, textarea').forEach(input => { input.disabled = !hasPerm; });
+  // Chỉ disable các trường nhập liệu cụ thể của form dữ liệu
+  const formInputs = modalEl.querySelectorAll(
+    '#addDataCommonFields input, #addDataCommonFields select, #addDataAdditionalFields input, #addDataAdditionalFields select, ' +
+    '#editDataCommonFields input, #editDataCommonFields select, #editDataAdditionalFields input, #editDataAdditionalFields select, ' +
+    '#rollsTableBody input, #editRollsTableBody input'
+  );
+  formInputs.forEach(input => { input.disabled = !hasPerm; });
+
+  // Luôn đảm bảo các input OCR file không bị disable
+  const ocrFileInput = modalEl.querySelector('#receiptImageInput');
+  const ocrCamInput = modalEl.querySelector('#receiptCameraInput');
+  if (ocrFileInput) ocrFileInput.disabled = false;
+  if (ocrCamInput) ocrCamInput.disabled = false;
 
   const submitBtn = modalEl.querySelector('button[type="submit"]');
   if (submitBtn) submitBtn.style.display = hasPerm ? '' : 'none';
@@ -1161,20 +1173,6 @@ function initReceiptOcrHandlers() {
   const btnClear = document.getElementById('btnClearOcrImage');
   const btnSettings = document.getElementById('btnOcrSettings');
 
-  if (btnUpload && fileInput) {
-    btnUpload.addEventListener('click', (e) => {
-      e.stopPropagation();
-      fileInput.click();
-    });
-  }
-
-  if (btnCamera && cameraInput) {
-    btnCamera.addEventListener('click', (e) => {
-      e.stopPropagation();
-      cameraInput.click();
-    });
-  }
-
   if (fileInput) {
     fileInput.addEventListener('change', (e) => {
       const file = e.target.files?.[0];
@@ -1215,7 +1213,7 @@ function initReceiptOcrHandlers() {
   // Drag & drop handlers
   if (dropzone) {
     dropzone.addEventListener('click', (e) => {
-      if (e.target.closest('#btnClearOcrImage') || e.target.closest('#btnOcrSettings') || e.target.closest('#btnCameraReceipt') || e.target.closest('#btnUploadReceipt')) return;
+      if (e.target.closest('#btnClearOcrImage') || e.target.closest('#btnOcrSettings') || e.target.closest('#btnCameraReceipt') || e.target.closest('#btnUploadReceipt') || e.target.closest('label') || e.target.closest('button')) return;
       if (fileInput) fileInput.click();
     });
 
