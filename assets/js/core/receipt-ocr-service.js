@@ -9,7 +9,17 @@
   'use strict';
 
   const STORAGE_KEY = 'gemini_ocr_api_key';
-  const DEFAULT_MODEL = 'gemini-1.5-flash';
+  const CACHED_MODEL_KEY = 'gemini_cached_model_name';
+
+  const CANDIDATE_MODELS = [
+    'gemini-2.0-flash',
+    'gemini-1.5-flash-latest',
+    'gemini-1.5-flash',
+    'gemini-2.5-flash',
+    'gemini-1.5-flash-8b',
+    'gemini-1.5-pro',
+    'gemini-pro'
+  ];
 
   const ReceiptOcrService = {
     /**
@@ -28,6 +38,7 @@
           localStorage.setItem(STORAGE_KEY, apiKey.trim());
         } else {
           localStorage.removeItem(STORAGE_KEY);
+          localStorage.removeItem(CACHED_MODEL_KEY);
         }
       }
     },
@@ -38,6 +49,43 @@
     hasApiKey: function () {
       const key = this.getApiKey();
       return Boolean(key && key.length > 10);
+    },
+
+    /**
+     * Tự động dò tìm model tốt nhất được hỗ trợ bởi API Key của người dùng
+     */
+    resolveWorkingModel: async function (apiKey) {
+      const cached = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(CACHED_MODEL_KEY) : null;
+      if (cached) return cached;
+
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey.trim())}`;
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          const models = data.models || [];
+          const supported = models
+            .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
+            .map(m => (m.name || '').replace(/^models\//, ''));
+
+          for (const cand of CANDIDATE_MODELS) {
+            if (supported.includes(cand)) {
+              if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(CACHED_MODEL_KEY, cand);
+              return cand;
+            }
+          }
+
+          if (supported.length > 0) {
+            const first = supported[0];
+            if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(CACHED_MODEL_KEY, first);
+            return first;
+          }
+        }
+      } catch (err) {
+        console.warn('ListModels failed, fallback to default candidate:', err);
+      }
+
+      return 'gemini-2.0-flash';
     },
 
     /**
@@ -114,7 +162,8 @@ Format JSON mong đợi:
 }
 `;
 
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${DEFAULT_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`;
+      const modelName = await this.resolveWorkingModel(apiKey);
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey.trim())}`;
 
       const requestBody = {
         contents: [
@@ -223,28 +272,53 @@ Format JSON mong đợi:
     },
 
     /**
-     * Test kết nối API Key
+     * Test kết nối API Key và tìm model hoạt động
      */
     testApiKey: async function (apiKey) {
       if (!apiKey || !apiKey.trim()) throw new Error('API Key không được để trống.');
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${DEFAULT_MODEL}:generateContent?key=${encodeURIComponent(apiKey.trim())}`;
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: 'Hello, reply with OK' }] }]
-        })
-      });
 
-      if (!response.ok) {
-        let msg = `API Key không hợp lệ (HTTP ${response.status})`;
+      // 1. Kiểm tra API Key và liệt kê model
+      const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey.trim())}`;
+      const listRes = await fetch(listUrl);
+
+      if (!listRes.ok) {
+        let msg = `API Key không hợp lệ (HTTP ${listRes.status})`;
         try {
-          const json = await response.json();
+          const json = await listRes.json();
           if (json.error && json.error.message) msg = json.error.message;
         } catch (_) {}
         throw new Error(msg);
       }
-      return true;
+
+      const listData = await listRes.json();
+      const models = listData.models || [];
+      const supported = models
+        .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
+        .map(m => (m.name || '').replace(/^models\//, ''));
+
+      if (supported.length === 0) {
+        throw new Error('API Key hợp lệ nhưng không tìm thấy model nào hỗ trợ generateContent.');
+      }
+
+      // Chọn model tốt nhất
+      let selectedModel = 'gemini-2.0-flash';
+      for (const cand of CANDIDATE_MODELS) {
+        if (supported.includes(cand)) {
+          selectedModel = cand;
+          break;
+        }
+      }
+      if (!supported.includes(selectedModel)) selectedModel = supported[0];
+
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem(CACHED_MODEL_KEY, selectedModel);
+      }
+
+      return {
+        success: true,
+        model: selectedModel,
+        availableModelsCount: supported.length
+      };
     }
   };
 

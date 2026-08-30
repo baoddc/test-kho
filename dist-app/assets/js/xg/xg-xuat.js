@@ -1301,8 +1301,8 @@ function initReceiptOcrHandlers() {
       if (statusDiv) statusDiv.innerHTML = '<span class="text-primary">Đang kết nối tới Google Gemini API...</span>';
 
       try {
-        await window.ReceiptOcrService.testApiKey(key);
-        if (statusDiv) statusDiv.innerHTML = '<span class="text-success fw-bold">✅ Kết nối thành công! API Key hợp lệ.</span>';
+        const testRes = await window.ReceiptOcrService.testApiKey(key);
+        if (statusDiv) statusDiv.innerHTML = `<span class="text-success fw-bold">✅ Kết nối thành công! Đã kích hoạt model: <code>${testRes.model}</code></span>`;
       } catch (err) {
         if (statusDiv) statusDiv.innerHTML = `<span class="text-danger fw-bold">❌ Kết nối thất bại: ${err.message}</span>`;
       } finally {
