@@ -1184,7 +1184,8 @@ function renderItemCards() {
       btnPickInv.addEventListener('click', () => {
         currentItemTargetIndex = idx;
         const maVatTu = (item.maVatTu || '').trim();
-        openInventoryModal('add_item', maVatTu);
+        const batch = (item.batch || '').trim();
+        openInventoryModal('add_item', maVatTu, batch);
       });
     }
 
@@ -1692,7 +1693,8 @@ function openEditDataModal() {
     btnEditAddRoll.disabled = !maVatTu;
     btnEditAddRoll.onclick = () => {
       const currentMaVatTu = modalEl.querySelector('[name="col_5"]')?.value.trim() || maVatTu;
-      openInventoryModal('edit', currentMaVatTu);
+      const currentBatch = modalEl.querySelector('[name="col_7"]')?.value.trim() || rowData[7] || '';
+      openInventoryModal('edit', currentMaVatTu, currentBatch);
     };
   }
 
@@ -1724,12 +1726,28 @@ function openDeleteDataModal() {
    INVENTORY MODAL - Chọn cuộn từ Tồn Kho (Supabase)
 ================================================================================ */
 
-async function openInventoryModal(target, maVatTu = '') {
+async function openInventoryModal(target, maVatTu = '', batch = '') {
   currentModalTarget = target;
   currentMaVatTuFilter = maVatTu;
+  currentBatchFilter = batch;
 
   const inventoryModal = document.getElementById('inventoryRollsModal');
   if (!inventoryModal) return;
+
+  const filterInfoEl = document.getElementById('inventoryFilterInfo');
+  if (filterInfoEl) {
+    if (maVatTu || batch) {
+      filterInfoEl.innerHTML = `Đang lọc: ${maVatTu ? `Mã VT: <strong>${maVatTu}</strong>` : ''} ${batch ? `| Lô (Batch): <strong>${batch}</strong>` : ''}`;
+      filterInfoEl.style.display = '';
+    } else {
+      filterInfoEl.innerHTML = '';
+      filterInfoEl.style.display = 'none';
+    }
+  }
+
+  // Clear search input
+  const searchInput = document.getElementById('inventorySearchInput');
+  if (searchInput) searchInput.value = '';
 
   // Reset selection
   const tbody = document.getElementById('inventoryTableBody');
@@ -1749,7 +1767,7 @@ async function openInventoryModal(target, maVatTu = '') {
     const batchSize = 1000;
     let hasMore = true;
 
-    // Tải phân trang dữ liệu xg-nhap và lọc ở Database nếu có maVatTu
+    // Tải phân trang dữ liệu xg-nhap và lọc ở Database nếu có maVatTu / batch
     while (hasMore) {
       let query = supabase
         .from('xg-nhap')
@@ -1757,6 +1775,9 @@ async function openInventoryModal(target, maVatTu = '') {
       
       if (maVatTu) {
         query = query.ilike('Mã vật tư', `%${maVatTu}%`);
+      }
+      if (batch) {
+        query = query.ilike('Batch', `%${batch}%`);
       }
       
       query = query.order('id', { ascending: true })
@@ -1800,6 +1821,12 @@ async function openInventoryModal(target, maVatTu = '') {
       tonData = tonData.filter(row => String(row['Mã vật tư'] || '').toLowerCase().includes(maVatTuLower));
     }
 
+    // Lọc theo Batch / Lô (nếu có)
+    if (batch) {
+      const batchLower = batch.toLowerCase();
+      tonData = tonData.filter(row => String(row['Batch'] || '').toLowerCase().includes(batchLower));
+    }
+
     // Sắp xếp theo mã vật tư
     tonData.sort((a, b) => String(a['Mã vật tư'] || '').localeCompare(String(b['Mã vật tư'] || ''), 'vi'));
 
@@ -1810,7 +1837,7 @@ async function openInventoryModal(target, maVatTu = '') {
     }));
 
     cachedInventoryData = processedTon;
-    renderInventoryTable(processedTon, document.getElementById('inventorySearchInput')?.value || '');
+    renderInventoryTable(processedTon, '');
     if (loadingDiv) loadingDiv.style.display = 'none';
 
   } catch (err) {
