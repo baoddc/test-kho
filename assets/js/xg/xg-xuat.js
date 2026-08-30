@@ -263,18 +263,41 @@ window.addEventListener('load', () => {
     });
   }
 
-  // Lắng nghe đóng modal để giải phóng cuộn không được chọn
+  // Lắng nghe đóng modal tồn kho để giải phóng cuộn không được chọn
   const invModalEl = document.getElementById('inventoryRollsModal');
   if (invModalEl) {
     invModalEl.addEventListener('hidden.bs.modal', () => {
-      const formRolls = new Set(
-        Array.from(document.querySelectorAll('#rollsTableBody .roll-cuon-id, #editRollsTableBody .roll-cuon-id'))
-          .map(inp => inp.value.trim().toLowerCase())
-          .filter(Boolean)
-      );
+      const formRolls = new Set();
+      multiItemsData.forEach(item => {
+        (item.rolls || []).forEach(r => {
+          if (r.cuonId) formRolls.add(String(r.cuonId).trim().toLowerCase());
+        });
+      });
+      document.querySelectorAll('#editRollsTableBody .roll-cuon-id').forEach(inp => {
+        const v = inp.value.trim().toLowerCase();
+        if (v) formRolls.add(v);
+      });
       if (window.inventoryLockService) {
         const myLocks = Array.from(window.inventoryLockService.myLockedRolls);
-        const toRelease = myLocks.filter(id => !formRolls.has(id));
+        const toRelease = myLocks.filter(id => !formRolls.has(String(id).trim().toLowerCase()));
+        if (toRelease.length > 0) {
+          window.inventoryLockService.releaseLock(toRelease, false);
+        }
+      }
+    });
+  }
+
+  // Lắng nghe đóng addDataModal để giải phóng toàn bộ cuộn đang giữ nếu hủy thêm phiếu
+  const addModalEl = document.getElementById('addDataModal');
+  if (addModalEl) {
+    addModalEl.addEventListener('hidden.bs.modal', () => {
+      if (window.inventoryLockService) {
+        const toRelease = [];
+        multiItemsData.forEach(item => {
+          (item.rolls || []).forEach(r => {
+            if (r.cuonId) toRelease.push(r.cuonId);
+          });
+        });
         if (toRelease.length > 0) {
           window.inventoryLockService.releaseLock(toRelease, false);
         }
@@ -1172,6 +1195,11 @@ function renderItemCards() {
     if (btnRemoveCard) {
       btnRemoveCard.addEventListener('click', () => {
         if (multiItemsData.length > 1) {
+          if (window.inventoryLockService && item.rolls) {
+            item.rolls.forEach(r => {
+              if (r.cuonId) window.inventoryLockService.releaseLock(r.cuonId, false);
+            });
+          }
           multiItemsData.splice(idx, 1);
           renderItemCards();
         }
