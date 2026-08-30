@@ -1786,6 +1786,8 @@ async function openInventoryModal(target, maVatTu = '', batch = '') {
 
   const selectedCountEl = document.getElementById('inventorySelectedCount');
   if (selectedCountEl) selectedCountEl.textContent = '0';
+  const selectedKgEl = document.getElementById('inventorySelectedKg');
+  if (selectedKgEl) selectedKgEl.textContent = '0';
 
   new bootstrap.Modal(inventoryModal).show();
 
@@ -1895,6 +1897,9 @@ async function openInventoryModal(target, maVatTu = '', batch = '') {
 function updateInventoryTableLockStates() {
   const tbody = document.getElementById('inventoryTableBody');
   if (!tbody) return;
+  let countChecked = 0;
+  let totalSelectedKg = 0;
+
   tbody.querySelectorAll('tr').forEach(tr => {
     const cb = tr.querySelector('.inventory-checkbox');
     if (!cb) return;
@@ -1905,6 +1910,12 @@ function updateInventoryTableLockStates() {
     const isLockedByOther = lockStatus.isLocked && !lockStatus.isMe;
 
     cb.disabled = isLockedByOther;
+    if (cb.checked) {
+      countChecked++;
+      const kg = parseNumericInput(cb.dataset.tonKg) || 0;
+      totalSelectedKg += kg;
+    }
+
     const badgeContainer = tr.querySelector('.lock-badge-container');
     if (badgeContainer) {
       if (isLockedByOther) {
@@ -1950,9 +1961,21 @@ function updateInventoryTableLockStates() {
     }
   });
 
-  const countChecked = document.querySelectorAll('#inventoryTableBody .inventory-checkbox:checked').length;
   const countEl = document.getElementById('inventorySelectedCount');
+  const kgEl = document.getElementById('inventorySelectedKg');
   if (countEl) countEl.textContent = countChecked;
+  if (kgEl) kgEl.textContent = formatNumericValue(totalSelectedKg);
+
+  // Update header checkbox state
+  const selectAllCb = document.getElementById('selectAllInventoryCheckbox');
+  const allEnabledCheckboxes = tbody.querySelectorAll('.inventory-checkbox:not(:disabled)');
+  if (selectAllCb) {
+    if (allEnabledCheckboxes.length > 0) {
+      selectAllCb.checked = Array.from(allEnabledCheckboxes).every(cb => cb.checked);
+    } else {
+      selectAllCb.checked = false;
+    }
+  }
 }
 
 function renderInventoryTable(data, searchVal = '') {
@@ -1987,6 +2010,7 @@ function renderInventoryTable(data, searchVal = '') {
 
   if (filtered.length === 0) {
     tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Không có cuộn nào khả dụng</td></tr>';
+    updateInventoryTableLockStates();
     return;
   }
 
@@ -2082,7 +2106,32 @@ function renderInventoryTable(data, searchVal = '') {
 
     tbody.appendChild(tr);
   });
+
+  updateInventoryTableLockStates();
 }
+
+// Select all checkbox in inventory table
+document.addEventListener('change', (e) => {
+  if (e.target && e.target.id === 'selectAllInventoryCheckbox') {
+    const isChecked = e.target.checked;
+    const tbody = document.getElementById('inventoryTableBody');
+    if (!tbody) return;
+    tbody.querySelectorAll('.inventory-checkbox:not(:disabled)').forEach(cb => {
+      if (cb.checked !== isChecked) {
+        cb.checked = isChecked;
+        const cuonId = cb.dataset.cuonId;
+        if (window.inventoryLockService && cuonId) {
+          if (isChecked) {
+            window.inventoryLockService.acquireLock(cuonId);
+          } else {
+            window.inventoryLockService.releaseLock(cuonId);
+          }
+        }
+      }
+    });
+    updateInventoryTableLockStates();
+  }
+});
 
 // Inventory search
 document.addEventListener('input', (e) => {

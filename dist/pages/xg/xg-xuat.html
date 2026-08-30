@@ -345,7 +345,10 @@
             </div>
           </div>
           <div class="modal-footer">
-            <div class="text-muted small me-auto">Đã chọn: <strong id="inventorySelectedCount">0</strong> cuộn</div>
+            <div class="text-muted small me-auto d-flex align-items-center gap-3">
+              <span>Đã chọn: <strong id="inventorySelectedCount" class="text-primary fs-6">0</strong> cuộn</span>
+              <span class="border-start ps-3">Tổng khối lượng: <strong id="inventorySelectedKg" class="text-success fs-6">0</strong> kg</span>
+            </div>
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
             <button type="button" class="btn btn-primary" id="btnConfirmInventorySelection">Đồng ý</button>
           </div>
@@ -402,14 +405,14 @@
   <script src="/assets/js/home.js"></script>
 
   <!-- Supabase config (URL + anon key) -->
-  <script src="/assets/js/core/supabase-config.js?v=2.0.4"></script>
-  <script src="/assets/js/core/supabase-data-engine.js?v=2.0.4"></script>
-  <script src="/assets/js/core/inventory-lock-service.js?v=2.0.4"></script>
-  <script src="/assets/js/core/qr-scanner-service.js?v=2.0.4"></script>
-  <script src="/assets/js/core/receipt-ocr-service.js?v=2.0.4"></script>
+  <script src="/assets/js/core/supabase-config.js?v=2.0.5"></script>
+  <script src="/assets/js/core/supabase-data-engine.js?v=2.0.5"></script>
+  <script src="/assets/js/core/inventory-lock-service.js?v=2.0.5"></script>
+  <script src="/assets/js/core/qr-scanner-service.js?v=2.0.5"></script>
+  <script src="/assets/js/core/receipt-ocr-service.js?v=2.0.5"></script>
 
   <!-- Supabase version of xg-xuat -->
-  <script src="/assets/js/xg/xg-xuat.js?v=2.0.4"></script>
+  <script src="/assets/js/xg/xg-xuat.js?v=2.0.5"></script>
 
   <!-- Bootstrap JS (for dropdown) -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
