@@ -1038,7 +1038,7 @@ function generateItemCardHTML(item, index, totalItems) {
             <input type="text" class="form-control form-control-sm item-roll-cuon-id font-monospace bg-light" value="${r.cuonId || ''}" placeholder="Cuộn ID" readonly data-item-idx="${index}" data-roll-idx="${rIdx}" style="cursor: not-allowed;">
           </td>
           <td>
-            <input type="text" class="form-control form-control-sm item-roll-kg fw-bold text-end" value="${r.kg ? formatNumericValue(r.kg) : ''}" placeholder="Số kg" data-item-idx="${index}" data-roll-idx="${rIdx}" required>
+            <input type="text" class="form-control form-control-sm item-roll-kg fw-bold text-end bg-light" value="${r.kg ? formatNumericValue(r.kg) : ''}" placeholder="Số kg" readonly data-item-idx="${index}" data-roll-idx="${rIdx}" style="cursor: not-allowed;" required>
           </td>
           <td class="text-center">
             <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 btn-remove-item-roll" data-item-idx="${index}" data-roll-idx="${rIdx}" title="Xóa cuộn">
