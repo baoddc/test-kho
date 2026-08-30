@@ -329,10 +329,10 @@
                     <th style="width: 45px;" class="text-center">
                       <input type="checkbox" id="selectAllInventoryCheckbox" title="Chọn tất cả hiển thị">
                     </th>
-                    <th style="width: 130px;">Mã vật tư</th>
+                    <th style="width: 120px;">Mã vật tư</th>
                     <th>Tên vật tư</th>
-                    <th style="width: 120px;">Batch</th>
-                    <th style="width: 150px;">Cuộn ID</th>
+                    <th style="width: 110px;">Batch</th>
+                    <th style="width: 220px;">Cuộn ID</th>
                     <th style="width: 120px;" class="text-end">Tồn cuối (Kg)</th>
                     <th style="width: 180px;" class="text-center">Trạng thái / Giữ chỗ</th>
                   </tr>
@@ -362,20 +362,15 @@
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body py-3">
-            <p class="small mb-2 text-secondary">
-              Để nhận diện chính xác 100% tiếng Việt, bảng và số liệu trên phiếu xuất kho, bạn có thể nhập <strong>Gemini API Key</strong> (hoàn toàn miễn phí từ Google).
-            </p>
             <div class="mb-3">
-              <label for="geminiApiKeyInput" class="form-label small fw-bold text-dark">Gemini API Key:</label>
-              <div class="input-group input-group-sm">
-                <input type="password" id="geminiApiKeyInput" class="form-control font-monospace" placeholder="AIzaSy...">
+              <label for="geminiApiKeyInput" class="form-label small fw-bold">Google Gemini API Key <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <input type="password" class="form-control font-monospace" id="geminiApiKeyInput" placeholder="AIzaSy...">
                 <button class="btn btn-outline-secondary" type="button" id="btnToggleApiKeyVisibility">
                   <i class="bi bi-eye"></i>
                 </button>
               </div>
-              <div class="form-text small mt-1">
-                Chưa có key? Lấy miễn phí tại: <a href="https://aistudio.google.com/app/apikey" target="_blank" class="fw-bold text-primary">Google AI Studio</a>. Key được lưu an toàn trong trình duyệt của bạn.
-              </div>
+              <div class="form-text small text-muted">Key được lưu an toàn trong trình duyệt (LocalStorage) của bạn.</div>
             </div>
             <div id="apiKeyTestStatus" class="small mb-0"></div>
           </div>
@@ -407,14 +402,14 @@
   <script src="/assets/js/home.js"></script>
 
   <!-- Supabase config (URL + anon key) -->
-  <script src="/assets/js/core/supabase-config.js?v=2.0.3"></script>
-  <script src="/assets/js/core/supabase-data-engine.js?v=2.0.3"></script>
-  <script src="/assets/js/core/inventory-lock-service.js?v=2.0.3"></script>
-  <script src="/assets/js/core/qr-scanner-service.js?v=2.0.3"></script>
-  <script src="/assets/js/core/receipt-ocr-service.js?v=2.0.3"></script>
+  <script src="/assets/js/core/supabase-config.js?v=2.0.4"></script>
+  <script src="/assets/js/core/supabase-data-engine.js?v=2.0.4"></script>
+  <script src="/assets/js/core/inventory-lock-service.js?v=2.0.4"></script>
+  <script src="/assets/js/core/qr-scanner-service.js?v=2.0.4"></script>
+  <script src="/assets/js/core/receipt-ocr-service.js?v=2.0.4"></script>
 
   <!-- Supabase version of xg-xuat -->
-  <script src="/assets/js/xg/xg-xuat.js?v=2.0.3"></script>
+  <script src="/assets/js/xg/xg-xuat.js?v=2.0.4"></script>
 
   <!-- Bootstrap JS (for dropdown) -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
