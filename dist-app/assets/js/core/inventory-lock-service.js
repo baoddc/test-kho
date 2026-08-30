@@ -254,7 +254,21 @@
 
         if (shouldNotify) this.notifyListeners();
 
-        // 3. Gửi RPC lên Supabase không đồng bộ
+        // 3. Upsert trực tiếp vào bảng inventory_locks VÀ gọi RPC
+        try {
+          window.supabase
+            .from('inventory_locks')
+            .upsert({
+              module_type: this.moduleType,
+              cuon_id: cleanId,
+              locked_by: currentUser,
+              created_at: new Date().toISOString(),
+              expires_at: new Date(expiresAt).toISOString()
+            }, { onConflict: 'module_type,cuon_id' })
+            .catch(() => {});
+        } catch (e) {}
+
+        // Gửi RPC lên Supabase không đồng bộ
         window.supabase.rpc('acquire_inventory_lock', {
           p_module: this.moduleType,
           p_cuon_id: cleanId,
@@ -323,6 +337,17 @@
 
       if (shouldNotify) this.notifyListeners();
 
+      // 3. Xóa trực tiếp khỏi bảng inventory_locks VÀ gọi RPC
+      try {
+        await window.supabase
+          .from('inventory_locks')
+          .delete()
+          .eq('module_type', this.moduleType)
+          .in('cuon_id', cleanIds);
+      } catch (e) {
+        console.warn('[InventoryLockService] direct delete error:', e);
+      }
+
       try {
         window.supabase.rpc('release_inventory_lock', {
           p_module: this.moduleType,
@@ -331,6 +356,29 @@
         }).catch(e => console.warn('[InventoryLockService] releaseLock RPC error:', e));
       } catch (e) {
         console.warn('[InventoryLockService] releaseLock error:', e);
+      }
+    }
+
+    /**
+     * Dọn dẹp các khóa mồ côi (khóa thuộc về currentUser nhưng không nằm trong form hiện tại)
+     * @param {string[]} validRollIds Danh sách các cuộn ID hợp lệ đang nằm trong form
+     */
+    async cleanOrphanLocks(validRollIds = []) {
+      const validSet = new Set((validRollIds || []).map(id => String(id || '').trim().toLowerCase()));
+      const currentUser = (typeof localStorage !== 'undefined' && localStorage.getItem('currentUser')) || this.currentUser || 'anonymous';
+      const cleanUser = String(currentUser).trim().toLowerCase();
+
+      const staleIds = [];
+      for (const [key, lock] of this.activeLocks.entries()) {
+        if (String(lock.lockedBy || '').trim().toLowerCase() === cleanUser) {
+          if (!validSet.has(key)) {
+            staleIds.push(lock.cuonId);
+          }
+        }
+      }
+
+      if (staleIds.length > 0) {
+        await this.releaseLock(staleIds, true);
       }
     }
 

@@ -1865,7 +1865,22 @@ async function openInventoryModal(target, maVatTu = '', batch = '') {
     }));
 
     cachedInventoryData = processedTon;
+
+    // Lấy các cuộn ID hợp lệ đang nằm trong phiếu xuất hiện tại
+    const currentFormRolls = [];
+    multiItemsData.forEach(item => {
+      (item.rolls || []).forEach(r => {
+        if (r.cuonId) currentFormRolls.push(r.cuonId);
+      });
+    });
+    if (currentModalTarget === 'edit') {
+      document.querySelectorAll('#editRollsTableBody .roll-cuon-id').forEach(inp => {
+        if (inp.value.trim()) currentFormRolls.push(inp.value.trim());
+      });
+    }
+
     if (window.inventoryLockService) {
+      await window.inventoryLockService.cleanOrphanLocks(currentFormRolls);
       await window.inventoryLockService.refreshLocks(true);
     }
     renderInventoryTable(processedTon, '');
@@ -1897,7 +1912,29 @@ function updateInventoryTableLockStates() {
         tr.classList.remove('table-primary');
         tr.style.opacity = '0.75';
         cb.checked = false;
-        badgeContainer.innerHTML = `<span class="badge bg-warning text-dark px-2 py-1 shadow-sm" style="font-size: 0.78rem; border: 1px solid #d97706; font-weight: 600;" title="Cuộn đang được tài khoản [${lockStatus.lockedBy}] chọn xuất"><i class="bi bi-person-fill-lock me-1"></i>${lockStatus.lockedBy} đang giữ</span>`;
+        const currentUser = (typeof localStorage !== 'undefined' && localStorage.getItem('currentUser')) || 'anonymous';
+        const canForceUnlock = (String(currentUser).toLowerCase() === 'admin' || String(currentUser).toLowerCase() === 'bao.lt' || String(lockStatus.lockedBy).toLowerCase() === String(currentUser).toLowerCase());
+        badgeContainer.innerHTML = `
+          <span class="badge bg-warning text-dark px-2 py-1 shadow-sm" style="font-size: 0.78rem; border: 1px solid #d97706; font-weight: 600;" title="Cuộn đang được tài khoản [${lockStatus.lockedBy}] chọn xuất">
+            <i class="bi bi-person-fill-lock me-1"></i>${lockStatus.lockedBy} đang giữ
+          </span>
+          ${canForceUnlock ? `
+            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 ms-1 btn-force-unlock" data-cuon-id="${cuonId}" title="Mở khóa cuộn này">
+              <i class="bi bi-unlock-fill"></i> Mở
+            </button>
+          ` : ''}
+        `;
+        const btnUnlock = badgeContainer.querySelector('.btn-force-unlock');
+        if (btnUnlock) {
+          btnUnlock.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            btnUnlock.disabled = true;
+            btnUnlock.textContent = '...';
+            await window.inventoryLockService.releaseLock(cuonId);
+            await window.inventoryLockService.refreshLocks(false);
+            updateInventoryTableLockStates();
+          });
+        }
       } else {
         tr.classList.remove('table-warning');
         tr.style.opacity = '1';
@@ -1973,8 +2010,20 @@ function renderInventoryTable(data, searchVal = '') {
     }
 
     let statusContent = '';
+    const currentUser = (typeof localStorage !== 'undefined' && localStorage.getItem('currentUser')) || 'anonymous';
+    const canForceUnlock = (String(currentUser).toLowerCase() === 'admin' || String(currentUser).toLowerCase() === 'bao.lt' || String(lockStatus.lockedBy).toLowerCase() === String(currentUser).toLowerCase());
+
     if (isLockedByOther) {
-      statusContent = `<span class="badge bg-warning text-dark px-2 py-1 shadow-sm" style="font-size: 0.78rem; border: 1px solid #d97706; font-weight: 600;" title="Cuộn đang được tài khoản [${lockStatus.lockedBy}] chọn xuất"><i class="bi bi-person-fill-lock me-1"></i>${lockStatus.lockedBy} đang giữ</span>`;
+      statusContent = `
+        <span class="badge bg-warning text-dark px-2 py-1 shadow-sm" style="font-size: 0.78rem; border: 1px solid #d97706; font-weight: 600;" title="Cuộn đang được tài khoản [${lockStatus.lockedBy}] chọn xuất">
+          <i class="bi bi-person-fill-lock me-1"></i>${lockStatus.lockedBy} đang giữ
+        </span>
+        ${canForceUnlock ? `
+          <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 ms-1 btn-force-unlock" data-cuon-id="${cuonId}" title="Mở khóa cuộn này">
+            <i class="bi bi-unlock-fill"></i> Mở
+          </button>
+        ` : ''}
+      `;
     } else if (isAlreadyInForm || (lockStatus.isLocked && lockStatus.isMe)) {
       statusContent = `<span class="badge bg-primary px-2 py-1 shadow-sm" style="font-size: 0.78rem;"><i class="bi bi-check2-circle me-1"></i>Bạn đang giữ</span>`;
     } else {
@@ -1999,6 +2048,18 @@ function renderInventoryTable(data, searchVal = '') {
         <span class="lock-badge-container">${statusContent}</span>
       </td>
     `;
+
+    const btnUnlock = tr.querySelector('.btn-force-unlock');
+    if (btnUnlock) {
+      btnUnlock.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        btnUnlock.disabled = true;
+        btnUnlock.textContent = '...';
+        await window.inventoryLockService.releaseLock(cuonId);
+        await window.inventoryLockService.refreshLocks(false);
+        updateInventoryTableLockStates();
+      });
+    }
 
     const chk = tr.querySelector('.inventory-checkbox');
     chk.addEventListener('change', (e) => {
