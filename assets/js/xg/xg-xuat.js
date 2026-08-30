@@ -1865,6 +1865,9 @@ async function openInventoryModal(target, maVatTu = '', batch = '') {
     }));
 
     cachedInventoryData = processedTon;
+    if (window.inventoryLockService) {
+      await window.inventoryLockService.refreshLocks(true);
+    }
     renderInventoryTable(processedTon, '');
     if (loadingDiv) loadingDiv.style.display = 'none';
 
@@ -1877,8 +1880,6 @@ async function openInventoryModal(target, maVatTu = '', batch = '') {
 function updateInventoryTableLockStates() {
   const tbody = document.getElementById('inventoryTableBody');
   if (!tbody) return;
-  const currentUsername = (typeof localStorage !== 'undefined' && localStorage.getItem('currentUser')) || 'Bạn';
-
   tbody.querySelectorAll('tr').forEach(tr => {
     const cb = tr.querySelector('.inventory-checkbox');
     if (!cb) return;
@@ -1889,24 +1890,25 @@ function updateInventoryTableLockStates() {
     const isLockedByOther = lockStatus.isLocked && !lockStatus.isMe;
 
     cb.disabled = isLockedByOther;
-    const badgeContainer = tr.querySelector('.lock-status-cell');
+    const badgeContainer = tr.querySelector('.lock-badge-container');
     if (badgeContainer) {
       if (isLockedByOther) {
         tr.classList.add('table-warning');
-        tr.classList.remove('table-success');
+        tr.classList.remove('table-primary');
         tr.style.opacity = '0.75';
         cb.checked = false;
         badgeContainer.innerHTML = `<span class="badge bg-warning text-dark px-2 py-1 shadow-sm" style="font-size: 0.78rem; border: 1px solid #d97706; font-weight: 600;" title="Cuộn đang được tài khoản [${lockStatus.lockedBy}] chọn xuất"><i class="bi bi-person-fill-lock me-1"></i>${lockStatus.lockedBy} đang giữ</span>`;
-      } else if (cb.checked) {
-        tr.classList.remove('table-warning');
-        tr.classList.add('table-success');
-        tr.style.opacity = '1';
-        const displayUser = (lockStatus.isLocked && lockStatus.lockedBy) ? lockStatus.lockedBy : currentUsername;
-        badgeContainer.innerHTML = `<span class="badge bg-primary px-2 py-1 shadow-sm" style="font-size: 0.78rem;"><i class="bi bi-person-check-fill me-1"></i>${displayUser} (Đang chọn)</span>`;
       } else {
-        tr.classList.remove('table-warning', 'table-success');
+        tr.classList.remove('table-warning');
         tr.style.opacity = '1';
-        badgeContainer.innerHTML = `<span class="badge bg-success bg-opacity-75 text-white px-2 py-1" style="font-size: 0.75rem;"><i class="bi bi-check-circle me-1"></i>Sẵn sàng</span>`;
+        if (cb.checked || (lockStatus.isLocked && lockStatus.isMe)) {
+          tr.classList.add('table-primary');
+          badgeContainer.innerHTML = `<span class="badge bg-primary px-2 py-1 shadow-sm" style="font-size: 0.78rem;"><i class="bi bi-check2-circle me-1"></i>Bạn đang giữ</span>`;
+        } else {
+          tr.classList.remove('table-primary');
+          const tonKg = parseFloat(cb.dataset.tonKg) || 0;
+          badgeContainer.innerHTML = `<span class="badge ${tonKg > 0 ? 'bg-success' : 'bg-secondary'}">${tonKg > 0 ? 'Còn tồn' : 'Hết'}</span>`;
+        }
       }
     }
   });
@@ -1920,7 +1922,6 @@ function renderInventoryTable(data, searchVal = '') {
   const tbody = document.getElementById('inventoryTableBody');
   if (!tbody) return;
   tbody.innerHTML = '';
-  const currentUsername = (typeof localStorage !== 'undefined' && localStorage.getItem('currentUser')) || 'Bạn';
 
   const formRolls = new Set();
   if (currentModalTarget === 'add_item' || currentModalTarget === 'add') {
@@ -1964,22 +1965,20 @@ function renderInventoryTable(data, searchVal = '') {
     const isLockedByOther = lockStatus.isLocked && !lockStatus.isMe;
 
     const tr = document.createElement('tr');
-    if (isAlreadyInForm) tr.classList.add('table-info');
-    if (isLockedByOther) {
+    if (isAlreadyInForm || (lockStatus.isLocked && lockStatus.isMe)) {
+      tr.classList.add('table-primary');
+    } else if (isLockedByOther) {
       tr.classList.add('table-warning');
       tr.style.opacity = '0.75';
     }
 
-    let statusHtml = '';
+    let statusContent = '';
     if (isLockedByOther) {
-      statusHtml = `<span class="badge bg-warning text-dark px-2 py-1 shadow-sm" style="font-size: 0.78rem; border: 1px solid #d97706; font-weight: 600;" title="Cuộn đang được tài khoản [${lockStatus.lockedBy}] chọn xuất"><i class="bi bi-person-fill-lock me-1"></i>${lockStatus.lockedBy} đang giữ</span>`;
-    } else if (isAlreadyInForm) {
-      statusHtml = `<span class="badge bg-info text-white px-2 py-1 shadow-sm" style="font-size: 0.78rem;"><i class="bi bi-layers-fill me-1"></i>Đã có trong phiếu</span>`;
-    } else if (lockStatus.isMe) {
-      const displayUser = lockStatus.lockedBy || currentUsername;
-      statusHtml = `<span class="badge bg-primary px-2 py-1 shadow-sm" style="font-size: 0.78rem;"><i class="bi bi-person-check-fill me-1"></i>${displayUser} (Đang chọn)</span>`;
+      statusContent = `<span class="badge bg-warning text-dark px-2 py-1 shadow-sm" style="font-size: 0.78rem; border: 1px solid #d97706; font-weight: 600;" title="Cuộn đang được tài khoản [${lockStatus.lockedBy}] chọn xuất"><i class="bi bi-person-fill-lock me-1"></i>${lockStatus.lockedBy} đang giữ</span>`;
+    } else if (isAlreadyInForm || (lockStatus.isLocked && lockStatus.isMe)) {
+      statusContent = `<span class="badge bg-primary px-2 py-1 shadow-sm" style="font-size: 0.78rem;"><i class="bi bi-check2-circle me-1"></i>Bạn đang giữ</span>`;
     } else {
-      statusHtml = `<span class="badge bg-success bg-opacity-75 text-white px-2 py-1" style="font-size: 0.75rem;"><i class="bi bi-check-circle me-1"></i>Sẵn sàng</span>`;
+      statusContent = `<span class="badge ${tonKg > 0 ? 'bg-success' : 'bg-secondary'}">${tonKg > 0 ? 'Còn tồn' : 'Hết'}</span>`;
     }
 
     tr.innerHTML = `
@@ -1988,15 +1987,17 @@ function renderInventoryTable(data, searchVal = '') {
           data-cuon-id="${cuonId}" 
           data-ma-vattu="${maVatTu}" 
           data-ton-kg="${tonKg}"
-          ${isAlreadyInForm || lockStatus.isMe ? 'checked' : ''}
+          ${(isAlreadyInForm || (lockStatus.isLocked && lockStatus.isMe)) ? 'checked' : ''}
           ${isLockedByOther ? 'disabled' : ''}>
       </td>
       <td class="fw-bold">${maVatTu}</td>
       <td>${tenVatTu}</td>
-      <td><span class="badge bg-light text-dark border font-monospace">${batch}</span></td>
+      <td>${batch}</td>
       <td class="font-monospace fw-bold text-primary">${cuonId}</td>
       <td class="text-end fw-bold">${typeof formatNumber === 'function' ? formatNumber(tonKg) : tonKg}</td>
-      <td class="text-center lock-status-cell">${statusHtml}</td>
+      <td class="text-center">
+        <span class="lock-badge-container">${statusContent}</span>
+      </td>
     `;
 
     const chk = tr.querySelector('.inventory-checkbox');
