@@ -398,13 +398,32 @@
 
     if (isDirectlyAllowed) return true;
 
-    // 2. Nếu không nằm trực tiếp trong allowedPages, kiểm tra theo quyền Nhóm (canView)
-    if (normHref.includes('/xg/')) return !!(groupPerms.xg && groupPerms.xg.canView);
-    if (normHref.includes('/tole/')) return !!(groupPerms.tole && groupPerms.tole.canView);
-    if (normHref.includes('/5s/')) return !!(groupPerms['5s'] && groupPerms['5s'].canView);
-    if (normHref.includes('/pl/')) return !!(groupPerms.pl && groupPerms.pl.canView);
-    if (hrefFile === 'cong-viec') return !!(groupPerms.chung && groupPerms.chung.canView);
-    if (hrefFile === 'quan-ly-user') return !!(groupPerms.admin && groupPerms.admin.canView);
+    // 2. Kiểm tra các trang con phụ thuộc (companion pages) nếu trang cha được cấp quyền
+    const companionParentMap = {
+      'pl-tong-hop-can-thu': 'pl-can-thu',
+      'pl-tong-hop-da-thu': 'pl-da-thu',
+      'pl-tong-hop-chua-thu': 'pl-chua-thu',
+      'form-in': 'pl-phieu-in'
+    };
+    if (companionParentMap[pageFileNoExt]) {
+      const parentFile = companionParentMap[pageFileNoExt];
+      const isParentAllowed = Array.isArray(allowedPages) && allowedPages.some(page => {
+        const cleanPage = normalizeUrlPath(page);
+        const pageFile = cleanPage.split('/').pop().replace('-supabase', '');
+        return parentFile === pageFile;
+      });
+      if (isParentAllowed) return true;
+    }
+
+    // 3. Fallback theo nhóm CHỈ áp dụng nếu tài khoản legacy chưa từng được cấu hình danh sách trang (userAllowedPages là null)
+    const rawAllowedStorage = localStorage.getItem('userAllowedPages');
+    if (rawAllowedStorage === null) {
+      if (normHref.includes('/xg/')) return !!(groupPerms.xg && groupPerms.xg.canView);
+      if (normHref.includes('/tole/')) return !!(groupPerms.tole && groupPerms.tole.canView);
+      if (normHref.includes('/5s/')) return !!(groupPerms['5s'] && groupPerms['5s'].canView);
+      if (normHref.includes('/pl/')) return !!(groupPerms.pl && groupPerms.pl.canView);
+      if (hrefFile === 'cong-viec') return !!(groupPerms.chung && groupPerms.chung.canView);
+    }
 
     return false;
   }

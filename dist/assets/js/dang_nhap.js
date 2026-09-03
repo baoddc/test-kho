@@ -389,7 +389,12 @@ function completeLogin(username, accountObj = null) {
       if (accountObj.permissions) {
          localStorage.setItem('userPermissions', JSON.stringify(accountObj.permissions));
       }
-      const rawAllowed = accountObj.allowedPages;
+      let rawAllowed = accountObj.allowedPages;
+      if (typeof rawAllowed === 'string') {
+         try {
+            rawAllowed = JSON.parse(rawAllowed);
+         } catch (e) {}
+      }
       if (rawAllowed) {
          if (Array.isArray(rawAllowed)) {
             localStorage.setItem('userAllowedPages', JSON.stringify(rawAllowed));
@@ -400,6 +405,9 @@ function completeLogin(username, accountObj = null) {
                localStorage.setItem('userGroupPermissions', JSON.stringify(rawAllowed.groups));
             }
          }
+      } else {
+         localStorage.setItem('userAllowedPages', '[]');
+         localStorage.removeItem('userGroupPermissions');
       }
 
       // Lưu permChecksum khởi tạo ban đầu để so sánh khi Admin thay đổi quyền
