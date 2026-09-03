@@ -2645,37 +2645,65 @@ function updateSelectedRows() {
 }
 
 function setupModalPermissions(modalEl) {
-  const currentUser = localStorage.getItem('currentUser');
-  const isAdmin = currentUser === 'bao.lt';
+  const perms = (typeof getUserPermissions === 'function')
+    ? getUserPermissions('pl')
+    : { canAdd: true, canEdit: true, canDelete: true, isAdmin: true };
 
-  if (!modalEl) return isAdmin;
+  if (!modalEl) return perms.isAdmin;
 
-  // Vô hiệu hóa tất cả các input, select, textarea trong modal nếu không phải admin
+  const modalId = (modalEl.id || '').toLowerCase();
+  let hasPerm = perms.isAdmin;
+
+  if (modalId.includes('delete')) {
+    hasPerm = perms.isAdmin || perms.canDelete;
+  } else if (modalId.includes('add')) {
+    hasPerm = perms.isAdmin || perms.canAdd;
+  } else if (modalId.includes('edit')) {
+    hasPerm = perms.isAdmin || perms.canEdit;
+  } else {
+    hasPerm = perms.isAdmin || perms.canEdit || perms.canAdd;
+  }
+
+  // Vô hiệu hóa tất cả các input, select, textarea trong modal nếu không có quyền
   const inputs = modalEl.querySelectorAll('input, select, textarea');
   inputs.forEach(input => {
-    input.disabled = !isAdmin;
+    input.disabled = !hasPerm;
   });
 
-  // Ẩn/hiện các nút hành động trong modal
-  // Nút Submit (Thêm, Cập nhật, In phiếu, v.v.)
-  const submitBtns = modalEl.querySelectorAll('button[type="submit"], #btnConfirmDelete, #btnEditAddRowModal, #btnAddRowModal');
+  // Ẩn/hiện các nút hành động trong modal theo quyền tương ứng
+  const submitBtns = modalEl.querySelectorAll('button[type="submit"]');
   submitBtns.forEach(btn => {
-    btn.style.display = isAdmin ? '' : 'none';
+    btn.style.display = hasPerm ? '' : 'none';
   });
 
-  // Ẩn các nút "Xóa" dòng trong modal
+  const btnConfirmDelete = modalEl.querySelector('#btnConfirmDelete');
+  if (btnConfirmDelete) {
+    btnConfirmDelete.style.display = (perms.isAdmin || perms.canDelete) ? '' : 'none';
+  }
+
+  const btnEditAddRowModal = modalEl.querySelector('#btnEditAddRowModal');
+  if (btnEditAddRowModal) {
+    btnEditAddRowModal.style.display = (perms.isAdmin || perms.canEdit) ? '' : 'none';
+  }
+
+  const btnAddRowModal = modalEl.querySelector('#btnAddRowModal');
+  if (btnAddRowModal) {
+    btnAddRowModal.style.display = (perms.isAdmin || perms.canAdd) ? '' : 'none';
+  }
+
+  // Ẩn các nút "Xóa" dòng trong modal nếu không có quyền
   const removeBtns = modalEl.querySelectorAll('.btn-remove-edit-row, .btn-remove-row');
   removeBtns.forEach(btn => {
-    btn.style.display = isAdmin ? '' : 'none';
+    btn.style.display = hasPerm ? '' : 'none';
   });
 
-  // Ẩn các nút "Thêm mặt hàng mới" trong dropdown (nếu modal có dropdown)
+  // Ẩn các nút "Thêm mặt hàng mới" trong dropdown nếu không có quyền thêm
   const addNewItemBtns = modalEl.querySelectorAll('.btn-add-new-item');
   addNewItemBtns.forEach(btn => {
-    btn.style.display = isAdmin ? '' : 'none';
+    btn.style.display = (perms.isAdmin || perms.canAdd) ? '' : 'none';
   });
 
-  return isAdmin;
+  return hasPerm;
 }
 
 /* =============================================================================
