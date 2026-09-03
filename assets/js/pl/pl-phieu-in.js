@@ -1835,7 +1835,7 @@ async function submitAddData() {
   }
 
   // Show loading overlay
-  showLoadingOverlay('Đang lưu dữ liệu vào Supabase...');
+  showLoadingOverlay('Đang lưu dữ liệu...');
 
   try {
     const matHangIdx = sheetHeaders.findIndex(h => String(h || '').toLowerCase().includes('mặt hàng') || String(h || '').toLowerCase().includes('tên hàng') || String(h || '').toLowerCase().includes('mat hang'));
@@ -2061,14 +2061,14 @@ async function loadGoogleSheet(resetPage = false) {
     const freshData = typeof fetchAllFromSupabase === 'function'
       ? await fetchAllFromSupabase('pl-phieu-in', '*', 'id', true)
       : await (async () => {
-          let rows = [], from = 0, batchSize = 1000, hasMore = true;
-          while (hasMore) {
-            const { data, error } = await supabase.from('pl-phieu-in').select('*').order('id', { ascending: true }).range(from, from + batchSize - 1);
-            if (error) throw error;
-            if (data && data.length > 0) { rows = rows.concat(data); if (data.length < batchSize) hasMore = false; else from += batchSize; } else hasMore = false;
-          }
-          return rows;
-        })();
+        let rows = [], from = 0, batchSize = 1000, hasMore = true;
+        while (hasMore) {
+          const { data, error } = await supabase.from('pl-phieu-in').select('*').order('id', { ascending: true }).range(from, from + batchSize - 1);
+          if (error) throw error;
+          if (data && data.length > 0) { rows = rows.concat(data); if (data.length < batchSize) hasMore = false; else from += batchSize; } else hasMore = false;
+        }
+        return rows;
+      })();
 
     if (typeof setStoredTableCache === 'function') setStoredTableCache('pl-phieu-in', freshData);
     rawSupabaseData = freshData;
