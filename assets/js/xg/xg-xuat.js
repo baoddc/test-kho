@@ -2276,14 +2276,8 @@ document.addEventListener('submit', async (e) => {
         if (error) throw error;
         insertedData = Array.isArray(data) ? data : [data];
       } catch (rpcErr) {
-        console.warn('RPC xuat_xg_atomic failed, falling back to direct insert if RPC not found:', rpcErr);
-        if (rpcErr.message && (rpcErr.message.includes('function public.xuat_xg_atomic') || rpcErr.message.includes('does not exist'))) {
-          const { data, error } = await supabase.from(TABLE_NAME).insert(recordsToInsert).select();
-          if (error) throw error;
-          insertedData = data;
-        } else {
-          throw rpcErr;
-        }
+        console.error('Lỗi giao dịch xuất kho RPC xuat_xg_atomic:', rpcErr);
+        throw new Error(rpcErr.message || 'Giao dịch xuất kho không thành công. Vui lòng kiểm tra lại trạng thái cuộn và quyền hạn.');
       }
 
       if (insertedData) {
