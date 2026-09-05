@@ -436,7 +436,14 @@ function initViTriTonPage() {
     // Populate Results UI
     if (resMatCode) resMatCode.textContent = `Mã VT: ${parsed.maVatTu}`;
     if (resBatch) resBatch.textContent = `Batch: ${parsed.batch}`;
-    if (resScannedKg) resScannedKg.textContent = `Tem: ${formatKg(parsed.kg)} Kg`;
+    if (resScannedKg) {
+      if (parsed.kg !== null && !isNaN(parsed.kg)) {
+        resScannedKg.textContent = `Tem: ${formatKg(parsed.kg)} Kg`;
+        resScannedKg.style.display = '';
+      } else {
+        resScannedKg.style.display = 'none';
+      }
+    }
     if (resMatName) {
       resMatName.textContent = matName ? `Tên: ${matName}` : 'Tên: (Chưa có mô tả vật tư)';
       resMatName.title = matName;
@@ -536,11 +543,12 @@ function initViTriTonPage() {
 
   function startCoilCameraScanner() {
     if (typeof Html5Qrcode === 'undefined') {
-      alert('Chưa tải được thư viện Html5Qrcode. Vui lòng kiểm tra kết nối mạng!');
+      if (coilCameraStatus) {
+        coilCameraStatus.textContent = 'Không thể mở camera. Bạn có thể nhập tay hoặc dùng súng quét!';
+        coilCameraStatus.className = 'coil-status-text';
+      }
       return;
     }
-    if (coilCameraContainer) coilCameraContainer.style.display = 'block';
-    if (coilCameraStatus) coilCameraStatus.textContent = 'Đang khởi động camera quét Barcode/QR...';
 
     stopCoilCameraScanner();
 
@@ -549,7 +557,7 @@ function initViTriTonPage() {
         coilHtml5QrCodeInstance = new Html5Qrcode('coilCameraReader');
         const config = {
           fps: 10,
-          qrbox: { width: 280, height: 160 }
+          qrbox: { width: 320, height: 180 }
         };
 
         coilHtml5QrCodeInstance.start(
@@ -558,18 +566,27 @@ function initViTriTonPage() {
           (decodedText) => {
             playBeepSoundLocal();
             if (coilBarcodeInput) coilBarcodeInput.value = decodedText;
-            stopCoilCameraScanner();
             handleProcessCoilBarcode(decodedText);
           },
           () => {}
         ).then(() => {
-          if (coilCameraStatus) coilCameraStatus.textContent = 'Hướng camera vào tem Barcode hoặc mã QR';
+          if (coilCameraStatus) {
+            coilCameraStatus.textContent = 'Camera đang hoạt động. Hướng camera vào tem mã vạch...';
+            coilCameraStatus.className = 'coil-status-text text-success';
+          }
         }).catch((err) => {
-          console.error('Lỗi camera:', err);
-          if (coilCameraStatus) coilCameraStatus.textContent = 'Không thể mở camera: ' + err;
+          console.warn('Không thể mở camera:', err);
+          if (coilCameraStatus) {
+            coilCameraStatus.textContent = 'Không thể mở camera. Bạn có thể nhập tay hoặc dùng súng quét!';
+            coilCameraStatus.className = 'coil-status-text';
+          }
         });
       } catch (e) {
-        console.error('Camera init error:', e);
+        console.warn('Camera init error:', e);
+        if (coilCameraStatus) {
+          coilCameraStatus.textContent = 'Không thể mở camera. Bạn có thể nhập tay hoặc dùng súng quét!';
+          coilCameraStatus.className = 'coil-status-text';
+        }
       }
     }, 250);
   }
@@ -587,7 +604,6 @@ function initViTriTonPage() {
         coilHtml5QrCodeInstance = null;
       }
     }
-    if (coilCameraContainer) coilCameraContainer.style.display = 'none';
   }
 
   // Event Listeners
@@ -622,6 +638,7 @@ function initViTriTonPage() {
         coilBarcodeInput.focus();
         coilBarcodeInput.select();
       }
+      startCoilCameraScanner();
     });
 
     coilScanModalEl.addEventListener('hidden.bs.modal', () => {

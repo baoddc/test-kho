@@ -50,11 +50,21 @@ assert.strictEqual(res4.batch, '2X349VN');
 assert.strictEqual(res4.kg, 2310);
 console.log('✅ Test 4 Passed: Extra whitespace handled properly');
 
-// Test 5: Invalid inputs
+// Test 5: Two parts format (Mã VT-Batch without weight)
+const res5 = parseCoilBarcode('10001189-2X349VN');
+assert.deepStrictEqual(res5, {
+  maVatTu: '10001189',
+  batch: '2X349VN',
+  kg: null,
+  rawText: '10001189-2X349VN'
+});
+console.log('✅ Test 5 Passed: 2-part format 10001189-2X349VN');
+
+// Test 6: Invalid inputs
 assert.strictEqual(parseCoilBarcode(''), null);
 assert.strictEqual(parseCoilBarcode(null), null);
 assert.strictEqual(parseCoilBarcode('A01'), null);
-assert.strictEqual(parseCoilBarcode('10001189-2X349VN'), null); // Missing weight
-console.log('✅ Test 5 Passed: Invalid inputs return null');
+assert.strictEqual(parseCoilBarcode('10001189'), null);
+console.log('✅ Test 6 Passed: Single part invalid inputs return null');
 
 console.log('🎉 ALL COIL BARCODE PARSER TESTS PASSED!');

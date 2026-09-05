@@ -144,6 +144,8 @@
 
     // Split by '-'
     const parts = text.split('-').map(p => p.trim()).filter(Boolean);
+
+    // 3 or more parts: MãVT - Batch - Kg (or batch with hyphens)
     if (parts.length >= 3) {
       const maVatTu = parts[0];
       const rawKg = parts[parts.length - 1];
@@ -151,17 +153,34 @@
 
       const sanitizedKg = rawKg.replace(',', '.');
       const kg = parseFloat(sanitizedKg);
-      if (isNaN(kg) || kg <= 0) {
-        return null;
+      if (!isNaN(kg) && kg > 0) {
+        return {
+          maVatTu,
+          batch,
+          kg,
+          rawText: text
+        };
       }
 
+      // If last part is not a number, treat everything after maVatTu as batch
       return {
         maVatTu,
-        batch,
-        kg,
+        batch: parts.slice(1).join('-'),
+        kg: null,
         rawText: text
       };
     }
+
+    // 2 parts: MãVT - Batch
+    if (parts.length === 2) {
+      return {
+        maVatTu: parts[0],
+        batch: parts[1],
+        kg: null,
+        rawText: text
+      };
+    }
+
     return null;
   }
 
