@@ -44,6 +44,9 @@
           <button id="btnRefreshData" class="btn btn-sm btn-outline-secondary shadow-sm d-inline-flex align-items-center justify-content-center" style="height: 32px; width: 34px; flex-shrink: 0;" title="Tải lại dữ liệu">
             <i class="bi bi-arrow-clockwise"></i>
           </button>
+          <button id="btnScanCoil" class="btn btn-sm btn-outline-success shadow-sm d-inline-flex align-items-center gap-1 text-nowrap px-2" style="height: 32px; white-space: nowrap; flex-shrink: 0;" title="Quét Barcode cuộn (Mã VT-Batch-Khối lượng)">
+            <i class="bi bi-upc-scan"></i> <span class="d-none d-sm-inline">Quét Cuộn</span>
+          </button>
         </div>
 
         <!-- Right: Inline Metric Pills -->
@@ -152,6 +155,109 @@
       </div>
     </div>
 
+  <!-- ==================== MODAL QUÉT CUỘN & TRA CỨU BATCH ==================== -->
+  <div class="modal fade" id="coilScanModal" tabindex="-1" aria-labelledby="coilScanModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content shadow-lg border-0 bg-dark text-white">
+        <div class="modal-header border-secondary py-2 px-3">
+          <h6 class="modal-title d-flex align-items-center gap-2 fw-bold text-success" id="coilScanModalLabel">
+            <i class="bi bi-upc-scan fs-5"></i> Quét Barcode Cuộn & Tra Cứu Tồn Kho Theo Batch
+          </h6>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body p-3">
+          <!-- Top Scan / Input Section -->
+          <div class="input-group mb-2 shadow-sm">
+            <span class="input-group-text bg-secondary border-secondary text-white">
+              <i class="bi bi-upc"></i>
+            </span>
+            <input type="text" id="coilBarcodeInput" class="form-control border-secondary bg-dark text-white fw-semibold" placeholder="Nhập hoặc dùng súng bắn barcode: Mã vật tư-Batch-Khối lượng..." autocomplete="off">
+            <button id="btnSubmitCoilBarcode" class="btn btn-success px-3 fw-semibold" type="button">
+              <i class="bi bi-search me-1"></i> Tra cứu
+            </button>
+            <button id="btnToggleCameraScanner" class="btn btn-outline-info" type="button" title="Bật/Tắt Camera">
+              <i class="bi bi-camera-video me-1"></i> <span class="d-none d-sm-inline">Camera</span>
+            </button>
+          </div>
+
+          <!-- Camera Scanner Viewport (Hidden by default) -->
+          <div id="coilCameraContainer" class="mb-3 p-2 border border-secondary rounded bg-black position-relative" style="display: none;">
+            <div id="coilCameraReader" style="width: 100%; min-height: 250px; border-radius: 6px; overflow: hidden; background: #000;"></div>
+            <div class="d-flex justify-content-between align-items-center mt-2 px-1">
+              <span id="coilCameraStatus" class="small text-info">Đang khởi động camera quét Barcode/QR...</span>
+              <button type="button" id="btnCloseCameraReader" class="btn btn-sm btn-outline-light py-0 px-2" style="font-size: 0.75rem;">Đóng Camera</button>
+            </div>
+          </div>
+
+          <!-- Alert / Status messages -->
+          <div id="coilScanAlert" class="alert alert-warning py-2 px-3 small d-none" role="alert"></div>
+
+          <!-- Results Section (Visible after successful scan / parse) -->
+          <div id="coilScanResultContainer" style="display: none;">
+            <!-- Roll & Batch Overview Card -->
+            <div class="card bg-secondary bg-opacity-10 border border-secondary mb-3 shadow-sm">
+              <div class="card-body p-2 p-md-3">
+                <div class="row g-2 align-items-center">
+                  <div class="col-12 col-md-6">
+                    <div class="d-flex flex-wrap gap-1 align-items-center mb-1">
+                      <span class="badge bg-primary fs-6 fw-bold" id="resMatCode">Mã VT: ---</span>
+                      <span class="badge bg-secondary text-light fs-6 fw-bold" id="resBatch">Batch: ---</span>
+                      <span class="badge bg-warning text-dark fs-6 fw-bold" id="resScannedKg">Tem: 0 Kg</span>
+                    </div>
+                    <div class="text-light small fw-semibold text-truncate" id="resMatName" title="">Tên vật tư: ---</div>
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <div class="d-flex flex-wrap gap-2 justify-content-md-end">
+                      <!-- Total in Warehouse -->
+                      <div class="border border-secondary rounded p-2 bg-dark text-nowrap shadow-sm">
+                        <div class="text-secondary small fw-bold text-uppercase" style="font-size: 0.68rem;">Tồn Toàn Kho (Batch)</div>
+                        <div class="fw-bold text-success fs-6"><span id="resTotalRolls">0</span> cuộn <span class="text-secondary">|</span> <span id="resTotalKg">0</span> Kg</div>
+                      </div>
+                      <!-- At Current Rack -->
+                      <div class="border rounded p-2 bg-dark text-nowrap shadow-sm border-info" id="resCurrentRackBox">
+                        <div class="text-secondary small fw-bold text-uppercase" style="font-size: 0.68rem;">Tại Kệ Hiện Tại (<span id="resCurrentRackName">A01</span>)</div>
+                        <div class="fw-bold fs-6 text-info" id="resCurrentRackText">0 cuộn | 0 Kg</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Detailed Rolls Table -->
+            <div class="d-flex align-items-center justify-content-between mb-1">
+              <span class="small fw-semibold text-light"><i class="bi bi-boxes me-1 text-warning"></i> Danh sách các cuộn tồn của Batch trong kho</span>
+              <span class="badge bg-info text-dark" id="resRollsCountBadge">0 cuộn</span>
+            </div>
+            <div class="table-responsive rounded border border-secondary" style="max-height: 280px; overflow-y: auto;">
+              <table class="table table-dark table-sm table-bordered table-hover align-middle mb-0" id="coilBatchTable">
+                <thead class="table-secondary text-dark sticky-top" style="z-index: 2;">
+                  <tr>
+                    <th class="text-center" style="width: 40px;">STT</th>
+                    <th class="text-center">Vị trí kệ</th>
+                    <th>Cuộn ID</th>
+                    <th class="text-end">Khối lượng (Kg)</th>
+                    <th>Ngày nhập</th>
+                    <th class="text-center">Lưu kho</th>
+                    <th>Mã CT</th>
+                    <th class="text-center" style="width: 105px;">Hành động</th>
+                  </tr>
+                </thead>
+                <tbody id="coilBatchTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer border-secondary py-2 px-3 justify-content-between">
+          <span class="small text-secondary" id="coilScanFooterStatus">
+            <i class="bi bi-info-circle me-1"></i> Nhập hoặc quét Barcode dạng <code>Mã VT-Batch-Khối lượng</code>
+          </span>
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Đóng</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ==================== SCRIPTS ==================== -->
