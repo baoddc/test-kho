@@ -185,7 +185,8 @@
     getAllStandardRacks,
     openQRCameraScanner,
     closeQRCameraScanner,
-    parseCoilBarcode
+    parseCoilBarcode,
+    playBeepSound
   };
 
   window.qrScannerService = serviceExport;
