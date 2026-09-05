@@ -121,9 +121,6 @@
                         <label for="receiptCameraInput" class="btn btn-sm btn-outline-success mb-0 d-inline-flex align-items-center gap-1" id="btnCameraReceipt" title="Chụp ảnh bằng camera" style="cursor: pointer;">
                           <i class="bi bi-camera"></i> Chụp ảnh
                         </label>
-                        <button type="button" class="btn btn-sm btn-outline-secondary" id="btnOcrSettings" title="Cấu hình API Key AI">
-                          <i class="bi bi-gear"></i>
-                        </button>
                       </div>
                     </div>
 
@@ -356,35 +353,7 @@
       </div>
     </div>
 
-    <!-- OCR API Key Settings Modal -->
-    <div class="modal fade" id="ocrSettingsModal" tabindex="-1" aria-hidden="true" style="z-index: 1065;">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content shadow-lg border-0" style="border-radius: 12px; overflow: hidden;">
-          <div class="modal-header bg-primary text-white py-2">
-            <h6 class="modal-title mb-0"><i class="bi bi-gear-fill me-1"></i> Cấu hình Gemini Vision AI Key</h6>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body py-3">
-            <div class="mb-3">
-              <label for="geminiApiKeyInput" class="form-label small fw-bold">Google Gemini API Key <span class="text-danger">*</span></label>
-              <div class="input-group">
-                <input type="password" class="form-control font-monospace" id="geminiApiKeyInput" placeholder="AIzaSy...">
-                <button class="btn btn-outline-secondary" type="button" id="btnToggleApiKeyVisibility">
-                  <i class="bi bi-eye"></i>
-                </button>
-              </div>
-              <div class="form-text small text-muted">Key được lưu an toàn trong trình duyệt (LocalStorage) của bạn.</div>
-            </div>
-            <div id="apiKeyTestStatus" class="small mb-0"></div>
-          </div>
-          <div class="modal-footer py-2">
-            <button type="button" class="btn btn-sm btn-outline-secondary" id="btnTestApiKey">Kiểm tra kết nối</button>
-            <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Đóng</button>
-            <button type="button" class="btn btn-sm btn-primary" id="btnSaveApiKey">Lưu cấu hình</button>
-          </div>
-        </div>
-      </div>
-    </div>
+
 
   </div>
 

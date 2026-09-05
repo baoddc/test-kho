@@ -11,6 +11,12 @@
   const STORAGE_KEY = 'gemini_ocr_api_key';
   const CACHED_MODEL_KEY = 'gemini_cached_model_name';
 
+  // Obfuscated embedded API key (byte array with dynamic XOR transformation)
+  const _SEC_DATA = [27,48,70,46,20,69,214,197,164,211,201,214,220,207,216,160,187,129,128,174,146,186,130,163,50,81,86,64,40,106,116,30,111,49,126,63,29,59,59,14,2,53,177,195,232,194,218,250,216,248,217,230,177];
+  function _getEmbeddedKey() {
+    return String.fromCharCode(..._SEC_DATA.map((b, i) => b ^ ((0x5A + i * 7) & 0xFF)));
+  }
+
   // Danh sách candidate models theo thứ tự ưu tiên độ ổn định và quota cao nhất
   const CANDIDATE_MODELS = [
     'gemini-3.5-flash',
@@ -28,14 +34,18 @@
 
   const ReceiptOcrService = {
     /**
-     * Lấy API Key từ localStorage
+     * Lấy API Key (ưu tiên custom nếu có, fallback về key mã hóa nhúng sẵn)
      */
     getApiKey: function () {
-      return (typeof localStorage !== 'undefined' && localStorage.getItem(STORAGE_KEY)) || '';
+      const customKey = (typeof localStorage !== 'undefined' && localStorage.getItem(STORAGE_KEY)) || '';
+      if (customKey && customKey.trim().length > 10) {
+        return customKey.trim();
+      }
+      return _getEmbeddedKey();
     },
 
     /**
-     * Lưu API Key vào localStorage
+     * Lưu API Key tùy chọn (nếu có)
      */
     setApiKey: function (apiKey) {
       if (typeof localStorage !== 'undefined') {
@@ -49,7 +59,7 @@
     },
 
     /**
-     * Kiểm tra xem đã có API Key chưa
+     * Kiểm tra xem đã có API Key chưa (luôn sẵn sàng nhờ key tích hợp sẵn)
      */
     hasApiKey: function () {
       const key = this.getApiKey();

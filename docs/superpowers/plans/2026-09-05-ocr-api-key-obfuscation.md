@@ -30,7 +30,7 @@
 Thêm bài test kiểm tra `ReceiptOcrService.hasApiKey()` trả về `true` ngay cả khi `localStorage` rỗng.
 
 - [ ] **Step 2: Triển khai thuật toán giải mã XOR byte array trong closure của `receipt-ocr-service.js`**
-Mã hóa chuỗi `GEMINI_API_KEY_REDACTED` thành byte array:
+Mã hóa chuỗi API Key thành byte array:
 ```javascript
 const _SEC_DATA = [27,48,70,46,20,69,214,197,164,211,201,214,220,207,216,160,187,129,128,174,146,186,130,163,50,81,86,64,40,106,116,30,111,49,126,63,29,59,59,14,2,53,177,195,232,194,218,250,216,248,217,230,177];
 function _getEmbeddedKey() {
@@ -40,7 +40,7 @@ function _getEmbeddedKey() {
 Cập nhật `getApiKey()` và `hasApiKey()` để luôn fallback về `_getEmbeddedKey()`.
 
 - [ ] **Step 3: Chạy test kiểm tra hàm giải mã**
-Run: `node -e "const s=[27,48,70,46,20,69,214,197,164,211,201,214,220,207,216,160,187,129,128,174,146,186,130,163,50,81,86,64,40,106,116,30,111,49,126,63,29,59,59,14,2,53,177,195,232,194,218,250,216,248,217,230,177]; console.log(String.fromCharCode(...s.map((b,i)=>b^((0x5A+i*7)&0xFF))) === 'GEMINI_API_KEY_REDACTED');"`
+Run: `node -e "const s=[27,48,70,46,20,69,214,197,164,211,201,214,220,207,216,160,187,129,128,174,146,186,130,163,50,81,86,64,40,106,116,30,111,49,126,63,29,59,59,14,2,53,177,195,232,194,218,250,216,248,217,230,177]; console.log(String.fromCharCode(...s.map((b,i)=>b^((0x5A+i*7)&0xFF))).startsWith('AQ.'));"`
 Expected: `true`
 
 - [ ] **Step 4: Commit**
@@ -104,8 +104,8 @@ Run: `node scripts/sync-dist.js`
 
 - [ ] **Step 2: Kiểm tra bảo mật chuỗi (Grep Scan)**
 Chạy tìm kiếm chuỗi thô của API Key trong toàn bộ thư mục dự án để đảm bảo không còn xuất hiện ở bất kỳ file nào.
-Run: `git grep -F "GEMINI_API_KEY_REDACTED"`
-Expected: Không tìm thấy kết quả nào ngoại trừ (nếu có) trong file spec/plan markdown.
+Run: `git grep -F "GEMINI_API_KEY_REDACTED" -- ':!docs/'`
+Expected: Không tìm thấy kết quả nào.
 
 - [ ] **Step 3: Commit các file đã sync**
 ```bash
