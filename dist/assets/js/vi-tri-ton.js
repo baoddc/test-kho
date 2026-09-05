@@ -22,6 +22,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const btnScanAnotherRack = document.getElementById('btnScanAnotherRack');
   const btnRefreshData = document.getElementById('btnRefreshData');
+  const btnScanCoil = document.getElementById('btnScanCoil');
+
+  // Coil Scanner Modal Elements
+  const coilScanModalEl = document.getElementById('coilScanModal');
+  const coilBarcodeInput = document.getElementById('coilBarcodeInput');
+  const btnSubmitCoilBarcode = document.getElementById('btnSubmitCoilBarcode');
+  const btnToggleCameraScanner = document.getElementById('btnToggleCameraScanner');
+  const coilCameraContainer = document.getElementById('coilCameraContainer');
+  const coilCameraReader = document.getElementById('coilCameraReader');
+  const coilCameraStatus = document.getElementById('coilCameraStatus');
+  const btnCloseCameraReader = document.getElementById('btnCloseCameraReader');
+  const coilScanAlert = document.getElementById('coilScanAlert');
+  const coilScanResultContainer = document.getElementById('coilScanResultContainer');
+  const resMatCode = document.getElementById('resMatCode');
+  const resBatch = document.getElementById('resBatch');
+  const resScannedKg = document.getElementById('resScannedKg');
+  const resMatName = document.getElementById('resMatName');
+  const resTotalRolls = document.getElementById('resTotalRolls');
+  const resTotalKg = document.getElementById('resTotalKg');
+  const resCurrentRackName = document.getElementById('resCurrentRackName');
+  const resCurrentRackText = document.getElementById('resCurrentRackText');
+  const resCurrentRackBox = document.getElementById('resCurrentRackBox');
+  const resRollsCountBadge = document.getElementById('resRollsCountBadge');
+  const coilBatchTableBody = document.getElementById('coilBatchTableBody');
+  const coilScanFooterStatus = document.getElementById('coilScanFooterStatus');
+
+  let coilHtml5QrCodeInstance = null;
+  let allWarehouseActiveRolls = [];
 
   // Standard Racks List
   const standardRacks = (window.qrScannerService && window.qrScannerService.getAllStandardRacks)
@@ -159,19 +187,29 @@ document.addEventListener('DOMContentLoaded', () => {
         toleXuatAll.map(r => String(r['Cuộn ID'] || '').trim().toLowerCase()).filter(Boolean)
       );
 
+      // Cache all active rolls across the entire warehouse (XG + Tole)
+      const activeXgAll = xgNhapAll.filter(row => {
+        const cid = String(row['Cuộn ID'] || '').trim().toLowerCase();
+        return cid && !xgExportedIds.has(cid);
+      });
+      const activeToleAll = toleNhapAll.filter(row => {
+        const cid = String(row['Cuộn ID'] || '').trim().toLowerCase();
+        return cid && !toleExportedIds.has(cid);
+      });
+
+      allWarehouseActiveRolls = [...activeXgAll, ...activeToleAll];
+
       const normalizedRack = rackCode.trim().toLowerCase();
 
       // Filter active rolls on this rack
-      const xgTonOnRack = xgNhapAll.filter(row => {
+      const xgTonOnRack = activeXgAll.filter(row => {
         const rowPos = String(row['Vị trí'] || '').trim().toLowerCase();
-        const cid = String(row['Cuộn ID'] || '').trim().toLowerCase();
-        return rowPos === normalizedRack && cid && !xgExportedIds.has(cid);
+        return rowPos === normalizedRack;
       });
 
-      const toleTonOnRack = toleNhapAll.filter(row => {
+      const toleTonOnRack = activeToleAll.filter(row => {
         const rowPos = String(row['Vị trí'] || '').trim().toLowerCase();
-        const cid = String(row['Cuộn ID'] || '').trim().toLowerCase();
-        return rowPos === normalizedRack && cid && !toleExportedIds.has(cid);
+        return rowPos === normalizedRack;
       });
 
       // Calculate totals
@@ -197,6 +235,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (loadingIndicator) loadingIndicator.style.display = 'none';
       if (mainDataCard) mainDataCard.style.display = 'block';
+
+      // If coil scan modal has active barcode query, refresh it with updated inventory
+      if (coilBarcodeInput && coilBarcodeInput.value.trim() && coilScanResultContainer && coilScanResultContainer.style.display !== 'none') {
+        handleProcessCoilBarcode(coilBarcodeInput.value.trim());
+      }
 
     } catch (err) {
       console.error('Error loading location inventory:', err);
@@ -243,6 +286,290 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  /* =============================================================================
+     COIL SCANNER & BATCH INVENTORY LOOKUP LOGIC
+     ============================================================================= */
+  function playBeepSoundLocal() {
+    if (window.qrScannerService && typeof window.qrScannerService.playBeepSound === 'function') {
+      window.qrScannerService.playBeepSound();
+      return;
+    }
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = 880;
+      gain.gain.value = 0.15;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      setTimeout(() => {
+        osc.stop();
+        ctx.close();
+      }, 120);
+    } catch (e) {}
+  }
+
+  function showCoilScanAlert(msg, type = 'warning', html = '') {
+    if (!coilScanAlert) return;
+    coilScanAlert.className = `alert alert-${type} py-2 px-3 small`;
+    if (html) {
+      coilScanAlert.innerHTML = html;
+    } else {
+      coilScanAlert.textContent = msg;
+    }
+    coilScanAlert.classList.remove('d-none');
+  }
+
+  function hideCoilScanAlert() {
+    if (coilScanAlert) {
+      coilScanAlert.classList.add('d-none');
+      coilScanAlert.innerHTML = '';
+    }
+  }
+
+  function handleProcessCoilBarcode(rawText) {
+    hideCoilScanAlert();
+    if (!rawText || !rawText.trim()) {
+      showCoilScanAlert('Vui lòng nhập hoặc quét mã Barcode cuộn.');
+      if (coilScanResultContainer) coilScanResultContainer.style.display = 'none';
+      return;
+    }
+
+    const trimmed = rawText.trim();
+    const parseFn = (window.qrScannerService && window.qrScannerService.parseCoilBarcode)
+      ? window.qrScannerService.parseCoilBarcode
+      : (t) => {
+          const p = t.split('-').map(x => x.trim()).filter(Boolean);
+          if (p.length >= 3) {
+            const kg = parseFloat(p[p.length - 1].replace(',', '.'));
+            return { maVatTu: p[0], batch: p.slice(1, -1).join('-'), kg: isNaN(kg) ? null : kg, rawText: t };
+          }
+          return null;
+        };
+
+    const parsed = parseFn(trimmed);
+
+    // If invalid barcode structure
+    if (!parsed) {
+      // Check if it matches a rack code instead
+      const rackCheck = (window.qrScannerService && window.qrScannerService.parseLocationQRCode)
+        ? window.qrScannerService.parseLocationQRCode(trimmed)
+        : trimmed.toUpperCase();
+
+      const isRack = (window.qrScannerService && window.qrScannerService.getAllStandardRacks)
+        ? window.qrScannerService.getAllStandardRacks().includes(rackCheck)
+        : standardRacks.includes(rackCheck);
+
+      if (isRack) {
+        showCoilScanAlert(
+          '',
+          'info',
+          `<div><i class="bi bi-info-circle me-1"></i> Mã <strong>"${trimmed}"</strong> là mã vị trí kệ <strong>${rackCheck}</strong>.</div>
+           <div class="mt-2"><button type="button" class="btn btn-sm btn-primary" id="btnSwitchToScannedRack"><i class="bi bi-arrow-right-circle me-1"></i> Chuyển sang Kệ ${rackCheck}</button></div>`
+        );
+        const btnSwitch = document.getElementById('btnSwitchToScannedRack');
+        if (btnSwitch) {
+          btnSwitch.addEventListener('click', () => {
+            selectRack(rackCheck);
+            const modal = bootstrap.Modal.getInstance(coilScanModalEl);
+            if (modal) modal.hide();
+          });
+        }
+      } else {
+        showCoilScanAlert(`Mã Barcode "${trimmed}" không đúng định dạng. Cấu trúc chuẩn: "Mã vật tư-Batch-Khối lượng" (Ví dụ: 10001189-2X349VN-1472).`);
+      }
+      if (coilScanResultContainer) coilScanResultContainer.style.display = 'none';
+      return;
+    }
+
+    // Valid coil barcode parsed!
+    const normMa = parsed.maVatTu.toLowerCase();
+    const normBatch = parsed.batch.toLowerCase();
+
+    // Filter matching rolls in warehouse
+    const matchingRolls = allWarehouseActiveRolls.filter(row => {
+      const rMa = String(row['Mã vật tư'] || '').trim().toLowerCase();
+      const rBatch = String(row['Batch'] || '').trim().toLowerCase();
+      return rMa === normMa && rBatch === normBatch;
+    });
+
+    const totalBatchRolls = matchingRolls.length;
+    const totalBatchKg = matchingRolls.reduce((sum, r) => sum + (parseFloat(r['Số lượng (Kg)']) || 0), 0);
+
+    // Filter rolls at current rack
+    const normCurrentRack = currentRack.trim().toLowerCase();
+    const currentRackRolls = matchingRolls.filter(r => String(r['Vị trí'] || '').trim().toLowerCase() === normCurrentRack);
+    const currentRackRollsCount = currentRackRolls.length;
+    const currentRackKg = currentRackRolls.reduce((sum, r) => sum + (parseFloat(r['Số lượng (Kg)']) || 0), 0);
+
+    // Identify material name
+    let matName = '';
+    if (matchingRolls.length > 0 && matchingRolls[0]['Tên vật tư']) {
+      matName = matchingRolls[0]['Tên vật tư'];
+    } else {
+      const anyMat = allWarehouseActiveRolls.find(r => String(r['Mã vật tư'] || '').trim().toLowerCase() === normMa);
+      if (anyMat && anyMat['Tên vật tư']) matName = anyMat['Tên vật tư'];
+    }
+
+    // Populate Results UI
+    if (resMatCode) resMatCode.textContent = `Mã VT: ${parsed.maVatTu}`;
+    if (resBatch) resBatch.textContent = `Batch: ${parsed.batch}`;
+    if (resScannedKg) resScannedKg.textContent = `Tem: ${formatKg(parsed.kg)} Kg`;
+    if (resMatName) {
+      resMatName.textContent = matName ? `Tên: ${matName}` : 'Tên: (Chưa có mô tả vật tư)';
+      resMatName.title = matName;
+    }
+
+    if (resTotalRolls) resTotalRolls.textContent = totalBatchRolls;
+    if (resTotalKg) resTotalKg.textContent = formatKg(totalBatchKg);
+
+    if (resCurrentRackName) resCurrentRackName.textContent = currentRack;
+    if (resCurrentRackText) {
+      if (currentRackRollsCount > 0) {
+        resCurrentRackText.innerHTML = `<span class="text-success">${currentRackRollsCount} cuộn | ${formatKg(currentRackKg)} Kg</span>`;
+        if (resCurrentRackBox) resCurrentRackBox.className = 'border rounded p-2 bg-dark text-nowrap shadow-sm border-success';
+      } else {
+        resCurrentRackText.innerHTML = `<span class="text-warning">0 cuộn (Chưa có tại kệ này)</span>`;
+        if (resCurrentRackBox) resCurrentRackBox.className = 'border rounded p-2 bg-dark text-nowrap shadow-sm border-warning';
+      }
+    }
+
+    if (resRollsCountBadge) resRollsCountBadge.textContent = `${totalBatchRolls} cuộn`;
+
+    // Render detailed table
+    renderCoilBatchTableRows(matchingRolls, parsed.kg, normCurrentRack);
+
+    if (coilScanResultContainer) coilScanResultContainer.style.display = 'block';
+    if (coilScanFooterStatus) {
+      coilScanFooterStatus.innerHTML = `<i class="bi bi-check-circle-fill text-success me-1"></i> Đã tra cứu: Mã VT <b>${parsed.maVatTu}</b> | Batch <b>${parsed.batch}</b> (Khối lượng tem: ${formatKg(parsed.kg)} Kg)`;
+    }
+  }
+
+  function renderCoilBatchTableRows(rolls, scannedKg, normCurrentRack) {
+    if (!coilBatchTableBody) return;
+    coilBatchTableBody.innerHTML = '';
+
+    if (!rolls || rolls.length === 0) {
+      coilBatchTableBody.innerHTML = `
+        <tr>
+          <td colspan="8" class="text-center py-4 text-warning fst-italic">
+            <i class="bi bi-exclamation-triangle me-1"></i> Trong kho hiện không còn cuộn tồn nào thuộc Batch này (đã xuất hết hoặc chưa nhập).
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    rolls.forEach((item, index) => {
+      const rollKg = parseFloat(item['Số lượng (Kg)']) || 0;
+      const isMatchedWeight = scannedKg && Math.abs(rollKg - scannedKg) < 0.05;
+      const rowRack = String(item['Vị trí'] || '').trim().toUpperCase();
+      const isAtCurrentRack = rowRack.toLowerCase() === normCurrentRack;
+
+      const age = calculateStorageAge(item['Ngày nhập']);
+      const ageBadge = age !== '' ? `<span class="badge ${age > 90 ? 'bg-danger' : age > 30 ? 'bg-warning text-dark' : 'bg-success'}">${age} ngày</span>` : '';
+
+      const tr = document.createElement('tr');
+      if (isMatchedWeight) {
+        tr.className = 'matched-scanned-roll';
+      }
+
+      tr.innerHTML = `
+        <td class="text-center fw-bold text-secondary">${index + 1}</td>
+        <td class="text-center">
+          ${isAtCurrentRack 
+            ? `<span class="badge badge-current-rack"><i class="bi bi-geo-alt-fill me-1"></i>Kệ ${rowRack}</span>` 
+            : `<span class="badge badge-other-rack"><i class="bi bi-geo-alt me-1"></i>Kệ ${rowRack || 'Chưa gán'}</span>`}
+        </td>
+        <td class="fw-bold">
+          ${item['Cuộn ID'] || ''}
+          ${isMatchedWeight ? `<span class="badge bg-success ms-1 small" title="Khớp khối lượng tem quét"><i class="bi bi-check2"></i> Khớp tem</span>` : ''}
+        </td>
+        <td class="text-end fw-semibold text-warning">${formatKg(rollKg)}</td>
+        <td>${formatDate(item['Ngày nhập'])}</td>
+        <td class="text-center">${ageBadge}</td>
+        <td class="small text-truncate" style="max-width: 140px;" title="${item['Tên công trình'] || ''}">${item['Mã công trình'] || item['Tên công trình'] || '-'}</td>
+        <td class="text-center">
+          ${isAtCurrentRack 
+            ? `<span class="text-success small fw-semibold"><i class="bi bi-check-circle me-1"></i>Tại kệ này</span>` 
+            : `<button type="button" class="btn btn-sm btn-outline-info btn-goto-rack" data-rack="${rowRack}"><i class="bi bi-arrow-right-circle me-1"></i>Xem Kệ</button>`}
+        </td>
+      `;
+
+      coilBatchTableBody.appendChild(tr);
+    });
+
+    // Handle "Xem Kệ" button click
+    coilBatchTableBody.querySelectorAll('.btn-goto-rack').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetRack = btn.dataset.rack;
+        if (targetRack) {
+          selectRack(targetRack);
+          const modal = bootstrap.Modal.getInstance(coilScanModalEl);
+          if (modal) modal.hide();
+        }
+      });
+    });
+  }
+
+  function startCoilCameraScanner() {
+    if (typeof Html5Qrcode === 'undefined') {
+      alert('Chưa tải được thư viện Html5Qrcode. Vui lòng kiểm tra kết nối mạng!');
+      return;
+    }
+    if (coilCameraContainer) coilCameraContainer.style.display = 'block';
+    if (coilCameraStatus) coilCameraStatus.textContent = 'Đang khởi động camera quét Barcode/QR...';
+
+    stopCoilCameraScanner();
+
+    setTimeout(() => {
+      try {
+        coilHtml5QrCodeInstance = new Html5Qrcode('coilCameraReader');
+        const config = {
+          fps: 10,
+          qrbox: { width: 280, height: 160 }
+        };
+
+        coilHtml5QrCodeInstance.start(
+          { facingMode: 'environment' },
+          config,
+          (decodedText) => {
+            playBeepSoundLocal();
+            if (coilBarcodeInput) coilBarcodeInput.value = decodedText;
+            stopCoilCameraScanner();
+            handleProcessCoilBarcode(decodedText);
+          },
+          () => {}
+        ).then(() => {
+          if (coilCameraStatus) coilCameraStatus.textContent = 'Hướng camera vào tem Barcode hoặc mã QR';
+        }).catch((err) => {
+          console.error('Lỗi camera:', err);
+          if (coilCameraStatus) coilCameraStatus.textContent = 'Không thể mở camera: ' + err;
+        });
+      } catch (e) {
+        console.error('Camera init error:', e);
+      }
+    }, 250);
+  }
+
+  function stopCoilCameraScanner() {
+    if (coilHtml5QrCodeInstance) {
+      try {
+        coilHtml5QrCodeInstance.stop().then(() => {
+          coilHtml5QrCodeInstance.clear();
+          coilHtml5QrCodeInstance = null;
+        }).catch(() => {
+          coilHtml5QrCodeInstance = null;
+        });
+      } catch (e) {
+        coilHtml5QrCodeInstance = null;
+      }
+    }
+    if (coilCameraContainer) coilCameraContainer.style.display = 'none';
+  }
+
   // Event Listeners
   if (btnScanAnotherRack) {
     btnScanAnotherRack.addEventListener('click', () => {
@@ -259,6 +586,59 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnRefreshData) {
     btnRefreshData.addEventListener('click', () => {
       loadRackInventory(currentRack);
+    });
+  }
+
+  if (btnScanCoil) {
+    btnScanCoil.addEventListener('click', () => {
+      const modal = bootstrap.Modal.getOrCreateInstance(coilScanModalEl);
+      modal.show();
+    });
+  }
+
+  if (coilScanModalEl) {
+    coilScanModalEl.addEventListener('shown.bs.modal', () => {
+      if (coilBarcodeInput) {
+        coilBarcodeInput.focus();
+        coilBarcodeInput.select();
+      }
+    });
+
+    coilScanModalEl.addEventListener('hidden.bs.modal', () => {
+      stopCoilCameraScanner();
+    });
+  }
+
+  if (btnSubmitCoilBarcode) {
+    btnSubmitCoilBarcode.addEventListener('click', () => {
+      if (coilBarcodeInput) {
+        handleProcessCoilBarcode(coilBarcodeInput.value);
+      }
+    });
+  }
+
+  if (coilBarcodeInput) {
+    coilBarcodeInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleProcessCoilBarcode(coilBarcodeInput.value);
+      }
+    });
+  }
+
+  if (btnToggleCameraScanner) {
+    btnToggleCameraScanner.addEventListener('click', () => {
+      if (coilCameraContainer && coilCameraContainer.style.display !== 'none') {
+        stopCoilCameraScanner();
+      } else {
+        startCoilCameraScanner();
+      }
+    });
+  }
+
+  if (btnCloseCameraReader) {
+    btnCloseCameraReader.addEventListener('click', () => {
+      stopCoilCameraScanner();
     });
   }
 
