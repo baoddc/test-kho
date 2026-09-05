@@ -145,6 +145,7 @@ CREATE POLICY "Locks authenticated write" ON public.inventory_locks
 -- =============================================================================
 
 DROP POLICY IF EXISTS "Allow all access to cong_viec" ON public.cong_viec;
+DROP POLICY IF EXISTS "Cong viec authenticated policy" ON public.cong_viec;
 CREATE POLICY "Cong viec authenticated policy" ON public.cong_viec
     FOR ALL TO authenticated
     USING (true)
