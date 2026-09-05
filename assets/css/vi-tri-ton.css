@@ -379,26 +379,141 @@
   font-weight: 600;
 }
 
-.matched-scanned-roll {
-  background-color: rgba(16, 185, 129, 0.2) !important;
-  border-left: 3px solid #10b981 !important;
+/* =============================================================================
+   COIL RESULT POPUP (MATCHING USER DATA FORM)
+   ============================================================================= */
+#coilResultModal .modal-content {
+  border-radius: 14px;
+  background-color: #171f2e !important;
+  border: 1px solid #28354c;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.75);
 }
 
-.badge-current-rack {
-  background-color: #0284c7;
+#coilResultModal .modal-header {
+  border-bottom: 1px solid #253147;
+}
+
+.identified-roll-banner {
+  background: rgba(6, 78, 59, 0.4);
+  border: 1.5px solid #059669;
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+
+.badge-identified {
+  background-color: #059669 !important;
   color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  padding: 5px 8px;
+  border-radius: 4px;
+}
+
+.badge-rack-highlight {
+  background-color: #dc2626 !important;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+.btn-switch-rack {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
   font-weight: 600;
+  border: none;
+  font-size: 0.82rem;
+  padding: 5px 14px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
 }
 
-.badge-other-rack {
-  background-color: #475569;
-  color: #f1f5f9;
+.btn-switch-rack:hover {
+  background-color: #f1f5f9 !important;
+  transform: translateY(-1px);
 }
 
-.btn-goto-rack {
-  padding: 2px 8px;
+.material-info-card {
+  background: #192233 !important;
+  border: 1px solid #28354c !important;
+  border-radius: 10px;
+}
+
+.batch-distribution-box {
+  background: #141b29;
+  border: 1px solid #232d40;
+}
+
+.rack-pill-btn {
+  background: #0284c7;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rack-pill-btn:hover {
+  background: #0369a1;
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.rack-cell-btn {
+  background: transparent;
+  color: #38bdf8;
+  border: 1px solid #0284c7;
+  border-radius: 4px;
   font-size: 0.75rem;
   font-weight: 600;
+  padding: 1px 7px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
 }
+
+.rack-cell-btn:hover {
+  background: #0284c7;
+  color: #fff;
+}
+
+.row-scanned-highlight {
+  background: rgba(220, 38, 38, 0.25) !important;
+  border-left: 3px solid #ef4444 !important;
+}
+
+.row-scanned-highlight > td,
+.row-scanned-highlight > th {
+  background-color: rgba(220, 38, 38, 0.28) !important;
+}
+
+.badge-scanned-pill {
+  background: #dc2626 !important;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.badge-correct-batch {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  font-size: 0.72rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
 
 

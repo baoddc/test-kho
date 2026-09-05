@@ -23,6 +23,7 @@ Thumbs.db
 .gemini/
 .agents/
 .temp_baoddc/
+supabase/.temp/
 
 # Vercel build output
 .vercel/

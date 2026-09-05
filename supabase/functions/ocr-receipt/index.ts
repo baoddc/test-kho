@@ -31,8 +31,8 @@ Quy tắc bóc tách:
 7. items: Quét toàn bộ các dòng hàng trong bảng chi tiết (cột Stt, Mã hàng, Tên hàng, Lô, Số lượng). Với MỖI DÒNG trong bảng, trích xuất 1 phần tử gồm:
    - stt: Số thứ tự dòng (1, 2, 3...)
    - maVatTu: Cột 'Mã hàng / Material' (ví dụ '10001189')
-   - tenVatTu: Cột 'Tên hàng / Material Description' (ví dụ 'Thép phôi kẽm Z275 G450')
-   - batch: Cột 'Lô / Batch' (ví dụ '1.8X351VN' hoặc '2.5X350VN')
+   - tenVatTu: Cột 'Tên hàng / Material Description' (ví dụ 'Thép phôi kẽm Z275 G450'). Tự động ghép Lô/Batch vào giữa tên vật tư (ví dụ 'Thép phôi kẽm Z275 G450' + '1.5x348VN' -> 'Thép phôi kẽm 1.5x348VN Z275 G450'; '3x451VN' -> 'Thép phôi kẽm 3.0x451VN Z275 G450').
+   - batch: Cột 'Lô / Batch' (ví dụ '1.8x351VN' hoặc '2.5x350VN' hoặc '1.5x348VN')
 8. ghiChu: Luôn trả về chuỗi rỗng "".
 
 Format JSON mong đợi:
@@ -54,6 +54,59 @@ Format JSON mong đợi:
   "ghiChu": ""
 }
 `;
+
+function formatBatchForMaterialName(batch: string): string {
+  if (!batch) return "";
+  batch = String(batch).trim();
+  // If batch starts with an integer before x/X (e.g. 3x451VN -> 3.0x451VN, 3X451VN -> 3.0x451VN)
+  let formatted = batch.replace(/^(\d+)\s*[xX]/, "$1.0x");
+  // Convert any capital 'X' used as dimension separator to lowercase 'x' (e.g. 1.5X348VN -> 1.5x348VN)
+  formatted = formatted.replace(/^(\d+(?:\.\d+)?)\s*[xX]/, "$1x");
+  formatted = formatted.replace(/(\d)\s*[xX]\s*(\d)/g, "$1x$2");
+  return formatted;
+}
+
+function mergeBatchIntoTenVatTu(tenVatTu: string, batch: string): string {
+  if (!tenVatTu && !batch) return "";
+  if (!batch || !String(batch).trim()) return (tenVatTu || "").trim();
+
+  const formattedBatch = formatBatchForMaterialName(batch);
+  const rawBatch = String(batch).trim();
+  let name = (tenVatTu || "").trim();
+
+  if (!name) return formattedBatch;
+
+  const lowerName = name.toLowerCase();
+  const lowerBatch = rawBatch.toLowerCase();
+  const lowerFormatted = formattedBatch.toLowerCase();
+  if (lowerName.includes(lowerBatch) || lowerName.includes(lowerFormatted)) {
+    // If name already contains batch but with capital X, ensure X is replaced by x in dimension
+    return name.replace(/\b(\d+(?:\.\d+)?)\s*X\s*(\d+[A-Za-z0-9]*)\b/g, "$1x$2");
+  }
+
+  const dimRegex = /\b\d+(\.\d+)?\s*[xX]\s*\d+[A-Za-z0-9]*\b/i;
+  if (dimRegex.test(name)) {
+    return name.replace(dimRegex, formattedBatch);
+  }
+
+  const gradeRegex = /(?=\b(Z\d+|G\d+|AZ\d+|AM\d+|S\d+GD|S\d+|SGCC|SGCD|SECC|SPCC|SUS\s*\d+|GI\s+Z)\b)/i;
+  const gradeMatch = name.search(gradeRegex);
+  if (gradeMatch !== -1) {
+    const before = name.substring(0, gradeMatch).trim();
+    const after = name.substring(gradeMatch).trim();
+    return `${before} ${formattedBatch} ${after}`.replace(/\s+/g, " ").trim();
+  }
+
+  const prefixRegex = /^(Thép phôi kẽm|Thép phôi|Phôi tôn kẽm|Phôi tôn|Phôi thép mạ kẽm|Phôi thép|Thép tấm cuộn|Thép cuộn|Thép Inox cuộn|Thép Inox|Tôn cuộn)(\s+|$)(.*)$/i;
+  const prefixMatch = name.match(prefixRegex);
+  if (prefixMatch) {
+    const prefix = prefixMatch[1].trim();
+    const rest = (prefixMatch[3] || "").trim();
+    return rest ? `${prefix} ${formattedBatch} ${rest}`.replace(/\s+/g, " ").trim() : `${prefix} ${formattedBatch}`;
+  }
+
+  return `${name} ${formattedBatch}`.trim();
+}
 
 function normalizeDate(dateStr: string): string {
   if (!dateStr) return "";
@@ -158,20 +211,26 @@ serve(async (req: Request) => {
 
         let itemsList = [];
         if (Array.isArray(parsed.items) && parsed.items.length > 0) {
-          itemsList = parsed.items.map((it: any, idx: number) => ({
-            stt: it.stt || (idx + 1),
-            maVatTu: String(it.maVatTu || "").trim(),
-            tenVatTu: String(it.tenVatTu || "").trim(),
-            batch: String(it.batch || "").trim()
-          })).filter((it: any) => it.maVatTu || it.tenVatTu || it.batch);
+          itemsList = parsed.items.map((it: any, idx: number) => {
+            const b = String(it.batch || "").trim();
+            const rawT = String(it.tenVatTu || "").trim();
+            return {
+              stt: it.stt || (idx + 1),
+              maVatTu: String(it.maVatTu || "").trim(),
+              tenVatTu: mergeBatchIntoTenVatTu(rawT, b),
+              batch: b
+            };
+          }).filter((it: any) => it.maVatTu || it.tenVatTu || it.batch);
         }
 
         if (itemsList.length === 0) {
+          const b = String(parsed.batch || "").trim();
+          const rawT = String(parsed.tenVatTu || "").trim();
           itemsList = [{
             stt: 1,
             maVatTu: String(parsed.maVatTu || "").trim(),
-            tenVatTu: String(parsed.tenVatTu || "").trim(),
-            batch: String(parsed.batch || "").trim()
+            tenVatTu: mergeBatchIntoTenVatTu(rawT, b),
+            batch: b
           }];
         }
 

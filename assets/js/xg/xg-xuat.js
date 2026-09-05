@@ -1007,6 +1007,63 @@ function formatNumericValue(val) {
   return n.toLocaleString('vi-VN', { minimumFractionDigits: 0, maximumFractionDigits: 3 });
 }
 
+function formatBatchForMaterialName(batch) {
+  if (!batch) return '';
+  batch = String(batch).trim();
+  // If batch starts with an integer before x/X (e.g. 3x451VN -> 3.0x451VN, 3X451VN -> 3.0x451VN)
+  let formatted = batch.replace(/^(\d+)\s*[xX]/, '$1.0x');
+  // Convert any capital 'X' used as dimension separator to lowercase 'x' (e.g. 1.5X348VN -> 1.5x348VN)
+  formatted = formatted.replace(/^(\d+(?:\.\d+)?)\s*[xX]/, '$1x');
+  formatted = formatted.replace(/(\d)\s*[xX]\s*(\d)/g, '$1x$2');
+  return formatted;
+}
+
+function mergeBatchIntoTenVatTu(tenVatTu, batch) {
+  if (!tenVatTu && !batch) return '';
+  if (!batch || !String(batch).trim()) return (tenVatTu || '').trim();
+  
+  const formattedBatch = formatBatchForMaterialName(batch);
+  const rawBatch = String(batch).trim();
+  let name = (tenVatTu || '').trim();
+  
+  if (!name) return formattedBatch;
+  
+  // Check if batch is already inside name
+  const lowerName = name.toLowerCase();
+  const lowerBatch = rawBatch.toLowerCase();
+  const lowerFormatted = formattedBatch.toLowerCase();
+  if (lowerName.includes(lowerBatch) || lowerName.includes(lowerFormatted)) {
+    // If name already contains batch but with capital X, ensure X is replaced by x in dimension
+    return name.replace(/\b(\d+(?:\.\d+)?)\s*X\s*(\d+[A-Za-z0-9]*)\b/g, '$1x$2');
+  }
+  
+  // If name already has a dimension/batch like 1.5X348VN or 3x451VN, replace it
+  const dimRegex = /\b\d+(\.\d+)?\s*[xX]\s*\d+[A-Za-z0-9]*\b/i;
+  if (dimRegex.test(name)) {
+    return name.replace(dimRegex, formattedBatch);
+  }
+  
+  // Look for standard grade/coating markers (Z275, G450, AZ150, S450GD, SGCC, etc.)
+  const gradeRegex = /(?=\b(Z\d+|G\d+|AZ\d+|AM\d+|S\d+GD|S\d+|SGCC|SGCD|SECC|SPCC|SUS\s*\d+|GI\s+Z)\b)/i;
+  const gradeMatch = name.search(gradeRegex);
+  if (gradeMatch !== -1) {
+    const before = name.substring(0, gradeMatch).trim();
+    const after = name.substring(gradeMatch).trim();
+    return `${before} ${formattedBatch} ${after}`.replace(/\s+/g, ' ').trim();
+  }
+  
+  // Fallback: prefix match
+  const prefixRegex = /^(Thép phôi kẽm|Thép phôi|Phôi tôn kẽm|Phôi tôn|Phôi thép mạ kẽm|Phôi thép|Thép tấm cuộn|Thép cuộn|Thép Inox cuộn|Thép Inox|Tôn cuộn)(\s+|$)(.*)$/i;
+  const prefixMatch = name.match(prefixRegex);
+  if (prefixMatch) {
+    const prefix = prefixMatch[1].trim();
+    const rest = (prefixMatch[3] || '').trim();
+    return rest ? `${prefix} ${formattedBatch} ${rest}`.replace(/\s+/g, ' ').trim() : `${prefix} ${formattedBatch}`;
+  }
+  
+  return `${name} ${formattedBatch}`.trim();
+}
+
 function updateMultiItemTotals() {
   let globalRolls = 0;
   let globalKg = 0;
@@ -1181,11 +1238,36 @@ function renderItemCards() {
         item.tenVatTu = e.target.value.trim();
         updateTitle();
       });
+      tenVtInp.addEventListener('blur', (e) => {
+        const val = e.target.value.trim();
+        if (val && item.batch) {
+          const merged = mergeBatchIntoTenVatTu(val, item.batch);
+          if (merged !== val) {
+            item.tenVatTu = merged;
+            tenVtInp.value = merged;
+            updateTitle();
+          }
+        }
+      });
     }
 
     if (batchInp) {
       batchInp.addEventListener('input', (e) => {
         item.batch = e.target.value.trim();
+        updateTitle();
+      });
+      batchInp.addEventListener('change', (e) => {
+        let newBatch = e.target.value.trim();
+        newBatch = formatBatchForMaterialName(newBatch);
+        item.batch = newBatch;
+        batchInp.value = newBatch;
+        if (newBatch && item.tenVatTu) {
+          const merged = mergeBatchIntoTenVatTu(item.tenVatTu, newBatch);
+          if (merged !== item.tenVatTu) {
+            item.tenVatTu = merged;
+            if (tenVtInp) tenVtInp.value = merged;
+          }
+        }
         updateTitle();
       });
     }
@@ -1354,19 +1436,25 @@ function populateFieldsFromOcr(data) {
 
   // 8. Tự động sinh các thẻ mặt hàng (Multi-Item Cards) từ ảnh
   if (Array.isArray(data.items) && data.items.length > 0) {
-    multiItemsData = data.items.map(it => ({
-      id: Math.random().toString(36).slice(2),
-      maVatTu: it.maVatTu || '',
-      tenVatTu: it.tenVatTu || '',
-      batch: it.batch || '',
-      rolls: []
-    }));
+    multiItemsData = data.items.map(it => {
+      const batch = formatBatchForMaterialName(it.batch || '');
+      const rawTen = (it.tenVatTu || '').trim();
+      return {
+        id: Math.random().toString(36).slice(2),
+        maVatTu: it.maVatTu || '',
+        tenVatTu: mergeBatchIntoTenVatTu(rawTen, batch),
+        batch: batch,
+        rolls: []
+      };
+    });
   } else {
+    const batch = formatBatchForMaterialName(data.batch || '');
+    const rawTen = (data.tenVatTu || '').trim();
     multiItemsData = [{
       id: Math.random().toString(36).slice(2),
       maVatTu: data.maVatTu || '',
-      tenVatTu: data.tenVatTu || '',
-      batch: data.batch || '',
+      tenVatTu: mergeBatchIntoTenVatTu(rawTen, batch),
+      batch: batch,
       rolls: []
     }];
   }
@@ -1646,6 +1734,18 @@ function openEditDataModal() {
   modalEl.dataset.additionalColIndices = JSON.stringify(additionalColIndices);
 
   currentModalTarget = 'edit';
+
+  const editBatchInp = commonFieldsContainer.querySelector('[name="col_7"]');
+  const editTenVtInp = commonFieldsContainer.querySelector('[name="col_6"]');
+  if (editBatchInp && editTenVtInp) {
+    editBatchInp.addEventListener('change', () => {
+      const b = formatBatchForMaterialName(editBatchInp.value);
+      editBatchInp.value = b;
+      if (b && editTenVtInp.value.trim()) {
+        editTenVtInp.value = mergeBatchIntoTenVatTu(editTenVtInp.value.trim(), b);
+      }
+    });
+  }
 
   const btnEditAddRoll = document.getElementById('btnEditAddRoll');
   if (btnEditAddRoll) {
@@ -2239,8 +2339,9 @@ document.addEventListener('submit', async (e) => {
       const recordsToInsert = [];
       multiItemsData.forEach(item => {
         const maVatTu = (item.maVatTu || '').trim();
-        const tenVatTu = (item.tenVatTu || '').trim();
         const batch = (item.batch || '').trim();
+        const rawTenVt = (item.tenVatTu || '').trim();
+        const tenVatTu = mergeBatchIntoTenVatTu(rawTenVt, batch);
 
         (item.rolls || []).forEach(roll => {
           const parsedKg = parseNumericInput(roll.kg);
@@ -2377,6 +2478,10 @@ document.addEventListener('submit', async (e) => {
         const colIdx = parseInt(inp.name.replace('edit_ext_', ''), 10);
         updateData[COLUMN_HEADERS[colIdx]] = inp.value || null;
       });
+
+      if (updateData['Tên vật tư'] && updateData['Batch']) {
+        updateData['Tên vật tư'] = mergeBatchIntoTenVatTu(updateData['Tên vật tư'], updateData['Batch']);
+      }
 
       updateData['Số lượng (Kg)'] = rollKgValues.reduce((sum, kg) => sum + kg, 0);
       delete updateData['id'];

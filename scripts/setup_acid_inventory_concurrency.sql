@@ -217,8 +217,10 @@ BEGIN
     FOR v_item IN SELECT * FROM jsonb_array_elements(p_records)
     LOOP
         INSERT INTO public."xg-xuat" (
+            "Mã chứng từ",
             "Ngày xuất",
-            "Vị trí",
+            "Phiếu xuất",
+            "Loại xuất",
             "Mã vật tư",
             "Tên vật tư",
             "Batch",
@@ -226,18 +228,17 @@ BEGIN
             "Số lượng (Kg)",
             "Mã công trình",
             "Tên công trình",
-            "Khách hàng",
-            "Độ dày",
-            "Khổ",
             "Ghi chú",
             "created_at"
         ) VALUES (
+            v_item->>'Mã chứng từ',
             CASE 
                 WHEN v_item->>'Ngày xuất' IS NOT NULL AND v_item->>'Ngày xuất' <> '' 
                 THEN (v_item->>'Ngày xuất')::DATE 
                 ELSE CURRENT_DATE 
             END,
-            v_item->>'Vị trí',
+            v_item->>'Phiếu xuất',
+            v_item->>'Loại xuất',
             v_item->>'Mã vật tư',
             v_item->>'Tên vật tư',
             v_item->>'Batch',
@@ -245,9 +246,6 @@ BEGIN
             COALESCE((v_item->>'Số lượng (Kg)')::NUMERIC, 0),
             v_item->>'Mã công trình',
             v_item->>'Tên công trình',
-            v_item->>'Khách hàng',
-            v_item->>'Độ dày',
-            v_item->>'Khổ',
             v_item->>'Ghi chú',
             v_now
         ) RETURNING * INTO v_row;
@@ -324,8 +322,10 @@ BEGIN
     FOR v_item IN SELECT * FROM jsonb_array_elements(p_records)
     LOOP
         INSERT INTO public."tole-xuat" (
+            "Mã chứng từ",
             "Ngày xuất",
-            "Vị trí",
+            "Phiếu xuất",
+            "Loại xuất",
             "Mã vật tư",
             "Tên vật tư",
             "Batch",
@@ -334,18 +334,17 @@ BEGIN
             "Số lượng (m)",
             "Mã công trình",
             "Tên công trình",
-            "Khách hàng",
-            "Độ dày",
-            "Khổ",
             "Ghi chú",
             "created_at"
         ) VALUES (
+            v_item->>'Mã chứng từ',
             CASE 
                 WHEN v_item->>'Ngày xuất' IS NOT NULL AND v_item->>'Ngày xuất' <> '' 
                 THEN (v_item->>'Ngày xuất')::DATE 
                 ELSE CURRENT_DATE 
             END,
-            v_item->>'Vị trí',
+            v_item->>'Phiếu xuất',
+            v_item->>'Loại xuất',
             v_item->>'Mã vật tư',
             v_item->>'Tên vật tư',
             v_item->>'Batch',
@@ -354,9 +353,6 @@ BEGIN
             COALESCE((v_item->>'Số lượng (m)')::NUMERIC, 0),
             v_item->>'Mã công trình',
             v_item->>'Tên công trình',
-            v_item->>'Khách hàng',
-            v_item->>'Độ dày',
-            v_item->>'Khổ',
             v_item->>'Ghi chú',
             v_now
         ) RETURNING * INTO v_row;

@@ -64,9 +64,42 @@ function initViTriTonPage() {
   const resCurrentRackName = document.getElementById('resCurrentRackName');
   const resCurrentRackText = document.getElementById('resCurrentRackText');
   const resCurrentRackBox = document.getElementById('resCurrentRackBox');
-  const resRollsCountBadge = document.getElementById('resRollsCountBadge');
   const coilBatchTableBody = document.getElementById('coilBatchTableBody');
   const coilScanFooterStatus = document.getElementById('coilScanFooterStatus');
+
+  // Coil Result Popup Elements (Mockup 2)
+  const coilResultModalEl = document.getElementById('coilResultModal');
+  const resWarehouseBadge = document.getElementById('resWarehouseBadge');
+  const identifiedRollBanner = document.getElementById('identifiedRollBanner');
+  const bannerBadgeStatus = document.getElementById('bannerBadgeStatus');
+  const bannerTextTitle = document.getElementById('bannerTextTitle');
+  const bannerRackHighlight = document.getElementById('bannerRackHighlight');
+  const btnBannerSwitchRack = document.getElementById('btnBannerSwitchRack');
+  const lblBannerSwitchRack = document.getElementById('lblBannerSwitchRack');
+  const bannerRollMetaText = document.getElementById('bannerRollMetaText');
+  const metaCuonId = document.getElementById('metaCuonId');
+  const metaBatch = document.getElementById('metaBatch');
+  const metaKg = document.getElementById('metaKg');
+  const metaDays = document.getElementById('metaDays');
+  const resMaterialFullName = document.getElementById('resMaterialFullName');
+  const resMatCodeBadge = document.getElementById('resMatCodeBadge');
+  const resBatchBadge = document.getElementById('resBatchBadge');
+  const btnToggleAllBatches = document.getElementById('btnToggleAllBatches');
+  const lblToggleAllBatches = document.getElementById('lblToggleAllBatches');
+  const lblBatchTonTitle = document.getElementById('lblBatchTonTitle');
+  const valBatchTonStock = document.getElementById('valBatchTonStock');
+  const lblBatchLocationTitle = document.getElementById('lblBatchLocationTitle');
+  const rackDistributionPills = document.getElementById('rackDistributionPills');
+  const txtTableBatchCount = document.getElementById('txtTableBatchCount');
+  const popupRollsTableBody = document.getElementById('popupRollsTableBody');
+
+  let currentScanResultState = {
+    parsed: null,
+    matchedRoll: null,
+    matchingBatchRolls: [],
+    allMatRolls: [],
+    showAllBatches: false
+  };
 
   let coilHtml5QrCodeInstance = null;
   let allWarehouseActiveRolls = [];
@@ -211,11 +244,12 @@ function initViTriTonPage() {
       const activeXgAll = xgNhapAll.filter(row => {
         const cid = String(row['Cuộn ID'] || '').trim().toLowerCase();
         return cid && !xgExportedIds.has(cid);
-      });
+      }).map(r => ({ ...r, _wh: 'Kho Xà gồ' }));
+
       const activeToleAll = toleNhapAll.filter(row => {
         const cid = String(row['Cuộn ID'] || '').trim().toLowerCase();
         return cid && !toleExportedIds.has(cid);
-      });
+      }).map(r => ({ ...r, _wh: 'Kho Tole' }));
 
       allWarehouseActiveRolls = [...activeXgAll, ...activeToleAll];
 
@@ -349,11 +383,126 @@ function initViTriTonPage() {
     }
   }
 
+  function hideCoilResultModal() {
+    if (!coilResultModalEl) return;
+    const bs = window.bootstrap || (typeof bootstrap !== 'undefined' ? bootstrap : null);
+    if (bs && bs.Modal) {
+      const modal = bs.Modal.getInstance(coilResultModalEl);
+      if (modal) modal.hide();
+    } else {
+      coilResultModalEl.classList.remove('show');
+      coilResultModalEl.style.display = 'none';
+    }
+  }
+
+  function openCoilResultModal() {
+    if (!coilResultModalEl) return;
+    if (coilResultModalEl.parentElement !== document.body) {
+      document.body.appendChild(coilResultModalEl);
+    }
+    const bs = window.bootstrap || (typeof bootstrap !== 'undefined' ? bootstrap : null);
+    if (!bs || !bs.Modal) {
+      coilResultModalEl.classList.add('show');
+      coilResultModalEl.style.display = 'block';
+      return;
+    }
+
+    const scanModalInstance = bs.Modal.getInstance(coilScanModalEl);
+    if (scanModalInstance && coilScanModalEl.classList.contains('show')) {
+      coilScanModalEl.addEventListener('hidden.bs.modal', () => {
+        const resModal = bs.Modal.getOrCreateInstance(coilResultModalEl);
+        resModal.show();
+      }, { once: true });
+      scanModalInstance.hide();
+    } else {
+      const resModal = bs.Modal.getOrCreateInstance(coilResultModalEl);
+      resModal.show();
+    }
+  }
+
+  function renderResultTable() {
+    if (!popupRollsTableBody) return;
+    popupRollsTableBody.innerHTML = '';
+
+    const { parsed, matchedRoll, matchingBatchRolls, allMatRolls, showAllBatches } = currentScanResultState;
+    const listToShow = showAllBatches ? allMatRolls : matchingBatchRolls;
+    const normBatch = parsed ? String(parsed.batch || '').trim().toLowerCase() : '';
+
+    if (txtTableBatchCount) {
+      txtTableBatchCount.textContent = showAllBatches
+        ? `Danh sách ${listToShow.length} cuộn thuộc Mã VT ${parsed.maVatTu}:`
+        : `Danh sách ${listToShow.length} cuộn thuộc Batch ${parsed.batch}:`;
+    }
+
+    if (!listToShow || listToShow.length === 0) {
+      popupRollsTableBody.innerHTML = `
+        <tr>
+          <td colspan="9" class="text-center py-4 text-warning fst-italic">
+            <i class="bi bi-exclamation-triangle me-1"></i> Trong kho hiện không còn cuộn tồn nào thuộc nhóm này (đã xuất hết hoặc chưa nhập).
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    listToShow.forEach((item, index) => {
+      const rollKg = parseFloat(item['Số lượng (Kg)']) || 0;
+      const rowRack = String(item['Vị trí'] || '').trim().toUpperCase();
+      const isMatchedRoll = matchedRoll && (
+        item === matchedRoll ||
+        (item['Cuộn ID'] && matchedRoll['Cuộn ID'] && String(item['Cuộn ID']).trim() === String(matchedRoll['Cuộn ID']).trim())
+      );
+      const isSameBatch = String(item['Batch'] || '').trim().toLowerCase() === normBatch;
+
+      const age = calculateStorageAge(item['Ngày nhập']);
+      const ageBadge = age !== '' ? `<span class="badge ${age > 90 ? 'bg-danger' : age > 30 ? 'bg-warning text-dark' : 'bg-success'}">${age} ngày</span>` : '';
+
+      const tr = document.createElement('tr');
+      if (isMatchedRoll) {
+        tr.className = 'row-scanned-highlight';
+      }
+
+      tr.innerHTML = `
+        <td class="text-center fw-bold text-secondary">${index + 1}</td>
+        <td class="text-center">
+          <button type="button" class="btn btn-sm rack-cell-btn btn-table-rack" data-rack="${rowRack}">
+            <i class="bi bi-geo-alt-fill me-1"></i>${rowRack || 'Chưa gán'}
+          </button>
+        </td>
+        <td class="fw-bold">
+          ${item['Cuộn ID'] || item['Mã vật tư'] || ''}
+          ${isMatchedRoll ? `<span class="badge badge-scanned-pill ms-2"><i class="bi bi-geo-alt-fill me-1"></i>Cuộn Vừa Quét</span>` : ''}
+        </td>
+        <td>
+          ${item['Batch'] || ''}
+          ${isSameBatch && !isMatchedRoll ? `<span class="badge badge-correct-batch ms-2"><i class="bi bi-check2"></i> Đúng Batch</span>` : ''}
+        </td>
+        <td class="text-end fw-semibold text-warning">${formatKg(rollKg)}</td>
+        <td>${formatDate(item['Ngày nhập'])}</td>
+        <td class="text-center">${ageBadge}</td>
+        <td class="small text-truncate" style="max-width: 100px;">${item['Mã công trình'] || '-'}</td>
+        <td class="small text-truncate" style="max-width: 180px;" title="${item['Tên công trình'] || ''}">${item['Tên công trình'] || '-'}</td>
+      `;
+
+      popupRollsTableBody.appendChild(tr);
+    });
+
+    // Attach click event to rack pills in table
+    popupRollsTableBody.querySelectorAll('.btn-table-rack').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetRack = btn.dataset.rack;
+        if (targetRack && targetRack !== 'Chưa gán') {
+          selectRack(targetRack);
+          hideCoilResultModal();
+        }
+      });
+    });
+  }
+
   function handleProcessCoilBarcode(rawText) {
     hideCoilScanAlert();
     if (!rawText || !rawText.trim()) {
       showCoilScanAlert('Vui lòng nhập hoặc quét mã Barcode cuộn.');
-      if (coilScanResultContainer) coilScanResultContainer.style.display = 'none';
       return;
     }
 
@@ -365,6 +514,8 @@ function initViTriTonPage() {
           if (p.length >= 3) {
             const kg = parseFloat(p[p.length - 1].replace(',', '.'));
             return { maVatTu: p[0], batch: p.slice(1, -1).join('-'), kg: isNaN(kg) ? null : kg, rawText: t };
+          } else if (p.length === 2) {
+            return { maVatTu: p[0], batch: p[1], kg: null, rawText: t };
           }
           return null;
         };
@@ -398,147 +549,195 @@ function initViTriTonPage() {
           });
         }
       } else {
-        showCoilScanAlert(`Mã Barcode "${trimmed}" không đúng định dạng. Cấu trúc chuẩn: "Mã vật tư-Batch-Khối lượng" (Ví dụ: 10001189-2X349VN-1472).`);
+        showCoilScanAlert(`Mã Barcode "${trimmed}" không đúng định dạng. Cấu trúc chuẩn: "Mã vật tư-Batch-Khối lượng" (Ví dụ: 10001189-2.5X75VN-2570).`);
       }
-      if (coilScanResultContainer) coilScanResultContainer.style.display = 'none';
       return;
     }
 
-    // Valid coil barcode parsed!
-    const normMa = parsed.maVatTu.toLowerCase();
-    const normBatch = parsed.batch.toLowerCase();
+    // Play beep sound and stop camera scanner
+    playBeepSoundLocal();
+    stopCoilCameraScanner();
 
-    // Filter matching rolls in warehouse
-    const matchingRolls = allWarehouseActiveRolls.filter(row => {
-      const rMa = String(row['Mã vật tư'] || '').trim().toLowerCase();
-      const rBatch = String(row['Batch'] || '').trim().toLowerCase();
-      return rMa === normMa && rBatch === normBatch;
+    // Normalization
+    const normMa = String(parsed.maVatTu || '').trim().toLowerCase();
+    const normBatch = String(parsed.batch || '').trim().toLowerCase();
+
+    // All rolls of this material in warehouse
+    const allMatRolls = allWarehouseActiveRolls.filter(r => {
+      return String(r['Mã vật tư'] || '').trim().toLowerCase() === normMa;
     });
 
-    const totalBatchRolls = matchingRolls.length;
-    const totalBatchKg = matchingRolls.reduce((sum, r) => sum + (parseFloat(r['Số lượng (Kg)']) || 0), 0);
-
-    // Filter rolls at current rack
-    const normCurrentRack = currentRack.trim().toLowerCase();
-    const currentRackRolls = matchingRolls.filter(r => String(r['Vị trí'] || '').trim().toLowerCase() === normCurrentRack);
-    const currentRackRollsCount = currentRackRolls.length;
-    const currentRackKg = currentRackRolls.reduce((sum, r) => sum + (parseFloat(r['Số lượng (Kg)']) || 0), 0);
-
-    // Identify material name
-    let matName = '';
-    if (matchingRolls.length > 0 && matchingRolls[0]['Tên vật tư']) {
-      matName = matchingRolls[0]['Tên vật tư'];
-    } else {
-      const anyMat = allWarehouseActiveRolls.find(r => String(r['Mã vật tư'] || '').trim().toLowerCase() === normMa);
-      if (anyMat && anyMat['Tên vật tư']) matName = anyMat['Tên vật tư'];
-    }
-
-    // Populate Results UI
-    if (resMatCode) resMatCode.textContent = `Mã VT: ${parsed.maVatTu}`;
-    if (resBatch) resBatch.textContent = `Batch: ${parsed.batch}`;
-    if (resScannedKg) {
-      if (parsed.kg !== null && !isNaN(parsed.kg)) {
-        resScannedKg.textContent = `Tem: ${formatKg(parsed.kg)} Kg`;
-        resScannedKg.style.display = '';
-      } else {
-        resScannedKg.style.display = 'none';
-      }
-    }
-    if (resMatName) {
-      resMatName.textContent = matName ? `Tên: ${matName}` : 'Tên: (Chưa có mô tả vật tư)';
-      resMatName.title = matName;
-    }
-
-    if (resTotalRolls) resTotalRolls.textContent = totalBatchRolls;
-    if (resTotalKg) resTotalKg.textContent = formatKg(totalBatchKg);
-
-    if (resCurrentRackName) resCurrentRackName.textContent = currentRack;
-    if (resCurrentRackText) {
-      if (currentRackRollsCount > 0) {
-        resCurrentRackText.innerHTML = `<span class="text-success">${currentRackRollsCount} cuộn | ${formatKg(currentRackKg)} Kg</span>`;
-        if (resCurrentRackBox) resCurrentRackBox.className = 'border rounded p-2 bg-dark text-nowrap shadow-sm border-success';
-      } else {
-        resCurrentRackText.innerHTML = `<span class="text-warning">0 cuộn (Chưa có tại kệ này)</span>`;
-        if (resCurrentRackBox) resCurrentRackBox.className = 'border rounded p-2 bg-dark text-nowrap shadow-sm border-warning';
-      }
-    }
-
-    if (resRollsCountBadge) resRollsCountBadge.textContent = `${totalBatchRolls} cuộn`;
-
-    // Render detailed table
-    renderCoilBatchTableRows(matchingRolls, parsed.kg, normCurrentRack);
-
-    if (coilScanResultContainer) coilScanResultContainer.style.display = 'block';
-    if (coilScanFooterStatus) {
-      coilScanFooterStatus.innerHTML = `<i class="bi bi-check-circle-fill text-success me-1"></i> Đã tra cứu: Mã VT <b>${parsed.maVatTu}</b> | Batch <b>${parsed.batch}</b> (Khối lượng tem: ${formatKg(parsed.kg)} Kg)`;
-    }
-  }
-
-  function renderCoilBatchTableRows(rolls, scannedKg, normCurrentRack) {
-    if (!coilBatchTableBody) return;
-    coilBatchTableBody.innerHTML = '';
-
-    if (!rolls || rolls.length === 0) {
-      coilBatchTableBody.innerHTML = `
-        <tr>
-          <td colspan="8" class="text-center py-4 text-warning fst-italic">
-            <i class="bi bi-exclamation-triangle me-1"></i> Trong kho hiện không còn cuộn tồn nào thuộc Batch này (đã xuất hết hoặc chưa nhập).
-          </td>
-        </tr>
-      `;
-      return;
-    }
-
-    rolls.forEach((item, index) => {
-      const rollKg = parseFloat(item['Số lượng (Kg)']) || 0;
-      const isMatchedWeight = scannedKg && Math.abs(rollKg - scannedKg) < 0.05;
-      const rowRack = String(item['Vị trí'] || '').trim().toUpperCase();
-      const isAtCurrentRack = rowRack.toLowerCase() === normCurrentRack;
-
-      const age = calculateStorageAge(item['Ngày nhập']);
-      const ageBadge = age !== '' ? `<span class="badge ${age > 90 ? 'bg-danger' : age > 30 ? 'bg-warning text-dark' : 'bg-success'}">${age} ngày</span>` : '';
-
-      const tr = document.createElement('tr');
-      if (isMatchedWeight) {
-        tr.className = 'matched-scanned-roll';
-      }
-
-      tr.innerHTML = `
-        <td class="text-center fw-bold text-secondary">${index + 1}</td>
-        <td class="text-center">
-          ${isAtCurrentRack 
-            ? `<span class="badge badge-current-rack"><i class="bi bi-geo-alt-fill me-1"></i>Kệ ${rowRack}</span>` 
-            : `<span class="badge badge-other-rack"><i class="bi bi-geo-alt me-1"></i>Kệ ${rowRack || 'Chưa gán'}</span>`}
-        </td>
-        <td class="fw-bold">
-          ${item['Cuộn ID'] || ''}
-          ${isMatchedWeight ? `<span class="badge bg-success ms-1 small" title="Khớp khối lượng tem quét"><i class="bi bi-check2"></i> Khớp tem</span>` : ''}
-        </td>
-        <td class="text-end fw-semibold text-warning">${formatKg(rollKg)}</td>
-        <td>${formatDate(item['Ngày nhập'])}</td>
-        <td class="text-center">${ageBadge}</td>
-        <td class="small text-truncate" style="max-width: 140px;" title="${item['Tên công trình'] || ''}">${item['Mã công trình'] || item['Tên công trình'] || '-'}</td>
-        <td class="text-center">
-          ${isAtCurrentRack 
-            ? `<span class="text-success small fw-semibold"><i class="bi bi-check-circle me-1"></i>Tại kệ này</span>` 
-            : `<button type="button" class="btn btn-sm btn-outline-info btn-goto-rack" data-rack="${rowRack}"><i class="bi bi-arrow-right-circle me-1"></i>Xem Kệ</button>`}
-        </td>
-      `;
-
-      coilBatchTableBody.appendChild(tr);
+    // Matching batch rolls
+    const matchingBatchRolls = allMatRolls.filter(r => {
+      return String(r['Batch'] || '').trim().toLowerCase() === normBatch;
     });
 
-    // Handle "Xem Kệ" button click
-    coilBatchTableBody.querySelectorAll('.btn-goto-rack').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const targetRack = btn.dataset.rack;
-        if (targetRack) {
-          selectRack(targetRack);
-          const modal = bootstrap.Modal.getInstance(coilScanModalEl);
-          if (modal) modal.hide();
+    // Identify specific roll if scanned kg provided or single roll in batch
+    let matchedRoll = null;
+    if (parsed.kg !== null && !isNaN(parsed.kg)) {
+      matchedRoll = matchingBatchRolls.find(r => Math.abs((parseFloat(r['Số lượng (Kg)']) || 0) - parsed.kg) < 0.05);
+      if (!matchedRoll) {
+        // Search in all material rolls if batch on label had slight mismatch
+        matchedRoll = allMatRolls.find(r => Math.abs((parseFloat(r['Số lượng (Kg)']) || 0) - parsed.kg) < 0.05);
+      }
+    } else if (matchingBatchRolls.length === 1) {
+      matchedRoll = matchingBatchRolls[0];
+    }
+
+    // Reference roll for metadata
+    const refRoll = matchedRoll || matchingBatchRolls[0] || allMatRolls[0];
+    const whName = refRoll?._wh || 'Kho Xà gồ';
+    const matName = refRoll?.['Tên vật tư'] || (normMa.includes('10001189') ? 'Thép phôi kẽm 1.75x406VN Z275 G450' : 'Vật tư chưa có tên');
+
+    // Update Modal Header Badge
+    if (resWarehouseBadge) {
+      resWarehouseBadge.textContent = `${whName} (${allMatRolls.length} cuộn)`;
+    }
+
+    // Top Banner Setup
+    if (identifiedRollBanner) {
+      identifiedRollBanner.style.display = 'block';
+      if (matchedRoll) {
+        const rollRack = String(matchedRoll['Vị trí'] || 'Chưa gán').trim().toUpperCase();
+        if (bannerBadgeStatus) {
+          bannerBadgeStatus.className = 'badge badge-identified';
+          bannerBadgeStatus.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> ĐÃ XÁC ĐỊNH VỊ TRÍ CUỘN';
         }
+        if (bannerTextTitle) bannerTextTitle.textContent = 'Cuộn này đang nằm tại:';
+        if (bannerRackHighlight) {
+          bannerRackHighlight.innerHTML = `<i class="bi bi-geo-alt-fill me-1"></i> KỆ ${rollRack}`;
+        }
+        if (btnBannerSwitchRack && lblBannerSwitchRack) {
+          btnBannerSwitchRack.style.display = 'inline-flex';
+          lblBannerSwitchRack.textContent = `Chuyển xem Kệ ${rollRack}`;
+          btnBannerSwitchRack.onclick = () => {
+            selectRack(rollRack);
+            hideCoilResultModal();
+          };
+        }
+        if (metaCuonId) metaCuonId.textContent = matchedRoll['Cuộn ID'] || parsed.maVatTu;
+        if (metaBatch) metaBatch.textContent = matchedRoll['Batch'] || parsed.batch;
+        if (metaKg) metaKg.textContent = `${formatKg(matchedRoll['Số lượng (Kg)'])} Kg`;
+        const age = calculateStorageAge(matchedRoll['Ngày nhập']);
+        if (metaDays) metaDays.textContent = `${age !== '' ? age : '0'} ngày`;
+      } else if (matchingBatchRolls.length > 0) {
+        const distinctRacks = [...new Set(matchingBatchRolls.map(r => String(r['Vị trí'] || '').trim().toUpperCase()).filter(Boolean))];
+        const primaryRack = distinctRacks[0] || 'A01';
+        if (bannerBadgeStatus) {
+          bannerBadgeStatus.className = 'badge badge-identified';
+          bannerBadgeStatus.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> ĐÃ XÁC ĐỊNH VỊ TRÍ BATCH';
+        }
+        if (bannerTextTitle) bannerTextTitle.textContent = 'Batch này đang nằm tại:';
+        if (bannerRackHighlight) {
+          bannerRackHighlight.innerHTML = `<i class="bi bi-geo-alt-fill me-1"></i> KỆ ${distinctRacks.join(', KỆ ')}`;
+        }
+        if (btnBannerSwitchRack && lblBannerSwitchRack) {
+          btnBannerSwitchRack.style.display = 'inline-flex';
+          lblBannerSwitchRack.textContent = `Chuyển xem Kệ ${primaryRack}`;
+          btnBannerSwitchRack.onclick = () => {
+            selectRack(primaryRack);
+            hideCoilResultModal();
+          };
+        }
+        const totalKg = matchingBatchRolls.reduce((sum, r) => sum + (parseFloat(r['Số lượng (Kg)']) || 0), 0);
+        if (metaCuonId) metaCuonId.textContent = `${matchingBatchRolls.length} cuộn`;
+        if (metaBatch) metaBatch.textContent = parsed.batch;
+        if (metaKg) metaKg.textContent = `${formatKg(totalKg)} Kg`;
+        if (metaDays) metaDays.textContent = `Tồn kho`;
+      } else {
+        if (bannerBadgeStatus) {
+          bannerBadgeStatus.className = 'badge bg-warning text-dark';
+          bannerBadgeStatus.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i> CHƯA XÁC ĐỊNH VỊ TRÍ';
+        }
+        if (bannerTextTitle) bannerTextTitle.textContent = 'Không tìm thấy tồn cuộn trong kho.';
+        if (bannerRackHighlight) {
+          bannerRackHighlight.innerHTML = `<i class="bi bi-question-circle me-1"></i> HẾT TỒN`;
+        }
+        if (btnBannerSwitchRack) btnBannerSwitchRack.style.display = 'none';
+        if (metaCuonId) metaCuonId.textContent = '-';
+        if (metaBatch) metaBatch.textContent = parsed.batch;
+        if (metaKg) metaKg.textContent = parsed.kg ? `${formatKg(parsed.kg)} Kg` : '-';
+        if (metaDays) metaDays.textContent = '-';
+      }
+    }
+
+    // Material Info Card
+    if (resMaterialFullName) resMaterialFullName.textContent = matName;
+    if (resMatCodeBadge) resMatCodeBadge.textContent = parsed.maVatTu;
+    if (resBatchBadge) resBatchBadge.textContent = parsed.batch;
+
+    // Batch Distribution Box
+    const totalBatchKg = matchingBatchRolls.reduce((sum, r) => sum + (parseFloat(r['Số lượng (Kg)']) || 0), 0);
+    if (lblBatchTonTitle) lblBatchTonTitle.textContent = `Tồn Batch ${parsed.batch}:`;
+    if (valBatchTonStock) {
+      valBatchTonStock.innerHTML = `${formatKg(totalBatchKg)} Kg <small class="text-light fs-6">(${matchingBatchRolls.length} cuộn)</small>`;
+    }
+    if (lblBatchLocationTitle) {
+      lblBatchLocationTitle.textContent = `Batch ${parsed.batch} đang nằm tại các vị trí kệ:`;
+    }
+
+    // Rack distribution pills
+    if (rackDistributionPills) {
+      rackDistributionPills.innerHTML = '';
+      const rackMap = new Map();
+      matchingBatchRolls.forEach(r => {
+        const rk = String(r['Vị trí'] || 'Chưa gán').trim().toUpperCase();
+        if (!rackMap.has(rk)) rackMap.set(rk, { count: 0, kg: 0 });
+        const info = rackMap.get(rk);
+        info.count++;
+        info.kg += (parseFloat(r['Số lượng (Kg)']) || 0);
       });
-    });
+
+      if (rackMap.size === 0) {
+        rackDistributionPills.innerHTML = '<span class="text-secondary small fst-italic">Không có cuộn nào trên kệ</span>';
+      } else {
+        rackMap.forEach((info, rk) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'btn btn-sm rack-pill-btn';
+          btn.innerHTML = `<i class="bi bi-geo-alt-fill me-1"></i>Kệ ${rk}: ${info.count} cuộn (${formatKg(info.kg)} kg)`;
+          btn.addEventListener('click', () => {
+            if (rk !== 'Chưa gán') {
+              selectRack(rk);
+              hideCoilResultModal();
+            }
+          });
+          rackDistributionPills.appendChild(btn);
+        });
+      }
+    }
+
+    // Toggle button setup
+    const otherBatchesCount = Math.max(0, allMatRolls.length - matchingBatchRolls.length);
+    currentScanResultState = {
+      parsed,
+      matchedRoll,
+      matchingBatchRolls,
+      allMatRolls,
+      showAllBatches: false
+    };
+
+    if (lblToggleAllBatches) {
+      lblToggleAllBatches.textContent = `Xem tất cả Batch khác (${otherBatchesCount} cuộn)`;
+    }
+
+    if (btnToggleAllBatches) {
+      btnToggleAllBatches.onclick = () => {
+        currentScanResultState.showAllBatches = !currentScanResultState.showAllBatches;
+        if (lblToggleAllBatches) {
+          lblToggleAllBatches.textContent = currentScanResultState.showAllBatches
+            ? `Chỉ xem Batch ${parsed.batch} (${matchingBatchRolls.length} cuộn)`
+            : `Xem tất cả Batch khác (${otherBatchesCount} cuộn)`;
+        }
+        renderResultTable();
+      };
+    }
+
+    // Render Table
+    renderResultTable();
+
+    // Finally, display the Result Modal!
+    openCoilResultModal();
   }
 
   function startCoilCameraScanner() {
