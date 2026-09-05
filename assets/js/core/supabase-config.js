@@ -19,8 +19,69 @@ window.supabase = _supabaseLib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
  * @param {Object} record - Raw record object from Supabase.
  * @returns {boolean} True if locked (> 24h old), false otherwise.
  */
+/**
+ * Lấy hồ sơ người dùng đã xác thực từ Supabase Auth session
+ */
+function getCachedUserProfile() {
+  try {
+    const raw = sessionStorage.getItem('supabase_user_profile') || localStorage.getItem('supabase_user_profile');
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return null;
+}
+
+/**
+ * Đồng bộ hồ sơ người dùng từ Supabase Auth & public.user_profiles
+ */
+async function syncUserProfile() {
+  if (!window.supabase?.auth) return null;
+  try {
+    const { data: { session }, error: sessionErr } = await window.supabase.auth.getSession();
+    if (!session?.user) return null;
+
+    const { data: profile, error } = await window.supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('id', session.user.id)
+      .maybeSingle();
+
+    if (profile) {
+      sessionStorage.setItem('supabase_user_profile', JSON.stringify(profile));
+      localStorage.setItem('currentUser', profile.username);
+      return profile;
+    }
+  } catch (e) {
+    console.warn('Lỗi đồng bộ hồ sơ user:', e);
+  }
+  return null;
+}
+
+// Tự động đồng bộ hồ sơ khi phiên Auth thay đổi
+if (typeof window !== 'undefined' && window.supabase?.auth) {
+  window.supabase.auth.onAuthStateChange((event, session) => {
+    if (session?.user) {
+      syncUserProfile();
+    } else if (event === 'SIGNED_OUT') {
+      sessionStorage.removeItem('supabase_user_profile');
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('userPermissions');
+    }
+  });
+}
+
+/**
+ * Checks if a Supabase data record was created over 24 hours ago.
+ * Thực thi kiểm tra trên UI (Database RLS đã bảo vệ cứng tầng dưới).
+ * @param {Object} record - Raw record object from Supabase.
+ * @returns {boolean} True if locked (> 24h old), false otherwise.
+ */
 function isRecordLocked(record) {
   if (!record) return false;
+
+  const profile = getCachedUserProfile();
+  if (profile?.is_admin || profile?.username?.toLowerCase() === 'bao.lt') {
+    return false;
+  }
 
   // Bypass 24h lock restriction for user "bao.lt"
   const currentUser = (typeof localStorage !== 'undefined' && localStorage.getItem('currentUser')) || (typeof window !== 'undefined' && window.currentUser);
@@ -40,6 +101,8 @@ function isRecordLocked(record) {
 
 if (typeof window !== 'undefined') {
   window.isRecordLocked = isRecordLocked;
+  window.getCachedUserProfile = getCachedUserProfile;
+  window.syncUserProfile = syncUserProfile;
 }
 
 /**
@@ -48,6 +111,20 @@ if (typeof window !== 'undefined') {
  * @returns {Object} { canView: boolean, canAdd: boolean, canEdit: boolean, canDelete: boolean, isAdmin: boolean }
  */
 function getUserPermissions(groupName = null) {
+  const profile = getCachedUserProfile();
+  if (profile) {
+    if (profile.is_admin || profile.username?.toLowerCase() === 'bao.lt') {
+      return { canView: true, canAdd: true, canEdit: true, canDelete: true, isAdmin: true };
+    }
+    return {
+      canView: !!profile.can_view,
+      canAdd: !!profile.can_add,
+      canEdit: !!profile.can_edit,
+      canDelete: !!profile.can_delete,
+      isAdmin: !!profile.is_admin
+    };
+  }
+
   const currentUser = (typeof localStorage !== 'undefined' && localStorage.getItem('currentUser')) || (typeof window !== 'undefined' && window.currentUser);
   if (!currentUser) {
     return { canView: false, canAdd: false, canEdit: false, canDelete: false, isAdmin: false };
