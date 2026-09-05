@@ -3,7 +3,27 @@
    Xử lý tổng hợp tồn kho Xà gồ & Tole theo mã kệ A01-A14, B01-B14 & Grating
 ================================================================================ */
 
-document.addEventListener('DOMContentLoaded', () => {
+/* Global Modal Opener - Available immediately */
+window.openCoilScanModal = function () {
+  const modalEl = document.getElementById('coilScanModal');
+  if (!modalEl) {
+    console.warn('Không tìm thấy element #coilScanModal');
+    return;
+  }
+  if (modalEl.parentElement !== document.body) {
+    document.body.appendChild(modalEl);
+  }
+  const bs = window.bootstrap || (typeof bootstrap !== 'undefined' ? bootstrap : null);
+  if (bs && bs.Modal) {
+    const modal = bs.Modal.getOrCreateInstance(modalEl);
+    modal.show();
+  } else {
+    modalEl.classList.add('show');
+    modalEl.style.display = 'block';
+  }
+};
+
+function initViTriTonPage() {
   const rackSelectDropdown = document.getElementById('rackSelectDropdown');
   const displayRackTitle = document.getElementById('displayRackTitle');
   const totalRollsCount = document.getElementById('totalRollsCount');
@@ -590,9 +610,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (btnScanCoil) {
-    btnScanCoil.addEventListener('click', () => {
-      const modal = bootstrap.Modal.getOrCreateInstance(coilScanModalEl);
-      modal.show();
+    btnScanCoil.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.openCoilScanModal();
     });
   }
 
@@ -646,4 +666,10 @@ document.addEventListener('DOMContentLoaded', () => {
   initRackDropdown();
   updateDisplayTitle();
   loadRackInventory(currentRack);
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initViTriTonPage);
+} else {
+  initViTriTonPage();
+}

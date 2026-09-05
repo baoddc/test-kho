@@ -44,7 +44,7 @@
           <button id="btnRefreshData" class="btn btn-sm btn-outline-secondary shadow-sm d-inline-flex align-items-center justify-content-center" style="height: 32px; width: 34px; flex-shrink: 0;" title="Tải lại dữ liệu">
             <i class="bi bi-arrow-clockwise"></i>
           </button>
-          <button id="btnScanCoil" class="btn btn-sm btn-outline-success shadow-sm d-inline-flex align-items-center gap-1 text-nowrap px-2" style="height: 32px; white-space: nowrap; flex-shrink: 0;" title="Quét Barcode cuộn (Mã VT-Batch-Khối lượng)">
+          <button id="btnScanCoil" type="button" onclick="window.openCoilScanModal && window.openCoilScanModal()" class="btn btn-sm btn-outline-success shadow-sm d-inline-flex align-items-center gap-1 text-nowrap px-2" style="height: 32px; white-space: nowrap; flex-shrink: 0;" title="Quét Barcode cuộn (Mã VT-Batch-Khối lượng)">
             <i class="bi bi-upc-scan"></i> <span class="d-none d-sm-inline">Quét Cuộn</span>
           </button>
         </div>
@@ -154,6 +154,8 @@
         </div>
       </div>
     </div>
+
+  </div>
 
   <!-- ==================== MODAL QUÉT CUỘN & TRA CỨU BATCH ==================== -->
   <div class="modal fade" id="coilScanModal" tabindex="-1" aria-labelledby="coilScanModalLabel" aria-hidden="true">
@@ -269,16 +271,16 @@
 
   <!-- Supabase JS Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="/assets/js/core/supabase-config.js?v=2.0.3"></script>
-  <script src="/assets/js/core/inventory-lock-service.js?v=2.0.3"></script>
-  <script src="/assets/js/core/qr-scanner-service.js?v=2.0.3"></script>
+  <script src="/assets/js/core/supabase-config.js?v=2.0.5"></script>
+  <script src="/assets/js/core/inventory-lock-service.js?v=2.0.5"></script>
+  <script src="/assets/js/core/qr-scanner-service.js?v=2.0.5"></script>
 
   <!-- Sidebar JS (auto-injects sidebar + topbar) -->
-  <script src="/assets/js/components/sidebar.js"></script>
-  <script src="/assets/js/home.js"></script>
+  <script src="/assets/js/components/sidebar.js?v=2.0.5"></script>
+  <script src="/assets/js/home.js?v=2.0.5"></script>
 
   <!-- Page Logic JS -->
-  <script src="/assets/js/vi-tri-ton.js?v=2.0.3"></script>
+  <script src="/assets/js/vi-tri-ton.js?v=2.0.5"></script>
 
 </body>
 

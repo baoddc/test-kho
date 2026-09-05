@@ -57,40 +57,81 @@ function initLoginForm() {
 
       let account = null;
 
-      // Xác thực an toàn 100% qua Supabase RPC (chống F12 xem mật khẩu)
-      if (!window.supabase || typeof window.supabase.rpc !== 'function') {
+      let emailToLogin = username;
+      if (!emailToLogin.includes('@')) {
+         if (username.toLowerCase() === 'bao.lt') {
+            emailToLogin = 'thaibao06061997@gmail.com';
+         } else {
+            emailToLogin = `${username}@ddc.com`;
+         }
+      }
+
+      // Xác thực an toàn qua Supabase Auth chính thức (JWT Session)
+      if (!window.supabase) {
          errorMessage.textContent = 'Không thể kết nối đến máy chủ Supabase. Vui lòng kiểm tra kết nối mạng!';
          errorMessage.style.display = 'block';
          return;
       }
 
       try {
-         const { data, error } = await window.supabase.rpc('check_login', {
-            p_username: username,
-            p_password: password
+         // 1. Thử đăng nhập chuẩn Supabase Auth
+         const { data: authData, error: authError } = await window.supabase.auth.signInWithPassword({
+            email: emailToLogin,
+            password: password
          });
 
-         if (error) {
-            console.error('Supabase RPC check_login error:', error);
-            errorMessage.textContent = 'Lỗi hệ thống khi xác thực. Vui lòng thử lại sau!';
-            errorMessage.style.display = 'block';
-            return;
-         }
+         if (!authError && authData?.user) {
+            // Lấy hồ sơ phân quyền từ public.user_profiles
+            const { data: profile } = await window.supabase
+               .from('user_profiles')
+               .select('*')
+               .eq('id', authData.user.id)
+               .maybeSingle();
 
-         if (data && data.length > 0) {
-            const u = data[0];
             account = {
-               username: u.username,
-               email: u.email,
-               requireOtp: u.require_otp,
-               allowedPages: u.allowed_pages || [],
+               username: profile?.username || username,
+               email: authData.user.email,
+               requireOtp: false,
+               allowedPages: profile?.allowed_pages || ['*'],
                permissions: {
-                  canAdd: u.can_add,
-                  canEdit: u.can_edit,
-                  canDelete: u.can_delete,
-                  canView: u.can_view
-               }
+                  canAdd: !!profile?.can_add || !!profile?.is_admin,
+                  canEdit: !!profile?.can_edit || !!profile?.is_admin,
+                  canDelete: !!profile?.can_delete || !!profile?.is_admin,
+                  canView: !!profile?.can_view
+               },
+               profile: profile
             };
+
+            sessionStorage.setItem('supabase_user_profile', JSON.stringify(profile || account));
+         } else {
+            // 2. Fallback sang RPC check_login nếu tài khoản chưa được chuyển sang auth.users
+            const { data, error } = await window.supabase.rpc('check_login', {
+               p_username: username,
+               p_password: password
+            });
+
+            if (error) {
+               console.warn('RPC check_login warning:', error);
+               errorMessage.textContent = 'Tên đăng nhập hoặc mật khẩu không chính xác!';
+               errorMessage.style.display = 'block';
+               return;
+            }
+
+            if (data && data.length > 0) {
+               const u = data[0];
+               account = {
+                  username: u.username,
+                  email: u.email,
+                  requireOtp: u.require_otp,
+                  allowedPages: u.allowed_pages || [],
+                  permissions: {
+                     canAdd: u.can_add,
+                     canEdit: u.can_edit,
+                     canDelete: u.can_delete,
+                     canView: u.can_view
+                  }
+               };
+            }
          }
       } catch (err) {
          console.error('Supabase connection exception:', err);
@@ -107,7 +148,7 @@ function initLoginForm() {
             currentPendingUser = account;
             triggerOtpVerification(account);
          } else {
-            // Đăng nhập trực tiếp cho tài khoản bình thường
+            // Đăng nhập trực tiếp
             completeLogin(account.username, account);
          }
       } else {

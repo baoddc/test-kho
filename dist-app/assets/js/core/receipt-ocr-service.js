@@ -2,6 +2,7 @@
  * =============================================================================
  * RECEIPT OCR SERVICE (Vision AI & Pattern Parser)
  * Tự động trích xuất thông tin từ ảnh Phiếu Xuất Kho (DDC / Phiếu kho)
+ * Sử dụng Supabase Edge Function để bảo vệ API Key tuyệt đối trên máy chủ
  * =============================================================================
  */
 
@@ -11,37 +12,20 @@
   const STORAGE_KEY = 'gemini_ocr_api_key';
   const CACHED_MODEL_KEY = 'gemini_cached_model_name';
 
-  // Obfuscated embedded API key (byte array with dynamic XOR transformation)
-  const _SEC_DATA = [27,48,70,46,20,69,214,197,164,211,201,214,220,207,216,160,187,129,128,174,146,186,130,163,50,81,86,64,40,106,116,30,111,49,126,63,29,59,59,14,2,53,177,195,232,194,218,250,216,248,217,230,177];
-  function _getEmbeddedKey() {
-    return String.fromCharCode(..._SEC_DATA.map((b, i) => b ^ ((0x5A + i * 7) & 0xFF)));
-  }
-
-  // Danh sách candidate models theo thứ tự ưu tiên độ ổn định và quota cao nhất
+  // Danh sách candidate models khi chạy direct test
   const CANDIDATE_MODELS = [
-    'gemini-3.5-flash',
-    'gemini-3.5-flash-lite',
-    'gemini-3.6-flash',
-    'gemini-3.1-flash-lite',
-    'gemini-flash-lite-latest',
     'gemini-2.5-flash',
-    'gemini-3.7-flash',
-    'gemini-flash-latest',
-    'gemini-2.5-pro',
     'gemini-1.5-flash',
-    'gemini-2.0-flash'
+    'gemini-2.0-flash',
+    'gemini-2.5-pro'
   ];
 
   const ReceiptOcrService = {
     /**
-     * Lấy API Key (ưu tiên custom nếu có, fallback về key mã hóa nhúng sẵn)
+     * Lấy API Key tùy chỉnh của người dùng nếu có (dùng cho môi trường dev riêng)
      */
-    getApiKey: function () {
-      const customKey = (typeof localStorage !== 'undefined' && localStorage.getItem(STORAGE_KEY)) || '';
-      if (customKey && customKey.trim().length > 10) {
-        return customKey.trim();
-      }
-      return _getEmbeddedKey();
+    getCustomApiKey: function () {
+      return (typeof localStorage !== 'undefined' && localStorage.getItem(STORAGE_KEY)) || '';
     },
 
     /**
@@ -59,48 +43,11 @@
     },
 
     /**
-     * Kiểm tra xem đã có API Key chưa (luôn sẵn sàng nhờ key tích hợp sẵn)
+     * Kiểm tra xem dịch vụ OCR có sẵn sàng không.
+     * Mặc định luôn sẵn sàng thông qua Supabase Edge Function (hoặc custom key nếu có).
      */
     hasApiKey: function () {
-      const key = this.getApiKey();
-      return Boolean(key && key.length > 10);
-    },
-
-    /**
-     * Tự động dò tìm model tốt nhất được hỗ trợ bởi API Key của người dùng
-     */
-    resolveWorkingModel: async function (apiKey) {
-      const cached = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(CACHED_MODEL_KEY) : null;
-      if (cached && CANDIDATE_MODELS.includes(cached)) return cached;
-
-      try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey.trim())}`;
-        const res = await fetch(url);
-        if (res.ok) {
-          const data = await res.json();
-          const models = data.models || [];
-          const supported = models
-            .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
-            .map(m => (m.name || '').replace(/^models\//, ''));
-
-          for (const cand of CANDIDATE_MODELS) {
-            if (supported.includes(cand)) {
-              if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(CACHED_MODEL_KEY, cand);
-              return cand;
-            }
-          }
-
-          if (supported.length > 0) {
-            const first = supported[0];
-            if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(CACHED_MODEL_KEY, first);
-            return first;
-          }
-        }
-      } catch (err) {
-        console.warn('ListModels failed, fallback to default candidate:', err);
-      }
-
-      return 'gemini-3.5-flash';
+      return true;
     },
 
     /**
@@ -141,9 +88,93 @@
     },
 
     /**
-     * Gọi Gemini Vision API để bóc tách thông tin phiếu xuất kho (Tự động luân chuyển model nếu bị 429 Quota Exceeded)
+     * Chuẩn hóa batch/lô trước khi đưa vào tên vật tư (VD: 3x451VN -> 3.0x451VN, 1.5X348VN -> 1.5x348VN)
      */
-    callGeminiVision: async function (base64Data, mimeType, apiKey) {
+    formatBatchForMaterialName: function (batch) {
+      if (!batch) return '';
+      batch = String(batch).trim();
+      // If batch starts with an integer before x/X (e.g. 3x451VN -> 3.0x451VN, 3X451VN -> 3.0x451VN)
+      let formatted = batch.replace(/^(\d+)\s*[xX]/, '$1.0x');
+      // Convert any capital 'X' used as dimension separator to lowercase 'x' (e.g. 1.5X348VN -> 1.5x348VN)
+      formatted = formatted.replace(/^(\d+(?:\.\d+)?)\s*[xX]/, '$1x');
+      formatted = formatted.replace(/(\d)\s*[xX]\s*(\d)/g, '$1x$2');
+      return formatted;
+    },
+
+    /**
+     * Tự động chèn Lô/Batch vào Tên vật tư theo đúng cấu trúc tiêu chuẩn:
+     * VD: 'Thép phôi kẽm Z275 G450' + '1.5X348VN' -> 'Thép phôi kẽm 1.5x348VN Z275 G450'
+     * VD: 'Thép phôi kẽm Z275 G450' + '3x451VN'   -> 'Thép phôi kẽm 3.0x451VN Z275 G450'
+     */
+    mergeBatchIntoTenVatTu: function (tenVatTu, batch) {
+      if (!tenVatTu && !batch) return '';
+      if (!batch || !String(batch).trim()) return (tenVatTu || '').trim();
+
+      const formattedBatch = this.formatBatchForMaterialName(batch);
+      const rawBatch = String(batch).trim();
+      let name = (tenVatTu || '').trim();
+
+      if (!name) return formattedBatch;
+
+      const lowerName = name.toLowerCase();
+      const lowerBatch = rawBatch.toLowerCase();
+      const lowerFormatted = formattedBatch.toLowerCase();
+      if (lowerName.includes(lowerBatch) || lowerName.includes(lowerFormatted)) {
+        // If name already contains batch but with capital X, ensure X is replaced by x in dimension
+        return name.replace(/\b(\d+(?:\.\d+)?)\s*X\s*(\d+[A-Za-z0-9]*)\b/g, '$1x$2');
+      }
+
+      const dimRegex = /\b\d+(\.\d+)?\s*[xX]\s*\d+[A-Za-z0-9]*\b/i;
+      if (dimRegex.test(name)) {
+        return name.replace(dimRegex, formattedBatch);
+      }
+
+      const gradeRegex = /(?=\b(Z\d+|G\d+|AZ\d+|AM\d+|S\d+GD|S\d+|SGCC|SGCD|SECC|SPCC|SUS\s*\d+|GI\s+Z)\b)/i;
+      const gradeMatch = name.search(gradeRegex);
+      if (gradeMatch !== -1) {
+        const before = name.substring(0, gradeMatch).trim();
+        const after = name.substring(gradeMatch).trim();
+        return `${before} ${formattedBatch} ${after}`.replace(/\s+/g, ' ').trim();
+      }
+
+      const prefixRegex = /^(Thép phôi kẽm|Thép phôi|Phôi tôn kẽm|Phôi tôn|Phôi thép mạ kẽm|Phôi thép|Thép tấm cuộn|Thép cuộn|Thép Inox cuộn|Thép Inox|Tôn cuộn)(\s+|$)(.*)$/i;
+      const prefixMatch = name.match(prefixRegex);
+      if (prefixMatch) {
+        const prefix = prefixMatch[1].trim();
+        const rest = (prefixMatch[3] || '').trim();
+        return rest ? `${prefix} ${formattedBatch} ${rest}`.replace(/\s+/g, ' ').trim() : `${prefix} ${formattedBatch}`;
+      }
+
+      return `${name} ${formattedBatch}`.trim();
+    },
+
+    /**
+     * Gọi Supabase Edge Function ocr-receipt để bóc tách thông tin bảo mật qua Server
+     */
+    callEdgeFunctionVision: async function (base64Data, mimeType) {
+      if (!window.supabase || typeof window.supabase.functions?.invoke !== 'function') {
+        throw new Error('Supabase client chưa được khởi tạo đầy đủ.');
+      }
+
+      const { data, error } = await window.supabase.functions.invoke('ocr-receipt', {
+        body: { base64Data, mimeType }
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Lỗi kết nối máy chủ Supabase Edge Function.');
+      }
+
+      if (!data || !data.success) {
+        throw new Error(data?.error || 'Không thể bóc tách dữ liệu từ phiếu xuất.');
+      }
+
+      return data.data;
+    },
+
+    /**
+     * Fallback gọi Gemini Vision trực tiếp nếu người dùng cung cấp custom API Key
+     */
+    callDirectGeminiVision: async function (base64Data, mimeType, apiKey) {
       const prompt = `
 Bạn là chuyên gia OCR và trích xuất dữ liệu phiếu kho chứng từ tiếng Việt của CÔNG TY CỔ PHẦN CƠ KHÍ XÂY DỰNG THƯƠNG MẠI ĐẠI DŨNG (DAI DUNG).
 Hãy phân tích hình ảnh PHIẾU XUẤT KHO (GOODS ISSUE NOTE) được cung cấp và trích xuất thông tin theo cấu trúc JSON thuần túy (không chứa markdown, không chứa giải thích).
@@ -158,8 +189,8 @@ Quy tắc bóc tách:
 7. items: Quét toàn bộ các dòng hàng trong bảng chi tiết (cột Stt, Mã hàng, Tên hàng, Lô, Số lượng). Với MỖI DÒNG trong bảng, trích xuất 1 phần tử gồm:
    - stt: Số thứ tự dòng (1, 2, 3...)
    - maVatTu: Cột 'Mã hàng / Material' (ví dụ '10001189')
-   - tenVatTu: Cột 'Tên hàng / Material Description' (ví dụ 'Thép phôi kẽm Z275 G450')
-   - batch: Cột 'Lô / Batch' (ví dụ '1.8X351VN' hoặc '2.5X350VN')
+   - tenVatTu: Cột 'Tên hàng / Material Description' (ví dụ 'Thép phôi kẽm Z275 G450'). Tự động ghép Lô/Batch vào giữa tên vật tư (ví dụ 'Thép phôi kẽm Z275 G450' + '1.5x348VN' -> 'Thép phôi kẽm 1.5x348VN Z275 G450'; '3x451VN' -> 'Thép phôi kẽm 3.0x451VN Z275 G450').
+   - batch: Cột 'Lô / Batch' (ví dụ '1.8x351VN' hoặc '2.5x350VN' hoặc '1.5x348VN')
 8. ghiChu: Luôn trả về chuỗi rỗng "".
 
 Format JSON mong đợi:
@@ -182,16 +213,9 @@ Format JSON mong đợi:
 }
 `;
 
-      // Xác định danh sách model cần thử theo thứ tự ưu tiên
-      const primaryModel = await this.resolveWorkingModel(apiKey);
-      const modelsToTry = [primaryModel, ...CANDIDATE_MODELS.filter(m => m !== primaryModel)];
-
-      let lastError = null;
-
-      for (const modelName of modelsToTry) {
+      for (const modelName of CANDIDATE_MODELS) {
         try {
           const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey.trim())}`;
-
           const requestBody = {
             contents: [
               {
@@ -219,65 +243,43 @@ Format JSON mong đợi:
             body: JSON.stringify(requestBody)
           });
 
-          if (!response.ok) {
-            let errMsg = `Lỗi API (${response.status}): ${response.statusText}`;
-            try {
-              const errJson = await response.json();
-              if (errJson.error && errJson.error.message) {
-                errMsg = errJson.error.message;
-              }
-            } catch (_) { }
-
-            // Nếu model bị 429 Quota Exceeded, 404 không tồn tại hoặc 503 tạm thời quá tải, tự động chuyển sang model kế tiếp
-            if (response.status === 429 || response.status === 404 || response.status === 503 || response.status === 500) {
-              console.warn(`[OCR AI Fallback] Model "${modelName}" trả về HTTP ${response.status} (${errMsg}). Đang tự động thử model kế tiếp...`);
-              lastError = new Error(`[${modelName}] ${errMsg}`);
-              continue;
-            }
-
-            throw new Error(errMsg);
-          }
+          if (!response.ok) continue;
 
           const resData = await response.json();
           const rawText = resData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-          if (!rawText) {
-            throw new Error(`Không nhận được dữ liệu phản hồi từ model "${modelName}".`);
-          }
+          if (!rawText) continue;
 
-          // Parse JSON an toàn
           let cleaned = rawText.trim();
           if (cleaned.startsWith('```json')) cleaned = cleaned.replace(/^```json/, '').replace(/```$/, '').trim();
           else if (cleaned.startsWith('```')) cleaned = cleaned.replace(/^```/, '').replace(/```$/, '').trim();
 
           const parsed = JSON.parse(cleaned);
 
-          // Cập nhật model hoạt động tốt vào sessionStorage
-          if (typeof sessionStorage !== 'undefined') {
-            sessionStorage.setItem(CACHED_MODEL_KEY, modelName);
-          }
-
-          // Chuẩn hóa danh sách items
           let itemsList = [];
           if (Array.isArray(parsed.items) && parsed.items.length > 0) {
-            itemsList = parsed.items.map((it, idx) => ({
-              stt: it.stt || (idx + 1),
-              maVatTu: String(it.maVatTu || '').trim(),
-              tenVatTu: String(it.tenVatTu || '').trim(),
-              batch: String(it.batch || '').trim()
-            })).filter(it => it.maVatTu || it.tenVatTu || it.batch);
+            itemsList = parsed.items.map((it, idx) => {
+              const b = String(it.batch || '').trim();
+              const rawT = String(it.tenVatTu || '').trim();
+              return {
+                stt: it.stt || (idx + 1),
+                maVatTu: String(it.maVatTu || '').trim(),
+                tenVatTu: this.mergeBatchIntoTenVatTu(rawT, b),
+                batch: b
+              };
+            }).filter(it => it.maVatTu || it.tenVatTu || it.batch);
           }
 
-          // Fallback nếu AI trả về trường đơn lẻ
           if (itemsList.length === 0) {
+            const b = String(parsed.batch || '').trim();
+            const rawT = String(parsed.tenVatTu || '').trim();
             itemsList = [{
               stt: 1,
               maVatTu: String(parsed.maVatTu || '').trim(),
-              tenVatTu: String(parsed.tenVatTu || '').trim(),
-              batch: String(parsed.batch || '').trim()
+              tenVatTu: this.mergeBatchIntoTenVatTu(rawT, b),
+              batch: b
             }];
           }
 
-          // Đảm bảo tuân thủ các quy tắc bất biến
           return {
             ngayXuat: this.normalizeDate(parsed.ngayXuat) || new Date().toISOString().split('T')[0],
             phieuXuat: String(parsed.phieuXuat || '').trim(),
@@ -286,7 +288,6 @@ Format JSON mong đợi:
             maCongTrinh: String(parsed.maCongTrinh || '').trim(),
             tenCongTrinh: String(parsed.tenCongTrinh || '').trim(),
             items: itemsList,
-            // Giữ các trường tương thích ngược cấp 1 cho item đầu tiên
             maVatTu: itemsList[0]?.maVatTu || '',
             tenVatTu: itemsList[0]?.tenVatTu || '',
             batch: itemsList[0]?.batch || '',
@@ -294,20 +295,17 @@ Format JSON mong đợi:
             ghiChu: '',
             usedModel: modelName
           };
-
         } catch (err) {
-          console.warn(`[OCR AI Fallback] Model "${modelName}" gặp lỗi:`, err);
-          lastError = err;
           continue;
         }
       }
 
-      // Nếu tất cả các model đều thất bại
-      throw lastError || new Error('Tất cả các model AI đều không khả dụng hoặc đã vượt hạn mức quota. Vui lòng thử lại sau giây lát.');
+      throw new Error('Tất cả các model AI đều không khả dụng hoặc đã vượt hạn mức quota.');
     },
 
     /**
      * Xử lý file/ảnh và trích xuất dữ liệu
+     * Ưu tiên Edge Function phía server để giấu API Key hoàn toàn.
      * @param {File|Blob} fileOrBlob 
      * @returns {Promise<{success: boolean, data?: object, error?: string, rawBase64?: string}>}
      */
@@ -318,18 +316,29 @@ Format JSON mong đợi:
 
       try {
         const { base64Data, mimeType, dataUrl } = await this.fileToBase64(fileOrBlob);
-        const apiKey = this.getApiKey();
+        const customKey = this.getCustomApiKey();
 
-        if (!apiKey) {
-          return {
-            success: false,
-            needsApiKey: true,
-            dataUrl: dataUrl,
-            error: 'Chưa cấu hình Gemini API Key. Vui lòng bấm vào biểu tượng cài đặt để nhập API Key (miễn phí).'
-          };
+        let extractedData = null;
+
+        // Nếu có custom key người dùng tự cấu hình thì dùng direct call
+        if (customKey && customKey.trim().length > 10) {
+          extractedData = await this.callDirectGeminiVision(base64Data, mimeType, customKey);
+        } else {
+          // Mặc định gọi qua Supabase Edge Function bảo mật
+          extractedData = await this.callEdgeFunctionVision(base64Data, mimeType);
         }
 
-        const extractedData = await this.callGeminiVision(base64Data, mimeType, apiKey);
+        if (extractedData) {
+          if (Array.isArray(extractedData.items)) {
+            extractedData.items = extractedData.items.map(it => ({
+              ...it,
+              tenVatTu: this.mergeBatchIntoTenVatTu(it.tenVatTu, it.batch)
+            }));
+          }
+          if (extractedData.tenVatTu && extractedData.batch) {
+            extractedData.tenVatTu = this.mergeBatchIntoTenVatTu(extractedData.tenVatTu, extractedData.batch);
+          }
+        }
 
         return {
           success: true,
@@ -346,53 +355,14 @@ Format JSON mong đợi:
     },
 
     /**
-     * Test kết nối API Key và tìm model hoạt động
+     * Test kết nối API Key tùy chọn (nếu người dùng cấu hình thủ công)
      */
     testApiKey: async function (apiKey) {
       if (!apiKey || !apiKey.trim()) throw new Error('API Key không được để trống.');
-
-      // 1. Kiểm tra API Key và liệt kê model
       const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey.trim())}`;
       const listRes = await fetch(listUrl);
-
-      if (!listRes.ok) {
-        let msg = `API Key không hợp lệ (HTTP ${listRes.status})`;
-        try {
-          const json = await listRes.json();
-          if (json.error && json.error.message) msg = json.error.message;
-        } catch (_) { }
-        throw new Error(msg);
-      }
-
-      const listData = await listRes.json();
-      const models = listData.models || [];
-      const supported = models
-        .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
-        .map(m => (m.name || '').replace(/^models\//, ''));
-
-      if (supported.length === 0) {
-        throw new Error('API Key hợp lệ nhưng không tìm thấy model nào hỗ trợ generateContent.');
-      }
-
-      // Chọn model tốt nhất
-      let selectedModel = 'gemini-3.5-flash';
-      for (const cand of CANDIDATE_MODELS) {
-        if (supported.includes(cand)) {
-          selectedModel = cand;
-          break;
-        }
-      }
-      if (!supported.includes(selectedModel)) selectedModel = supported[0];
-
-      if (typeof sessionStorage !== 'undefined') {
-        sessionStorage.setItem(CACHED_MODEL_KEY, selectedModel);
-      }
-
-      return {
-        success: true,
-        model: selectedModel,
-        availableModelsCount: supported.length
-      };
+      if (!listRes.ok) throw new Error(`API Key không hợp lệ (HTTP ${listRes.status})`);
+      return { success: true };
     }
   };
 

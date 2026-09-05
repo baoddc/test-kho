@@ -1063,6 +1063,7 @@
       return !el.classList.contains('sidebar') &&
         !el.classList.contains('topbar') &&
         !el.classList.contains('sidebar-overlay') &&
+        !el.classList.contains('modal') &&
         el.tagName !== 'SCRIPT' &&
         el.id !== 'auth-modal';
     });
