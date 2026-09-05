@@ -1,9 +1,9 @@
 -- =============================================================================
--- SUPABASE USER MANAGEMENT RPC FUNCTIONS
+-- SUPABASE USER MANAGEMENT RPC FUNCTIONS (ĐÃ ĐƯỢC BẢO MẬT & KIỂM TRA QUYỀN ADMIN)
 -- Hướng dẫn: Chạy script này trong SQL Editor của Supabase Dashboard
 -- =============================================================================
 
--- 1. Hàm lấy danh sách tất cả người dùng (KHÔNG lấy password)
+-- 1. Hàm lấy danh sách tất cả người dùng (CHỈ ADMIN MỚI ĐƯỢC GỌI)
 DROP FUNCTION IF EXISTS public.admin_get_users();
 CREATE OR REPLACE FUNCTION public.admin_get_users()
 RETURNS TABLE (
@@ -22,6 +22,11 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 BEGIN
+    -- Kiểm tra quyền Admin bảo mật từ Database
+    IF public.is_admin() IS NOT TRUE THEN
+        RAISE EXCEPTION 'Truy cập bị từ chối: Chỉ Quản trị viên mới có quyền xem danh sách người dùng!';
+    END IF;
+
     RETURN QUERY
     SELECT 
         u.id,
@@ -39,7 +44,7 @@ BEGIN
 END;
 $$;
 
--- 2. Hàm Thêm mới hoặc Cập nhật thông tin & phân quyền người dùng
+-- 2. Hàm Thêm mới hoặc Cập nhật thông tin & phân quyền người dùng (CHỈ ADMIN MỚI ĐƯỢC GỌI)
 DROP FUNCTION IF EXISTS public.admin_save_user(BIGINT, TEXT, TEXT, TEXT, BOOLEAN, BOOLEAN, BOOLEAN, BOOLEAN, BOOLEAN);
 DROP FUNCTION IF EXISTS public.admin_save_user(BIGINT, TEXT, TEXT, TEXT, BOOLEAN, BOOLEAN, BOOLEAN, BOOLEAN, BOOLEAN, JSONB);
 CREATE OR REPLACE FUNCTION public.admin_save_user(
@@ -62,6 +67,11 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 BEGIN
+    -- Kiểm tra quyền Admin bảo mật từ Database
+    IF public.is_admin() IS NOT TRUE THEN
+        RAISE EXCEPTION 'Truy cập bị từ chối: Chỉ Quản trị viên mới có quyền tạo hoặc sửa người dùng!';
+    END IF;
+
     -- Thêm mới người dùng
     IF p_id IS NULL OR p_id = 0 THEN
         IF p_username IS NULL OR p_username = '' THEN
@@ -124,7 +134,8 @@ BEGIN
 END;
 $$;
 
--- 3. Hàm Xóa người dùng an toàn (Ngăn xóa tài khoản bao.lt)
+-- 3. Hàm Xóa người dùng an toàn (CHỈ ADMIN MỚI ĐƯỢC GỌI & Ngăn xóa tài khoản bao.lt)
+DROP FUNCTION IF EXISTS public.admin_delete_user(BIGINT);
 CREATE OR REPLACE FUNCTION public.admin_delete_user(
     p_user_id BIGINT
 )
@@ -138,6 +149,11 @@ AS $$
 DECLARE
     v_username TEXT;
 BEGIN
+    -- Kiểm tra quyền Admin bảo mật từ Database
+    IF public.is_admin() IS NOT TRUE THEN
+        RAISE EXCEPTION 'Truy cập bị từ chối: Chỉ Quản trị viên mới có quyền xóa người dùng!';
+    END IF;
+
     SELECT username INTO v_username FROM public.users WHERE id = p_user_id;
 
     IF v_username IS NULL THEN
@@ -156,3 +172,12 @@ BEGIN
     RETURN;
 END;
 $$;
+
+-- 4. THU HỒI QUYỀN THỰC THI TỪ ROLE ẨN DANH (ANON)
+REVOKE EXECUTE ON FUNCTION public.admin_get_users FROM anon;
+REVOKE EXECUTE ON FUNCTION public.admin_save_user FROM anon;
+REVOKE EXECUTE ON FUNCTION public.admin_delete_user FROM anon;
+
+GRANT EXECUTE ON FUNCTION public.admin_get_users TO authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_save_user TO authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_delete_user TO authenticated;

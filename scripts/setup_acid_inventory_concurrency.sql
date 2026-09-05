@@ -1,5 +1,6 @@
 -- =============================================================================
 -- SQL SETUP: CHUẨN HÓA DỮ LIỆU ACID & KIỂM SOÁT XUNG ĐỘT ĐỒNG THỜI (XG & TOLE)
+-- ĐÃ GIA CỐ BẢO MẬT: BẢO VỆ TOKEN JWT, PHÂN QUYỀN RLS & THU HỒI QUYỀN ROLE ẨN DANH (ANON)
 -- Chạy script này trong Supabase Dashboard -> SQL Editor
 -- =============================================================================
 
@@ -17,36 +18,44 @@ CREATE TABLE IF NOT EXISTS public.inventory_locks (
 CREATE INDEX IF NOT EXISTS idx_inventory_locks_lookup 
 ON public.inventory_locks (module_type, cuon_id, expires_at);
 
--- Bật Row Level Security và cấp quyền đọc/ghi công khai (hoặc theo auth) cho inventory_locks
+-- Bật Row Level Security và CHỈ CHO PHÉP TÀI KHOẢN ĐÃ ĐĂNG NHẬP
 ALTER TABLE public.inventory_locks ENABLE ROW LEVEL SECURITY;
 
-DO $$ 
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_policies 
-        WHERE tablename = 'inventory_locks' AND policyname = 'Allow all access to inventory_locks'
-    ) THEN
-        CREATE POLICY "Allow all access to inventory_locks" 
-        ON public.inventory_locks FOR ALL USING (true) WITH CHECK (true);
-    END IF;
-END $$;
+DROP POLICY IF EXISTS "Allow all access to inventory_locks" ON public.inventory_locks;
+DROP POLICY IF EXISTS "Locks authenticated select" ON public.inventory_locks;
+DROP POLICY IF EXISTS "Locks authenticated write" ON public.inventory_locks;
+
+CREATE POLICY "Locks authenticated select" ON public.inventory_locks
+    FOR SELECT TO authenticated
+    USING (true);
+
+CREATE POLICY "Locks authenticated write" ON public.inventory_locks
+    FOR ALL TO authenticated
+    USING (true)
+    WITH CHECK (true);
 
 
 -- 2. Ràng Buộc Cứng (Hard Unique Constraints) Chống Xuất Trùng Cuộn ID
-CREATE UNIQUE INDEX IF NOT EXISTS idx_uq_xg_xuat_cuon_id 
-ON public."xg-xuat" ("Cuộn ID") 
-WHERE "Cuộn ID" IS NOT NULL AND TRIM("Cuộn ID") != '';
+DO $$ BEGIN
+    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'xg-xuat') THEN
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_uq_xg_xuat_cuon_id 
+        ON public."xg-xuat" ("Cuộn ID") 
+        WHERE "Cuộn ID" IS NOT NULL AND TRIM("Cuộn ID") != '';
+    END IF;
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_uq_tole_xuat_cuon_id 
-ON public."tole-xuat" ("Cuộn ID") 
-WHERE "Cuộn ID" IS NOT NULL AND TRIM("Cuộn ID") != '';
+    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'tole-xuat') THEN
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_uq_tole_xuat_cuon_id 
+        ON public."tole-xuat" ("Cuộn ID") 
+        WHERE "Cuộn ID" IS NOT NULL AND TRIM("Cuộn ID") != '';
+    END IF;
+END $$;
 
 
 -- 3. Hàm RPC: Chiếm Khóa Tạm (Acquire Inventory Lock)
 CREATE OR REPLACE FUNCTION public.acquire_inventory_lock(
     p_module TEXT,
     p_cuon_id TEXT,
-    p_user TEXT,
+    p_user TEXT DEFAULT NULL,
     p_ttl_seconds INT DEFAULT 300
 )
 RETURNS BOOLEAN
@@ -55,7 +64,7 @@ SECURITY DEFINER
 AS $$
 DECLARE
     v_clean_cuon_id TEXT := TRIM(p_cuon_id);
-    v_clean_user TEXT := TRIM(COALESCE(p_user, 'Anonymous'));
+    v_clean_user TEXT := TRIM(COALESCE(NULLIF(auth.jwt() ->> 'email', ''), p_user, 'Anonymous'));
     v_now TIMESTAMPTZ := NOW();
     v_expires_at TIMESTAMPTZ := v_now + (p_ttl_seconds || ' seconds')::INTERVAL;
     v_existing RECORD;
@@ -100,14 +109,14 @@ $$;
 CREATE OR REPLACE FUNCTION public.release_inventory_lock(
     p_module TEXT,
     p_cuon_ids TEXT[],
-    p_user TEXT
+    p_user TEXT DEFAULT NULL
 )
 RETURNS VOID
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
-    v_clean_user TEXT := LOWER(TRIM(COALESCE(p_user, 'Anonymous')));
+    v_clean_user TEXT := LOWER(TRIM(COALESCE(NULLIF(auth.jwt() ->> 'email', ''), p_user, 'Anonymous')));
 BEGIN
     IF p_cuon_ids IS NULL OR array_length(p_cuon_ids, 1) IS NULL THEN
         RETURN;
@@ -120,6 +129,7 @@ BEGIN
           LOWER(TRIM(locked_by)) = v_clean_user 
           OR v_clean_user = 'admin' 
           OR v_clean_user = 'bao.lt'
+          OR v_clean_user = 'thaibao06061997@gmail.com'
       );
 END;
 $$;
@@ -150,10 +160,10 @@ END;
 $$;
 
 
--- 6. Hàm RPC Giao Dịch Xuất XG Nguyên Tử (Atomic XG Export)
+-- 6. Hàm RPC Giao Dịch Xuất XG Nguyên Tử (Atomic XG Export) - KIỂM TRA QUYỀN CAN_ADD
 CREATE OR REPLACE FUNCTION public.xuat_xg_atomic(
     p_records JSONB,
-    p_user TEXT
+    p_user TEXT DEFAULT NULL
 )
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -168,6 +178,16 @@ DECLARE
     v_row RECORD;
     v_now TIMESTAMPTZ := NOW();
 BEGIN
+    -- KIỂM TRA QUYỀN HẠN CỦA TÀI KHOẢN GỌI RPC NẾU ĐÃ ĐĂNG NHẬP
+    IF auth.uid() IS NOT NULL THEN
+        IF NOT (
+            (SELECT COALESCE(is_admin, false) FROM public.user_profiles WHERE id = auth.uid()) OR
+            (SELECT COALESCE(can_add, false) FROM public.user_profiles WHERE id = auth.uid())
+        ) THEN
+            RAISE EXCEPTION 'Truy cập bị từ chối: Tài khoản của bạn không có quyền Thêm dữ liệu (can_add = false)!';
+        END IF;
+    END IF;
+
     -- BƯỚC 1: KIỂM TRA TOÀN VẸN DỮ LIỆU TẤT CẢ CUỘN (VALIDATION & ISOLATION)
     FOR v_item IN SELECT * FROM jsonb_array_elements(p_records)
     LOOP
@@ -247,10 +267,10 @@ END;
 $$;
 
 
--- 7. Hàm RPC Giao Dịch Xuất TOLE Nguyên Tử (Atomic TOLE Export)
+-- 7. Hàm RPC Giao Dịch Xuất TOLE Nguyên Tử (Atomic TOLE Export) - KIỂM TRA QUYỀN CAN_ADD
 CREATE OR REPLACE FUNCTION public.xuat_tole_atomic(
     p_records JSONB,
-    p_user TEXT
+    p_user TEXT DEFAULT NULL
 )
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -265,6 +285,16 @@ DECLARE
     v_row RECORD;
     v_now TIMESTAMPTZ := NOW();
 BEGIN
+    -- KIỂM TRA QUYỀN HẠN CỦA TÀI KHOẢN GỌI RPC NẾU ĐÃ ĐĂNG NHẬP
+    IF auth.uid() IS NOT NULL THEN
+        IF NOT (
+            (SELECT COALESCE(is_admin, false) FROM public.user_profiles WHERE id = auth.uid()) OR
+            (SELECT COALESCE(can_add, false) FROM public.user_profiles WHERE id = auth.uid())
+        ) THEN
+            RAISE EXCEPTION 'Truy cập bị từ chối: Tài khoản của bạn không có quyền Thêm dữ liệu (can_add = false)!';
+        END IF;
+    END IF;
+
     -- BƯỚC 1: KIỂM TRA TOÀN VẸN DỮ LIỆU TẤT CẢ CUỘN (VALIDATION & ISOLATION)
     FOR v_item IN SELECT * FROM jsonb_array_elements(p_records)
     LOOP
@@ -344,3 +374,10 @@ BEGIN
     RETURN v_inserted_rows;
 END;
 $$;
+
+
+-- 8. THU HỒI QUYỀN THỰC THI TỪ ROLE ẨN DANH (ANON)
+REVOKE EXECUTE ON FUNCTION public.xuat_xg_atomic FROM anon;
+REVOKE EXECUTE ON FUNCTION public.xuat_tole_atomic FROM anon;
+GRANT EXECUTE ON FUNCTION public.xuat_xg_atomic TO authenticated;
+GRANT EXECUTE ON FUNCTION public.xuat_tole_atomic TO authenticated;
