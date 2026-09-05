@@ -137,6 +137,34 @@
     }, 300);
   }
 
+  function parseCoilBarcode(rawText) {
+    if (!rawText) return null;
+    const text = String(rawText).trim();
+    if (!text) return null;
+
+    // Split by '-'
+    const parts = text.split('-').map(p => p.trim()).filter(Boolean);
+    if (parts.length >= 3) {
+      const maVatTu = parts[0];
+      const rawKg = parts[parts.length - 1];
+      const batch = parts.slice(1, parts.length - 1).join('-');
+
+      const sanitizedKg = rawKg.replace(',', '.');
+      const kg = parseFloat(sanitizedKg);
+      if (isNaN(kg) || kg <= 0) {
+        return null;
+      }
+
+      return {
+        maVatTu,
+        batch,
+        kg,
+        rawText: text
+      };
+    }
+    return null;
+  }
+
   function closeQRCameraScanner() {
     if (html5QrCodeInstance) {
       try {
@@ -152,11 +180,18 @@
     }
   }
 
-  window.qrScannerService = {
+  const serviceExport = {
     parseLocationQRCode,
     getAllStandardRacks,
     openQRCameraScanner,
-    closeQRCameraScanner
+    closeQRCameraScanner,
+    parseCoilBarcode
   };
+
+  window.qrScannerService = serviceExport;
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = serviceExport;
+  }
 
 })(typeof window !== 'undefined' ? window : globalThis);
