@@ -2,6 +2,7 @@
  * =============================================================================
  * RECEIPT OCR SERVICE (Vision AI & Pattern Parser)
  * Tự động trích xuất thông tin từ ảnh Phiếu Xuất Kho (DDC / Phiếu kho)
+ * Sử dụng Supabase Edge Function để bảo vệ API Key tuyệt đối trên máy chủ
  * =============================================================================
  */
 
@@ -11,37 +12,20 @@
   const STORAGE_KEY = 'gemini_ocr_api_key';
   const CACHED_MODEL_KEY = 'gemini_cached_model_name';
 
-  // Obfuscated embedded API key (byte array with dynamic XOR transformation)
-  const _SEC_DATA = [27,48,70,46,20,69,214,197,164,211,201,214,220,207,216,160,187,129,128,174,146,186,130,163,50,81,86,64,40,106,116,30,111,49,126,63,29,59,59,14,2,53,177,195,232,194,218,250,216,248,217,230,177];
-  function _getEmbeddedKey() {
-    return String.fromCharCode(..._SEC_DATA.map((b, i) => b ^ ((0x5A + i * 7) & 0xFF)));
-  }
-
-  // Danh sách candidate models theo thứ tự ưu tiên độ ổn định và quota cao nhất
+  // Danh sách candidate models khi chạy direct test
   const CANDIDATE_MODELS = [
-    'gemini-3.5-flash',
-    'gemini-3.5-flash-lite',
-    'gemini-3.6-flash',
-    'gemini-3.1-flash-lite',
-    'gemini-flash-lite-latest',
     'gemini-2.5-flash',
-    'gemini-3.7-flash',
-    'gemini-flash-latest',
-    'gemini-2.5-pro',
     'gemini-1.5-flash',
-    'gemini-2.0-flash'
+    'gemini-2.0-flash',
+    'gemini-2.5-pro'
   ];
 
   const ReceiptOcrService = {
     /**
-     * Lấy API Key (ưu tiên custom nếu có, fallback về key mã hóa nhúng sẵn)
+     * Lấy API Key tùy chỉnh của người dùng nếu có (dùng cho môi trường dev riêng)
      */
-    getApiKey: function () {
-      const customKey = (typeof localStorage !== 'undefined' && localStorage.getItem(STORAGE_KEY)) || '';
-      if (customKey && customKey.trim().length > 10) {
-        return customKey.trim();
-      }
-      return _getEmbeddedKey();
+    getCustomApiKey: function () {
+      return (typeof localStorage !== 'undefined' && localStorage.getItem(STORAGE_KEY)) || '';
     },
 
     /**
@@ -59,48 +43,11 @@
     },
 
     /**
-     * Kiểm tra xem đã có API Key chưa (luôn sẵn sàng nhờ key tích hợp sẵn)
+     * Kiểm tra xem dịch vụ OCR có sẵn sàng không.
+     * Mặc định luôn sẵn sàng thông qua Supabase Edge Function (hoặc custom key nếu có).
      */
     hasApiKey: function () {
-      const key = this.getApiKey();
-      return Boolean(key && key.length > 10);
-    },
-
-    /**
-     * Tự động dò tìm model tốt nhất được hỗ trợ bởi API Key của người dùng
-     */
-    resolveWorkingModel: async function (apiKey) {
-      const cached = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(CACHED_MODEL_KEY) : null;
-      if (cached && CANDIDATE_MODELS.includes(cached)) return cached;
-
-      try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey.trim())}`;
-        const res = await fetch(url);
-        if (res.ok) {
-          const data = await res.json();
-          const models = data.models || [];
-          const supported = models
-            .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
-            .map(m => (m.name || '').replace(/^models\//, ''));
-
-          for (const cand of CANDIDATE_MODELS) {
-            if (supported.includes(cand)) {
-              if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(CACHED_MODEL_KEY, cand);
-              return cand;
-            }
-          }
-
-          if (supported.length > 0) {
-            const first = supported[0];
-            if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(CACHED_MODEL_KEY, first);
-            return first;
-          }
-        }
-      } catch (err) {
-        console.warn('ListModels failed, fallback to default candidate:', err);
-      }
-
-      return 'gemini-3.5-flash';
+      return true;
     },
 
     /**
@@ -141,9 +88,32 @@
     },
 
     /**
-     * Gọi Gemini Vision API để bóc tách thông tin phiếu xuất kho (Tự động luân chuyển model nếu bị 429 Quota Exceeded)
+     * Gọi Supabase Edge Function ocr-receipt để bóc tách thông tin bảo mật qua Server
      */
-    callGeminiVision: async function (base64Data, mimeType, apiKey) {
+    callEdgeFunctionVision: async function (base64Data, mimeType) {
+      if (!window.supabase || typeof window.supabase.functions?.invoke !== 'function') {
+        throw new Error('Supabase client chưa được khởi tạo đầy đủ.');
+      }
+
+      const { data, error } = await window.supabase.functions.invoke('ocr-receipt', {
+        body: { base64Data, mimeType }
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Lỗi kết nối máy chủ Supabase Edge Function.');
+      }
+
+      if (!data || !data.success) {
+        throw new Error(data?.error || 'Không thể bóc tách dữ liệu từ phiếu xuất.');
+      }
+
+      return data.data;
+    },
+
+    /**
+     * Fallback gọi Gemini Vision trực tiếp nếu người dùng cung cấp custom API Key
+     */
+    callDirectGeminiVision: async function (base64Data, mimeType, apiKey) {
       const prompt = `
 Bạn là chuyên gia OCR và trích xuất dữ liệu phiếu kho chứng từ tiếng Việt của CÔNG TY CỔ PHẦN CƠ KHÍ XÂY DỰNG THƯƠNG MẠI ĐẠI DŨNG (DAI DUNG).
 Hãy phân tích hình ảnh PHIẾU XUẤT KHO (GOODS ISSUE NOTE) được cung cấp và trích xuất thông tin theo cấu trúc JSON thuần túy (không chứa markdown, không chứa giải thích).
@@ -182,16 +152,9 @@ Format JSON mong đợi:
 }
 `;
 
-      // Xác định danh sách model cần thử theo thứ tự ưu tiên
-      const primaryModel = await this.resolveWorkingModel(apiKey);
-      const modelsToTry = [primaryModel, ...CANDIDATE_MODELS.filter(m => m !== primaryModel)];
-
-      let lastError = null;
-
-      for (const modelName of modelsToTry) {
+      for (const modelName of CANDIDATE_MODELS) {
         try {
           const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey.trim())}`;
-
           const requestBody = {
             contents: [
               {
@@ -219,44 +182,18 @@ Format JSON mong đợi:
             body: JSON.stringify(requestBody)
           });
 
-          if (!response.ok) {
-            let errMsg = `Lỗi API (${response.status}): ${response.statusText}`;
-            try {
-              const errJson = await response.json();
-              if (errJson.error && errJson.error.message) {
-                errMsg = errJson.error.message;
-              }
-            } catch (_) { }
-
-            // Nếu model bị 429 Quota Exceeded, 404 không tồn tại hoặc 503 tạm thời quá tải, tự động chuyển sang model kế tiếp
-            if (response.status === 429 || response.status === 404 || response.status === 503 || response.status === 500) {
-              console.warn(`[OCR AI Fallback] Model "${modelName}" trả về HTTP ${response.status} (${errMsg}). Đang tự động thử model kế tiếp...`);
-              lastError = new Error(`[${modelName}] ${errMsg}`);
-              continue;
-            }
-
-            throw new Error(errMsg);
-          }
+          if (!response.ok) continue;
 
           const resData = await response.json();
           const rawText = resData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-          if (!rawText) {
-            throw new Error(`Không nhận được dữ liệu phản hồi từ model "${modelName}".`);
-          }
+          if (!rawText) continue;
 
-          // Parse JSON an toàn
           let cleaned = rawText.trim();
           if (cleaned.startsWith('```json')) cleaned = cleaned.replace(/^```json/, '').replace(/```$/, '').trim();
           else if (cleaned.startsWith('```')) cleaned = cleaned.replace(/^```/, '').replace(/```$/, '').trim();
 
           const parsed = JSON.parse(cleaned);
 
-          // Cập nhật model hoạt động tốt vào sessionStorage
-          if (typeof sessionStorage !== 'undefined') {
-            sessionStorage.setItem(CACHED_MODEL_KEY, modelName);
-          }
-
-          // Chuẩn hóa danh sách items
           let itemsList = [];
           if (Array.isArray(parsed.items) && parsed.items.length > 0) {
             itemsList = parsed.items.map((it, idx) => ({
@@ -267,7 +204,6 @@ Format JSON mong đợi:
             })).filter(it => it.maVatTu || it.tenVatTu || it.batch);
           }
 
-          // Fallback nếu AI trả về trường đơn lẻ
           if (itemsList.length === 0) {
             itemsList = [{
               stt: 1,
@@ -277,7 +213,6 @@ Format JSON mong đợi:
             }];
           }
 
-          // Đảm bảo tuân thủ các quy tắc bất biến
           return {
             ngayXuat: this.normalizeDate(parsed.ngayXuat) || new Date().toISOString().split('T')[0],
             phieuXuat: String(parsed.phieuXuat || '').trim(),
@@ -286,7 +221,6 @@ Format JSON mong đợi:
             maCongTrinh: String(parsed.maCongTrinh || '').trim(),
             tenCongTrinh: String(parsed.tenCongTrinh || '').trim(),
             items: itemsList,
-            // Giữ các trường tương thích ngược cấp 1 cho item đầu tiên
             maVatTu: itemsList[0]?.maVatTu || '',
             tenVatTu: itemsList[0]?.tenVatTu || '',
             batch: itemsList[0]?.batch || '',
@@ -294,20 +228,17 @@ Format JSON mong đợi:
             ghiChu: '',
             usedModel: modelName
           };
-
         } catch (err) {
-          console.warn(`[OCR AI Fallback] Model "${modelName}" gặp lỗi:`, err);
-          lastError = err;
           continue;
         }
       }
 
-      // Nếu tất cả các model đều thất bại
-      throw lastError || new Error('Tất cả các model AI đều không khả dụng hoặc đã vượt hạn mức quota. Vui lòng thử lại sau giây lát.');
+      throw new Error('Tất cả các model AI đều không khả dụng hoặc đã vượt hạn mức quota.');
     },
 
     /**
      * Xử lý file/ảnh và trích xuất dữ liệu
+     * Ưu tiên Edge Function phía server để giấu API Key hoàn toàn.
      * @param {File|Blob} fileOrBlob 
      * @returns {Promise<{success: boolean, data?: object, error?: string, rawBase64?: string}>}
      */
@@ -318,18 +249,17 @@ Format JSON mong đợi:
 
       try {
         const { base64Data, mimeType, dataUrl } = await this.fileToBase64(fileOrBlob);
-        const apiKey = this.getApiKey();
+        const customKey = this.getCustomApiKey();
 
-        if (!apiKey) {
-          return {
-            success: false,
-            needsApiKey: true,
-            dataUrl: dataUrl,
-            error: 'Chưa cấu hình Gemini API Key. Vui lòng bấm vào biểu tượng cài đặt để nhập API Key (miễn phí).'
-          };
+        let extractedData = null;
+
+        // Nếu có custom key người dùng tự cấu hình thì dùng direct call
+        if (customKey && customKey.trim().length > 10) {
+          extractedData = await this.callDirectGeminiVision(base64Data, mimeType, customKey);
+        } else {
+          // Mặc định gọi qua Supabase Edge Function bảo mật
+          extractedData = await this.callEdgeFunctionVision(base64Data, mimeType);
         }
-
-        const extractedData = await this.callGeminiVision(base64Data, mimeType, apiKey);
 
         return {
           success: true,
@@ -346,53 +276,14 @@ Format JSON mong đợi:
     },
 
     /**
-     * Test kết nối API Key và tìm model hoạt động
+     * Test kết nối API Key tùy chọn (nếu người dùng cấu hình thủ công)
      */
     testApiKey: async function (apiKey) {
       if (!apiKey || !apiKey.trim()) throw new Error('API Key không được để trống.');
-
-      // 1. Kiểm tra API Key và liệt kê model
       const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey.trim())}`;
       const listRes = await fetch(listUrl);
-
-      if (!listRes.ok) {
-        let msg = `API Key không hợp lệ (HTTP ${listRes.status})`;
-        try {
-          const json = await listRes.json();
-          if (json.error && json.error.message) msg = json.error.message;
-        } catch (_) { }
-        throw new Error(msg);
-      }
-
-      const listData = await listRes.json();
-      const models = listData.models || [];
-      const supported = models
-        .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
-        .map(m => (m.name || '').replace(/^models\//, ''));
-
-      if (supported.length === 0) {
-        throw new Error('API Key hợp lệ nhưng không tìm thấy model nào hỗ trợ generateContent.');
-      }
-
-      // Chọn model tốt nhất
-      let selectedModel = 'gemini-3.5-flash';
-      for (const cand of CANDIDATE_MODELS) {
-        if (supported.includes(cand)) {
-          selectedModel = cand;
-          break;
-        }
-      }
-      if (!supported.includes(selectedModel)) selectedModel = supported[0];
-
-      if (typeof sessionStorage !== 'undefined') {
-        sessionStorage.setItem(CACHED_MODEL_KEY, selectedModel);
-      }
-
-      return {
-        success: true,
-        model: selectedModel,
-        availableModelsCount: supported.length
-      };
+      if (!listRes.ok) throw new Error(`API Key không hợp lệ (HTTP ${listRes.status})`);
+      return { success: true };
     }
   };
 
