@@ -1399,11 +1399,7 @@ async function handleReceiptImageProcess(file, label = '') {
 
     if (result.needsApiKey) {
       if (loadingOverlay) loadingOverlay.style.display = 'none';
-      const settingsModal = document.getElementById('ocrSettingsModal');
-      if (settingsModal) {
-        new bootstrap.Modal(settingsModal).show();
-      }
-      alert('Bạn cần nhập Gemini API Key (miễn phí từ Google) để tự động quét và phân tích phiếu xuất kho.');
+      alert('Không thể kết nối dịch vụ nhận diện ảnh. Vui lòng thử lại sau.');
       return;
     }
 
@@ -1439,7 +1435,6 @@ function initReceiptOcrHandlers() {
   const btnUpload = document.getElementById('btnUploadReceipt');
   const btnCamera = document.getElementById('btnCameraReceipt');
   const btnClear = document.getElementById('btnClearOcrImage');
-  const btnSettings = document.getElementById('btnOcrSettings');
 
   if (fileInput) {
     fileInput.addEventListener('change', (e) => {
@@ -1462,26 +1457,10 @@ function initReceiptOcrHandlers() {
     });
   }
 
-  if (btnSettings) {
-    btnSettings.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const modalEl = document.getElementById('ocrSettingsModal');
-      if (modalEl) {
-        const inputKey = document.getElementById('geminiApiKeyInput');
-        if (inputKey && window.ReceiptOcrService) {
-          inputKey.value = window.ReceiptOcrService.getApiKey() || '';
-        }
-        const statusDiv = document.getElementById('apiKeyTestStatus');
-        if (statusDiv) statusDiv.innerHTML = '';
-        new bootstrap.Modal(modalEl).show();
-      }
-    });
-  }
-
   // Drag & drop handlers
   if (dropzone) {
     dropzone.addEventListener('click', (e) => {
-      if (e.target.closest('#btnClearOcrImage') || e.target.closest('#btnOcrSettings') || e.target.closest('#btnCameraReceipt') || e.target.closest('#btnUploadReceipt') || e.target.closest('label') || e.target.closest('button')) return;
+      if (e.target.closest('#btnClearOcrImage') || e.target.closest('#btnCameraReceipt') || e.target.closest('#btnUploadReceipt') || e.target.closest('label') || e.target.closest('button')) return;
       if (fileInput) fileInput.click();
     });
 
@@ -1530,53 +1509,6 @@ function initReceiptOcrHandlers() {
       }
     }
   });
-
-  // Settings modal logic
-  const btnToggleVis = document.getElementById('btnToggleApiKeyVisibility');
-  const apiKeyInput = document.getElementById('geminiApiKeyInput');
-  if (btnToggleVis && apiKeyInput) {
-    btnToggleVis.addEventListener('click', () => {
-      apiKeyInput.type = apiKeyInput.type === 'password' ? 'text' : 'password';
-      btnToggleVis.innerHTML = apiKeyInput.type === 'password' ? '<i class="bi bi-eye"></i>' : '<i class="bi bi-eye-slash"></i>';
-    });
-  }
-
-  const btnSaveKey = document.getElementById('btnSaveApiKey');
-  if (btnSaveKey && apiKeyInput) {
-    btnSaveKey.addEventListener('click', () => {
-      if (window.ReceiptOcrService) {
-        window.ReceiptOcrService.setApiKey(apiKeyInput.value.trim());
-      }
-      bootstrap.Modal.getInstance(document.getElementById('ocrSettingsModal'))?.hide();
-      alert('Đã lưu cấu hình Gemini API Key thành công!');
-    });
-  }
-
-  const btnTestKey = document.getElementById('btnTestApiKey');
-  if (btnTestKey && apiKeyInput) {
-    btnTestKey.addEventListener('click', async () => {
-      const key = apiKeyInput.value.trim();
-      const statusDiv = document.getElementById('apiKeyTestStatus');
-      if (!key) {
-        if (statusDiv) statusDiv.innerHTML = '<span class="text-danger fw-bold">Vui lòng nhập API Key để kiểm tra.</span>';
-        return;
-      }
-
-      btnTestKey.disabled = true;
-      btnTestKey.textContent = 'Đang kiểm tra...';
-      if (statusDiv) statusDiv.innerHTML = '<span class="text-primary">Đang kết nối tới Google Gemini API...</span>';
-
-      try {
-        const testRes = await window.ReceiptOcrService.testApiKey(key);
-        if (statusDiv) statusDiv.innerHTML = `<span class="text-success fw-bold">✅ Kết nối thành công! Đã kích hoạt model: <code>${testRes.model}</code></span>`;
-      } catch (err) {
-        if (statusDiv) statusDiv.innerHTML = `<span class="text-danger fw-bold">❌ Kết nối thất bại: ${err.message}</span>`;
-      } finally {
-        btnTestKey.disabled = false;
-        btnTestKey.textContent = 'Kiểm tra kết nối';
-      }
-    });
-  }
 }
 
 
