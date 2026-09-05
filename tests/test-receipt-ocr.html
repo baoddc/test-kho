@@ -32,14 +32,17 @@
       const d2 = window.ReceiptOcrService.normalizeDate('2026-08-31');
       log('normalizeDate 2026-08-31 -> 2026-08-31', d2 === '2026-08-31', d2);
 
-      // Test 3: API Key management
-      window.ReceiptOcrService.setApiKey('test_api_key_1234567890');
-      log('setApiKey & getApiKey', window.ReceiptOcrService.getApiKey() === 'test_api_key_1234567890');
-      log('hasApiKey()', window.ReceiptOcrService.hasApiKey() === true);
+      // Test 3: API Key management (Embedded Key by default)
+      window.ReceiptOcrService.setApiKey('');
+      log('hasApiKey() with embedded key (localStorage empty)', window.ReceiptOcrService.hasApiKey() === true);
+      const defaultKey = window.ReceiptOcrService.getApiKey();
+      log('getApiKey() returns embedded key', defaultKey && defaultKey.startsWith('AQ.') && defaultKey.length > 20);
+
+      window.ReceiptOcrService.setApiKey('custom_test_api_key_1234567890');
+      log('setApiKey & getApiKey (custom override)', window.ReceiptOcrService.getApiKey() === 'custom_test_api_key_1234567890');
 
       window.ReceiptOcrService.setApiKey('');
-      log('clearApiKey', window.ReceiptOcrService.getApiKey() === '');
-      log('hasApiKey() after clear', window.ReceiptOcrService.hasApiKey() === false);
+      log('fallback to embedded key after clear custom', window.ReceiptOcrService.getApiKey() === defaultKey);
 
     } catch (e) {
       log('Execution Error', false, e.message);
