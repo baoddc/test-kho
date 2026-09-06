@@ -24,7 +24,7 @@
 - Consumes: Web Vibration API `navigator.vibrate`
 - Produces: `playBeepSuccess()` vừa phát âm thanh A5 vừa kích hoạt rung 100ms
 
-- [ ] **Step 1: Viết mã rung trong `playBeepSuccess`**
+- [x] **Step 1: Viết mã rung trong `playBeepSuccess`**
 Trong `assets/js/tem-nhan-kiem-ke/kiem-ke-storage.js`, bổ sung `navigator.vibrate(100)`:
 ```javascript
   function playBeepSuccess() {
@@ -48,7 +48,7 @@ Trong `assets/js/tem-nhan-kiem-ke/kiem-ke-storage.js`, bổ sung `navigator.vibr
   }
 ```
 
-- [ ] **Step 2: Commit Task 1**
+- [x] **Step 2: Commit Task 1**
 ```bash
 git add assets/js/tem-nhan-kiem-ke/kiem-ke-storage.js
 git commit -m "feat(kiem-ke): add haptic vibration feedback to playBeepSuccess"
@@ -65,7 +65,7 @@ git commit -m "feat(kiem-ke): add haptic vibration feedback to playBeepSuccess"
 - Consumes: `Html5Qrcode`, `playBeepSuccess`, `navigator.vibrate`
 - Produces: Camera quét dọc/ngang linh hoạt với `qrbox` vuông và native BarcodeDetector
 
-- [ ] **Step 1: Cập nhật cấu hình Html5Qrcode trong `startCameraScanner`**
+- [x] **Step 1: Cập nhật cấu hình Html5Qrcode trong `startCameraScanner`**
 Thay đổi `qrbox` sang hàm tính toán vuông thích ứng và thêm `experimentalFeatures`:
 ```javascript
         html5QrCodeScanner = new Html5Qrcode('cameraScannerReader', {
@@ -95,7 +95,7 @@ Trong `onScanSuccess`, bổ sung thêm rung haptic trực tiếp:
           }
 ```
 
-- [ ] **Step 2: Commit Task 2**
+- [x] **Step 2: Commit Task 2**
 ```bash
 git add assets/js/tem-nhan-kiem-ke/kiem-ke.js
 git commit -m "feat(kiem-ke): enable omnidirectional scanning and haptic buzz for inventory camera"
@@ -112,13 +112,13 @@ git commit -m "feat(kiem-ke): enable omnidirectional scanning and haptic buzz fo
 - Consumes: `Html5Qrcode`, `playBeepSoundLocal`
 - Produces: Camera cuộn tồn quét dọc/ngang với `qrbox` vuông và rung haptic tin cậy
 
-- [ ] **Step 1: Cập nhật `playBeepSoundLocal` có rung an toàn**
+- [x] **Step 1: Cập nhật `playBeepSoundLocal` có rung an toàn**
 Bổ sung `navigator.vibrate(100)` vào `playBeepSoundLocal` trước khi phát beep.
 
-- [ ] **Step 2: Cập nhật cấu hình camera trong `startCoilCameraScanner`**
+- [x] **Step 2: Cập nhật cấu hình camera trong `startCoilCameraScanner`**
 Khởi tạo `Html5Qrcode` với `experimentalFeatures: { useBarCodeDetectorIfSupported: true }` và `qrbox` vuông linh hoạt. Trong callback nhận diện thành công gọi `navigator.vibrate(100)`.
 
-- [ ] **Step 3: Commit Task 3**
+- [x] **Step 3: Commit Task 3**
 ```bash
 git add assets/js/tem-nhan-kiem-ke/vi-tri-ton.js
 git commit -m "feat(vi-tri-ton): add haptic vibration and omnidirectional scanning for coil camera"
@@ -135,11 +135,11 @@ git commit -m "feat(vi-tri-ton): add haptic vibration and omnidirectional scanni
 - Consumes: `Html5Qrcode`
 - Produces: Rung 100ms chuẩn hóa và kích hoạt `useBarCodeDetectorIfSupported: true`
 
-- [ ] **Step 1: Chuẩn hóa nhịp rung 100ms và cấu hình engine**
+- [x] **Step 1: Chuẩn hóa nhịp rung 100ms và cấu hình engine**
 Trong `playBeepSound()`: `navigator.vibrate(100)`.
 Trong `openQRCameraScanner()`: truyền `experimentalFeatures: { useBarCodeDetectorIfSupported: true }` cho instance và config.
 
-- [ ] **Step 2: Commit Task 4**
+- [x] **Step 2: Commit Task 4**
 ```bash
 git add assets/js/core/qr-scanner-service.js
 git commit -m "feat(qr-scanner): standardize 100ms haptic buzz and native barcode detector"
@@ -153,17 +153,17 @@ git commit -m "feat(qr-scanner): standardize 100ms haptic buzz and native barcod
 - Build: `scripts/sync-dist.js`
 - Target: `public/`, `dist/`, `dist-app/`
 
-- [ ] **Step 1: Chạy build đồng bộ**
+- [x] **Step 1: Chạy build đồng bộ**
 Run: `npm run build`
 Verify output files in `public/`, `dist/`, `dist-app/` match the source files.
 
-- [ ] **Step 2: Kiểm tra cú pháp JavaScript**
+- [x] **Step 2: Kiểm tra cú pháp JavaScript**
 Run: `node -c assets/js/tem-nhan-kiem-ke/kiem-ke.js`
 Run: `node -c assets/js/tem-nhan-kiem-ke/kiem-ke-storage.js`
 Run: `node -c assets/js/tem-nhan-kiem-ke/vi-tri-ton.js`
 Run: `node -c assets/js/core/qr-scanner-service.js`
 
-- [ ] **Step 3: Commit bản dựng đồng bộ**
+- [x] **Step 3: Commit bản dựng đồng bộ**
 ```bash
 git add public/ dist/ dist-app/
 git commit -m "chore: sync omnidirectional and haptic scanner updates to dist directories"
