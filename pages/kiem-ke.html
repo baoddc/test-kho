@@ -249,24 +249,24 @@
   </div>
 
   <!-- RESET CONFIRMATION MODAL -->
-  <div class="modal fade" id="resetConfirmModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content bg-dark text-light border-danger">
+  <div class="modal fade" id="resetConfirmModal" tabindex="-1" aria-hidden="true" style="z-index: 99995;">
+    <div class="modal-dialog modal-dialog-centered" style="z-index: 100000;">
+      <div class="modal-content bg-dark text-light border-danger" style="z-index: 100005;">
         <div class="modal-header border-secondary py-2">
           <h6 class="modal-title fw-bold text-danger"><i class="bi bi-arrow-counterclockwise me-2"></i> Xác Nhận Làm Lại Kiểm Kê</h6>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" onclick="window.hideResetModal && window.hideResetModal()"></button>
         </div>
         <div class="modal-body p-3">
           <p class="text-light mb-3">Bạn muốn làm lại kiểm kê theo tùy chọn nào dưới đây?</p>
           <div class="d-grid gap-2">
-            <button type="button" class="btn btn-danger d-flex align-items-center justify-content-start gap-2 py-2 px-3 text-start" id="btnResetAll">
+            <button type="button" class="btn btn-danger d-flex align-items-center justify-content-start gap-2 py-2 px-3 text-start" id="btnResetAll" onclick="window.performResetAll && window.performResetAll()">
               <i class="bi bi-trash3-fill fs-5"></i>
               <div>
                 <div class="fw-bold">Xóa Tất Cả (File Excel + Cuộn Quét)</div>
                 <small class="d-block opacity-75" style="font-size: 0.76rem;">Xóa file Excel cơ sở và toàn bộ cuộn đã quét để bắt đầu mới hoàn toàn</small>
               </div>
             </button>
-            <button type="button" class="btn btn-outline-warning d-flex align-items-center justify-content-start gap-2 py-2 px-3 text-start mt-1" id="btnResetScannedOnly">
+            <button type="button" class="btn btn-outline-warning d-flex align-items-center justify-content-start gap-2 py-2 px-3 text-start mt-1" id="btnResetScannedOnly" onclick="window.performResetScannedOnly && window.performResetScannedOnly()">
               <i class="bi bi-upc-scan fs-5"></i>
               <div>
                 <div class="fw-bold">Chỉ Xóa Cuộn Đã Quét (Giữ Lại File Excel)</div>
@@ -277,7 +277,7 @@
         </div>
         <div class="modal-footer border-secondary py-1 justify-content-between">
           <small class="text-muted fst-italic">Hành động này không thể hoàn tác</small>
-          <button type="button" class="btn btn-sm btn-secondary px-3" data-bs-dismiss="modal">Đóng</button>
+          <button type="button" class="btn btn-sm btn-secondary px-3" data-bs-dismiss="modal" onclick="window.hideResetModal && window.hideResetModal()">Đóng</button>
         </div>
       </div>
     </div>

@@ -232,3 +232,42 @@ body.fixed-viewport {
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
   min-width: 280px;
 }
+
+/* ==========================================================================
+   MODAL FIX: Đảm bảo Modal luôn nằm trên Backdrop và bấm được 100%
+   ========================================================================== */
+.modal-backdrop {
+  z-index: 99990 !important;
+  background-color: rgba(0, 0, 0, 0.65) !important;
+}
+
+.modal {
+  z-index: 99995 !important;
+  pointer-events: auto !important;
+}
+
+.modal-dialog {
+  z-index: 100000 !important;
+  position: relative !important;
+  pointer-events: auto !important;
+}
+
+.modal-content {
+  position: relative !important;
+  z-index: 100005 !important;
+  pointer-events: auto !important;
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+  border: 1px solid #475569 !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7) !important;
+}
+
+#resetConfirmModal button,
+#resetConfirmModal .btn,
+#cameraModal button,
+#cameraModal .btn {
+  position: relative !important;
+  z-index: 100010 !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
