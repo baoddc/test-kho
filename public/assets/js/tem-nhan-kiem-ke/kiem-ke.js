@@ -825,9 +825,10 @@ function initKiemKeApp() {
 
   function startCameraScanner() {
     if (typeof Html5Qrcode === 'undefined') {
-      if (cameraStatusText) {
-        cameraStatusText.textContent = 'Không thể mở camera. Bạn có thể nhập tay hoặc dùng súng quét!';
-        cameraStatusText.className = 'coil-status-text text-warning';
+      if (modalLastScanAlert) {
+        modalLastScanAlert.className = 'alert alert-warning py-2 px-3 small mb-2';
+        modalLastScanAlert.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i> Chưa tải được thư viện Camera. Bạn có thể nhập tay hoặc dùng súng quét mã!';
+        modalLastScanAlert.classList.remove('d-none');
       }
       return;
     }
@@ -842,41 +843,53 @@ function initKiemKeApp() {
           qrbox: { width: 320, height: 180 }
         };
 
+        const onScanSuccess = (decodedText) => {
+          const now = Date.now();
+          // Debounce: ignore immediate duplicate scanning of same coil within 2.5s
+          if (decodedText === lastCameraScanText && (now - lastCameraScanTime) < 2500) {
+            return;
+          }
+          lastCameraScanText = decodedText;
+          lastCameraScanTime = now;
+
+          if (modalBarcodeInput) modalBarcodeInput.value = decodedText;
+          const res = processScannedBarcode(decodedText);
+          updateModalScanFeedback(res, decodedText);
+        };
+
+        // Attempt facingMode environment (rear mobile camera), fallback to user (webcam/laptop)
         html5QrCodeScanner.start(
           { facingMode: 'environment' },
           config,
-          (decodedText) => {
-            const now = Date.now();
-            // Debounce: ignore immediate duplicate scanning of same coil within 2.5s
-            if (decodedText === lastCameraScanText && (now - lastCameraScanTime) < 2500) {
-              return;
-            }
-            lastCameraScanText = decodedText;
-            lastCameraScanTime = now;
-
-            if (modalBarcodeInput) modalBarcodeInput.value = decodedText;
-            const res = processScannedBarcode(decodedText);
-            updateModalScanFeedback(res, decodedText);
-          },
+          onScanSuccess,
           () => {}
-        ).then(() => {
-          if (cameraStatusText) {
-            cameraStatusText.textContent = 'Camera đang hoạt động. Hướng camera vào tem mã vạch...';
-            cameraStatusText.className = 'coil-status-text text-success';
+        ).catch(() => {
+          return html5QrCodeScanner.start(
+            { facingMode: 'user' },
+            config,
+            onScanSuccess,
+            () => {}
+          );
+        }).catch(() => {
+          if (Html5Qrcode.getCameras) {
+            return Html5Qrcode.getCameras().then(devices => {
+              if (devices && devices.length > 0) {
+                return html5QrCodeScanner.start(devices[0].id, config, onScanSuccess, () => {});
+              }
+              throw new Error('Không tìm thấy camera');
+            });
           }
+          throw new Error('Không thể mở camera');
         }).catch(err => {
           console.warn('Không thể mở camera:', err);
-          if (cameraStatusText) {
-            cameraStatusText.textContent = 'Không thể truy cập camera. Bạn có thể nhập tay hoặc dùng súng quét!';
-            cameraStatusText.className = 'coil-status-text text-warning';
+          if (modalLastScanAlert) {
+            modalLastScanAlert.className = 'alert alert-warning py-2 px-3 small mb-2';
+            modalLastScanAlert.innerHTML = '<i class="bi bi-info-circle me-1"></i> Không thể truy cập camera. Bạn có thể nhập tay hoặc dùng súng quét mã vạch!';
+            modalLastScanAlert.classList.remove('d-none');
           }
         });
       } catch (e) {
         console.warn('Camera error:', e);
-        if (cameraStatusText) {
-          cameraStatusText.textContent = 'Lỗi khởi tạo camera. Vui lòng thử lại!';
-          cameraStatusText.className = 'coil-status-text text-danger';
-        }
       }
     }, 250);
   }
