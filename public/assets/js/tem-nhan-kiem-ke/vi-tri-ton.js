@@ -344,6 +344,9 @@ function initViTriTonPage() {
      COIL SCANNER & BATCH INVENTORY LOOKUP LOGIC
      ============================================================================= */
   function playBeepSoundLocal() {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try { navigator.vibrate(100); } catch (e) {}
+    }
     if (window.qrScannerService && typeof window.qrScannerService.playBeepSound === 'function') {
       window.qrScannerService.playBeepSound();
       return;
@@ -753,16 +756,33 @@ function initViTriTonPage() {
 
     setTimeout(() => {
       try {
-        coilHtml5QrCodeInstance = new Html5Qrcode('coilCameraReader');
+        coilHtml5QrCodeInstance = new Html5Qrcode('coilCameraReader', {
+          experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true
+          }
+        });
         const config = {
           fps: 10,
-          qrbox: { width: 320, height: 180 }
+          qrbox: (viewfinderWidth, viewfinderHeight) => {
+            const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+            const edge = Math.floor(minEdge * 0.72);
+            return {
+              width: Math.max(220, Math.min(edge, 300)),
+              height: Math.max(220, Math.min(edge, 300))
+            };
+          },
+          experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true
+          }
         };
 
         coilHtml5QrCodeInstance.start(
           { facingMode: 'environment' },
           config,
           (decodedText) => {
+            if (typeof navigator !== 'undefined' && navigator.vibrate) {
+              try { navigator.vibrate(100); } catch (e) {}
+            }
             playBeepSoundLocal();
             if (coilBarcodeInput) coilBarcodeInput.value = decodedText;
             handleProcessCoilBarcode(decodedText);
@@ -770,7 +790,7 @@ function initViTriTonPage() {
           () => {}
         ).then(() => {
           if (coilCameraStatus) {
-            coilCameraStatus.textContent = 'Camera đang hoạt động. Hướng camera vào tem mã vạch...';
+            coilCameraStatus.textContent = 'Camera đang hoạt động. Hướng camera vào tem mã vạch (ngang/dọc)...';
             coilCameraStatus.className = 'coil-status-text text-success';
           }
         }).catch((err) => {

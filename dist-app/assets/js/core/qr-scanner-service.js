@@ -67,6 +67,9 @@
   }
 
   function playBeepSound() {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try { navigator.vibrate(100); } catch (e) {}
+    }
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const osc = ctx.createOscillator();
@@ -82,9 +85,6 @@
         ctx.close();
       }, 120);
     } catch (e) {}
-    if (navigator.vibrate) {
-      try { navigator.vibrate(80); } catch (e) {}
-    }
   }
 
   function openQRCameraScanner(onScanned, options = {}) {
@@ -109,8 +109,19 @@
         try { html5QrCodeInstance.stop().catch(() => {}); } catch (e) {}
       }
 
-      html5QrCodeInstance = new Html5Qrcode('qrScannerReader');
-      const config = { fps: 10, qrbox: { width: 220, height: 220 }, ...options };
+      html5QrCodeInstance = new Html5Qrcode('qrScannerReader', {
+        experimentalFeatures: {
+          useBarCodeDetectorIfSupported: true
+        }
+      });
+      const config = {
+        fps: 10,
+        qrbox: { width: 220, height: 220 },
+        experimentalFeatures: {
+          useBarCodeDetectorIfSupported: true
+        },
+        ...options
+      };
 
       html5QrCodeInstance.start(
         { facingMode: 'environment' },

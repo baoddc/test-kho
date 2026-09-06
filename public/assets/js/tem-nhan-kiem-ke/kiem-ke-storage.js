@@ -80,6 +80,9 @@
   }
 
   function playBeepSuccess() {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try { navigator.vibrate(100); } catch (e) {}
+    }
     const ctx = getAudioContext();
     if (!ctx) return;
     try {

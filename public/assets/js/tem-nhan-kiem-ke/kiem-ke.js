@@ -837,10 +837,24 @@ function initKiemKeApp() {
 
     setTimeout(() => {
       try {
-        html5QrCodeScanner = new Html5Qrcode('cameraScannerReader');
+        html5QrCodeScanner = new Html5Qrcode('cameraScannerReader', {
+          experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true
+          }
+        });
         const config = {
           fps: 10,
-          qrbox: { width: 320, height: 180 }
+          qrbox: (viewfinderWidth, viewfinderHeight) => {
+            const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+            const edge = Math.floor(minEdge * 0.72);
+            return {
+              width: Math.max(220, Math.min(edge, 300)),
+              height: Math.max(220, Math.min(edge, 300))
+            };
+          },
+          experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true
+          }
         };
 
         const onScanSuccess = (decodedText) => {
@@ -851,6 +865,10 @@ function initKiemKeApp() {
           }
           lastCameraScanText = decodedText;
           lastCameraScanTime = now;
+
+          if (typeof navigator !== 'undefined' && navigator.vibrate) {
+            try { navigator.vibrate(100); } catch (e) {}
+          }
 
           if (modalBarcodeInput) modalBarcodeInput.value = decodedText;
           const res = processScannedBarcode(decodedText);
