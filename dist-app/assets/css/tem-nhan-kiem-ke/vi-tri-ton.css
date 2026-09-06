@@ -505,5 +505,152 @@
   border-radius: 4px;
 }
 
+/* ==========================================================================
+   CAMERA CONTROLS OVERLAY: FLASH, SWITCH CAM, ZOOM IN/OUT (0.6x - 3.0x)
+   ========================================================================== */
+.scanner-viewport-box,
+.camera-viewport-box {
+  position: relative !important;
+  overflow: hidden !important;
+  border-radius: 8px;
+}
+
+.camera-overlay-controls {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.camera-overlay-toolbar-top {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
+  z-index: 25;
+}
+
+.cam-overlay-btn {
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #f8fafc;
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.cam-overlay-btn:hover {
+  background: rgba(30, 41, 59, 0.9);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-1px);
+}
+
+.cam-overlay-btn:active {
+  transform: translateY(0);
+}
+
+.cam-overlay-btn.torch-active {
+  background: #f59e0b !important;
+  color: #000 !important;
+  font-weight: 700;
+  border-color: #fbbf24 !important;
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.75) !important;
+}
+
+.cam-overlay-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.camera-overlay-zoom-bar {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  background: rgba(15, 23, 42, 0.82);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 24px;
+  padding: 5px 14px;
+  pointer-events: auto;
+  z-index: 25;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
+  max-width: 94%;
+}
+
+.camera-zoom-presets {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cam-zoom-btn {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #e2e8f0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 12px;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cam-zoom-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+
+.cam-zoom-btn.active {
+  background: #0284c7;
+  color: #fff;
+  border-color: #38bdf8;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
+}
+
+.camera-zoom-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.camera-zoom-slider {
+  width: 130px;
+  height: 4px;
+  accent-color: #38bdf8;
+  cursor: pointer;
+}
+
+.camera-zoom-val-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #38bdf8;
+  min-width: 32px;
+  text-align: center;
+}
+
 
 

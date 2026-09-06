@@ -823,7 +823,10 @@ function initKiemKeApp() {
     });
   }
 
-  function startCameraScanner() {
+  let kkCameraController = null;
+  let activeCameraDeviceId = null;
+
+  function startCameraScanner(preferredDeviceId = null) {
     if (typeof Html5Qrcode === 'undefined') {
       if (modalLastScanAlert) {
         modalLastScanAlert.className = 'alert alert-warning py-2 px-3 small mb-2';
@@ -833,7 +836,25 @@ function initKiemKeApp() {
       return;
     }
 
-    stopCameraScanner();
+    if (preferredDeviceId) {
+      activeCameraDeviceId = preferredDeviceId;
+    }
+
+    // Dừng scanner cũ nhưng giữ overlay nếu chỉ đổi camera
+    stopCameraScanner(false);
+
+    // Khởi tạo controller overlay
+    if (!kkCameraController && typeof CameraController !== 'undefined') {
+      kkCameraController = new CameraController({
+        container: 'cameraScannerContainer',
+        readerId: 'cameraScannerReader',
+        onCameraChanged: (newDeviceId) => {
+          activeCameraDeviceId = newDeviceId;
+          startCameraScanner(newDeviceId);
+        }
+      });
+      kkCameraController.init();
+    }
 
     setTimeout(() => {
       try {
@@ -875,44 +896,74 @@ function initKiemKeApp() {
           updateModalScanFeedback(res, decodedText);
         };
 
-        // Attempt facingMode environment (rear mobile camera), fallback to user (webcam/laptop)
-        html5QrCodeScanner.start(
-          { facingMode: 'environment' },
-          config,
-          onScanSuccess,
-          () => {}
-        ).catch(() => {
-          return html5QrCodeScanner.start(
-            { facingMode: 'user' },
+        const onScannerReady = () => {
+          if (kkCameraController) {
+            kkCameraController.setHtml5QrCode(html5QrCodeScanner);
+            if (activeCameraDeviceId) {
+              kkCameraController.setCurrentCameraById(activeCameraDeviceId);
+            }
+            kkCameraController.onScanStarted();
+          }
+        };
+
+        if (activeCameraDeviceId) {
+          html5QrCodeScanner.start(
+            activeCameraDeviceId,
             config,
             onScanSuccess,
             () => {}
-          );
-        }).catch(() => {
-          if (Html5Qrcode.getCameras) {
-            return Html5Qrcode.getCameras().then(devices => {
-              if (devices && devices.length > 0) {
-                return html5QrCodeScanner.start(devices[0].id, config, onScanSuccess, () => {});
-              }
-              throw new Error('Không tìm thấy camera');
-            });
-          }
-          throw new Error('Không thể mở camera');
-        }).catch(err => {
-          console.warn('Không thể mở camera:', err);
-          if (modalLastScanAlert) {
-            modalLastScanAlert.className = 'alert alert-warning py-2 px-3 small mb-2';
-            modalLastScanAlert.innerHTML = '<i class="bi bi-info-circle me-1"></i> Không thể truy cập camera. Bạn có thể nhập tay hoặc dùng súng quét mã vạch!';
-            modalLastScanAlert.classList.remove('d-none');
-          }
-        });
+          ).then(onScannerReady).catch(err => {
+            console.warn('Lỗi mở camera theo ID:', err);
+            startCameraScannerWithFacing(config, onScanSuccess, onScannerReady);
+          });
+        } else {
+          startCameraScannerWithFacing(config, onScanSuccess, onScannerReady);
+        }
       } catch (e) {
         console.warn('Camera error:', e);
       }
     }, 250);
   }
 
-  function stopCameraScanner() {
+  function startCameraScannerWithFacing(config, onScanSuccess, onScannerReady) {
+    html5QrCodeScanner.start(
+      { facingMode: 'environment' },
+      config,
+      onScanSuccess,
+      () => {}
+    ).then(onScannerReady).catch(() => {
+      return html5QrCodeScanner.start(
+        { facingMode: 'user' },
+        config,
+        onScanSuccess,
+        () => {}
+      ).then(onScannerReady);
+    }).catch(() => {
+      if (Html5Qrcode.getCameras) {
+        return Html5Qrcode.getCameras().then(devices => {
+          if (devices && devices.length > 0) {
+            activeCameraDeviceId = devices[0].id;
+            return html5QrCodeScanner.start(devices[0].id, config, onScanSuccess, () => {}).then(onScannerReady);
+          }
+          throw new Error('Không tìm thấy camera');
+        });
+      }
+      throw new Error('Không thể mở camera');
+    }).catch(err => {
+      console.warn('Không thể mở camera:', err);
+      if (modalLastScanAlert) {
+        modalLastScanAlert.className = 'alert alert-warning py-2 px-3 small mb-2';
+        modalLastScanAlert.innerHTML = '<i class="bi bi-info-circle me-1"></i> Không thể truy cập camera. Bạn có thể nhập tay hoặc dùng súng quét mã vạch!';
+        modalLastScanAlert.classList.remove('d-none');
+      }
+    });
+  }
+
+  function stopCameraScanner(destroyController = true) {
+    if (destroyController && kkCameraController) {
+      try { kkCameraController.destroy(); } catch (e) {}
+      kkCameraController = null;
+    }
     if (html5QrCodeScanner) {
       try {
         html5QrCodeScanner.stop().then(() => {
