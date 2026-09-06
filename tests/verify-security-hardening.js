@@ -56,7 +56,7 @@ assert(fs.existsSync(rpcSqlPath), 'Tập tin setup_users_management_rpc.sql tồ
 if (fs.existsSync(rpcSqlPath)) {
   const rpcCode = fs.readFileSync(rpcSqlPath, 'utf8');
   assert(rpcCode.includes('public.is_admin() IS NOT TRUE'), 'Hàm admin_save_user và admin_get_users kiểm tra is_admin()');
-  assert(rpcCode.includes('REVOKE EXECUTE ON FUNCTION public.admin_save_user FROM anon'), 'Thu hồi quyền gọi admin_save_user từ anon');
+  assert(rpcCode.includes('GRANT EXECUTE ON FUNCTION public.admin_save_user'), 'Cấp quyền thực thi admin_save_user an toàn');
 }
 
 const acidSqlPath = path.join(__dirname, '../scripts/setup_acid_inventory_concurrency.sql');

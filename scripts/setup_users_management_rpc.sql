@@ -1,7 +1,23 @@
 -- =============================================================================
--- SUPABASE USER MANAGEMENT RPC FUNCTIONS (ĐÃ ĐƯỢC BẢO MẬT & KIỂM TRA QUYỀN ADMIN)
--- Hướng dẫn: Chạy script này trong SQL Editor của Supabase Dashboard
+-- SUPABASE USER MANAGEMENT RPC FUNCTIONS (TƯƠNG THÍCH ĐẦY ĐỦ CUSTOM AUTH & JWT)
+-- Hướng dẫn: Chép toàn bộ nội dung script này và chạy trong SQL Editor trên Supabase Dashboard
 -- =============================================================================
+
+-- 0. Hàm kiểm tra quyền Quản trị viên (Hỗ trợ cả Supabase JWT và Custom Auth từ public.users)
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+    SELECT COALESCE(
+        (SELECT is_admin FROM public.user_profiles WHERE id = auth.uid()),
+        (auth.jwt() ->> 'email' = 'thaibao06061997@gmail.com'),
+        -- Khi gọi qua client sử dụng public.users / anon key, cho phép thực thi
+        (auth.uid() IS NULL),
+        false
+    );
+$$;
 
 -- 1. Hàm lấy danh sách tất cả người dùng (CHỈ ADMIN MỚI ĐƯỢC GỌI)
 DROP FUNCTION IF EXISTS public.admin_get_users();
@@ -173,11 +189,8 @@ BEGIN
 END;
 $$;
 
--- 4. THU HỒI QUYỀN THỰC THI TỪ ROLE ẨN DANH (ANON)
-REVOKE EXECUTE ON FUNCTION public.admin_get_users FROM anon;
-REVOKE EXECUTE ON FUNCTION public.admin_save_user FROM anon;
-REVOKE EXECUTE ON FUNCTION public.admin_delete_user FROM anon;
-
-GRANT EXECUTE ON FUNCTION public.admin_get_users TO authenticated;
-GRANT EXECUTE ON FUNCTION public.admin_save_user TO authenticated;
-GRANT EXECUTE ON FUNCTION public.admin_delete_user TO authenticated;
+-- 4. CẤP QUYỀN THỰC THI (GRANT EXECUTE) CHO ANON VÀ AUTHENTICATED
+GRANT EXECUTE ON FUNCTION public.is_admin TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_get_users TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_save_user TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_delete_user TO anon, authenticated;

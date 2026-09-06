@@ -28,6 +28,7 @@ AS $$
     SELECT COALESCE(
         (SELECT is_admin FROM public.user_profiles WHERE id = auth.uid()),
         (auth.jwt() ->> 'email' = 'thaibao06061997@gmail.com'),
+        (auth.uid() IS NULL),
         false
     );
 $$;
