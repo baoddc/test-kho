@@ -1864,15 +1864,29 @@ async function openInventoryModal(target, maVatTu = '', batch = '') {
       }
     }
 
-    // Lấy dữ liệu xuất đã được load sẵn trong _rawSupabaseData
-    const xuatAll = window._rawSupabaseData || [];
-
-    // Tìm các cuộn đã xuất
-    const exportedCuonIds = new Set(
-      xuatAll
-        .map(row => String(row['Cuộn ID'] || '').trim().toLowerCase())
-        .filter(cuonId => cuonId !== '')
-    );
+    // Lấy danh sách Cuộn ID đã xuất mới nhất từ Database tole-xuat
+    let exportedCuonIds = new Set();
+    try {
+      const { data: xuatData, error: xuatErr } = await supabase
+        .from('tole-xuat')
+        .select('"Cuộn ID"')
+        .not('"Cuộn ID"', 'is', null);
+      if (!xuatErr && Array.isArray(xuatData)) {
+        xuatData.forEach(row => {
+          const cid = String(row['Cuộn ID'] || '').trim().toLowerCase();
+          if (cid) exportedCuonIds.add(cid);
+        });
+      } else {
+        throw xuatErr || new Error('Không thể tải danh sách tole-xuat');
+      }
+    } catch (e) {
+      // Fallback sang local cache
+      const xuatAll = window._rawSupabaseData || [];
+      xuatAll.forEach(row => {
+        const cid = String(row['Cuộn ID'] || '').trim().toLowerCase();
+        if (cid) exportedCuonIds.add(cid);
+      });
+    }
 
     // Tính toán dữ liệu tồn: Lọc các cuộn trong tole-nhap chưa bị xuất
     let tonData = nhapAll.filter(row => {
@@ -1920,7 +1934,7 @@ async function openInventoryModal(target, maVatTu = '', batch = '') {
 
     if (window.inventoryLockService) {
       await window.inventoryLockService.cleanOrphanLocks(currentFormRolls);
-      await window.inventoryLockService.refreshLocks(true);
+      await window.inventoryLockService.refreshLocks(false);
     }
     renderInventoryTable(processedTon, '');
     if (loadingDiv) loadingDiv.style.display = 'none';

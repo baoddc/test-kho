@@ -153,21 +153,37 @@
     async refreshLocks(silent = false) {
       if (!window.supabase) return;
       try {
-        const now = new Date().toISOString();
-        const { data, error } = await window.supabase
-          .from('inventory_locks')
-          .select('cuon_id, locked_by, expires_at')
-          .eq('module_type', this.moduleType)
-          .gt('expires_at', now);
+        let locksData = null;
 
-        if (error) {
-          // Bảng chưa tạo hoặc lỗi quyền -> fallback RPC hoặc bỏ qua nhẹ nhàng
-          return;
+        // 1. Thử gọi RPC get_active_inventory_locks (SECURITY DEFINER, đáng tin cậy 100% cho mọi role)
+        try {
+          const { data: rpcData, error: rpcErr } = await window.supabase.rpc('get_active_inventory_locks', {
+            p_module: this.moduleType
+          });
+          if (!rpcErr && Array.isArray(rpcData)) {
+            locksData = rpcData;
+          }
+        } catch (rpcEx) {
+          // Bỏ qua nếu lỗi RPC
+        }
+
+        // 2. Fallback sang select trực tiếp từ bảng inventory_locks
+        if (!locksData) {
+          const now = new Date().toISOString();
+          const { data, error } = await window.supabase
+            .from('inventory_locks')
+            .select('cuon_id, locked_by, expires_at')
+            .eq('module_type', this.moduleType)
+            .gt('expires_at', now);
+
+          if (!error && Array.isArray(data)) {
+            locksData = data;
+          }
         }
 
         this.activeLocks.clear();
-        if (data && Array.isArray(data)) {
-          data.forEach(item => {
+        if (locksData && Array.isArray(locksData)) {
+          locksData.forEach(item => {
             const cid = String(item.cuon_id || '').trim();
             if (cid) {
               this.activeLocks.set(cid.toLowerCase(), {
@@ -282,6 +298,7 @@
             this.activeLocks.delete(key);
             this.myLockedRolls.delete(key);
             this.notifyListeners();
+            alert(`Cuộn "${cleanId}" đang được người khác giữ hoặc đã xuất kho trước đó! Vui lòng chọn cuộn khác.`);
           }
         }).catch(err => {
           console.warn('[InventoryLockService] acquireLock exception:', err);
@@ -402,13 +419,14 @@
 
       const key = cleanId.toLowerCase();
       const lock = this.activeLocks.get(key);
-      const currentUser = (typeof localStorage !== 'undefined' && localStorage.getItem('currentUser')) || this.currentUser || 'anonymous';
 
       if (!lock || !lock.expiresAt || lock.expiresAt <= Date.now()) {
         return { isLocked: false, lockedBy: '', isMe: false, remainingSeconds: 0 };
       }
 
-      const isMe = String(lock.lockedBy || '').trim().toLowerCase() === String(currentUser).trim().toLowerCase();
+      // Cuộn này là isMe khi chính tab/phiên này đang giữ khóa
+      // Nếu là tab khác hoặc thiết bị khác (dù cùng hay khác tài khoản) đều coi là người khác đang giữ
+      const isMe = this.myLockedRolls.has(key);
       const remainingSeconds = Math.max(0, Math.floor((lock.expiresAt - Date.now()) / 1000));
 
       return {

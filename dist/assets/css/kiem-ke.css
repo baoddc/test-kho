@@ -1,0 +1,234 @@
+/* ==========================================================================
+   KIEM KE KHO - STYLING (kiem-ke.css)
+   Thiết kế giao diện hiện đại, tối ưu kiểm kê bằng máy quét Barcode
+   ========================================================================== */
+
+:root {
+  --kk-bg-dark: #0f172a;
+  --kk-card-bg: #1e293b;
+  --kk-card-border: #334155;
+  --kk-text-main: #f8fafc;
+  --kk-text-muted: #94a3b8;
+  --kk-accent-blue: #38bdf8;
+  --kk-accent-green: #22c55e;
+  --kk-accent-red: #ef4444;
+  --kk-accent-amber: #f59e0b;
+  --kk-accent-purple: #a855f7;
+}
+
+body.fixed-viewport {
+  background-color: var(--kk-bg-dark);
+  color: var(--kk-text-main);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  min-height: 100vh;
+}
+
+/* Header & Top Bar */
+.kiem-ke-header-card {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border: 1px solid var(--kk-card-border) !important;
+  border-radius: 10px;
+}
+
+/* Auto-focus Scanner Input Box */
+.barcode-input-container {
+  position: relative;
+  min-width: 280px;
+  flex: 1;
+}
+
+.barcode-scanner-input {
+  background-color: #0b1329 !important;
+  color: #38bdf8 !important;
+  border: 2px solid #0284c7 !important;
+  font-family: 'Courier New', Courier, monospace;
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: 0.5px;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
+  transition: all 0.2s ease-in-out;
+}
+
+.barcode-scanner-input:focus {
+  background-color: #070d1e !important;
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.5) !important;
+  color: #7dd3fc !important;
+}
+
+/* Stat Cards */
+.kk-stat-card {
+  background-color: var(--kk-card-bg);
+  border: 1px solid var(--kk-card-border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.kk-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+}
+
+.kk-stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+}
+
+.kk-stat-card.card-batches::before { background-color: var(--kk-accent-blue); }
+.kk-stat-card.card-excel::before { background-color: #818cf8; }
+.kk-stat-card.card-system::before { background-color: #2dd4bf; }
+.kk-stat-card.card-scanned::before { background-color: var(--kk-accent-amber); }
+.kk-stat-card.card-status::before { background-color: var(--kk-accent-green); }
+
+.kk-stat-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--kk-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.kk-stat-value {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--kk-text-main);
+  line-height: 1.2;
+}
+
+.kk-stat-sub {
+  font-size: 0.75rem;
+  color: var(--kk-text-muted);
+  margin-top: 2px;
+}
+
+/* Data Tables */
+.kk-main-card {
+  background-color: var(--kk-card-bg);
+  border: 1px solid var(--kk-card-border);
+  border-radius: 10px;
+}
+
+.kk-table-container {
+  max-height: calc(100vh - 290px);
+  overflow-y: auto;
+}
+
+.kk-table {
+  color: #e2e8f0;
+  margin-bottom: 0;
+  vertical-align: middle;
+}
+
+.kk-table thead th {
+  background-color: #0f172a;
+  color: #94a3b8;
+  font-weight: 700;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid var(--kk-card-border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  white-space: nowrap;
+}
+
+.kk-table tbody tr {
+  border-bottom: 1px solid #334155;
+  transition: background-color 0.12s ease;
+}
+
+.kk-table tbody tr:hover {
+  background-color: rgba(56, 189, 248, 0.08);
+}
+
+.virtual-key-badge {
+  background-color: #0f172a;
+  color: #38bdf8;
+  border: 1px solid #0284c7;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-family: 'Courier New', Courier, monospace;
+  font-weight: 700;
+  font-size: 0.88rem;
+  display: inline-block;
+}
+
+/* Status Badges */
+.badge-status {
+  font-weight: 700;
+  font-size: 0.78rem;
+  padding: 5px 10px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.badge-status-match {
+  background-color: rgba(34, 197, 94, 0.18);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
+.badge-status-shortage {
+  background-color: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.badge-status-surplus {
+  background-color: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.badge-status-unscanned {
+  background-color: rgba(148, 163, 184, 0.15);
+  color: #cbd5e1;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.badge-status-extra {
+  background-color: rgba(168, 85, 247, 0.18);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.4);
+}
+
+/* Live Feed Row Highlight */
+.kk-feed-item-new {
+  animation: flashGreen 1.2s ease-out;
+}
+
+@keyframes flashGreen {
+  0% { background-color: rgba(34, 197, 94, 0.35); }
+  100% { background-color: transparent; }
+}
+
+/* Toast Container */
+#kkToastContainer {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1080;
+}
+
+.kk-toast {
+  background: #1e293b;
+  color: #f8fafc;
+  border: 1px solid #475569;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  min-width: 280px;
+}

@@ -701,6 +701,7 @@
       children: [
         { label: 'In tem QR Vị trí Kệ', href: '/pages/in-tem-vitri.html' },
         { label: 'Tra cứu Tồn theo Kệ', href: '/pages/vi-tri-ton.html' },
+        { label: 'Kiểm kê Tồn kho', href: '/pages/kiem-ke.html' },
       ]
     },
     {
