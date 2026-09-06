@@ -867,7 +867,7 @@ function initKiemKeApp() {
           lastCameraScanTime = now;
 
           if (typeof navigator !== 'undefined' && navigator.vibrate) {
-            try { navigator.vibrate(100); } catch (e) {}
+            try { navigator.vibrate([250, 100, 250]); } catch (e) {}
           }
 
           if (modalBarcodeInput) modalBarcodeInput.value = decodedText;

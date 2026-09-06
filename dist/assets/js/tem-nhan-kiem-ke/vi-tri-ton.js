@@ -345,7 +345,7 @@ function initViTriTonPage() {
      ============================================================================= */
   function playBeepSoundLocal() {
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
-      try { navigator.vibrate(100); } catch (e) {}
+      try { navigator.vibrate([250, 100, 250]); } catch (e) {}
     }
     if (window.qrScannerService && typeof window.qrScannerService.playBeepSound === 'function') {
       window.qrScannerService.playBeepSound();
@@ -781,7 +781,7 @@ function initViTriTonPage() {
           config,
           (decodedText) => {
             if (typeof navigator !== 'undefined' && navigator.vibrate) {
-              try { navigator.vibrate(100); } catch (e) {}
+              try { navigator.vibrate([250, 100, 250]); } catch (e) {}
             }
             playBeepSoundLocal();
             if (coilBarcodeInput) coilBarcodeInput.value = decodedText;
