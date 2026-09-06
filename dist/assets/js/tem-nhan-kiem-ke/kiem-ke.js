@@ -47,6 +47,15 @@ function initKiemKeApp() {
   // Camera Modal Elements
   const cameraModalEl = document.getElementById('cameraModal');
   const cameraStatusText = document.getElementById('cameraStatusText');
+  const modalBarcodeInput = document.getElementById('modalBarcodeInput');
+  const btnSubmitModalBarcode = document.getElementById('btnSubmitModalBarcode');
+  const modalLastScanAlert = document.getElementById('modalLastScanAlert');
+  const modalLastScanTitle = document.getElementById('modalLastScanTitle');
+  const modalLastScanTime = document.getElementById('modalLastScanTime');
+  const modalLastScanMaVT = document.getElementById('modalLastScanMaVT');
+  const modalLastScanBatch = document.getElementById('modalLastScanBatch');
+  const modalLastScanKg = document.getElementById('modalLastScanKg');
+  const modalLastScanCount = document.getElementById('modalLastScanCount');
 
   // Move modals directly to body once at startup so they are never clipped by parents
   const resetConfirmModalEl = document.getElementById('resetConfirmModal');
@@ -309,6 +318,8 @@ function initKiemKeApp() {
     barcodeInput.value = '';
     recalculateAndRender();
     keepFocusOnScanner();
+
+    return { rollItem, existingCount };
   }
 
   // Barcode input Enter listener
@@ -715,47 +726,159 @@ function initKiemKeApp() {
     showToast(`Đã xuất báo cáo kiểm kê: ${fileName}`, 'success');
   }
 
-  // 9. Camera Scanner (Html5Qrcode)
+  // In-modal Feedback helper
+  function updateModalScanFeedback(res, rawText) {
+    if (!modalLastScanAlert) return;
+    if (!res || !res.rollItem) {
+      modalLastScanAlert.className = 'alert alert-warning py-2 px-3 small mb-2';
+      if (modalLastScanTitle) modalLastScanTitle.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i> Mã không hợp lệ:';
+      if (modalLastScanTime) modalLastScanTime.textContent = new Date().toLocaleTimeString('vi-VN');
+      if (modalLastScanMaVT) modalLastScanMaVT.textContent = rawText || '---';
+      if (modalLastScanBatch) modalLastScanBatch.textContent = 'Sai định dạng tem';
+      if (modalLastScanKg) modalLastScanKg.textContent = '0 Kg';
+      if (modalLastScanCount) modalLastScanCount.textContent = 'Bỏ qua';
+      modalLastScanAlert.classList.remove('d-none');
+      return;
+    }
+
+    const { rollItem, existingCount } = res;
+    modalLastScanAlert.className = existingCount > 0 
+      ? 'alert alert-info py-2 px-3 small mb-2' 
+      : 'alert alert-success py-2 px-3 small mb-2';
+    
+    if (modalLastScanTitle) {
+      modalLastScanTitle.className = existingCount > 0 ? 'fw-bold text-info' : 'fw-bold text-success';
+      modalLastScanTitle.innerHTML = existingCount > 0 
+        ? `<i class="bi bi-info-circle-fill me-1"></i> Đã quét cuộn (lần ${existingCount + 1}):`
+        : `<i class="bi bi-check-circle-fill me-1"></i> Đã quét thành công cuộn mới:`;
+    }
+    if (modalLastScanTime) modalLastScanTime.textContent = rollItem.timestamp || new Date().toLocaleTimeString('vi-VN');
+    if (modalLastScanMaVT) modalLastScanMaVT.textContent = `Mã VT: ${rollItem.maVatTu}`;
+    if (modalLastScanBatch) modalLastScanBatch.textContent = `Batch: ${rollItem.batch || '(Không lô)'}`;
+    if (modalLastScanKg) modalLastScanKg.textContent = `${formatKg(rollItem.kg)} Kg`;
+    if (modalLastScanCount) {
+      modalLastScanCount.textContent = existingCount > 0 ? `Lần ${existingCount + 1}` : 'Cuộn mới';
+      modalLastScanCount.className = existingCount > 0 ? 'badge bg-warning text-dark' : 'badge bg-success';
+    }
+
+    modalLastScanAlert.classList.remove('d-none');
+  }
+
+  // 9. Camera Scanner (Html5Qrcode - Continuous Scanning)
+  let lastCameraScanText = '';
+  let lastCameraScanTime = 0;
+
   if (btnOpenScannerCamera) {
     btnOpenScannerCamera.addEventListener('click', () => {
       const modal = new bootstrap.Modal(cameraModalEl);
       modal.show();
-      startCameraScanner();
     });
   }
 
   if (cameraModalEl) {
+    cameraModalEl.addEventListener('shown.bs.modal', () => {
+      if (modalBarcodeInput) {
+        modalBarcodeInput.value = '';
+        modalBarcodeInput.focus();
+      }
+      startCameraScanner();
+    });
+
     cameraModalEl.addEventListener('hidden.bs.modal', () => {
       stopCameraScanner();
+      lastCameraScanText = '';
+      lastCameraScanTime = 0;
+      if (modalLastScanAlert) modalLastScanAlert.classList.add('d-none');
       keepFocusOnScanner();
+    });
+  }
+
+  // Modal input enter / click listeners
+  if (modalBarcodeInput) {
+    modalBarcodeInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const text = modalBarcodeInput.value.trim();
+        if (text) {
+          const res = processScannedBarcode(text);
+          updateModalScanFeedback(res, text);
+          modalBarcodeInput.value = '';
+          modalBarcodeInput.focus();
+        }
+      }
+    });
+  }
+
+  if (btnSubmitModalBarcode) {
+    btnSubmitModalBarcode.addEventListener('click', () => {
+      if (modalBarcodeInput) {
+        const text = modalBarcodeInput.value.trim();
+        if (text) {
+          const res = processScannedBarcode(text);
+          updateModalScanFeedback(res, text);
+          modalBarcodeInput.value = '';
+          modalBarcodeInput.focus();
+        }
+      }
     });
   }
 
   function startCameraScanner() {
     if (typeof Html5Qrcode === 'undefined') {
-      if (cameraStatusText) cameraStatusText.textContent = 'Thư viện Camera Scanner chưa được tải.';
+      if (cameraStatusText) {
+        cameraStatusText.textContent = 'Không thể mở camera. Bạn có thể nhập tay hoặc dùng súng quét!';
+        cameraStatusText.className = 'coil-status-text text-warning';
+      }
       return;
     }
+
     stopCameraScanner();
-    try {
-      html5QrCodeScanner = new Html5Qrcode('cameraScannerReader');
-      const config = { fps: 10, qrbox: { width: 250, height: 180 } };
-      html5QrCodeScanner.start(
-        { facingMode: 'environment' },
-        config,
-        (decodedText) => {
-          stopCameraScanner();
-          const modal = bootstrap.Modal.getInstance(cameraModalEl);
-          if (modal) modal.hide();
-          processScannedBarcode(decodedText);
-        },
-        () => {}
-      ).catch(err => {
-        if (cameraStatusText) cameraStatusText.textContent = 'Không thể truy cập camera thiết bị: ' + err;
-      });
-    } catch (e) {
-      console.error('Camera error:', e);
-    }
+
+    setTimeout(() => {
+      try {
+        html5QrCodeScanner = new Html5Qrcode('cameraScannerReader');
+        const config = {
+          fps: 10,
+          qrbox: { width: 320, height: 180 }
+        };
+
+        html5QrCodeScanner.start(
+          { facingMode: 'environment' },
+          config,
+          (decodedText) => {
+            const now = Date.now();
+            // Debounce: ignore immediate duplicate scanning of same coil within 2.5s
+            if (decodedText === lastCameraScanText && (now - lastCameraScanTime) < 2500) {
+              return;
+            }
+            lastCameraScanText = decodedText;
+            lastCameraScanTime = now;
+
+            if (modalBarcodeInput) modalBarcodeInput.value = decodedText;
+            const res = processScannedBarcode(decodedText);
+            updateModalScanFeedback(res, decodedText);
+          },
+          () => {}
+        ).then(() => {
+          if (cameraStatusText) {
+            cameraStatusText.textContent = 'Camera đang hoạt động. Hướng camera vào tem mã vạch...';
+            cameraStatusText.className = 'coil-status-text text-success';
+          }
+        }).catch(err => {
+          console.warn('Không thể mở camera:', err);
+          if (cameraStatusText) {
+            cameraStatusText.textContent = 'Không thể truy cập camera. Bạn có thể nhập tay hoặc dùng súng quét!';
+            cameraStatusText.className = 'coil-status-text text-warning';
+          }
+        });
+      } catch (e) {
+        console.warn('Camera error:', e);
+        if (cameraStatusText) {
+          cameraStatusText.textContent = 'Lỗi khởi tạo camera. Vui lòng thử lại!';
+          cameraStatusText.className = 'coil-status-text text-danger';
+        }
+      }
+    }, 250);
   }
 
   function stopCameraScanner() {

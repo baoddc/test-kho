@@ -229,20 +229,70 @@
 
   </div>
 
-  <!-- CAMERA SCANNER MODAL -->
-  <div class="modal fade" id="cameraModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content bg-dark text-light border-secondary">
-        <div class="modal-header border-secondary py-2">
-          <h6 class="modal-title fw-bold"><i class="bi bi-camera-fill me-2 text-primary"></i> Quét Mã Qua Camera</h6>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+  <!-- CAMERA SCANNER MODAL (QUÉT MÃ VẠCH / QR CUỘN THÉP) -->
+  <div class="modal fade" id="cameraModal" tabindex="-1" aria-labelledby="cameraModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content shadow-lg border-0 text-white">
+        <!-- Header matching vi-tri-ton design -->
+        <div class="modal-header py-2 px-3 align-items-center">
+          <div class="d-flex align-items-center gap-2">
+            <div class="rounded-3 d-flex align-items-center justify-content-center" style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.35); color: #10b981; width: 38px; height: 38px; flex-shrink: 0;">
+              <i class="bi bi-qr-code-scan fs-5"></i>
+            </div>
+            <div>
+              <h5 class="modal-title fw-bold text-white mb-0" style="font-size: 1.05rem;" id="cameraModalLabel">Quét Mã Vạch / QR Cuộn Thép</h5>
+              <div class="text-secondary" style="font-size: 0.8rem;">Hướng camera vào mã vạch trên tem cuộn (Quét liên tục)</div>
+            </div>
+          </div>
+          <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
-        <div class="modal-body text-center p-3">
-          <div id="cameraScannerReader" style="width: 100%; min-height: 280px; background: #000; border-radius: 8px; overflow: hidden;"></div>
-          <div class="small text-muted mt-2" id="cameraStatusText">Đang khởi động camera...</div>
+
+        <div class="modal-body p-3">
+          <!-- Camera Viewport with Laser Beam -->
+          <div id="cameraScannerContainer" class="scanner-viewport-box mb-2">
+            <div id="cameraScannerReader" style="width: 100%; min-height: 290px; background: #000;"></div>
+            <div class="scan-laser-line"></div>
+          </div>
+
+          <!-- Camera Status Text -->
+          <div class="text-center mb-3">
+            <span id="cameraStatusText" class="coil-status-text">Đang khởi động camera...</span>
+          </div>
+
+          <!-- Input Group: Keyboard icon + Input + Green Ghi nhận button -->
+          <div class="input-group coil-input-group mb-1 shadow-sm">
+            <span class="input-group-text">
+              <i class="bi bi-keyboard fs-6"></i>
+            </span>
+            <input type="text" id="modalBarcodeInput" class="form-control fw-semibold" placeholder="Nhập hoặc bắn mã (VD: 10001189-2X349VN-1472)..." autocomplete="off">
+            <button id="btnSubmitModalBarcode" class="btn btn-success fw-bold px-3 d-flex align-items-center gap-1 border-0" type="button">
+              <i class="bi bi-check2-circle"></i> Ghi nhận
+            </button>
+          </div>
+
+          <!-- Format Hint -->
+          <div class="coil-format-hint mb-3 px-1">
+            <i class="bi bi-info-circle me-1"></i> Định dạng tem cuộn: <span class="hint-pink">MãVT-Batch-Kg</span> hoặc <span class="hint-pink">MãVT-Batch</span>.
+          </div>
+
+          <!-- Live Scan Alert / In-modal feedback -->
+          <div id="modalLastScanAlert" class="alert alert-dark border-secondary py-2 px-3 small d-none" role="alert">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-1">
+              <span class="fw-bold text-success" id="modalLastScanTitle"><i class="bi bi-check-circle-fill me-1"></i> Đã quét thành công:</span>
+              <span class="badge bg-secondary" id="modalLastScanTime">--:--:--</span>
+            </div>
+            <div class="d-flex align-items-center gap-2 flex-wrap mt-1">
+              <span class="badge bg-primary" id="modalLastScanMaVT">Mã VT: ---</span>
+              <span class="badge bg-secondary text-light" id="modalLastScanBatch">Batch: ---</span>
+              <span class="badge bg-warning text-dark" id="modalLastScanKg">0 Kg</span>
+              <span class="badge bg-info text-dark" id="modalLastScanCount">Lần 1</span>
+            </div>
+          </div>
         </div>
-        <div class="modal-footer border-secondary py-1">
-          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Đóng</button>
+
+        <div class="modal-footer border-secondary py-2 justify-content-between">
+          <span class="small text-muted fst-italic">Camera quét liên tục các cuộn tiếp theo</span>
+          <button type="button" class="btn btn-sm btn-secondary px-4" data-bs-dismiss="modal">Hoàn thành &amp; Đóng</button>
         </div>
       </div>
     </div>

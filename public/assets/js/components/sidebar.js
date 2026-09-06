@@ -34,7 +34,7 @@
         const u = new URL(path);
         path = u.pathname;
       }
-    } catch (e) {}
+    } catch (e) { }
 
     // Strip hash and query parameters
     path = path.split('#')[0].split('?')[0].trim();
@@ -708,7 +708,7 @@
     },
     {
       id: 'nav-vitri-qr',
-      label: 'VỊ TRÍ & TEM QR',
+      label: 'TEM QR, KIỂM KÊ',
       icon: `<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>`,
       children: [
         { label: 'In tem QR Vị trí Kệ', href: '/pages/tem-nhan-kiem-ke/in-tem-vitri.html' },
@@ -1501,7 +1501,7 @@
                 pageTitle,
                 currentUrl
               );
-            } catch (e) {}
+            } catch (e) { }
           }
         }
       } catch (e) {
@@ -1710,7 +1710,7 @@
   async function fetchUserPermissionsFromSupabase(username) {
     const SUPABASE_URL = 'https://ahcethtonjwktjtmxzog.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_zxmsB9cyjDwi9ai9Vw-s1w_QlqKMG0S';
-    
+
     // 1. Thử gọi RPC admin_get_users để bypass RLS
     try {
       const resRpc = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_users`, {
@@ -1759,7 +1759,7 @@
     if (typeof rawAllowed === 'string') {
       try {
         rawAllowed = JSON.parse(rawAllowed);
-      } catch (e) {}
+      } catch (e) { }
     }
 
     if (Array.isArray(rawAllowed)) {
@@ -1843,7 +1843,7 @@
         if (typeof rawAllowed === 'string') {
           try {
             rawAllowed = JSON.parse(rawAllowed);
-          } catch (e) {}
+          } catch (e) { }
         }
 
         // Tính toán Checksum chuẩn hóa của quyền hiện tại trên DB
@@ -1947,7 +1947,7 @@
     if (isHome) {
       try {
         window.history.replaceState({ tabId: 'tab-home', url: initUrl, title: 'Trang chủ' }, document.title, initUrl);
-      } catch (e) {}
+      } catch (e) { }
     }
   }
 
@@ -1967,7 +1967,7 @@
           fullTitle,
           targetUrl
         );
-      } catch (e) {}
+      } catch (e) { }
     }
   }
 

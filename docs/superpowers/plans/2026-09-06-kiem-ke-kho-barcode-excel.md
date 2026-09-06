@@ -558,7 +558,7 @@ Run: `git add assets/js/kiem-ke.js tests/test-kiem-ke-e2e.js; git commit -m "fea
 - Modify: `assets/js/components/sidebar.js`
 - Modify: `scripts/sync-dist.js` (nếu cần)
 
-- [ ] **Step 1: Thêm mục menu 'Kiểm kê Tồn kho' vào `sidebar.js` dưới nhóm 'VỊ TRÍ & TEM QR'**
+- [ ] **Step 1: Thêm mục menu 'Kiểm kê Tồn kho' vào `sidebar.js` dưới nhóm 'TEM QR, KIỂM KÊ'**
 - [ ] **Step 2: Chạy build đồng bộ `npm run build`**
 
 Run: `npm run build`
