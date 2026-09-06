@@ -45,6 +45,15 @@
       // Bỏ qua dòng tiêu đề nếu chứa chữ "Mã vật tư" hoặc "Material"
       if (ma.toLowerCase().includes('mã') || ma.toLowerCase().includes('material')) continue;
 
+      // Cột H (index 7) là Tên vật tư trong file Excel nếu có
+      let ten = '';
+      if (row[7] !== undefined && row[7] !== null) {
+        const t = String(row[7]).trim();
+        if (t && !t.toLowerCase().includes('tên') && !t.toLowerCase().includes('description')) {
+          ten = t;
+        }
+      }
+
       const kg = normalizeNumber(row[14]);
       const vKey = buildVirtualKey(ma, batch);
       if (!vKey || vKey === '-') continue;
@@ -54,11 +63,13 @@
           virtualKey: vKey,
           maVatTu: ma,
           batch: batch,
+          tenVatTu: ten,
           totalKg: 0,
           count: 0
         });
       }
       const item = map.get(vKey);
+      if (!item.tenVatTu && ten) item.tenVatTu = ten;
       item.totalKg = Math.round((item.totalKg + kg) * 100) / 100;
       item.count += 1;
     }
@@ -133,6 +144,23 @@
       ...(scannedMap ? scannedMap.keys() : [])
     ]);
 
+    // Tạo từ điển tên vật tư theo Mã vật tư
+    const matNameDict = new Map();
+    if (systemMap) {
+      systemMap.forEach(v => {
+        if (v.maVatTu && v.tenVatTu && !matNameDict.has(v.maVatTu)) {
+          matNameDict.set(v.maVatTu, v.tenVatTu);
+        }
+      });
+    }
+    if (excelMap) {
+      excelMap.forEach(v => {
+        if (v.maVatTu && v.tenVatTu && !matNameDict.has(v.maVatTu)) {
+          matNameDict.set(v.maVatTu, v.tenVatTu);
+        }
+      });
+    }
+
     const result = [];
     allKeys.forEach(vKey => {
       const ex = excelMap ? excelMap.get(vKey) : null;
@@ -141,7 +169,7 @@
 
       const maVatTu = (ex && ex.maVatTu) || (sys && sys.maVatTu) || (sc && sc.maVatTu) || '';
       const batch = (ex && ex.batch) || (sys && sys.batch) || (sc && sc.batch) || '';
-      const tenVatTu = (sys && sys.tenVatTu) || '';
+      const tenVatTu = (sys && sys.tenVatTu) || (ex && ex.tenVatTu) || matNameDict.get(maVatTu) || '';
 
       const excelKg = ex ? ex.totalKg : 0;
       const excelCount = ex ? ex.count : 0;

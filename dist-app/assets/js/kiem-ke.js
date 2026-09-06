@@ -101,30 +101,46 @@ function initKiemKeApp() {
     }
 
     try {
-      const fetchFunc = typeof fetchAllFromSupabase === 'function'
-        ? fetchAllFromSupabase
-        : async (tbl) => {
-            if (!window.supabase) return [];
-            let rows = [], from = 0, batchSize = 1000, hasMore = true;
-            while (hasMore) {
-              const { data, error } = await supabase.from(tbl).select('*').order('id', { ascending: true }).range(from, from + batchSize - 1);
-              if (error) throw error;
-              if (data && data.length > 0) {
-                rows = rows.concat(data);
-                if (data.length < batchSize) hasMore = false;
-                else from += batchSize;
-              } else {
-                hasMore = false;
-              }
-            }
-            return rows;
-          };
+      let client = window.supabase;
+      if (!client || typeof client.from !== 'function') {
+        for (let w = 0; w < 15; w++) {
+          await new Promise(r => setTimeout(r, 100));
+          client = window.supabase;
+          if (client && typeof client.from === 'function') break;
+        }
+      }
+
+      const fetchFunc = async (tbl) => {
+        if (typeof window.fetchAllFromSupabase === 'function') {
+          return await window.fetchAllFromSupabase(tbl);
+        }
+        if (!client || typeof client.from !== 'function') {
+          console.warn(`Supabase client chưa sẵn sàng khi truy vấn ${tbl}`);
+          return [];
+        }
+        let rows = [], from = 0, batchSize = 1000, hasMore = true;
+        while (hasMore) {
+          const { data, error } = await client.from(tbl).select('*').order('id', { ascending: true }).range(from, from + batchSize - 1);
+          if (error) {
+            console.error(`Lỗi truy vấn bảng ${tbl}:`, error);
+            throw error;
+          }
+          if (data && data.length > 0) {
+            rows = rows.concat(data);
+            if (data.length < batchSize) hasMore = false;
+            else from += batchSize;
+          } else {
+            hasMore = false;
+          }
+        }
+        return rows;
+      };
 
       const [xgNhap, xgXuat, toleNhap, toleXuat] = await Promise.all([
-        fetchFunc('xg-nhap').catch(() => []),
-        fetchFunc('xg-xuat').catch(() => []),
-        fetchFunc('tole-nhap').catch(() => []),
-        fetchFunc('tole-xuat').catch(() => [])
+        fetchFunc('xg-nhap').catch(e => { console.warn('Lỗi xg-nhap:', e); return []; }),
+        fetchFunc('xg-xuat').catch(e => { console.warn('Lỗi xg-xuat:', e); return []; }),
+        fetchFunc('tole-nhap').catch(e => { console.warn('Lỗi tole-nhap:', e); return []; }),
+        fetchFunc('tole-xuat').catch(e => { console.warn('Lỗi tole-xuat:', e); return []; })
       ]);
 
       const xgExportedIds = new Set(xgXuat.map(r => String(r['Cuộn ID'] || '').trim().toLowerCase()).filter(Boolean));
