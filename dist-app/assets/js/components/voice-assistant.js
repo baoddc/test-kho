@@ -588,7 +588,7 @@
         return;
       }
       if (norm.includes('gioi thieu') || norm.includes('ve gioi thieu')) {
-        handleNavigation('/pages/about.html', "Giới thiệu");
+        handleNavigation('/pages/trang-chu/about.html', "Giới thiệu");
         return;
       }
 

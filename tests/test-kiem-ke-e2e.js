@@ -5,8 +5,8 @@ const {
   aggregateSystemStock,
   aggregateScannedRolls,
   reconcile3Way
-} = require('../assets/js/kiem-ke-engine.js');
-const { checkDuplicate } = require('../assets/js/kiem-ke-storage.js');
+} = require('../assets/js/tem-nhan-kiem-ke/kiem-ke-engine.js');
+const { checkDuplicate } = require('../assets/js/tem-nhan-kiem-ke/kiem-ke-storage.js');
 
 console.log('--- RUNNING FULL INVENTORY AUDIT E2E SIMULATION ---');
 

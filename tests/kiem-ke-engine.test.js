@@ -6,7 +6,7 @@ const {
   aggregateScannedRolls,
   reconcile3Way,
   normalizeNumber
-} = require('../assets/js/kiem-ke-engine.js');
+} = require('../assets/js/tem-nhan-kiem-ke/kiem-ke-engine.js');
 
 console.log('--- TEST KIEM KE ENGINE ---');
 

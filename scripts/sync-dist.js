@@ -3,11 +3,12 @@ const path = require('path');
 
 function syncDirectory(srcDir, destDir) {
   if (!fs.existsSync(srcDir)) return;
-  if (!fs.existsSync(destDir)) {
-    fs.mkdirSync(destDir, { recursive: true });
+  if (fs.existsSync(destDir)) {
+    fs.rmSync(destDir, { recursive: true, force: true });
   }
+  fs.mkdirSync(destDir, { recursive: true });
 
-  // Copy/update files from src to dest
+  // Copy files from src to dest
   fs.cpSync(srcDir, destDir, { recursive: true });
 }
 

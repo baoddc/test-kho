@@ -60,8 +60,20 @@
     }
 
     // Normalize home/index alias
-    if (path === '/index' || path === '/pages/home' || path === '/pages/index' || path === '/home') {
+    if (path === '/index' || path === '/pages/home' || path === '/pages/index' || path === '/home' || path === '/pages/trang-chu/home') {
       path = '/';
+    }
+
+    // Map legacy URLs to new subfolder paths
+    const LEGACY_MAP = {
+      '/pages/in-tem-vitri': '/pages/tem-nhan-kiem-ke/in-tem-vitri',
+      '/pages/vi-tri-ton': '/pages/tem-nhan-kiem-ke/vi-tri-ton',
+      '/pages/kiem-ke': '/pages/tem-nhan-kiem-ke/kiem-ke',
+      '/pages/about': '/pages/trang-chu/about',
+      '/pages/flower': '/pages/trang-chu/flower'
+    };
+    if (LEGACY_MAP[path]) {
+      path = LEGACY_MAP[path];
     }
 
     return path;
@@ -699,15 +711,15 @@
       label: 'VỊ TRÍ & TEM QR',
       icon: `<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>`,
       children: [
-        { label: 'In tem QR Vị trí Kệ', href: '/pages/in-tem-vitri.html' },
-        { label: 'Tra cứu Tồn theo Kệ', href: '/pages/vi-tri-ton.html' },
-        { label: 'Kiểm kê Tồn kho', href: '/pages/kiem-ke.html' },
+        { label: 'In tem QR Vị trí Kệ', href: '/pages/tem-nhan-kiem-ke/in-tem-vitri.html' },
+        { label: 'Tra cứu Tồn theo Kệ', href: '/pages/tem-nhan-kiem-ke/vi-tri-ton.html' },
+        { label: 'Kiểm kê Tồn kho', href: '/pages/tem-nhan-kiem-ke/kiem-ke.html' },
       ]
     },
     {
       id: 'nav-about',
       label: 'GIỚI THIỆU',
-      href: '/pages/about.html',
+      href: '/pages/trang-chu/about.html',
       icon: `<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`,
     },
     {
@@ -1370,6 +1382,25 @@
   }
 
   function openTab(url, title, updateHistory = true) {
+    // Resolve legacy URLs to new canonical paths
+    const LEGACY_URL_EXACT = {
+      '/pages/in-tem-vitri.html': '/pages/tem-nhan-kiem-ke/in-tem-vitri.html',
+      '/pages/in-tem-vitri': '/pages/tem-nhan-kiem-ke/in-tem-vitri.html',
+      '/pages/vi-tri-ton.html': '/pages/tem-nhan-kiem-ke/vi-tri-ton.html',
+      '/pages/vi-tri-ton': '/pages/tem-nhan-kiem-ke/vi-tri-ton.html',
+      '/pages/kiem-ke.html': '/pages/tem-nhan-kiem-ke/kiem-ke.html',
+      '/pages/kiem-ke': '/pages/tem-nhan-kiem-ke/kiem-ke.html',
+      '/pages/about.html': '/pages/trang-chu/about.html',
+      '/pages/about': '/pages/trang-chu/about.html',
+      '/pages/flower.html': '/pages/trang-chu/flower.html',
+      '/pages/flower': '/pages/trang-chu/flower.html'
+    };
+    const cleanUrlPath = url ? url.split('?')[0].split('#')[0] : '';
+    if (LEGACY_URL_EXACT[cleanUrlPath]) {
+      const rest = (url.includes('?') ? '?' + url.split('?')[1] : '') + (url.includes('#') ? '#' + url.split('#')[1] : '');
+      url = LEGACY_URL_EXACT[cleanUrlPath] + rest;
+    }
+
     if (!isPageAllowed(url)) {
       const currentUser = localStorage.getItem('currentUser');
       if (!currentUser) {
@@ -1426,7 +1457,7 @@
     iframe.src = iframeSrc;
     iframe.setAttribute('frameborder', '0');
 
-    const resolvedTitle = title || getTitleForUrl(url);
+    const resolvedTitle = (title && title !== 'Error') ? title : getTitleForUrl(url);
 
     const tabObj = {
       id: tabId,

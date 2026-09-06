@@ -1,6 +1,6 @@
 {
-  "version": "1.0.7",
-  "buildTime": "2026-07-28T18:20:00Z",
-  "releaseNotes": "Cập nhật hệ thống Quản lý Kho Phôi Cuộn - DDC (v1.0.7).",
+  "version": "1.0.8",
+  "buildTime": "2026-09-06T14:25:00Z",
+  "releaseNotes": "Tái cơ cấu thư mục tem-nhan-kiem-ke và trang-chu (v1.0.8).",
   "minExeVersion": "1.0.1"
 }

@@ -130,15 +130,35 @@ CREATE POLICY "Profiles update policy" ON public.user_profiles
 DROP POLICY IF EXISTS "Allow all access to inventory_locks" ON public.inventory_locks;
 DROP POLICY IF EXISTS "Locks authenticated select" ON public.inventory_locks;
 DROP POLICY IF EXISTS "Locks authenticated write" ON public.inventory_locks;
+DROP POLICY IF EXISTS "Locks anon select" ON public.inventory_locks;
 
+-- Cho phép authenticated đọc trạng thái khóa
 CREATE POLICY "Locks authenticated select" ON public.inventory_locks
     FOR SELECT TO authenticated
     USING (true);
 
+-- Cho phép anon đọc trạng thái khóa để hiển thị trực quan và tránh chọn trùng cuộn
+CREATE POLICY "Locks anon select" ON public.inventory_locks
+    FOR SELECT TO anon
+    USING (true);
+
+-- Chỉ authenticated mới có quyền ghi trực tiếp (hoặc thông qua RPC SECURITY DEFINER)
 CREATE POLICY "Locks authenticated write" ON public.inventory_locks
     FOR ALL TO authenticated
     USING (true)
     WITH CHECK (true);
+
+-- Thêm bảng inventory_locks vào publication supabase_realtime để đồng bộ tức thì
+DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_publication_tables 
+            WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'inventory_locks'
+        ) THEN
+            ALTER PUBLICATION supabase_realtime ADD TABLE public.inventory_locks;
+        END IF;
+    END IF;
+END $$;
 
 
 -- =============================================================================

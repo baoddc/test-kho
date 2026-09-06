@@ -356,10 +356,17 @@ function computePermissionDiff(username, oldPerms, newAllowedPagesPayload) {
     }
 
     const pageLabels = {
+        '/pages/trang-chu/home.html': 'Trang chủ',
+        '/pages/trang-chu/about.html': 'Giới thiệu',
         '/pages/home.html': 'Trang chủ',
         '/pages/about.html': 'Giới thiệu',
         '/pages/cong-viec.html': 'Công việc & Nhắc hẹn',
         '/pages/quan-ly-user.html': 'Quản lý Người dùng',
+        
+        // Nhóm TEM NHÃN & KIỂM KÊ
+        '/pages/tem-nhan-kiem-ke/in-tem-vitri.html': 'In tem QR Vị trí Kệ',
+        '/pages/tem-nhan-kiem-ke/vi-tri-ton.html': 'Tra cứu Tồn theo Kệ',
+        '/pages/tem-nhan-kiem-ke/kiem-ke.html': 'Kiểm kê Tồn kho',
         
         // Nhóm 5S
         '/pages/5s/5s-so-do-phoi-cuon.html': 'Sơ đồ kho Phôi cuộn',

@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { checkDuplicate } = require('../assets/js/kiem-ke-storage.js');
+const { checkDuplicate } = require('../assets/js/tem-nhan-kiem-ke/kiem-ke-storage.js');
 
 console.log('--- TEST KIEM KE STORAGE ---');
 

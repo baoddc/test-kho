@@ -21,9 +21,27 @@
       "source": "/pages/home.html",
       "destination": "/",
       "permanent": false
+    },
+    {
+      "source": "/pages/trang-chu/home",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/pages/trang-chu/home.html",
+      "destination": "/",
+      "permanent": false
     }
   ],
   "rewrites": [
+    {
+      "source": "/pages/trang-chu/home.html",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/pages/trang-chu/home",
+      "destination": "/index.html"
+    },
     {
       "source": "/pages/home.html",
       "destination": "/index.html"

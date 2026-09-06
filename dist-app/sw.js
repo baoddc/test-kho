@@ -9,7 +9,7 @@ const PRECACHE_ASSETS = [
   '/assets/images/icon-192.png',
   '/assets/images/icon-512.png',
   '/assets/images/apple-touch-icon.png',
-  '/pages/home.html',
+  '/pages/trang-chu/home.html',
   '/pages/index.html'
 ];
 
