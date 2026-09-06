@@ -54,6 +54,8 @@ function initKiemKeApp() {
   let activeSystemRolls = [];
   let reconciledList = [];
   let html5QrCodeScanner = null;
+  let lastScanBarcode = '';
+  let lastScanTime = 0;
 
   // Restore Session
   const savedSession = window.KiemKeStorage ? window.KiemKeStorage.loadSession() : { scannedRolls: [], excelMetadata: null };
@@ -207,14 +209,18 @@ function initKiemKeApp() {
     if (!rawBarcode || !rawBarcode.trim()) return;
     const text = rawBarcode.trim();
 
-    // Check duplicate
-    if (window.KiemKeStorage.checkDuplicate(scannedRolls, text)) {
-      window.KiemKeStorage.playBoopError();
-      showToast(`CẢNH BÁO: Cuộn "${text}" đã được quét trước đó!`, 'danger');
+    // Chống dội phím phần cứng máy quét (nếu cùng 1 chuỗi nhận liên tiếp trong vòng 600ms)
+    const nowTs = Date.now();
+    if (lastScanBarcode === text && (nowTs - lastScanTime < 600)) {
       barcodeInput.value = '';
       keepFocusOnScanner();
       return;
     }
+    lastScanBarcode = text;
+    lastScanTime = nowTs;
+
+    // Đếm số lần mã Barcode này đã được quét trước đó (hỗ trợ nhiều cuộn có cùng tem Barcode)
+    const existingCount = scannedRolls.filter(r => String(r.barcode).trim().toLowerCase() === text.toLowerCase()).length;
 
     // Parse Barcode
     let parsed = null;
@@ -267,7 +273,11 @@ function initKiemKeApp() {
     scannedRolls.unshift(rollItem);
     window.KiemKeStorage.saveSession(scannedRolls, excelMeta);
 
-    showToast(`Đã ghi nhận cuộn: ${rollItem.maVatTu} - ${rollItem.batch} (${formatKg(rollItem.kg)} kg)`, 'success');
+    if (existingCount > 0) {
+      showToast(`Đã thêm cuộn (lần ${existingCount + 1}): ${rollItem.maVatTu} - ${rollItem.batch} (${formatKg(rollItem.kg)} kg)`, 'info');
+    } else {
+      showToast(`Đã ghi nhận cuộn: ${rollItem.maVatTu} - ${rollItem.batch} (${formatKg(rollItem.kg)} kg)`, 'success');
+    }
 
     barcodeInput.value = '';
     recalculateAndRender();

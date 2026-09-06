@@ -38,21 +38,16 @@ assert.strictEqual(systemMap.size, 3);
 assert.strictEqual(systemMap.get('10001189-2.5X75VN').totalKg, 2500);
 console.log('✅ Bước 2: Tải và SUMIF tồn hệ thống Supabase thành công.');
 
-// 3. Giả lập quét Barcode bằng máy quét
+// 3. Giả lập quét Barcode bằng máy quét (Hỗ trợ nhiều cuộn có cùng Barcode tem)
 const scannedRolls = [];
 const barcodesToScan = [
-  '10001189-2.5X75VN-2500', // Cuộn 1: Khớp 2500kg
-  '10001200-BATCH-01-1200', // Cuộn 2: Thiếu (chỉ mới quét 1200 / 2000)
-  '10001189-2.5X75VN-2500', // Cuộn 3: Trùng cuộn 1 -> phải bị từ chối
+  '10001189-2.5X75VN-2500', // Cuộn 1: 2500kg -> Khớp File (2500kg)
+  '10001200-BATCH-01-1000', // Cuộn 2: 1000kg
+  '10001200-BATCH-01-1000', // Cuộn 3: Trùng Barcode với cuộn 2 (cùng quy cách 1000kg) -> Tổng batch = 2000kg (Khớp File)
   '10009999-OUT-500'        // Cuộn 4: Ngoài danh mục File Excel
 ];
 
 barcodesToScan.forEach(barcode => {
-  const isDup = checkDuplicate(scannedRolls, barcode);
-  if (isDup) {
-    console.log(`ℹ️ [Chống quét trùng] Đã chặn quét trùng: ${barcode}`);
-    return;
-  }
   const parts = barcode.split('-');
   const kg = parseFloat(parts[parts.length - 1]);
   scannedRolls.push({
@@ -63,8 +58,8 @@ barcodesToScan.forEach(barcode => {
   });
 });
 
-assert.strictEqual(scannedRolls.length, 3, 'Chỉ ghi nhận 3 cuộn (1 cuộn trùng bị loại bỏ)');
-console.log('✅ Bước 3: Máy quét ghi nhận đúng, chặn quét trùng thành công.');
+assert.strictEqual(scannedRolls.length, 4, 'Cả 4 cuộn đều được ghi nhận đầy đủ');
+console.log('✅ Bước 3: Cho phép quét nhiều cuộn có cùng tem Barcode thành công.');
 
 // 4. Đối soát 3 chiều SUMIF
 const scannedMap = aggregateScannedRolls(scannedRolls);
@@ -81,8 +76,10 @@ assert.strictEqual(row1.status, 'MATCH');
 assert.strictEqual(row1.diffScannedVsExcelKg, 0);
 
 const row2 = reconciled.find(r => r.virtualKey === '10001200-BATCH-01');
-assert.strictEqual(row2.status, 'SHORTAGE');
-assert.strictEqual(row2.diffScannedVsExcelKg, -800); // Thiếu 800kg
+assert.strictEqual(row2.status, 'MATCH'); // 2 cuộn mỗi cuộn 1000kg -> tổng 2000kg khớp File
+assert.strictEqual(row2.scannedKg, 2000);
+assert.strictEqual(row2.scannedCount, 2);
+assert.strictEqual(row2.diffScannedVsExcelKg, 0);
 
 const row3 = reconciled.find(r => r.virtualKey === '10001300-BATCH-EXTRA');
 assert.strictEqual(row3.status, 'UNSCANNED'); // Chưa quét
