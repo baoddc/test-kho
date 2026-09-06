@@ -56,6 +56,15 @@
     }
   }
 
+  function clearScannedOnly() {
+    if (typeof localStorage === 'undefined') return;
+    try {
+      localStorage.removeItem(SESSION_KEY);
+    } catch (e) {
+      console.warn('Lỗi xóa LocalStorage:', e);
+    }
+  }
+
   // Web Audio API Synthesizer
   let audioCtx = null;
   function getAudioContext() {
@@ -109,6 +118,7 @@
     saveSession,
     loadSession,
     clearSession,
+    clearScannedOnly,
     playBeepSuccess,
     playBoopError
   };

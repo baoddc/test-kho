@@ -18,6 +18,8 @@ function initKiemKeApp() {
   const btnRefreshSystemData = document.getElementById('btnRefreshSystemData');
   const btnExportExcelReport = document.getElementById('btnExportExcelReport');
   const btnResetSession = document.getElementById('btnResetSession');
+  const btnResetAll = document.getElementById('btnResetAll');
+  const btnResetScannedOnly = document.getElementById('btnResetScannedOnly');
   const btnConfirmReset = document.getElementById('btnConfirmReset');
   const btnClearFeedOnly = document.getElementById('btnClearFeedOnly');
 
@@ -522,30 +524,90 @@ function initKiemKeApp() {
   }
 
   // 7. Reset Session
+  function performResetAll() {
+    scannedRolls = [];
+    excelMap = new Map();
+    excelMeta = null;
+    if (excelFileInput) excelFileInput.value = '';
+    if (lblExcelFileName) lblExcelFileName.textContent = 'Nạp File Excel Cơ Sở';
+    if (excelFileBadge) {
+      excelFileBadge.textContent = '0 dòng';
+      excelFileBadge.classList.add('d-none');
+    }
+    window.KiemKeStorage.clearSession();
+    showToast('Đã làm lại toàn bộ phiên kiểm kê (xóa file Excel và cuộn quét).', 'info');
+    recalculateAndRender();
+    keepFocusOnScanner();
+  }
+
+  function performResetScannedOnly() {
+    scannedRolls = [];
+    window.KiemKeStorage.clearScannedOnly();
+    if (excelMeta) {
+      window.KiemKeStorage.saveSession([], excelMeta);
+    }
+    showToast('Đã xóa toàn bộ cuộn đã quét (Giữ lại file Excel cơ sở).', 'info');
+    recalculateAndRender();
+    keepFocusOnScanner();
+  }
+
+  function hideResetModal() {
+    const modalEl = document.getElementById('resetConfirmModal');
+    if (!modalEl) return;
+    const bs = window.bootstrap || (typeof bootstrap !== 'undefined' ? bootstrap : null);
+    if (bs && bs.Modal) {
+      const inst = bs.Modal.getInstance(modalEl);
+      if (inst) inst.hide();
+    }
+    modalEl.classList.remove('show');
+    modalEl.style.display = 'none';
+    const backdrop = document.querySelector('.modal-backdrop');
+    if (backdrop) backdrop.remove();
+    document.body.classList.remove('modal-open');
+  }
+
   if (btnResetSession) {
     btnResetSession.addEventListener('click', () => {
-      const modal = new bootstrap.Modal(document.getElementById('resetConfirmModal'));
-      modal.show();
+      const modalEl = document.getElementById('resetConfirmModal');
+      if (modalEl && modalEl.parentElement !== document.body) {
+        document.body.appendChild(modalEl);
+      }
+      const bs = window.bootstrap || (typeof bootstrap !== 'undefined' ? bootstrap : null);
+      if (bs && bs.Modal) {
+        const modal = bs.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+      } else {
+        if (confirm('Bạn muốn làm lại kiểm kê?\n\n- Bấm OK để Xóa tất cả (File Excel + Cuộn quét).\n- Bấm Cancel để giữ nguyên.')) {
+          performResetAll();
+        }
+      }
     });
   }
+
+  if (btnResetAll) {
+    btnResetAll.addEventListener('click', () => {
+      hideResetModal();
+      performResetAll();
+    });
+  }
+
+  if (btnResetScannedOnly) {
+    btnResetScannedOnly.addEventListener('click', () => {
+      hideResetModal();
+      performResetScannedOnly();
+    });
+  }
+
   if (btnConfirmReset) {
     btnConfirmReset.addEventListener('click', () => {
-      scannedRolls = [];
-      window.KiemKeStorage.clearSession();
-      const modal = bootstrap.Modal.getInstance(document.getElementById('resetConfirmModal'));
-      if (modal) modal.hide();
-      showToast('Đã đặt lại phiên kiểm kê.', 'info');
-      recalculateAndRender();
-      keepFocusOnScanner();
+      hideResetModal();
+      performResetAll();
     });
   }
+
   if (btnClearFeedOnly) {
     btnClearFeedOnly.addEventListener('click', () => {
-      scannedRolls = [];
-      window.KiemKeStorage.saveSession(scannedRolls, excelMeta);
-      showToast('Đã xóa toàn bộ cuộn đã quét.', 'info');
-      recalculateAndRender();
-      keepFocusOnScanner();
+      performResetScannedOnly();
     });
   }
   if (btnRefreshSystemData) {

@@ -250,18 +250,34 @@
 
   <!-- RESET CONFIRMATION MODAL -->
   <div class="modal fade" id="resetConfirmModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content bg-dark text-light border-danger">
         <div class="modal-header border-secondary py-2">
-          <h6 class="modal-title fw-bold text-danger"><i class="bi bi-exclamation-triangle-fill me-2"></i> Xác Nhận Làm Lại</h6>
+          <h6 class="modal-title fw-bold text-danger"><i class="bi bi-arrow-counterclockwise me-2"></i> Xác Nhận Làm Lại Kiểm Kê</h6>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body p-3">
-          Bạn có chắc chắn muốn xóa toàn bộ danh sách các cuộn đã quét để bắt đầu một kỳ kiểm kê mới không?
+          <p class="text-light mb-3">Bạn muốn làm lại kiểm kê theo tùy chọn nào dưới đây?</p>
+          <div class="d-grid gap-2">
+            <button type="button" class="btn btn-danger d-flex align-items-center justify-content-start gap-2 py-2 px-3 text-start" id="btnResetAll">
+              <i class="bi bi-trash3-fill fs-5"></i>
+              <div>
+                <div class="fw-bold">Xóa Tất Cả (File Excel + Cuộn Quét)</div>
+                <small class="d-block opacity-75" style="font-size: 0.76rem;">Xóa file Excel cơ sở và toàn bộ cuộn đã quét để bắt đầu mới hoàn toàn</small>
+              </div>
+            </button>
+            <button type="button" class="btn btn-outline-warning d-flex align-items-center justify-content-start gap-2 py-2 px-3 text-start mt-1" id="btnResetScannedOnly">
+              <i class="bi bi-upc-scan fs-5"></i>
+              <div>
+                <div class="fw-bold">Chỉ Xóa Cuộn Đã Quét (Giữ Lại File Excel)</div>
+                <small class="d-block opacity-75" style="font-size: 0.76rem;">Giữ nguyên file Excel cơ sở hiện tại, chỉ xóa danh sách quét để quét lại từ đầu</small>
+              </div>
+            </button>
+          </div>
         </div>
-        <div class="modal-footer border-secondary py-1">
-          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Hủy</button>
-          <button type="button" class="btn btn-sm btn-danger" id="btnConfirmReset">Xác Nhận Xóa</button>
+        <div class="modal-footer border-secondary py-1 justify-content-between">
+          <small class="text-muted fst-italic">Hành động này không thể hoàn tác</small>
+          <button type="button" class="btn btn-sm btn-secondary px-3" data-bs-dismiss="modal">Đóng</button>
         </div>
       </div>
     </div>
