@@ -365,6 +365,7 @@ function computePermissionDiff(username, oldPerms, newAllowedPagesPayload) {
         
         // Nhóm TEM NHÃN & KIỂM KÊ
         '/pages/tem-nhan-kiem-ke/in-tem-vitri.html': 'In tem QR Vị trí Kệ',
+        '/pages/tem-nhan-kiem-ke/in-tem-cuon.html': 'In tem Barcode Cuộn',
         '/pages/tem-nhan-kiem-ke/vi-tri-ton.html': 'Tra cứu Tồn theo Kệ',
         '/pages/tem-nhan-kiem-ke/kiem-ke.html': 'Kiểm kê Tồn kho',
         

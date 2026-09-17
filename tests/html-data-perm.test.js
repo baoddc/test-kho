@@ -128,7 +128,8 @@ function createTestSandbox(pathname, currentUser, userGroupPerms, elements = [])
     'pages/pl/pl-chua-thu.html',
     'pages/pl/pl-phieu-in.html',
     'pages/tem-nhan-kiem-ke/kiem-ke.html',
-    'pages/tem-nhan-kiem-ke/in-tem-vitri.html'
+    'pages/tem-nhan-kiem-ke/in-tem-vitri.html',
+    'pages/tem-nhan-kiem-ke/in-tem-cuon.html'
   ];
 
   targetHtmlFiles.forEach(relPath => {

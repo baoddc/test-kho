@@ -99,6 +99,7 @@
     normCurrentPath.endsWith('/flower') ||
     normCurrentPath.endsWith('/offline') ||
     normCurrentPath.endsWith('/in-tem-vitri') ||
+    normCurrentPath.endsWith('/in-tem-cuon') ||
     normCurrentPath.endsWith('/vi-tri-ton');
 
   if (!isIframe && !isStandalonePage && normCurrentPath.startsWith('/pages/')) {
@@ -193,6 +194,8 @@
     'vi-tri-ton.html',
     'in-tem-vitri',
     'in-tem-vitri.html',
+    'in-tem-cuon',
+    'in-tem-cuon.html',
     'hse',
     'hse.html'
   ];
@@ -718,6 +721,7 @@
       icon: `<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>`,
       children: [
         { label: 'In tem QR Vị trí Kệ', href: '/pages/tem-nhan-kiem-ke/in-tem-vitri.html' },
+        { label: 'In tem Barcode Cuộn', href: '/pages/tem-nhan-kiem-ke/in-tem-cuon.html' },
         { label: 'Tra cứu Tồn theo Kệ', href: '/pages/tem-nhan-kiem-ke/vi-tri-ton.html' },
         { label: 'Kiểm kê Tồn kho', href: '/pages/tem-nhan-kiem-ke/kiem-ke.html' },
       ]
@@ -1386,6 +1390,8 @@
     const LEGACY_URL_EXACT = {
       '/pages/in-tem-vitri.html': '/pages/tem-nhan-kiem-ke/in-tem-vitri.html',
       '/pages/in-tem-vitri': '/pages/tem-nhan-kiem-ke/in-tem-vitri.html',
+      '/pages/in-tem-cuon.html': '/pages/tem-nhan-kiem-ke/in-tem-cuon.html',
+      '/pages/in-tem-cuon': '/pages/tem-nhan-kiem-ke/in-tem-cuon.html',
       '/pages/vi-tri-ton.html': '/pages/tem-nhan-kiem-ke/vi-tri-ton.html',
       '/pages/vi-tri-ton': '/pages/tem-nhan-kiem-ke/vi-tri-ton.html',
       '/pages/kiem-ke.html': '/pages/tem-nhan-kiem-ke/kiem-ke.html',

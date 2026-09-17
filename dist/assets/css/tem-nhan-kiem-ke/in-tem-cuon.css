@@ -1,0 +1,377 @@
+/* =============================================================================
+   IN TEM BARCODE CUỘN (XÀ GỒ & TOLE) - STYLESHEET
+   Áp dụng cho trang pages/tem-nhan-kiem-ke/in-tem-cuon.html
+   Quy chuẩn in: 2 tem theo hàng ngang khổ A4, chạy dọc xuống hết trang.
+   Barcode Code 128: width 4px, height 90px, font-size 35px.
+================================================================================ */
+
+html, body.in-tem-page {
+  height: auto !important;
+  min-height: 100vh !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  scroll-behavior: smooth;
+  background-color: #f8fafc;
+  color: #1e293b;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+body.in-tem-page .main-wrapper,
+body.in-tem-page .main-content {
+  height: auto !important;
+  min-height: 100% !important;
+  overflow: visible !important;
+  display: block !important;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Floating Navigation Buttons */
+.floating-scroll-controls {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 1050;
+  transition: all 0.3s ease;
+}
+
+.floating-btn {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  border-radius: 50% !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0.9;
+}
+
+.floating-btn:hover {
+  transform: translateY(-3px) scale(1.08);
+  opacity: 1;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* Rack Badges Matrix */
+.rack-checkbox-matrix {
+  max-height: 140px;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+  gap: 5px;
+}
+
+.rack-badge-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #334155;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s ease;
+}
+
+.rack-badge-check:hover {
+  border-color: #3b82f6;
+  background-color: #eff6ff;
+}
+
+.rack-badge-check:has(input:checked) {
+  background: #dbeafe;
+  border-color: #2563eb;
+  color: #1d4ed8;
+}
+
+/* Coils Table List Container */
+.coil-table-container {
+  max-height: 380px;
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.coil-table {
+  font-size: 0.83rem;
+  margin-bottom: 0;
+}
+
+.coil-table thead th {
+  position: sticky;
+  top: 0;
+  background: #f8fafc;
+  z-index: 10;
+  border-bottom: 2px solid #cbd5e1;
+  font-weight: 700;
+  color: #475569;
+  white-space: nowrap;
+}
+
+.coil-table tbody tr:hover {
+  background-color: #f1f5f9;
+}
+
+.coil-table tbody tr.table-active-row {
+  background-color: #eff6ff;
+}
+
+/* =============================================================================
+   PRINT LABEL CONTAINER & INDUSTRIAL CARD DESIGN
+================================================================================ */
+
+.labels-container {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.coil-label-card {
+  background: #ffffff;
+  border: 2.5px solid #0f172a;
+  border-radius: 8px;
+  padding: 12px 14px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  page-break-inside: avoid;
+  break-inside: avoid;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+  min-height: 310px;
+}
+
+/* Card Header */
+.label-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2px solid #0f172a;
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+}
+
+.label-logo-area {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.label-logo-img {
+  height: 28px;
+  width: auto;
+  object-fit: contain;
+}
+
+.label-company-title {
+  font-size: 0.82rem;
+  font-weight: 900;
+  color: #0f172a;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.label-rack-pill {
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 4px;
+  letter-spacing: 1px;
+}
+
+/* Material Name Header */
+.label-material-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.25;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  word-break: break-word;
+}
+
+/* Card Data Grid */
+.label-data-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 5px 12px;
+  border: 1px solid #94a3b8;
+  border-radius: 6px;
+  padding: 8px 10px;
+  background-color: #f8fafc;
+  margin-bottom: 10px;
+  font-size: 0.82rem;
+}
+
+.label-data-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.label-data-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.label-data-value {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #0f172a;
+  word-break: break-all;
+}
+
+.label-data-value.highlight-weight {
+  color: #1e3a8a;
+  font-size: 1rem;
+}
+
+/* Barcode Section */
+.label-barcode-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-top: 1.5px dashed #94a3b8;
+  padding-top: 8px;
+  margin-top: auto;
+  text-align: center;
+  background: #ffffff;
+}
+
+.label-barcode-svg {
+  max-width: 100%;
+  width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+
+/* Download Single Barcode Button */
+.single-barcode-download-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 2px 6px;
+  font-size: 0.72rem;
+  border-radius: 4px;
+  opacity: 0.4;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  transition: all 0.2s ease;
+  z-index: 5;
+}
+
+.coil-label-card:hover .single-barcode-download-btn {
+  opacity: 1;
+}
+
+/* =============================================================================
+   PRINT STYLESHEET (@media print)
+================================================================================ */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm 6mm;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 11pt;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .no-print,
+  .sidebar,
+  .topbar,
+  #controlPanel,
+  #statusSummaryBar,
+  #floatingScrollControls,
+  .single-barcode-download-btn {
+    display: none !important;
+  }
+
+  .main-content {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  .labels-container {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8mm 5mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  .coil-label-card {
+    border: 2.5px solid #000000 !important;
+    box-shadow: none !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    min-height: 290px !important;
+    padding: 10px 12px !important;
+  }
+
+  .label-header {
+    border-bottom: 2px solid #000000 !important;
+  }
+
+  .label-rack-pill {
+    background: #000000 !important;
+    color: #ffffff !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .label-data-grid {
+    border: 1px solid #000000 !important;
+    background-color: #ffffff !important;
+  }
+
+  .label-barcode-section {
+    border-top: 1.5px dashed #000000 !important;
+  }
+
+  .label-barcode-svg {
+    max-width: 100% !important;
+  }
+}

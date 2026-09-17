@@ -23,6 +23,8 @@ const PUBLIC_PAGES = [
   'vi-tri-ton.html',
   'in-tem-vitri',
   'in-tem-vitri.html',
+  'in-tem-cuon',
+  'in-tem-cuon.html',
   'hse',
   'hse.html'
 ];
