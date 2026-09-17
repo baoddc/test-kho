@@ -4,8 +4,124 @@
    Quy chuẩn Barcode Code 128: width: 4px, height: 90px, fontSize: 35px
    Bố cục in: 2 tem theo hàng ngang khổ A4, chạy dọc xuống hết trang
 ================================================================================ */
+/* =============================================================================
+   HELPER UTILITY FUNCTIONS (MODULE & BROWSER SCOPE)
+================================================================================ */
 
-document.addEventListener('DOMContentLoaded', () => {
+function formatCoilBarcodeData(row, mode = 'standard') {
+  if (!row) return '';
+  if (mode === 'cuon_id') {
+    return String(row['Cuộn ID'] || row['cuon_id'] || '').trim();
+  }
+  const maVt = String(row['Mã vật tư'] || row['ma_vat_tu'] || row['Mã VT'] || '').trim();
+  const batch = String(row['Batch'] || row['batch'] || row['Lô'] || '').trim();
+  const rawKg = row['Số lượng (Kg)'] ?? row['Khối lượng (kg)'] ?? row['kg'] ?? 0;
+  const numKg = Math.round(Number(String(rawKg).replace(',', '.')) || 0);
+  if (!maVt && !batch) return '';
+  return `${maVt}-${batch}-${numKg}`;
+}
+
+function parseRowDate(raw) {
+  if (!raw) return null;
+  if (raw instanceof Date) return isNaN(raw.getTime()) ? null : raw;
+  if (typeof raw === 'number') {
+    if (raw > 10000 && raw < 100000) {
+      const utcDays = Math.floor(raw - 25569);
+      const utcValue = utcDays * 86400;
+      const dateInfo = new Date(utcValue * 1000);
+      return isNaN(dateInfo.getTime()) ? null : dateInfo;
+    }
+  }
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    if (!trimmed) return null;
+    const iso = trimmed.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})/);
+    if (iso) return new Date(parseInt(iso[1], 10), parseInt(iso[2], 10) - 1, parseInt(iso[3], 10));
+    const m = trimmed.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})/);
+    if (m) {
+      let y = parseInt(m[3], 10);
+      if (y < 100) y += y < 50 ? 2000 : 1900;
+      return new Date(y, parseInt(m[2], 10) - 1, parseInt(m[1], 10));
+    }
+    const dt = new Date(trimmed);
+    if (!isNaN(dt.getTime())) return dt;
+  }
+  return null;
+}
+
+function calculateStorageAge(importDateStr, fallbackDays) {
+  if (fallbackDays !== undefined && fallbackDays !== null && fallbackDays !== '') {
+    const num = Number(String(fallbackDays).replace(',', '.'));
+    if (!isNaN(num) && num >= 0) return Math.round(num);
+  }
+  if (!importDateStr) return null;
+  const dateObj = parseRowDate(importDateStr);
+  if (!dateObj || isNaN(dateObj.getTime())) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const importDate = new Date(dateObj);
+  importDate.setHours(0, 0, 0, 0);
+  const diffTime = today - importDate;
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays >= 0 ? diffDays : 0;
+}
+
+function sortCoilsByStorageAge(coils, asc = true) {
+  return [...coils].sort((a, b) => {
+    const valA = a._storageAge;
+    const valB = b._storageAge;
+    const hasA = valA !== null && valA !== undefined && !isNaN(valA);
+    const hasB = valB !== null && valB !== undefined && !isNaN(valB);
+
+    if (!hasA && !hasB) return 0;
+    if (!hasA) return 1;
+    if (!hasB) return -1;
+
+    const diff = valA - valB;
+    if (diff !== 0) return asc ? diff : -diff;
+
+    const cidA = String(a['Cuộn ID'] || '');
+    const cidB = String(b['Cuộn ID'] || '');
+    return cidA.localeCompare(cidB, undefined, { numeric: true });
+  });
+}
+
+function normalizeExcelRow(rawRow) {
+  const row = {};
+  for (const key of Object.keys(rawRow)) {
+    const cleanKey = key.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (cleanKey.includes('ma vat tu') || cleanKey === 'ma vt' || cleanKey === 'mavt') {
+      row['Mã vật tư'] = String(rawRow[key] || '').trim();
+    } else if (cleanKey.includes('ten vat tu') || cleanKey.includes('ten hang') || cleanKey === 'tenvt') {
+      row['Tên vật tư'] = String(rawRow[key] || '').trim();
+    } else if (cleanKey === 'batch' || cleanKey.includes('so lo') || cleanKey === 'lo') {
+      row['Batch'] = String(rawRow[key] || '').trim();
+    } else if (cleanKey.includes('cuon id') || cleanKey.includes('ma cuon') || cleanKey === 'cuonid') {
+      row['Cuộn ID'] = String(rawRow[key] || '').trim();
+    } else if (cleanKey.includes('so luong') || cleanKey.includes('khoi luong') || cleanKey.includes('kg')) {
+      row['Số lượng (Kg)'] = Number(String(rawRow[key] || 0).replace(',', '.')) || 0;
+    } else if (cleanKey.includes('chieu dai') || cleanKey.includes('(m)') || cleanKey === 'm') {
+      row['Khối lượng (m)'] = Number(String(rawRow[key] || 0).replace(',', '.')) || 0;
+    } else if (cleanKey.includes('vi tri') || cleanKey === 'ke' || cleanKey === 'vitri') {
+      row['Vị trí'] = String(rawRow[key] || '').trim().toUpperCase();
+    } else if (cleanKey.includes('ngay nhap')) {
+      row['Ngày nhập'] = String(rawRow[key] || '').trim();
+    } else if (cleanKey.includes('luu kho') || cleanKey.includes('thoi gian luu kho') || cleanKey.includes('tuoi ton')) {
+      row['Thời gian lưu kho'] = Number(String(rawRow[key] || 0).replace(',', '.')) || 0;
+    } else if (cleanKey.includes('cong trinh')) {
+      row['Tên công trình'] = String(rawRow[key] || '').trim();
+    }
+  }
+  return row;
+}
+
+function formatNumber(num) {
+  if (num === null || num === undefined || isNaN(num)) return '0';
+  return Number(num).toLocaleString('vi-VN', { maximumFractionDigits: 2 });
+}
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', () => {
   // DOM Elements - Source & Controls
   const sourceSelect = document.getElementById('sourceSelect');
   const excelFileInput = document.getElementById('excelFileInput');
@@ -35,6 +151,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const tableTotalCount = document.getElementById('tableTotalCount');
   const btnSelectAllTable = document.getElementById('btnSelectAllTable');
   const btnDeselectAllTable = document.getElementById('btnDeselectAllTable');
+  const thStorageAge = document.getElementById('thStorageAge');
+  const iconSortStorageAge = document.getElementById('iconSortStorageAge');
 
   // Preview & Action Elements
   const previewSummaryText = document.getElementById('previewSummaryText');
@@ -53,6 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let allRawCoils = [];          // Danh sách toàn bộ cuộn nạp từ nguồn
   let filteredCoils = [];        // Danh sách cuộn sau khi qua bộ lọc kệ & tìm kiếm
   let selectedCoilKeys = new Set(); // Bộ Set lưu ID hoặc key duy nhất của các cuộn được chọn in
+  let currentSortAsc = true;     // Mặc định: sắp xếp thời gian lưu kho từ nhỏ đến lớn (Ascending)
 
   const standardRacks = [
     'A01', 'A02', 'A03', 'A04', 'A05', 'A06', 'A07', 'A08', 'A09', 'A10', 'A11', 'A12', 'A13', 'A14',
@@ -77,51 +196,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const cid = String(coil['Cuộn ID'] || '').trim();
     if (cid) return `${cid}_${index}`;
     return `coil_${index}_${coil['Mã vật tư'] || ''}_${coil['Batch'] || ''}`;
-  }
-
-  function formatCoilBarcodeData(row, mode = 'standard') {
-    if (!row) return '';
-    if (mode === 'cuon_id') {
-      return String(row['Cuộn ID'] || row['cuon_id'] || '').trim();
-    }
-    const maVt = String(row['Mã vật tư'] || row['ma_vat_tu'] || row['Mã VT'] || '').trim();
-    const batch = String(row['Batch'] || row['batch'] || row['Lô'] || '').trim();
-    const rawKg = row['Số lượng (Kg)'] ?? row['Khối lượng (kg)'] ?? row['kg'] ?? 0;
-    const numKg = Math.round(Number(String(rawKg).replace(',', '.')) || 0);
-    if (!maVt && !batch) return '';
-    return `${maVt}-${batch}-${numKg}`;
-  }
-
-  function normalizeExcelRow(rawRow) {
-    const row = {};
-    for (const key of Object.keys(rawRow)) {
-      const cleanKey = key.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-      if (cleanKey.includes('ma vat tu') || cleanKey === 'ma vt' || cleanKey === 'mavt') {
-        row['Mã vật tư'] = String(rawRow[key] || '').trim();
-      } else if (cleanKey.includes('ten vat tu') || cleanKey.includes('ten hang') || cleanKey === 'tenvt') {
-        row['Tên vật tư'] = String(rawRow[key] || '').trim();
-      } else if (cleanKey === 'batch' || cleanKey.includes('so lo') || cleanKey === 'lo') {
-        row['Batch'] = String(rawRow[key] || '').trim();
-      } else if (cleanKey.includes('cuon id') || cleanKey.includes('ma cuon') || cleanKey === 'cuonid') {
-        row['Cuộn ID'] = String(rawRow[key] || '').trim();
-      } else if (cleanKey.includes('so luong') || cleanKey.includes('khoi luong') || cleanKey.includes('kg')) {
-        row['Số lượng (Kg)'] = Number(String(rawRow[key] || 0).replace(',', '.')) || 0;
-      } else if (cleanKey.includes('chieu dai') || cleanKey.includes('(m)') || cleanKey === 'm') {
-        row['Khối lượng (m)'] = Number(String(rawRow[key] || 0).replace(',', '.')) || 0;
-      } else if (cleanKey.includes('vi tri') || cleanKey === 'ke' || cleanKey === 'vitri') {
-        row['Vị trí'] = String(rawRow[key] || '').trim().toUpperCase();
-      } else if (cleanKey.includes('ngay nhap')) {
-        row['Ngày nhập'] = String(rawRow[key] || '').trim();
-      } else if (cleanKey.includes('cong trinh')) {
-        row['Tên công trình'] = String(rawRow[key] || '').trim();
-      }
-    }
-    return row;
-  }
-
-  function formatNumber(num) {
-    if (num === null || num === undefined || isNaN(num)) return '0';
-    return Number(num).toLocaleString('vi-VN', { maximumFractionDigits: 2 });
   }
 
   /* =============================================================================
@@ -172,11 +246,18 @@ document.addEventListener('DOMContentLoaded', () => {
         return cid && !exportedIds.has(cid);
       });
 
-      allRawCoils = tonData.map((row, idx) => ({
-        ...row,
-        _uniqueKey: `sb_${sourceType}_${idx}_${row['Cuộn ID'] || ''}`,
-        _warehouseName: defaultWarehouse
-      }));
+      allRawCoils = tonData.map((row, idx) => {
+        const storageAge = calculateStorageAge(row['Ngày nhập'] || row['ngay_nhap'], row['Thời gian lưu kho']);
+        return {
+          ...row,
+          _storageAge: storageAge,
+          _uniqueKey: `sb_${sourceType}_${idx}_${row['Cuộn ID'] || ''}`,
+          _warehouseName: defaultWarehouse
+        };
+      });
+
+      // Mặc định sắp xếp theo thời gian lưu kho từ nhỏ đến lớn
+      allRawCoils = sortCoilsByStorageAge(allRawCoils, currentSortAsc);
 
       // Reset selection to select all by default
       selectedCoilKeys = new Set(allRawCoils.map(r => r._uniqueKey));
@@ -221,8 +302,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const normalizedList = rawJson.map((row, idx) => {
           const norm = normalizeExcelRow(row);
+          const storageAge = calculateStorageAge(norm['Ngày nhập'], norm['Thời gian lưu kho']);
           return {
             ...norm,
+            _storageAge: storageAge,
             _uniqueKey: `excel_${idx}_${norm['Cuộn ID'] || idx}`,
             _warehouseName: 'KHO TỒN VẬT TƯ - DDC'
           };
@@ -234,7 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
 
-        allRawCoils = normalizedList;
+        allRawCoils = sortCoilsByStorageAge(normalizedList, currentSortAsc);
         selectedCoilKeys = new Set(allRawCoils.map(r => r._uniqueKey));
 
         if (sourceSelect) sourceSelect.value = 'excel';
@@ -346,7 +429,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (filteredCoils.length === 0) {
       coilTableBody.innerHTML = `
         <tr>
-          <td colspan="7" class="text-center py-4 text-muted">
+          <td colspan="8" class="text-center py-4 text-muted">
             <i class="bi bi-inbox fs-4 d-block mb-1 text-secondary"></i>
             Không tìm thấy cuộn nào phù hợp với điều kiện lọc.
           </td>
@@ -367,6 +450,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const mVal = coil['Khối lượng (m)'];
       const weightText = mVal ? `${formatNumber(kgVal)} Kg (${formatNumber(mVal)} m)` : `${formatNumber(kgVal)} Kg`;
 
+      const age = coil._storageAge;
+      let storageAgeHtml = '<span class="text-muted small">---</span>';
+      if (age !== null && age !== undefined && !isNaN(age)) {
+        const badgeClass = age > 90 ? 'bg-danger' : (age > 30 ? 'bg-warning text-dark' : 'bg-success');
+        storageAgeHtml = `<span class="badge ${badgeClass} font-monospace">${age} ngày</span>`;
+      }
+
       tr.innerHTML = `
         <td class="text-center">
           <input type="checkbox" class="form-check-input coil-row-checkbox" data-key="${coil._uniqueKey}" ${isChecked ? 'checked' : ''}>
@@ -383,6 +473,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <span class="fw-bold text-primary font-monospace">${coil['Cuộn ID'] || '---'}</span>
         </td>
         <td class="text-end fw-bold text-dark">${weightText}</td>
+        <td class="text-center">${storageAgeHtml}</td>
         <td class="text-center">
           <span class="badge bg-dark">${coil['Vị trí'] || '---'}</span>
         </td>
@@ -905,10 +996,39 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Sắp xếp cột Thời gian lưu kho (Mặc định: từ nhỏ đến lớn)
+  if (thStorageAge) {
+    thStorageAge.addEventListener('click', () => {
+      currentSortAsc = !currentSortAsc;
+      allRawCoils = sortCoilsByStorageAge(allRawCoils, currentSortAsc);
+      if (iconSortStorageAge) {
+        iconSortStorageAge.className = currentSortAsc
+          ? 'bi bi-sort-numeric-down text-primary ms-1'
+          : 'bi bi-sort-numeric-up-alt text-primary ms-1';
+      }
+      thStorageAge.title = currentSortAsc
+        ? 'Đang xếp từ nhỏ đến lớn. Nhấn để đảo chiều'
+        : 'Đang xếp từ lớn đến nhỏ. Nhấn để đảo chiều';
+      applyFilters();
+    });
+  }
+
   /* =============================================================================
      INITIALIZATION
   ================================================================================ */
   renderRackMatrix();
   // Default load Xà gồ inventory from Supabase
   loadDataFromSupabase('xg');
-});
+  });
+}
+
+// Export helper logic for unit testing environment
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    parseRowDate: typeof parseRowDate !== 'undefined' ? parseRowDate : null,
+    calculateStorageAge: typeof calculateStorageAge !== 'undefined' ? calculateStorageAge : null,
+    sortCoilsByStorageAge: typeof sortCoilsByStorageAge !== 'undefined' ? sortCoilsByStorageAge : null,
+    formatCoilBarcodeData: typeof formatCoilBarcodeData !== 'undefined' ? formatCoilBarcodeData : null,
+    normalizeExcelRow: typeof normalizeExcelRow !== 'undefined' ? normalizeExcelRow : null
+  };
+}
