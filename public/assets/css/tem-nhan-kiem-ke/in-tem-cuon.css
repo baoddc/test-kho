@@ -339,6 +339,7 @@ body.in-tem-page .main-content {
     margin: 8mm 6mm;
   }
 
+  html,
   body {
     background: #ffffff !important;
     color: #000000 !important;
@@ -359,19 +360,24 @@ body.in-tem-page .main-content {
     display: none !important;
   }
 
-  .main-content {
+  .main-content,
+  .print-page-wrapper {
+    background: #ffffff !important;
     margin: 0 !important;
     padding: 0 !important;
     width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
   }
 
   .labels-container {
     display: grid !important;
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 8mm 5mm !important;
-    margin: 0 !important;
+    margin: 0 auto !important;
     padding: 0 !important;
     width: 100% !important;
+    background: #ffffff !important;
   }
 
   .coil-label-card {
@@ -381,9 +387,10 @@ body.in-tem-page .main-content {
     break-inside: avoid !important;
     min-height: 290px !important;
     padding: 10px 12px !important;
+    background: #ffffff !important;
   }
 
-  /* Barcode Only Minimal Card Print */
+  /* Barcode Only Minimal Card Print (Thuần nền trắng trên giấy A4) */
   .coil-label-card.barcode-only-card {
     border: none !important;
     box-shadow: none !important;
@@ -391,17 +398,22 @@ body.in-tem-page .main-content {
     padding: 4mm 2mm !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
-    background: transparent !important;
+    background: #ffffff !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
   }
 
   .coil-label-card.barcode-only-card.show-cut-border {
-    border: 0.5px dashed #475569 !important;
+    border: 0.5px dashed #64748b !important;
   }
 
   .coil-label-card.barcode-only-card .barcode-only-section {
     border: none !important;
     margin: 0 !important;
     padding: 0 !important;
+    background: #ffffff !important;
+    width: 100% !important;
   }
 
   .label-header {
@@ -422,9 +434,12 @@ body.in-tem-page .main-content {
 
   .label-barcode-section {
     border-top: 1.5px dashed #000000 !important;
+    background: #ffffff !important;
   }
 
   .label-barcode-svg {
+    background: #ffffff !important;
     max-width: 100% !important;
+    height: auto !important;
   }
 }
