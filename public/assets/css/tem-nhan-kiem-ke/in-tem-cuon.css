@@ -183,6 +183,25 @@ body.in-tem-page .main-content {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
 }
 
+/* ==================== SINGLE CUT BORDER SHARED GRID (TIẾT KIỆM GIẤY) ==================== */
+.labels-container.layout-single-cut-grid {
+  gap: 0 !important;
+  border-top: 1px dashed #94a3b8 !important;
+  border-left: 1px dashed #94a3b8 !important;
+  background: #ffffff !important;
+  border-radius: 4px;
+}
+
+.labels-container.layout-single-cut-grid .coil-label-card.barcode-only-card {
+  border: none !important;
+  border-right: 1px dashed #94a3b8 !important;
+  border-bottom: 1px dashed #94a3b8 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 10px 8px !important;
+  margin: 0 !important;
+}
+
 .barcode-only-section {
   border-top: none !important;
   margin-top: 0 !important;
@@ -380,22 +399,55 @@ body.in-tem-page .main-content {
     background: #ffffff !important;
   }
 
-  .coil-label-card {
-    border: 2.5px solid #000000 !important;
+  /* Shared single cut line grid (Chỉ 1 đường viền cắt chung tiết kiệm giấy) */
+  .labels-container.layout-single-cut-grid {
+    gap: 0 !important;
+    border-top: 0.5px dashed #475569 !important;
+    border-left: 0.5px dashed #475569 !important;
+  }
+
+  .labels-container.layout-single-cut-grid .coil-label-card.barcode-only-card {
+    border: none !important;
+    border-right: 0.5px dashed #475569 !important;
+    border-bottom: 0.5px dashed #475569 !important;
+    border-radius: 0 !important;
     box-shadow: none !important;
+    min-height: auto !important;
+    padding: 3mm 2mm !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
-    min-height: 290px !important;
-    padding: 10px 12px !important;
     background: #ffffff !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+  }
+
+  .labels-container.layout-single-cut-grid .coil-label-card.barcode-only-card .barcode-only-section {
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    width: 100% !important;
   }
 
   /* Barcode Only Minimal Card Print (Thuần nền trắng trên giấy A4) */
-  .coil-label-card.barcode-only-card {
+  .labels-container.layout-no-border-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 4mm 4mm !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    width: 100% !important;
+    background: #ffffff !important;
+    border: none !important;
+  }
+
+  .labels-container.layout-no-border-grid .coil-label-card.barcode-only-card {
     border: none !important;
     box-shadow: none !important;
     min-height: auto !important;
-    padding: 4mm 2mm !important;
+    padding: 3mm 2mm !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
     background: #ffffff !important;
@@ -404,16 +456,14 @@ body.in-tem-page .main-content {
     justify-content: center !important;
   }
 
-  .coil-label-card.barcode-only-card.show-cut-border {
-    border: 0.5px dashed #64748b !important;
-  }
-
-  .coil-label-card.barcode-only-card .barcode-only-section {
-    border: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
+  .coil-label-card {
+    border: 2.5px solid #000000 !important;
+    box-shadow: none !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    min-height: 290px !important;
+    padding: 10px 12px !important;
     background: #ffffff !important;
-    width: 100% !important;
   }
 
   .label-header {

@@ -467,6 +467,15 @@ document.addEventListener('DOMContentLoaded', () => {
       else el.classList.add('d-none');
     });
 
+    // Set container layout grid class (Chỉ 1 đường viền cắt chung tiết kiệm giấy)
+    if (labelStyle === 'barcode-only') {
+      labelsContainer.className = showCutBorder
+        ? 'labels-container layout-single-cut-grid'
+        : 'labels-container layout-no-border-grid';
+    } else {
+      labelsContainer.className = 'labels-container';
+    }
+
     coilsToPrint.forEach((coil, idx) => {
       const barcodeData = formatCoilBarcodeData(coil, barcodeMode);
       const barcodeSvgId = `barcode_svg_${idx}`;
@@ -475,7 +484,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (labelStyle === 'barcode-only') {
         // Chỉ lấy mã Barcode theo đúng ảnh mẫu người dùng yêu cầu
-        card.className = `coil-label-card barcode-only-card ${showCutBorder ? 'show-cut-border' : ''}`;
+        card.className = 'coil-label-card barcode-only-card';
         card.innerHTML = `
           <button type="button" class="btn btn-sm btn-light single-barcode-download-btn no-print" data-idx="${idx}" title="Tải ảnh barcode cuộn này">
             <i class="bi bi-download"></i>
