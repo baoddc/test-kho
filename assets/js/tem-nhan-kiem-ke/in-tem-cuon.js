@@ -247,7 +247,9 @@ if (typeof document !== 'undefined') {
       });
 
       allRawCoils = tonData.map((row, idx) => {
-        const storageAge = calculateStorageAge(row['Ngày nhập'] || row['ngay_nhap'], row['Thời gian lưu kho']);
+        const importDateVal = row['Ngày nhập'] || row['ngay_nhap'] || row['Ngay nhap'] || row['Ngày Nhập'] || row['created_at'];
+        const directAgeVal = row['Thời gian lưu kho'] || row['thoi_gian_luu_kho'] || row['Tuổi tồn'] || row['tuoi_ton'];
+        const storageAge = calculateStorageAge(importDateVal, directAgeVal);
         return {
           ...row,
           _storageAge: storageAge,
@@ -451,10 +453,10 @@ if (typeof document !== 'undefined') {
       const weightText = mVal ? `${formatNumber(kgVal)} Kg (${formatNumber(mVal)} m)` : `${formatNumber(kgVal)} Kg`;
 
       const age = coil._storageAge;
-      let storageAgeHtml = '<span class="text-muted small">---</span>';
+      let storageAgeHtml = '<span class="badge bg-secondary opacity-75 font-monospace">---</span>';
       if (age !== null && age !== undefined && !isNaN(age)) {
-        const badgeClass = age > 90 ? 'bg-danger' : (age > 30 ? 'bg-warning text-dark' : 'bg-success');
-        storageAgeHtml = `<span class="badge ${badgeClass} font-monospace">${age} ngày</span>`;
+        const badgeClass = age > 90 ? 'bg-danger text-white' : (age > 30 ? 'bg-warning text-dark' : 'bg-success text-white');
+        storageAgeHtml = `<span class="badge ${badgeClass} font-monospace fw-bold">${age} ngày</span>`;
       }
 
       tr.innerHTML = `
