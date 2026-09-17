@@ -13,6 +13,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const uploadedFileInfo = document.getElementById('uploadedFileInfo');
   const btnReloadData = document.getElementById('btnReloadData');
 
+  const labelStyleSelect = document.getElementById('labelStyleSelect');
+  const chkShowCutBorder = document.getElementById('chkShowCutBorder');
   const barcodeModeSelect = document.getElementById('barcodeModeSelect');
   const chkShowLogo = document.getElementById('chkShowLogo');
   const chkShowProject = document.getElementById('chkShowProject');
@@ -454,77 +456,99 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const barcodeMode = barcodeModeSelect ? barcodeModeSelect.value : 'standard';
+    const labelStyle = labelStyleSelect ? labelStyleSelect.value : 'barcode-only';
+    const showCutBorder = chkShowCutBorder ? chkShowCutBorder.checked : false;
     const showLogo = chkShowLogo ? chkShowLogo.checked : true;
     const showProject = chkShowProject ? chkShowProject.checked : true;
+
+    // Toggle visibility of full-info sub options
+    document.querySelectorAll('.full-info-opt').forEach(el => {
+      if (labelStyle === 'full-info') el.classList.remove('d-none');
+      else el.classList.add('d-none');
+    });
 
     coilsToPrint.forEach((coil, idx) => {
       const barcodeData = formatCoilBarcodeData(coil, barcodeMode);
       const barcodeSvgId = `barcode_svg_${idx}`;
 
       const card = document.createElement('div');
-      card.className = 'coil-label-card';
 
-      const kgVal = coil['Số lượng (Kg)'] ?? coil['Khối lượng (kg)'] ?? 0;
-      const mVal = coil['Khối lượng (m)'];
-      const weightDisplay = mVal ? `${formatNumber(kgVal)} Kg (${formatNumber(mVal)} m)` : `${formatNumber(kgVal)} Kg`;
+      if (labelStyle === 'barcode-only') {
+        // Chỉ lấy mã Barcode theo đúng ảnh mẫu người dùng yêu cầu
+        card.className = `coil-label-card barcode-only-card ${showCutBorder ? 'show-cut-border' : ''}`;
+        card.innerHTML = `
+          <button type="button" class="btn btn-sm btn-light single-barcode-download-btn no-print" data-idx="${idx}" title="Tải ảnh barcode cuộn này">
+            <i class="bi bi-download"></i>
+          </button>
+          <div class="label-barcode-section barcode-only-section">
+            <svg id="${barcodeSvgId}" class="label-barcode-svg"></svg>
+          </div>
+        `;
+      } else {
+        // Chế độ đầy đủ thông tin
+        card.className = 'coil-label-card';
+        const kgVal = coil['Số lượng (Kg)'] ?? coil['Khối lượng (kg)'] ?? 0;
+        const mVal = coil['Khối lượng (m)'];
+        const weightDisplay = mVal ? `${formatNumber(kgVal)} Kg (${formatNumber(mVal)} m)` : `${formatNumber(kgVal)} Kg`;
 
-      card.innerHTML = `
-        <button type="button" class="btn btn-sm btn-light single-barcode-download-btn no-print" data-idx="${idx}" title="Tải ảnh barcode cuộn này">
-          <i class="bi bi-download"></i>
-        </button>
+        card.innerHTML = `
+          <button type="button" class="btn btn-sm btn-light single-barcode-download-btn no-print" data-idx="${idx}" title="Tải ảnh barcode cuộn này">
+            <i class="bi bi-download"></i>
+          </button>
 
-        <!-- Label Header -->
-        <div class="label-header">
-          <div class="label-logo-area">
-            ${showLogo ? '<img src="/assets/images/logos/Logo-DDC.png" alt="DDC Logo" class="label-logo-img">' : ''}
-            <span class="label-company-title">${coil._warehouseName || 'KHO VẬT TƯ - ĐẠI DŨNG'}</span>
-          </div>
-          <div class="label-rack-pill">${coil['Vị trí'] || '---'}</div>
-        </div>
-
-        <!-- Material Name -->
-        <div class="label-material-title">${coil['Tên vật tư'] || 'THÉP CUỘN MẠ / PHÔI XÀ GỒ'}</div>
-
-        <!-- Coil Data Grid -->
-        <div class="label-data-grid">
-          <div class="label-data-item">
-            <span class="label-data-label">Mã vật tư</span>
-            <span class="label-data-value">${coil['Mã vật tư'] || '---'}</span>
-          </div>
-          <div class="label-data-item">
-            <span class="label-data-label">Cuộn ID</span>
-            <span class="label-data-value">${coil['Cuộn ID'] || '---'}</span>
-          </div>
-          <div class="label-data-item">
-            <span class="label-data-label">Số Lô / Batch</span>
-            <span class="label-data-value">${coil['Batch'] || '---'}</span>
-          </div>
-          <div class="label-data-item">
-            <span class="label-data-label">Khối lượng</span>
-            <span class="label-data-value highlight-weight">${weightDisplay}</span>
-          </div>
-          <div class="label-data-item">
-            <span class="label-data-label">Ngày nhập kho</span>
-            <span class="label-data-value">${coil['Ngày nhập'] || '---'}</span>
-          </div>
-          ${showProject && coil['Tên công trình'] ? `
-            <div class="label-data-item">
-              <span class="label-data-label">Công trình</span>
-              <span class="label-data-value text-truncate" title="${coil['Tên công trình']}">${coil['Tên công trình']}</span>
+          <!-- Label Header -->
+          <div class="label-header">
+            <div class="label-logo-area">
+              ${showLogo ? '<img src="/assets/images/logos/Logo-DDC.png" alt="DDC Logo" class="label-logo-img">' : ''}
+              <span class="label-company-title">${coil._warehouseName || 'KHO VẬT TƯ - ĐẠI DŨNG'}</span>
             </div>
-          ` : `
-            <div class="label-data-item">
-              <span class="label-data-label">Vị trí kệ</span>
-              <span class="label-data-value">${coil['Vị trí'] || '---'}</span>
-            </div>
-          `}
-        </div>
+            <div class="label-rack-pill">${coil['Vị trí'] || '---'}</div>
+          </div>
 
-        <!-- Barcode Section -->
-        <div class="label-barcode-section">
-          <svg id="${barcodeSvgId}" class="label-barcode-svg"></svg>
-        </div>
-      `;
+          <!-- Material Name -->
+          <div class="label-material-title">${coil['Tên vật tư'] || 'THÉP CUỘN MẠ / PHÔI XÀ GỒ'}</div>
+
+          <!-- Coil Data Grid -->
+          <div class="label-data-grid">
+            <div class="label-data-item">
+              <span class="label-data-label">Mã vật tư</span>
+              <span class="label-data-value">${coil['Mã vật tư'] || '---'}</span>
+            </div>
+            <div class="label-data-item">
+              <span class="label-data-label">Cuộn ID</span>
+              <span class="label-data-value">${coil['Cuộn ID'] || '---'}</span>
+            </div>
+            <div class="label-data-item">
+              <span class="label-data-label">Số Lô / Batch</span>
+              <span class="label-data-value">${coil['Batch'] || '---'}</span>
+            </div>
+            <div class="label-data-item">
+              <span class="label-data-label">Khối lượng</span>
+              <span class="label-data-value highlight-weight">${weightDisplay}</span>
+            </div>
+            <div class="label-data-item">
+              <span class="label-data-label">Ngày nhập kho</span>
+              <span class="label-data-value">${coil['Ngày nhập'] || '---'}</span>
+            </div>
+            ${showProject && coil['Tên công trình'] ? `
+              <div class="label-data-item">
+                <span class="label-data-label">Công trình</span>
+                <span class="label-data-value text-truncate" title="${coil['Tên công trình']}">${coil['Tên công trình']}</span>
+              </div>
+            ` : `
+              <div class="label-data-item">
+                <span class="label-data-label">Vị trí kệ</span>
+                <span class="label-data-value">${coil['Vị trí'] || '---'}</span>
+              </div>
+            `}
+          </div>
+
+          <!-- Barcode Section -->
+          <div class="label-barcode-section">
+            <svg id="${barcodeSvgId}" class="label-barcode-svg"></svg>
+          </div>
+        `;
+      }
 
       labelsContainer.appendChild(card);
 
@@ -709,6 +733,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Barcode Mode & Appearance
+  if (labelStyleSelect) {
+    labelStyleSelect.addEventListener('change', renderPreviewLabels);
+  }
+  if (chkShowCutBorder) {
+    chkShowCutBorder.addEventListener('change', renderPreviewLabels);
+  }
   if (barcodeModeSelect) {
     barcodeModeSelect.addEventListener('change', renderPreviewLabels);
   }

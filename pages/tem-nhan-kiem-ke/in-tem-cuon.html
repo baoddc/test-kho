@@ -77,6 +77,15 @@
               <div id="uploadedFileInfo" class="mt-1 small text-muted text-truncate"></div>
             </div>
 
+            <!-- Label Style Selector -->
+            <div class="mb-2">
+              <label class="form-label small fw-semibold mb-1">Kiểu hiển thị tem:</label>
+              <select id="labelStyleSelect" class="form-select form-select-sm fw-bold text-primary">
+                <option value="barcode-only" selected>Chỉ in mã Barcode (Theo ảnh mẫu)</option>
+                <option value="full-info">Tem đầy đủ thông tin (Logo, Kệ, Tên vật tư...)</option>
+              </select>
+            </div>
+
             <!-- Barcode Format Selector -->
             <div class="mb-2">
               <label class="form-label small fw-semibold mb-1">Định dạng mã Barcode:</label>
@@ -90,12 +99,16 @@
             </div>
 
             <!-- Toggles -->
-            <div class="d-flex gap-3 mt-2 flex-wrap">
+            <div class="d-flex gap-3 mt-2 flex-wrap" id="extraLabelOptions">
               <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" id="chkShowCutBorder">
+                <label class="form-check-label small" for="chkShowCutBorder">Đường viền cắt khi in</label>
+              </div>
+              <div class="form-check form-check-inline full-info-opt d-none">
                 <input class="form-check-input" type="checkbox" id="chkShowLogo" checked>
                 <label class="form-check-label small" for="chkShowLogo">Logo DDC</label>
               </div>
-              <div class="form-check form-check-inline">
+              <div class="form-check form-check-inline full-info-opt d-none">
                 <input class="form-check-input" type="checkbox" id="chkShowProject" checked>
                 <label class="form-check-label small" for="chkShowProject">Hiện công trình</label>
               </div>
