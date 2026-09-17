@@ -37,30 +37,72 @@ function formatBatchForMaterialName(batch) {
   return formatted;
 }
 
-function mergeBatchIntoTenVatTu(tenVatTu, batch) {
+function mergeBatchIntoTenVatTu(tenVatTu, batch, oldBatch) {
   if (!tenVatTu && !batch) return '';
   if (!batch || !String(batch).trim()) return (tenVatTu || '').trim();
+
   const formattedBatch = formatBatchForMaterialName(batch);
   const rawBatch = String(batch).trim();
   let name = (tenVatTu || '').trim();
+
   if (!name) return formattedBatch;
+
   const lowerName = name.toLowerCase();
   const lowerBatch = rawBatch.toLowerCase();
   const lowerFormatted = formattedBatch.toLowerCase();
   if (lowerName.includes(lowerBatch) || lowerName.includes(lowerFormatted)) {
     return name.replace(/\b(\d+(?:\.\d+)?)\s*X\s*(\d+[A-Za-z0-9]*)\b/g, '$1x$2');
   }
-  const dimRegex = /\b\d+(\.\d+)?\s*[xX]\s*\d+[A-Za-z0-9]*\b/i;
-  if (dimRegex.test(name)) {
-    return name.replace(dimRegex, formattedBatch);
+
+  if (oldBatch && String(oldBatch).trim()) {
+    const rawOld = String(oldBatch).trim();
+    const formattedOld = formatBatchForMaterialName(rawOld);
+    if (name.includes(rawOld)) {
+      return name.replace(rawOld, formattedBatch);
+    }
+    if (name.includes(formattedOld)) {
+      return name.replace(formattedOld, formattedBatch);
+    }
   }
-  const gradeRegex = /(?=\b(Z\d+|G\d+|AZ\d+|AM\d+|S\d+GD|S\d+|SGCC|SGCD|SECC|SPCC|SUS\s*\d+|GI\s+Z)\b)/i;
+
+  const gradeTokens = 'Z\\d+|G\\d+|AZ\\d+|AM\\d+|S\\d+GD|S\\d+|SGCC|SGCD|SECC|SPCC|SUS\\s*\\d+|GI\\s+Z';
+  const toleBatchMidRegex = new RegExp('(\\b\\d+(?:\\.\\d+)?\\s*[xX]\\s*\\d+\\s+)(?!(?:' + gradeTokens + ')\\b)([A-Za-z0-9\\-_]+)(\\s+(?:' + gradeTokens + ')\\b)', 'i');
+  const midMatch = name.match(toleBatchMidRegex);
+  if (midMatch) {
+    return name.replace(toleBatchMidRegex, `$1${formattedBatch}$3`);
+  }
+
+  const batchWithDimRegex = /\b\d+(\.\d+)?\s*[xX]\s*\d+[A-Za-z]+[A-Za-z0-9]*\b/i;
+  const isNewBatchDim = /\b\d+(\.\d+)?\s*[xX]/i.test(formattedBatch);
+  if (isNewBatchDim && batchWithDimRegex.test(name)) {
+    return name.replace(batchWithDimRegex, formattedBatch);
+  }
+
+  const gradeRegex = new RegExp('(?=\\b(' + gradeTokens + ')\\b)', 'i');
   const gradeMatch = name.search(gradeRegex);
   if (gradeMatch !== -1) {
     const before = name.substring(0, gradeMatch).trim();
     const after = name.substring(gradeMatch).trim();
     return `${before} ${formattedBatch} ${after}`.replace(/\s+/g, ' ').trim();
   }
+
+  const prefixRegex = /^(Thép phôi kẽm|Thép phôi|Phôi tôn kẽm|Phôi tôn mạ|Phôi tôn|Phôi thép mạ kẽm|Phôi thép|Thép tấm cuộn|Thép cuộn|Thép Inox cuộn|Thép Inox|Tôn cuộn)(\s+|$)(.*)$/i;
+  const prefixMatch = name.match(prefixRegex);
+  if (prefixMatch) {
+    const prefix = prefixMatch[1].trim();
+    const rest = (prefixMatch[3] || '').trim();
+    if (rest) {
+      const dimMatch = rest.match(/^(\d+(?:\.\d+)?\s*[xX]\s*\d+)(.*)$/);
+      if (dimMatch) {
+        const dimStr = dimMatch[1].replace(/\s*[xX]\s*/, 'x');
+        const remaining = dimMatch[2].trim();
+        return remaining ? `${prefix} ${dimStr} ${formattedBatch} ${remaining}`.replace(/\s+/g, ' ').trim() : `${prefix} ${dimStr} ${formattedBatch}`;
+      }
+      return `${prefix} ${formattedBatch} ${rest}`.replace(/\s+/g, ' ').trim();
+    }
+    return `${prefix} ${formattedBatch}`;
+  }
+
   return `${name} ${formattedBatch}`.trim();
 }
 
@@ -101,7 +143,12 @@ assert.strictEqual(simulatedItems[0].tenVatTu, 'Thép phôi kẽm 2.0x349VN Z275
 assert.strictEqual(simulatedItems[1].batch, '2.5X350VN', 'Mục 2: Batch phải giữ nguyên 2.5X350VN (chữ X hoa)');
 assert.strictEqual(simulatedItems[1].tenVatTu, 'Thép phôi kẽm 2.5x350VN Z275 G450', 'Mục 2: Tên vật tư phải có quy cách 2.5x350VN');
 
+// Kiểm tra Mục 3: Tole với kích thước 0.5x1200 và batch DOA-VN
+const toleMerged = mergeBatchIntoTenVatTu('Phôi tôn mạ 0.5x1200 AZ150 G550', 'DOA-VN');
+assert.strictEqual(toleMerged, 'Phôi tôn mạ 0.5x1200 DOA-VN AZ150 G550', 'Tole: Tên vật tư phải giữ nguyên kích thước 0.5x1200 và ghép DOA-VN');
+
 console.log('✅ Kiểm tra mô phỏng thẻ mặt hàng thành công!');
 console.log('Mục #1:', simulatedItems[0]);
 console.log('Mục #2:', simulatedItems[1]);
+console.log('Mục Tole:', toleMerged);
 console.log('🎉 TẤT CẢ KIỂM THỬ ĐỀU ĐẠT CHUẨN!');

@@ -1018,17 +1018,16 @@ function formatBatchForMaterialName(batch) {
   return formatted;
 }
 
-function mergeBatchIntoTenVatTu(tenVatTu, batch) {
+function mergeBatchIntoTenVatTu(tenVatTu, batch, oldBatch) {
   if (!tenVatTu && !batch) return '';
   if (!batch || !String(batch).trim()) return (tenVatTu || '').trim();
-  
+
   const formattedBatch = formatBatchForMaterialName(batch);
   const rawBatch = String(batch).trim();
   let name = (tenVatTu || '').trim();
-  
+
   if (!name) return formattedBatch;
-  
-  // Check if batch is already inside name
+
   const lowerName = name.toLowerCase();
   const lowerBatch = rawBatch.toLowerCase();
   const lowerFormatted = formattedBatch.toLowerCase();
@@ -1036,31 +1035,64 @@ function mergeBatchIntoTenVatTu(tenVatTu, batch) {
     // If name already contains batch but with capital X, ensure X is replaced by x in dimension
     return name.replace(/\b(\d+(?:\.\d+)?)\s*X\s*(\d+[A-Za-z0-9]*)\b/g, '$1x$2');
   }
-  
-  // If name already has a dimension/batch like 1.5X348VN or 3x451VN, replace it
-  const dimRegex = /\b\d+(\.\d+)?\s*[xX]\s*\d+[A-Za-z0-9]*\b/i;
-  if (dimRegex.test(name)) {
-    return name.replace(dimRegex, formattedBatch);
+
+  // If oldBatch was provided and is present in name, replace it with new formattedBatch
+  if (oldBatch && String(oldBatch).trim()) {
+    const rawOld = String(oldBatch).trim();
+    const formattedOld = formatBatchForMaterialName(rawOld);
+    if (name.includes(rawOld)) {
+      return name.replace(rawOld, formattedBatch);
+    }
+    if (name.includes(formattedOld)) {
+      return name.replace(formattedOld, formattedBatch);
+    }
   }
-  
+
+  // If name has an existing tole batch between dimension and grade marker:
+  // e.g. "Phôi tôn mạ 0.5x1200 PREV_BATCH AZ150 G550" -> replace PREV_BATCH with formattedBatch
+  const gradeTokens = 'Z\\d+|G\\d+|AZ\\d+|AM\\d+|S\\d+GD|S\\d+|SGCC|SGCD|SECC|SPCC|SUS\\s*\\d+|GI\\s+Z';
+  const toleBatchMidRegex = new RegExp('(\\b\\d+(?:\\.\\d+)?\\s*[xX]\\s*\\d+\\s+)(?!(?:' + gradeTokens + ')\\b)([A-Za-z0-9\\-_]+)(\\s+(?:' + gradeTokens + ')\\b)', 'i');
+  const midMatch = name.match(toleBatchMidRegex);
+  if (midMatch) {
+    return name.replace(toleBatchMidRegex, `$1${formattedBatch}$3`);
+  }
+
+  // If name already has a dimension-batch WITH letter suffix (like 1.5X348VN or 3x451VN),
+  // and the new batch is ALSO a dimension-like batch (like 3x451VN), replace it.
+  // CRITICAL: Pure dimensions (like 0.5x1200 without trailing letter suffix) are material sizes, NEVER replace them!
+  const batchWithDimRegex = /\b\d+(\.\d+)?\s*[xX]\s*\d+[A-Za-z]+[A-Za-z0-9]*\b/i;
+  const isNewBatchDim = /\b\d+(\.\d+)?\s*[xX]/i.test(formattedBatch);
+  if (isNewBatchDim && batchWithDimRegex.test(name)) {
+    return name.replace(batchWithDimRegex, formattedBatch);
+  }
+
   // Look for standard grade/coating markers (Z275, G450, AZ150, S450GD, SGCC, etc.)
-  const gradeRegex = /(?=\b(Z\d+|G\d+|AZ\d+|AM\d+|S\d+GD|S\d+|SGCC|SGCD|SECC|SPCC|SUS\s*\d+|GI\s+Z)\b)/i;
+  const gradeRegex = new RegExp('(?=\\b(' + gradeTokens + ')\\b)', 'i');
   const gradeMatch = name.search(gradeRegex);
   if (gradeMatch !== -1) {
     const before = name.substring(0, gradeMatch).trim();
     const after = name.substring(gradeMatch).trim();
     return `${before} ${formattedBatch} ${after}`.replace(/\s+/g, ' ').trim();
   }
-  
+
   // Fallback: prefix match
-  const prefixRegex = /^(Thép phôi kẽm|Thép phôi|Phôi tôn kẽm|Phôi tôn|Phôi thép mạ kẽm|Phôi thép|Thép tấm cuộn|Thép cuộn|Thép Inox cuộn|Thép Inox|Tôn cuộn)(\s+|$)(.*)$/i;
+  const prefixRegex = /^(Thép phôi kẽm|Thép phôi|Phôi tôn kẽm|Phôi tôn mạ|Phôi tôn|Phôi thép mạ kẽm|Phôi thép|Thép tấm cuộn|Thép cuộn|Thép Inox cuộn|Thép Inox|Tôn cuộn)(\s+|$)(.*)$/i;
   const prefixMatch = name.match(prefixRegex);
   if (prefixMatch) {
     const prefix = prefixMatch[1].trim();
     const rest = (prefixMatch[3] || '').trim();
-    return rest ? `${prefix} ${formattedBatch} ${rest}`.replace(/\s+/g, ' ').trim() : `${prefix} ${formattedBatch}`;
+    if (rest) {
+      const dimMatch = rest.match(/^(\d+(?:\.\d+)?\s*[xX]\s*\d+)(.*)$/);
+      if (dimMatch) {
+        const dimStr = dimMatch[1].replace(/\s*[xX]\s*/, 'x');
+        const remaining = dimMatch[2].trim();
+        return remaining ? `${prefix} ${dimStr} ${formattedBatch} ${remaining}`.replace(/\s+/g, ' ').trim() : `${prefix} ${dimStr} ${formattedBatch}`;
+      }
+      return `${prefix} ${formattedBatch} ${rest}`.replace(/\s+/g, ' ').trim();
+    }
+    return `${prefix} ${formattedBatch}`;
   }
-  
+
   return `${name} ${formattedBatch}`.trim();
 }
 
@@ -1258,10 +1290,11 @@ function renderItemCards() {
       });
       batchInp.addEventListener('change', (e) => {
         const newBatch = e.target.value.trim();
+        const oldBatch = item.batch;
         item.batch = newBatch;
         batchInp.value = newBatch;
         if (newBatch && item.tenVatTu) {
-          const merged = mergeBatchIntoTenVatTu(item.tenVatTu, newBatch);
+          const merged = mergeBatchIntoTenVatTu(item.tenVatTu, newBatch, oldBatch);
           if (merged !== item.tenVatTu) {
             item.tenVatTu = merged;
             if (tenVtInp) tenVtInp.value = merged;
@@ -1737,11 +1770,14 @@ function openEditDataModal() {
   const editBatchInp = commonFieldsContainer.querySelector('[name="col_7"]');
   const editTenVtInp = commonFieldsContainer.querySelector('[name="col_6"]');
   if (editBatchInp && editTenVtInp) {
+    editBatchInp.dataset.oldBatch = editBatchInp.value.trim();
     editBatchInp.addEventListener('change', () => {
       const b = editBatchInp.value.trim();
+      const oldB = editBatchInp.dataset.oldBatch || '';
       editBatchInp.value = b;
       if (b && editTenVtInp.value.trim()) {
-        editTenVtInp.value = mergeBatchIntoTenVatTu(editTenVtInp.value.trim(), b);
+        editTenVtInp.value = mergeBatchIntoTenVatTu(editTenVtInp.value.trim(), b, oldB);
+        editBatchInp.dataset.oldBatch = b;
       }
     });
   }
