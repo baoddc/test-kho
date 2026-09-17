@@ -358,13 +358,39 @@ body.in-tem-page .main-content {
     margin: 8mm 6mm;
   }
 
+  /* Loại bỏ toàn bộ bóng đổ và text shadow khi in */
+  *,
+  *::before,
+  *::after {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Khử triệt để nền đen / tối của dark theme trên html và body */
   html,
-  body {
+  html[data-bs-theme="dark"],
+  html[data-bs-theme="light"],
+  body,
+  body.in-tem-page,
+  body.in-iframe,
+  html[data-bs-theme="dark"] body,
+  html[data-bs-theme="light"] body,
+  html[data-bs-theme="dark"] body.in-tem-page,
+  html[data-bs-theme="dark"] body.in-iframe,
+  .main-wrapper,
+  .main-content,
+  .print-page-wrapper,
+  #labelsContainer,
+  .labels-container {
     background: #ffffff !important;
+    background-color: #ffffff !important;
     color: #000000 !important;
     font-size: 11pt;
     margin: 0 !important;
     padding: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    box-shadow: none !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }

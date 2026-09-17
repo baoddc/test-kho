@@ -880,6 +880,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Đảm bảo toàn bộ trang in và phần giấy thừa luôn là nền trắng không màu
+  window.addEventListener('beforeprint', () => {
+    document.documentElement.style.setProperty('background', '#ffffff', 'important');
+    document.documentElement.style.setProperty('background-color', '#ffffff', 'important');
+    document.body.style.setProperty('background', '#ffffff', 'important');
+    document.body.style.setProperty('background-color', '#ffffff', 'important');
+    const mainContent = document.querySelector('.main-content');
+    if (mainContent) {
+      mainContent.style.setProperty('background', '#ffffff', 'important');
+      mainContent.style.setProperty('background-color', '#ffffff', 'important');
+    }
+  });
+
+  window.addEventListener('afterprint', () => {
+    document.documentElement.style.removeProperty('background');
+    document.documentElement.style.removeProperty('background-color');
+    document.body.style.removeProperty('background');
+    document.body.style.removeProperty('background-color');
+    const mainContent = document.querySelector('.main-content');
+    if (mainContent) {
+      mainContent.style.removeProperty('background');
+      mainContent.style.removeProperty('background-color');
+    }
+  });
+
   /* =============================================================================
      INITIALIZATION
   ================================================================================ */

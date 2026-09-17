@@ -1013,10 +1013,25 @@ body.sidebar-collapsed .main-wrapper {
    DARK THEME UNIFICATION & PREMIUM TABLES
    ============================================================================= */
 
-/* Force dark theme defaults on body */
-html[data-bs-theme="dark"] body {
-  background-color: #272c42 !important;
-  color: #f3f4f6 !important;
+/* Force dark theme defaults on body (chỉ áp dụng trên màn hình) */
+@media screen {
+  html[data-bs-theme="dark"] body {
+    background-color: #272c42 !important;
+    color: #f3f4f6 !important;
+  }
+}
+
+@media print {
+  html,
+  html[data-bs-theme="dark"],
+  html[data-bs-theme="light"],
+  body,
+  html[data-bs-theme="dark"] body,
+  html[data-bs-theme="light"] body {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
 }
 
 /* Premium Table Dark Mode Overrides */
