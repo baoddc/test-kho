@@ -130,10 +130,14 @@ def main():
     data_rows = rows[1:]
     print(f"[✓] Đã đọc thành công {len(data_rows)} dòng từ Google Sheets.")
     
-    # Helper tìm index cột an toàn
-    def col_idx(name_sub):
+    # Helper tìm index cột an toàn (ưu tiên so khớp chính xác)
+    def col_idx(name):
+        target = name.strip().lower()
         for i, h in enumerate(headers):
-            if name_sub.lower() in h.lower():
+            if h.strip().lower() == target:
+                return i
+        for i, h in enumerate(headers):
+            if target in h.strip().lower():
                 return i
         return -1
     
@@ -152,6 +156,8 @@ def main():
     idx_plant = col_idx('Plant')
     idx_vendor = col_idx('Vendor name')
     idx_customer = col_idx('Customer name')
+    
+    print(f"[*] Map cột: Doc={idx_doc} ('{headers[idx_doc]}'), Material={idx_mat} ('{headers[idx_mat]}'), Desc={idx_mat_desc} ('{headers[idx_mat_desc]}')")
     
     def safe_get(row, idx):
         if idx >= 0 and idx < len(row):

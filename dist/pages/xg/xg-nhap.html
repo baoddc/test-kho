@@ -140,11 +140,20 @@
                           <td class="text-end fw-bold">Tổng số cuộn:</td>
                           <td class="fw-bold" id="totalRollsCount">0</td>
                           <td></td>
+                          <td></td>
+                          <td></td>
                         </tr>
                         <tr class="table-warning">
-                          <td class="text-end fw-bold">Tổng kg:</td>
+                          <td class="text-end fw-bold">Tổng kg cuộn:</td>
                           <td class="fw-bold" id="totalKg">0</td>
-                          <td></td>
+                          <td colspan="3"></td>
+                        </tr>
+                        <tr class="table-primary" id="sapReconciliationRow" style="display: none;">
+                          <td class="text-end fw-bold text-primary">Tổng kg SAP:</td>
+                          <td class="fw-bold text-primary" id="totalSapKgDisplay">0 kg</td>
+                          <td colspan="3">
+                            <span class="badge bg-secondary" id="sapReconciliationBadge">Chờ nhập kg cuộn</span>
+                          </td>
                         </tr>
                       </tfoot>
                     </table>
@@ -221,11 +230,20 @@
                           <td class="text-end fw-bold">Tổng số cuộn:</td>
                           <td class="fw-bold" id="editTotalRollsCount">0</td>
                           <td></td>
+                          <td></td>
+                          <td></td>
                         </tr>
                         <tr class="table-warning">
-                          <td class="text-end fw-bold">Tổng kg:</td>
+                          <td class="text-end fw-bold">Tổng kg cuộn:</td>
                           <td class="fw-bold" id="editTotalKg">0</td>
-                          <td></td>
+                          <td colspan="3"></td>
+                        </tr>
+                        <tr class="table-primary" id="editSapReconciliationRow" style="display: none;">
+                          <td class="text-end fw-bold text-primary">Tổng kg SAP:</td>
+                          <td class="fw-bold text-primary" id="editTotalSapKgDisplay">0 kg</td>
+                          <td colspan="3">
+                            <span class="badge bg-secondary" id="editSapReconciliationBadge">Chờ nhập kg cuộn</span>
+                          </td>
                         </tr>
                       </tfoot>
                     </table>
@@ -299,7 +317,8 @@
   <script src="/assets/js/core/qr-scanner-service.js?v=2.0.3"></script>
 
   <!-- Supabase version of xg-nhap -->
-  <script src="/assets/js/xg/xg-nhap.js?v=2.0.3"></script>
+  <script src="/assets/js/xg/xg-sap-lookup.js?v=2.0.4"></script>
+  <script src="/assets/js/xg/xg-nhap.js?v=2.0.4"></script>
 
   <!-- Bootstrap JS (for dropdown) -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

@@ -1130,6 +1130,9 @@ function openAddDataModal() {
   const rollsTableBody = document.getElementById('rollsTableBody');
   if (rollsTableBody) rollsTableBody.innerHTML = '';
   rollCount = 0;
+  if (window.XgSapLookup && window.XgSapLookup.resetSapSelection) {
+    window.XgSapLookup.resetSapSelection();
+  }
   updateRollTotals();
 
   const quantityColIndex = findQuantityColumnIndex();
@@ -1145,6 +1148,15 @@ function openAddDataModal() {
     maVatTuInput.addEventListener('input', () => {
       updateRollCuonIds();
     });
+  }
+
+  // Tích hợp Autocomplete SAP cho ô Phiếu nhập (col_3)
+  const phieuNhapInput = commonFieldsContainer.querySelector('input[name="col_3"]');
+  if (phieuNhapInput && window.XgSapLookup && window.XgSapLookup.initSapDocumentAutocomplete) {
+    phieuNhapInput.placeholder = 'Gõ số phiếu nhập để tìm SAP...';
+    phieuNhapInput.setAttribute('autocomplete', 'off');
+    const formEl = document.getElementById('addDataForm');
+    window.XgSapLookup.initSapDocumentAutocomplete(phieuNhapInput, formEl);
   }
 
   // Cột sau Số lượng: Vị trí(10), Mã CT(11), Tên CT(12), Ghi chú(13) - Vị trí ở bảng cuộn
@@ -1214,6 +1226,15 @@ function openEditDataModal() {
     maVatTuInput.addEventListener('input', () => {
       updateEditRollCuonIds();
     });
+  }
+
+  // Tích hợp Autocomplete SAP cho ô Phiếu nhập trong modal Sửa
+  const phieuNhapEditInput = commonFieldsContainer.querySelector('input[name="col_3"]');
+  if (phieuNhapEditInput && window.XgSapLookup && window.XgSapLookup.initSapDocumentAutocomplete) {
+    phieuNhapEditInput.placeholder = 'Gõ số phiếu nhập để tìm SAP...';
+    phieuNhapEditInput.setAttribute('autocomplete', 'off');
+    const formEl = document.getElementById('editDataForm');
+    window.XgSapLookup.initSapDocumentAutocomplete(phieuNhapEditInput, formEl);
   }
 
   // Existing roll data
@@ -1395,6 +1416,11 @@ function updateRollTotals() {
   const totalKgEl = document.getElementById('totalKg');
   if (totalRollsEl) totalRollsEl.textContent = rollsWithKg;
   if (totalKgEl) totalKgEl.textContent = totalKg.toFixed(2).replace('.', ',');
+
+  // Đối chiếu khối lượng SAP
+  if (window.XgSapLookup && typeof window.XgSapLookup.updateSapReconciliationDisplay === 'function') {
+    window.XgSapLookup.updateSapReconciliationDisplay(totalKg);
+  }
 }
 
 function addEditRollRow(cuonId = '', kgValue = '', viTri = '') {
@@ -1459,6 +1485,11 @@ function updateEditRollTotals() {
   const totalKgEl = document.getElementById('editTotalKg');
   if (totalRollsEl) totalRollsEl.textContent = rollsWithKg;
   if (totalKgEl) totalKgEl.textContent = totalKg.toFixed(2).replace('.', ',');
+
+  // Đối chiếu khối lượng SAP trong modal Sửa
+  if (window.XgSapLookup && typeof window.XgSapLookup.updateSapReconciliationDisplay === 'function') {
+    window.XgSapLookup.updateSapReconciliationDisplay(totalKg, true);
+  }
 }
 
 
