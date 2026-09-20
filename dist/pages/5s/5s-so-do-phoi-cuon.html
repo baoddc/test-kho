@@ -15,6 +15,11 @@
   
   <!-- Tailwind CSS qua CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: ['selector', '[data-bs-theme="dark"]'],
+    }
+  </script>
   
   <!-- Lucide Icons qua CDN -->
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -68,6 +73,10 @@
 
           <!-- Actions -->
           <div class="flex items-center gap-2">
+            <button id="btn-theme-toggle" class="btn btn-sm btn-outline-secondary d-flex items-center gap-1.5 px-3 py-1.5 rounded-lg shadow-sm" title="Chuyển chế độ Sáng / Tối">
+              <i id="theme-toggle-icon" class="bi bi-moon-fill"></i>
+              <span id="theme-toggle-text" class="hidden sm:inline">Chế độ tối</span>
+            </button>
             <button id="btn-refresh" class="btn btn-sm btn-outline-secondary d-flex items-center gap-1.5 px-3 py-1.5 rounded-lg shadow-sm hover:bg-slate-100">
               <i class="bi bi-arrow-clockwise"></i>
               <span class="hidden sm:inline">Làm mới</span>

@@ -1,6 +1,6 @@
 /* =============================================================================
    5S SƠ ĐỒ KHO PHÔI CUỘN - STYLES & ANIMATIONS
-   Thiết kế giao diện mặt bằng kho 5S, trạng thái kệ và hiệu ứng tương tác
+   Thiết kế giao diện mặt bằng kho 5S, hỗ trợ Chế độ Sáng & Tối (Light/Dark Theme)
 ================================================================================ */
 
 /* Custom Scrollbars */
@@ -21,6 +21,18 @@
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+[data-bs-theme="dark"] .custom-scrollbar::-webkit-scrollbar-track {
+  background: #181b2a;
+}
+
+[data-bs-theme="dark"] .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #373f5c;
+}
+
+[data-bs-theme="dark"] .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #4f587d;
 }
 
 /* Warehouse Filter Tabs */
@@ -49,12 +61,12 @@
 
 /* KPI Cards */
 .kpi-card {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .kpi-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
 }
 
 /* Keyframes & Animations */
@@ -97,7 +109,7 @@
   user-select: none;
 }
 
-/* Shelf Status Themes */
+/* Shelf Status Themes (Default Light Mode) */
 .shelf-empty {
   background-color: #f1f5f9 !important;
   border: 1px dashed #cbd5e1 !important;
@@ -150,7 +162,7 @@
 .shelf-container.hovered {
   transform: scale(1.06);
   z-index: 50;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
 }
 
 .shelf-container.highlighted {
@@ -211,4 +223,302 @@
 
 #modalShelfTableBody tr:hover {
   background-color: #f8fafc;
+}
+
+/* =============================================================================
+   DARK MODE OVERRIDES ([data-bs-theme="dark"])
+   ============================================================================= */
+
+[data-bs-theme="dark"] body {
+  background-color: #0f1117 !important;
+  color: #e2e8f0 !important;
+}
+
+/* Main Container */
+[data-bs-theme="dark"] #app {
+  background-color: #1a1d2d !important;
+  border-color: #2b324a !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4) !important;
+  color: #e2e8f0 !important;
+}
+
+/* Headers & Text */
+[data-bs-theme="dark"] h1,
+[data-bs-theme="dark"] .text-slate-900 {
+  color: #f8fafc !important;
+}
+
+[data-bs-theme="dark"] .text-slate-800 {
+  color: #e2e8f0 !important;
+}
+
+[data-bs-theme="dark"] .text-slate-700 {
+  color: #cbd5e1 !important;
+}
+
+[data-bs-theme="dark"] .text-slate-600 {
+  color: #94a3b8 !important;
+}
+
+[data-bs-theme="dark"] .text-slate-500 {
+  color: #7d89a1 !important;
+}
+
+[data-bs-theme="dark"] .text-slate-400 {
+  color: #64748b !important;
+}
+
+/* Dividers & Borders */
+[data-bs-theme="dark"] .border-slate-100,
+[data-bs-theme="dark"] .border-slate-200 {
+  border-color: #2b324a !important;
+}
+
+[data-bs-theme="dark"] .border-slate-300 {
+  border-color: #37405e !important;
+}
+
+/* Backgrounds */
+[data-bs-theme="dark"] .bg-slate-50 {
+  background-color: #141724 !important;
+}
+
+[data-bs-theme="dark"] .bg-slate-100 {
+  background-color: #202538 !important;
+}
+
+[data-bs-theme="dark"] .bg-white {
+  background-color: #1a1d2d !important;
+}
+
+/* Action Buttons */
+[data-bs-theme="dark"] .btn-outline-secondary {
+  color: #cbd5e1 !important;
+  border-color: #3e4868 !important;
+  background-color: #202538 !important;
+}
+
+[data-bs-theme="dark"] .btn-outline-secondary:hover {
+  background-color: #2d354f !important;
+  color: #ffffff !important;
+  border-color: #55628b !important;
+}
+
+/* KPI Cards in Dark Mode */
+[data-bs-theme="dark"] .kpi-card {
+  background: #202538 !important;
+  border-color: #2e3652 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
+}
+
+[data-bs-theme="dark"] .kpi-card:hover {
+  border-color: #434e73 !important;
+}
+
+[data-bs-theme="dark"] .kpi-card .text-slate-900 {
+  color: #ffffff !important;
+}
+
+[data-bs-theme="dark"] #kpi-xg-rolls {
+  color: #a5b4fc !important;
+}
+
+[data-bs-theme="dark"] #kpi-tole-rolls {
+  color: #6ee7b7 !important;
+}
+
+/* Filter Bar & Search */
+[data-bs-theme="dark"] .warehouse-filter-btn {
+  color: #94a3b8 !important;
+}
+
+[data-bs-theme="dark"] .warehouse-filter-btn:hover {
+  background-color: #2a3147 !important;
+  color: #ffffff !important;
+}
+
+[data-bs-theme="dark"] .warehouse-filter-btn.active {
+  background-color: #dc2626 !important;
+  color: #ffffff !important;
+}
+
+[data-bs-theme="dark"] input#search-input {
+  background-color: #141724 !important;
+  border-color: #2e3652 !important;
+  color: #f8fafc !important;
+}
+
+[data-bs-theme="dark"] input#search-input::placeholder {
+  color: #64748b !important;
+}
+
+[data-bs-theme="dark"] input#search-input:focus {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2) !important;
+}
+
+/* Map Layout in Dark Mode */
+[data-bs-theme="dark"] .shelf-empty {
+  background-color: #202538 !important;
+  border-color: #2f3754 !important;
+}
+
+[data-bs-theme="dark"] .shelf-empty .shelf-circle {
+  background-color: #141724 !important;
+  color: #64748b !important;
+  border-color: #2f3754 !important;
+}
+
+[data-bs-theme="dark"] .shelf-occupied {
+  background-color: #4a2318 !important;
+  border-color: #c2410c !important;
+}
+
+[data-bs-theme="dark"] .shelf-occupied .shelf-circle {
+  background-color: #1a1d2d !important;
+  color: #f87171 !important;
+  border-color: #ef4444 !important;
+}
+
+[data-bs-theme="dark"] .shelf-full {
+  background-color: #5c1818 !important;
+  border-color: #ef4444 !important;
+}
+
+[data-bs-theme="dark"] .shelf-full .shelf-circle {
+  background-color: #dc2626 !important;
+  color: #ffffff !important;
+  border-color: #b91c1c !important;
+}
+
+[data-bs-theme="dark"] .shelf-mini-badge {
+  background-color: rgba(20, 23, 36, 0.85) !important;
+  color: #f1f5f9 !important;
+  border: 1px solid #37405e !important;
+}
+
+[data-bs-theme="dark"] #center-aisle {
+  background-color: #174b35 !important;
+}
+
+[data-bs-theme="dark"] #grating-area {
+  background-color: #3b2b06 !important;
+  border-color: #92400e !important;
+  color: #fef3c7 !important;
+}
+
+[data-bs-theme="dark"] #grating-area * {
+  color: #fde68a !important;
+}
+
+[data-bs-theme="dark"] #grating-area .badge {
+  color: #ffffff !important;
+}
+
+[data-bs-theme="dark"] #unassigned-area {
+  background-color: #331118 !important;
+  border-color: #6b1426 !important;
+}
+
+[data-bs-theme="dark"] #unassigned-area span.text-rose-900 {
+  color: #fda4af !important;
+}
+
+/* Tooltips in Dark Mode */
+[data-bs-theme="dark"] .shelf-tooltip > div {
+  background-color: #1a1d2d !important;
+  border-color: #37405e !important;
+  color: #e2e8f0 !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6) !important;
+}
+
+[data-bs-theme="dark"] .shelf-tooltip .p-1.5,
+[data-bs-theme="dark"] .shelf-tooltip .p-1 {
+  background-color: #141724 !important;
+  border-color: #2b324a !important;
+}
+
+[data-bs-theme="dark"] .shelf-tooltip .text-slate-900,
+[data-bs-theme="dark"] .shelf-tooltip .text-slate-800 {
+  color: #f8fafc !important;
+}
+
+/* Modal in Dark Mode */
+[data-bs-theme="dark"] .modal-content {
+  background-color: #1a1d2d !important;
+  border-color: #323954 !important;
+  color: #e2e8f0 !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7) !important;
+}
+
+[data-bs-theme="dark"] .modal-header {
+  background-color: #141724 !important;
+  border-bottom: 1px solid #2b324a !important;
+}
+
+[data-bs-theme="dark"] .modal-body {
+  background-color: #10121c !important;
+}
+
+[data-bs-theme="dark"] .modal-body .bg-white {
+  background-color: #1a1d2d !important;
+  border-color: #2b324a !important;
+}
+
+[data-bs-theme="dark"] .modal-footer {
+  background-color: #141724 !important;
+  border-top: 1px solid #2b324a !important;
+}
+
+[data-bs-theme="dark"] input#modalSearchInput {
+  background-color: #141724 !important;
+  border-color: #2e3652 !important;
+  color: #f8fafc !important;
+}
+
+[data-bs-theme="dark"] input#modalSearchInput::placeholder {
+  color: #64748b !important;
+}
+
+[data-bs-theme="dark"] .table {
+  color: #cbd5e1 !important;
+  border-color: #2b324a !important;
+}
+
+[data-bs-theme="dark"] .table-light,
+[data-bs-theme="dark"] thead.table-light tr,
+[data-bs-theme="dark"] thead.table-light th {
+  background-color: #141724 !important;
+  color: #94a3b8 !important;
+  border-color: #2b324a !important;
+}
+
+[data-bs-theme="dark"] #modalShelfTableBody tr {
+  background-color: #1a1d2d !important;
+  color: #cbd5e1 !important;
+}
+
+[data-bs-theme="dark"] #modalShelfTableBody tr:nth-of-type(odd) {
+  background-color: #171926 !important;
+}
+
+[data-bs-theme="dark"] #modalShelfTableBody tr:hover {
+  background-color: #242940 !important;
+}
+
+[data-bs-theme="dark"] #modalShelfTableBody td {
+  border-color: #252b3f !important;
+  color: #cbd5e1 !important;
+}
+
+[data-bs-theme="dark"] #modalShelfTableBody .text-slate-900 {
+  color: #f8fafc !important;
+}
+
+[data-bs-theme="dark"] #modalShelfTableBody .text-slate-700 {
+  color: #cbd5e1 !important;
+}
+
+[data-bs-theme="dark"] #modalShelfTableBody .text-slate-600 {
+  color: #94a3b8 !important;
 }

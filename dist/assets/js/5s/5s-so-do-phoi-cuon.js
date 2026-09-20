@@ -847,8 +847,55 @@
       }
     };
 
-    if (xgBroadcast) xgBroadcast.onmessage = (e) => handleBroadcastMsg(e.data);
-    if (toleBroadcast) toleBroadcast.onmessage = (e) => handleBroadcastMsg(e.data);
+    // Theme Toggle & Synchronization
+    initThemeManagement();
+  }
+
+  // ==================== THEME MANAGEMENT ====================
+  function initThemeManagement() {
+    const themeBtn = document.getElementById('btn-theme-toggle');
+    const themeIcon = document.getElementById('theme-toggle-icon');
+    const themeText = document.getElementById('theme-toggle-text');
+
+    function updateThemeUI(theme) {
+      const isDark = theme === 'dark';
+      if (themeIcon) {
+        themeIcon.className = isDark ? 'bi bi-sun-fill text-warning' : 'bi bi-moon-fill text-slate-600';
+      }
+      if (themeText) {
+        themeText.textContent = isDark ? 'Chế độ sáng' : 'Chế độ tối';
+      }
+      if (themeBtn) {
+        themeBtn.setAttribute('title', isDark ? 'Chuyển sang Chế độ Sáng' : 'Chuyển sang Chế độ Tối');
+      }
+    }
+
+    // Read initial theme
+    const currentTheme = document.documentElement.getAttribute('data-bs-theme') || localStorage.getItem('ddc_theme') || 'dark';
+    document.documentElement.setAttribute('data-bs-theme', currentTheme);
+    updateThemeUI(currentTheme);
+
+    // Toggle button handler
+    if (themeBtn) {
+      themeBtn.addEventListener('click', () => {
+        const current = document.documentElement.getAttribute('data-bs-theme') || 'dark';
+        const next = current === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-bs-theme', next);
+        localStorage.setItem('ddc_theme', next);
+        updateThemeUI(next);
+      });
+    }
+
+    // Listen to changes on data-bs-theme attribute (e.g. from topbar or sidebar)
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((m) => {
+        if (m.type === 'attributes' && m.attributeName === 'data-bs-theme') {
+          const newTheme = document.documentElement.getAttribute('data-bs-theme') || 'dark';
+          updateThemeUI(newTheme);
+        }
+      });
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-bs-theme'] });
   }
 
   // ==================== INITIALIZATION ====================
