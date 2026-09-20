@@ -1,33 +1,122 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&display=swap');
+
+/* =============================================================================
+   5S SƠ ĐỒ KHO PHẾ LIỆU - CSS
+   Bố cục chuẩn tỷ lệ mặt bằng 96m x 11m, Dark/Light mode và hiệu ứng tương tác
+   ============================================================================= */
 
 body {
-    font-family: 'Montserrat', sans-serif;
+  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
+/* Custom Scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
-    width: 4px;
+  width: 6px;
+  height: 6px;
 }
-
 .custom-scrollbar::-webkit-scrollbar-track {
-    background: #f1f1f1;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
 }
-
 .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #ccc;
-    border-radius: 10px;
+  background: rgba(150, 150, 150, 0.35);
+  border-radius: 4px;
 }
-
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #999;
+  background: rgba(150, 150, 150, 0.55);
 }
 
-/* Map Area Animations */
+/* Map Areas Styling */
 .map-area {
-    transition: all 0.2s ease-in-out;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease, filter 0.2s ease;
+  user-select: none;
+}
+.map-area:hover {
+  z-index: 25 !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  transform: scale(1.02);
 }
 
-.map-area:hover {
+/* Area Search Highlight Pulse */
+@keyframes pulseHighlight {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
     transform: scale(1.02);
-    z-index: 20 !important;
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+    transform: scale(1.03);
+  }
+}
+.area-highlight {
+  animation: pulseHighlight 1.5s infinite !important;
+  z-index: 30 !important;
+  border: 2px solid #ef4444 !important;
+}
+
+/* Dark Theme Overrides */
+[data-bs-theme="dark"] .bg-white {
+  background-color: #1a1d2d !important;
+  color: #e2e8f0;
+}
+[data-bs-theme="dark"] .bg-gray-50,
+[data-bs-theme="dark"] .bg-gray-50\/50 {
+  background-color: #141724 !important;
+  color: #cbd5e1;
+}
+[data-bs-theme="dark"] .bg-gray-100 {
+  background-color: #202538 !important;
+}
+[data-bs-theme="dark"] .bg-gray-200 {
+  background-color: #2e3652 !important;
+}
+[data-bs-theme="dark"] .border-gray-100,
+[data-bs-theme="dark"] .border-gray-200,
+[data-bs-theme="dark"] .border-gray-300 {
+  border-color: #2b324a !important;
+}
+[data-bs-theme="dark"] .text-gray-700,
+[data-bs-theme="dark"] .text-gray-800,
+[data-bs-theme="dark"] .text-gray-900 {
+  color: #f1f5f9 !important;
+}
+[data-bs-theme="dark"] .text-gray-400,
+[data-bs-theme="dark"] .text-gray-500,
+[data-bs-theme="dark"] .text-gray-600 {
+  color: #94a3b8 !important;
+}
+[data-bs-theme="dark"] .status-item {
+  background-color: #141724 !important;
+  border-color: #2b324a !important;
+}
+[data-bs-theme="dark"] .status-item:hover {
+  background-color: #202538 !important;
+}
+[data-bs-theme="dark"] .form-select,
+[data-bs-theme="dark"] .form-control {
+  background-color: #141724 !important;
+  border-color: #2e3652 !important;
+  color: #f8fafc !important;
+}
+[data-bs-theme="dark"] .form-control::placeholder {
+  color: #64748b !important;
+}
+[data-bs-theme="dark"] .modal-content {
+  background-color: #1a1d2d !important;
+  color: #e2e8f0 !important;
+}
+[data-bs-theme="dark"] .table-light {
+  background-color: #202538 !important;
+  color: #e2e8f0 !important;
+}
+[data-bs-theme="dark"] .table {
+  color: #e2e8f0 !important;
+  border-color: #2b324a !important;
+}
+[data-bs-theme="dark"] .nav-pills .nav-link {
+  color: #94a3b8;
+}
+[data-bs-theme="dark"] .nav-pills .nav-link.active {
+  background-color: #ef4444;
+  color: #ffffff;
 }
