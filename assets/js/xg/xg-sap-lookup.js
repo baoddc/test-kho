@@ -339,16 +339,39 @@
       batchInput.value = sapRecord.batch || '';
     }
 
+    // Helper tìm input theo text label
+    const findInputByLabel = (labelPattern) => {
+      const labels = formEl.querySelectorAll('label');
+      for (const lbl of labels) {
+        if (lbl.textContent.trim().toLowerCase().includes(labelPattern.toLowerCase())) {
+          const parent = lbl.parentElement;
+          if (parent) {
+            const input = parent.querySelector('input, select');
+            if (input) return input;
+          }
+        }
+      }
+      return null;
+    };
+
     // 8. Mã công trình: Project ID
-    const maCongTrinhInput = formEl.querySelector('input[name="add_ext_11"]') ||
-                             formEl.querySelector('input[name="edit_ext_11"]');
+    const maCongTrinhInput = findInputByLabel('Mã công trình') ||
+                             findInputByLabel('Mã dự án') ||
+                             formEl.querySelector('input[name="add_ext_11"]') ||
+                             formEl.querySelector('input[name="edit_ext_11"]') ||
+                             formEl.querySelector('input[name="add_ext_12"]') ||
+                             formEl.querySelector('input[name="edit_ext_12"]');
     if (maCongTrinhInput) {
       maCongTrinhInput.value = sapRecord.project_id || '';
     }
 
     // 9. Tên công trình: Project name
-    const tenCongTrinhInput = formEl.querySelector('input[name="add_ext_12"]') ||
-                              formEl.querySelector('input[name="edit_ext_12"]');
+    const tenCongTrinhInput = findInputByLabel('Tên công trình') ||
+                              findInputByLabel('Tên dự án') ||
+                              formEl.querySelector('input[name="add_ext_12"]') ||
+                              formEl.querySelector('input[name="edit_ext_12"]') ||
+                              formEl.querySelector('input[name="add_ext_13"]') ||
+                              formEl.querySelector('input[name="edit_ext_13"]');
     if (tenCongTrinhInput) {
       tenCongTrinhInput.value = sapRecord.project_name || '';
     }
@@ -359,6 +382,8 @@
     // Cập nhật lại đối chiếu khối lượng cuộn vs SAP
     if (typeof window.updateRollTotals === 'function') {
       window.updateRollTotals();
+    } else if (typeof window.updateEditRollTotals === 'function' && formEl.id === 'editDataForm') {
+      window.updateEditRollTotals();
     }
   }
 

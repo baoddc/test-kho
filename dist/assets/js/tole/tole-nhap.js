@@ -995,6 +995,10 @@ function openAddDataModal() {
   const rollsTableBody = document.getElementById('rollsTableBody');
   if (rollsTableBody) rollsTableBody.innerHTML = '';
   rollCount = 0;
+  // Reset trạng thái chọn SAP trước đó
+  if (window.XgSapLookup && window.XgSapLookup.resetSapSelection) {
+    window.XgSapLookup.resetSapSelection();
+  }
   updateRollTotals();
 
   const quantityColIndex = findQuantityColumnIndex();
@@ -1004,6 +1008,25 @@ function openAddDataModal() {
   commonColIndices.forEach(colIdx => {
     buildFormField(COLUMN_HEADERS[colIdx], colIdx, undefined, commonFieldsContainer, 'col_');
   });
+
+  // Tích hợp Autocomplete SAP cho ô Phiếu nhập (col_3)
+  const formEl = document.getElementById('addDataForm');
+  const phieuNhapInput = commonFieldsContainer.querySelector('input[name="col_3"]');
+  if (phieuNhapInput && window.XgSapLookup && window.XgSapLookup.initSapDocumentAutocomplete) {
+    phieuNhapInput.placeholder = 'Gõ số phiếu nhập để tìm SAP...';
+    phieuNhapInput.autocomplete = 'off';
+    window.XgSapLookup.initSapDocumentAutocomplete(phieuNhapInput, formEl);
+  }
+
+  // Tích hợp nút Đồng bộ Google Sheets
+  const btnSyncGgSheet = document.getElementById('btnSyncGgSheet');
+  if (btnSyncGgSheet) {
+    btnSyncGgSheet.onclick = () => {
+      if (window.XgSapLookup && window.XgSapLookup.syncFromGoogleSheets) {
+        window.XgSapLookup.syncFromGoogleSheets(btnSyncGgSheet);
+      }
+    };
+  }
 
   const maVatTuInput = commonFieldsContainer.querySelector('input[name="col_5"]');
   if (maVatTuInput) {
@@ -1073,6 +1096,25 @@ function openEditDataModal() {
   commonColIndices.forEach(colIdx => {
     buildFormField(COLUMN_HEADERS[colIdx], colIdx, rowData[colIdx], commonFieldsContainer, 'col_');
   });
+
+  // Tích hợp Autocomplete SAP cho ô Phiếu nhập trong modal Sửa
+  const formEl = document.getElementById('editDataForm');
+  const phieuNhapEditInput = commonFieldsContainer.querySelector('input[name="col_3"]');
+  if (phieuNhapEditInput && window.XgSapLookup && window.XgSapLookup.initSapDocumentAutocomplete) {
+    phieuNhapEditInput.placeholder = 'Gõ số phiếu nhập để tìm SAP...';
+    phieuNhapEditInput.autocomplete = 'off';
+    window.XgSapLookup.initSapDocumentAutocomplete(phieuNhapEditInput, formEl);
+  }
+
+  // Tích hợp nút Đồng bộ Google Sheets trong modal Sửa
+  const btnEditSyncGgSheet = document.getElementById('btnEditSyncGgSheet');
+  if (btnEditSyncGgSheet) {
+    btnEditSyncGgSheet.onclick = () => {
+      if (window.XgSapLookup && window.XgSapLookup.syncFromGoogleSheets) {
+        window.XgSapLookup.syncFromGoogleSheets(btnEditSyncGgSheet);
+      }
+    };
+  }
 
   const maVatTuInput = commonFieldsContainer.querySelector('input[name="col_5"]');
   if (maVatTuInput) {
@@ -1275,6 +1317,11 @@ function updateRollTotals() {
   if (totalRollsEl) totalRollsEl.textContent = rollsWithKg;
   if (totalKgEl) totalKgEl.textContent = totalKg.toFixed(2).replace('.', ',') + ' kg';
   if (totalMEl) totalMEl.textContent = totalM.toFixed(2).replace('.', ',') + ' m';
+
+  // Đối chiếu khối lượng SAP
+  if (window.XgSapLookup && typeof window.XgSapLookup.updateSapReconciliationDisplay === 'function') {
+    window.XgSapLookup.updateSapReconciliationDisplay(totalKg);
+  }
 }
 
 function addEditRollRow(cuonId = '', kgValue = '', mValue = '', viTri = '') {
@@ -1352,6 +1399,11 @@ function updateEditRollTotals() {
   if (totalRollsEl) totalRollsEl.textContent = rollsWithKg;
   if (totalKgEl) totalKgEl.textContent = totalKg.toFixed(2).replace('.', ',') + ' kg';
   if (editTotalMEl) editTotalMEl.textContent = totalM.toFixed(2).replace('.', ',') + ' m';
+
+  // Đối chiếu khối lượng SAP trong modal Sửa
+  if (window.XgSapLookup && typeof window.XgSapLookup.updateSapReconciliationDisplay === 'function') {
+    window.XgSapLookup.updateSapReconciliationDisplay(totalKg, true);
+  }
 }
 
 
@@ -1718,3 +1770,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
+// Export các hàm tính tổng để SAP lookup có thể kích hoạt tính toán đối chiếu
+window.updateRollTotals = updateRollTotals;
+window.updateEditRollTotals = updateEditRollTotals;
