@@ -4,33 +4,418 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sơ đồ kho phôi cuộn</title>
+  <title>Sơ đồ kho phôi cuộn - 5S</title>
 
   <!-- Logo hiển thị trên tab -->
-  <link rel="icon" type="image/png" href="assets/img/Logo-DDC.png">
+  <link rel="icon" type="image/png" href="/assets/images/logos/Logo-DDC.png">
 
-  <!-- Import Tailwind CSS qua CDN -->
+  <!-- Bootstrap CSS & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  
+  <!-- Tailwind CSS qua CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Import Lucide Icons qua CDN -->
+  
+  <!-- Lucide Icons qua CDN -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- Import PapaParse để đọc file CSV từ Google Sheets -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-  <!-- Sidebar CSS -->
+  
+  <!-- SheetJS (xlsx) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <!-- Sidebar & Core CSS -->
   <link rel="stylesheet" href="/assets/css/sidebar.css">
+  <link rel="stylesheet" href="/assets/css/trang-chu/home.css">
   <!-- Link tới file CSS tùy chỉnh -->
   <link rel="stylesheet" href="/assets/css/5s/5s-so-do-phoi-cuon.css">
 </head>
 
-<body class="bg-[#f8f9fa] font-sans overflow-x-hidden min-h-screen">
-  <div id="app"
-    class="w-full max-w-5xl bg-white p-4 sm:p-6 md:p-10 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-gray-100 relative">
-    <!-- Nội dung sẽ được render bằng JavaScript -->
+<body class="bg-slate-50 font-sans min-h-screen text-slate-800">
+  
+  <div class="main-content container-fluid px-3 px-md-4 py-3 max-w-7xl mx-auto">
+    <!-- App Container -->
+    <div id="app" class="w-full bg-white p-4 sm:p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 relative">
+      
+      <!-- Loading State -->
+      <div id="loading-state" class="flex flex-col items-center justify-center py-20">
+        <div class="spinner-border text-danger mb-3" role="status" style="width: 3rem; height: 3rem;">
+          <span class="visually-hidden">Đang tải...</span>
+        </div>
+        <p class="text-slate-600 font-semibold text-base animate-pulse">Đang đồng bộ dữ liệu tồn kho phôi cuộn từ Supabase...</p>
+        <span class="text-xs text-slate-400 mt-1">Đang tính toán tồn thực tế kho Xà gồ & Kho Tole</span>
+      </div>
+
+      <!-- Main Layout (Hidden during initial load) -->
+      <div id="main-content-layout" class="hidden">
+        
+        <!-- Header & Title -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-100">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+                <i class="bi bi-diagram-3-fill me-1"></i> Quản Lý Kho 5S
+              </span>
+              <span id="sync-badge" class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 me-1.5 animate-ping"></span> Realtime Supabase
+              </span>
+            </div>
+            <h1 class="text-xl sm:text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+              SƠ ĐỒ MẶT BẰNG KHO PHÔI CUỘN
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">
+              Theo dõi tồn kho thực tế, sức chứa và vị trí kệ phôi cuộn (Kho Xà gồ & Kho Tole)
+            </p>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex items-center gap-2">
+            <button id="btn-refresh" class="btn btn-sm btn-outline-secondary d-flex items-center gap-1.5 px-3 py-1.5 rounded-lg shadow-sm hover:bg-slate-100">
+              <i class="bi bi-arrow-clockwise"></i>
+              <span class="hidden sm:inline">Làm mới</span>
+            </button>
+            <a href="/pages/tem-nhan-kiem-ke/vi-tri-ton.html" class="btn btn-sm btn-outline-primary d-flex items-center gap-1.5 px-3 py-1.5 rounded-lg shadow-sm">
+              <i class="bi bi-qr-code-scan"></i>
+              <span>Tra cứu vị trí</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Quick KPI Summary Banner -->
+        <div id="quick-kpi-banner" class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+          <!-- Total Rolls -->
+          <div class="kpi-card bg-gradient-to-br from-red-50 to-white border border-red-100 rounded-xl p-3.5 shadow-sm">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-red-700 uppercase tracking-wider">Tổng Tồn Cuộn</span>
+              <div class="w-8 h-8 rounded-lg bg-red-100 text-red-600 flex items-center justify-center text-sm font-bold">
+                <i class="bi bi-disc-fill"></i>
+              </div>
+            </div>
+            <div class="mt-2 flex items-baseline gap-2">
+              <span id="kpi-total-rolls" class="text-2xl sm:text-3xl font-extrabold text-slate-900">0</span>
+              <span class="text-xs font-semibold text-slate-500">cuộn</span>
+            </div>
+            <div class="text-[11px] text-slate-500 mt-1 flex items-center justify-between">
+              <span>Đang lưu trữ trên sơ đồ</span>
+              <span id="kpi-rack-utilization" class="font-medium text-red-600">0% kệ dùng</span>
+            </div>
+          </div>
+
+          <!-- Total Weight -->
+          <div class="kpi-card bg-gradient-to-br from-blue-50 to-white border border-blue-100 rounded-xl p-3.5 shadow-sm">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-blue-700 uppercase tracking-wider">Tổng Khối Lượng</span>
+              <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-bold">
+                <i class="bi bi-box-seam-fill"></i>
+              </div>
+            </div>
+            <div class="mt-2 flex items-baseline gap-2">
+              <span id="kpi-total-weight" class="text-2xl sm:text-3xl font-extrabold text-slate-900">0</span>
+              <span class="text-xs font-semibold text-slate-500">Kg</span>
+            </div>
+            <div class="text-[11px] text-slate-500 mt-1 flex items-center justify-between">
+              <span>Quy đổi:</span>
+              <span id="kpi-total-tons" class="font-semibold text-blue-700">0 tấn</span>
+            </div>
+          </div>
+
+          <!-- Xa Go Breakdown -->
+          <div class="kpi-card bg-gradient-to-br from-indigo-50 to-white border border-indigo-100 rounded-xl p-3.5 shadow-sm cursor-pointer hover:border-indigo-300 transition-colors" data-filter-trigger="xg">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-indigo-700 uppercase tracking-wider">Kho Xà Gồ</span>
+              <span class="badge bg-indigo-100 text-indigo-700 text-[10px]">XG</span>
+            </div>
+            <div class="mt-2 flex items-baseline gap-2">
+              <span id="kpi-xg-rolls" class="text-2xl sm:text-3xl font-extrabold text-indigo-900">0</span>
+              <span class="text-xs font-medium text-slate-500">cuộn</span>
+            </div>
+            <div class="text-[11px] text-slate-500 mt-1 flex items-center justify-between">
+              <span>Khối lượng:</span>
+              <span id="kpi-xg-weight" class="font-medium text-indigo-700">0 Kg</span>
+            </div>
+          </div>
+
+          <!-- Tole Breakdown -->
+          <div class="kpi-card bg-gradient-to-br from-emerald-50 to-white border border-emerald-100 rounded-xl p-3.5 shadow-sm cursor-pointer hover:border-emerald-300 transition-colors" data-filter-trigger="tole">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-emerald-700 uppercase tracking-wider">Kho Tole</span>
+              <span class="badge bg-emerald-100 text-emerald-700 text-[10px]">Tole</span>
+            </div>
+            <div class="mt-2 flex items-baseline gap-2">
+              <span id="kpi-tole-rolls" class="text-2xl sm:text-3xl font-extrabold text-emerald-900">0</span>
+              <span class="text-xs font-medium text-slate-500">cuộn</span>
+            </div>
+            <div class="text-[11px] text-slate-500 mt-1 flex items-center justify-between">
+              <span>Khối lượng:</span>
+              <span id="kpi-tole-weight" class="font-medium text-emerald-700">0 Kg</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter & Search Toolbar -->
+        <div class="bg-slate-50 p-3 sm:p-4 rounded-xl border border-slate-200 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-3">
+          
+          <!-- Warehouse Filter Tabs -->
+          <div class="flex items-center gap-1.5 bg-white p-1 rounded-lg border border-slate-200 shadow-sm overflow-x-auto">
+            <button class="warehouse-filter-btn active px-3.5 py-1.5 rounded-md text-xs sm:text-sm font-semibold transition-all" data-warehouse="all">
+              <i class="bi bi-grid-fill me-1"></i> Tất cả
+              <span id="badge-count-all" class="ms-1 px-1.5 py-0.2 bg-slate-100 text-slate-600 rounded-full text-[10px]">0</span>
+            </button>
+            <button class="warehouse-filter-btn px-3.5 py-1.5 rounded-md text-xs sm:text-sm font-semibold transition-all text-slate-600 hover:text-indigo-600" data-warehouse="xg">
+              <i class="bi bi-layers-fill me-1 text-indigo-500"></i> Kho Xà gồ
+              <span id="badge-count-xg" class="ms-1 px-1.5 py-0.2 bg-indigo-50 text-indigo-600 rounded-full text-[10px]">0</span>
+            </button>
+            <button class="warehouse-filter-btn px-3.5 py-1.5 rounded-md text-xs sm:text-sm font-semibold transition-all text-slate-600 hover:text-emerald-600" data-warehouse="tole">
+              <i class="bi bi-circle-square me-1 text-emerald-500"></i> Kho Tole
+              <span id="badge-count-tole" class="ms-1 px-1.5 py-0.2 bg-emerald-50 text-emerald-600 rounded-full text-[10px]">0</span>
+            </button>
+          </div>
+
+          <!-- Search Input -->
+          <div class="relative flex-1 max-w-md">
+            <div class="relative flex items-center">
+              <i class="bi bi-search absolute left-3.5 text-slate-400"></i>
+              <input
+                id="search-input"
+                type="text"
+                placeholder="Tìm kiếm Mã vật tư, Tên vật tư, Batch, Cuộn ID..."
+                class="w-full pl-10 pr-9 py-2 bg-white border border-slate-200 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all shadow-sm"
+              />
+              <button id="clear-search" class="hidden absolute right-2.5 text-slate-400 hover:text-slate-600 p-1">
+                <i class="bi bi-x-circle-fill"></i>
+              </button>
+            </div>
+            <!-- Search match summary -->
+            <div id="search-feedback" class="hidden text-[11px] text-slate-500 mt-1 ps-1 font-medium"></div>
+          </div>
+        </div>
+
+        <!-- Legend / Notes -->
+        <div class="flex flex-wrap items-center justify-between gap-2 px-1 mb-4 text-xs text-slate-500">
+          <div class="flex items-center gap-4 flex-wrap">
+            <div class="flex items-center gap-1.5">
+              <span class="w-3 h-3 rounded-sm bg-[#f4c7b3] border border-orange-300"></span>
+              <span>Kệ có cuộn</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="w-3 h-3 rounded-sm bg-slate-100 border border-slate-300"></span>
+              <span>Kệ trống</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="w-3 h-3 rounded-sm bg-red-200 border border-red-400"></span>
+              <span>Quá tải / Cảnh báo</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="w-3 h-3 rounded-sm bg-amber-200 border border-amber-400"></span>
+              <span>Khu vực Grating</span>
+            </div>
+          </div>
+          <div class="text-[11px] text-slate-400">
+            <i class="bi bi-info-circle me-1"></i> Rê chuột để xem nhanh, Nhấp vào kệ để mở chi tiết & xuất Excel
+          </div>
+        </div>
+
+        <!-- Interactive Map Wrapper -->
+        <div class="relative bg-white p-3 sm:p-6 rounded-2xl border border-slate-200 shadow-inner">
+          <div class="grid grid-cols-[1fr_40px_1fr] sm:grid-cols-[1fr_60px_1fr] md:grid-cols-[1fr_80px_1fr] gap-x-2 md:gap-x-4 relative">
+            
+            <!-- Left Shelves (B14 -> B01) -->
+            <div id="shelves-left" class="flex flex-col"></div>
+
+            <!-- Center Aisle -->
+            <div id="center-aisle" class="bg-[#82c97c] flex items-center justify-center rounded-sm relative shadow-inner transition-all duration-400 min-h-[500px]">
+              <div class="text-white font-bold tracking-[0.2em] sm:tracking-[0.3em] uppercase text-xs sm:text-sm md:text-lg opacity-90 select-none" style="writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg);">
+                Lối đi giữa xưởng
+              </div>
+              <div class="absolute -bottom-3 sm:-bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center z-30 pointer-events-none">
+                <div class="w-8 h-8 sm:w-10 sm:h-10 bg-green-900 rounded-full border-2 border-red-500 flex items-center justify-center shadow-lg relative">
+                  <div class="text-white text-[6px] sm:text-[7px] font-bold leading-tight text-center">
+                    YOU ARE<br/>HERE
+                  </div>
+                  <div class="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] sm:border-l-[6px] border-l-transparent border-r-[5px] sm:border-r-[6px] border-r-transparent border-t-[6px] sm:border-t-[8px] border-t-red-500"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Shelves (A14 -> A01) -->
+            <div id="shelves-right" class="flex flex-col"></div>
+
+          </div>
+
+          <!-- Bottom Area -->
+          <div id="bottom-area" class="grid grid-cols-[1fr_40px_1fr] sm:grid-cols-[1fr_60px_1fr] md:grid-cols-[1fr_80px_1fr] gap-x-2 md:gap-x-4 mt-8 md:mt-12 transition-all duration-400">
+            <!-- Road entrance -->
+            <div class="flex flex-col items-center justify-start pt-2 sm:pt-4 bg-slate-50 rounded-lg p-3 border border-dashed border-slate-300">
+              <div class="text-center font-bold text-xs sm:text-sm text-slate-700 flex items-center gap-1.5">
+                <i class="bi bi-truck text-slate-500"></i> Đường xe vào nhập / xuất hàng
+              </div>
+              <div class="w-full flex items-center justify-between mt-3 text-[10px] sm:text-xs text-slate-400 font-medium">
+                <span>&larr;</span><span>8.000 mm</span><span>&rarr;</span>
+              </div>
+            </div>
+
+            <div class="flex flex-col justify-end pb-1 text-center">
+              <span class="text-[9px] text-slate-400 font-medium">1.000 mm</span>
+            </div>
+
+            <!-- Grating Area -->
+            <div class="flex flex-col relative">
+              <div id="grating-area" class="shelf-container bg-amber-300 hover:bg-amber-400 p-3 sm:p-4 md:p-6 flex flex-col items-center justify-center text-center font-bold text-xs sm:text-sm text-slate-900 rounded-lg shadow-sm border-2 border-amber-400 cursor-pointer transition-all duration-300 relative group" data-id="GRATING">
+                
+                <div class="flex items-center gap-1.5 text-amber-950 font-bold mb-1">
+                  <i class="bi bi-grid-3x3-gap-fill text-amber-700"></i>
+                  <span>KHU VỰC GRATING & TẬP KẾT HÀNG</span>
+                </div>
+                <div class="text-[11px] font-medium text-amber-900">
+                  <span id="grating-roll-count" class="badge bg-amber-600 text-white me-1">0 cuộn</span>
+                  <span id="grating-kg-count" class="text-slate-800">0 Kg</span>
+                </div>
+
+                <!-- Grating Tooltip -->
+                <div class="shelf-tooltip right-side absolute bottom-full mb-2 z-50">
+                  <div class="min-w-[260px] bg-white p-3 rounded-xl shadow-2xl border border-amber-300 text-left pointer-events-auto">
+                    <div class="font-bold text-amber-800 border-b border-amber-100 pb-1.5 mb-2 flex items-center justify-between text-xs sm:text-sm">
+                      <span>Khu vực Grating</span>
+                      <span class="badge bg-amber-100 text-amber-800 text-[10px]">Tập kết</span>
+                    </div>
+                    <div id="grating-preview-content" class="text-xs text-slate-600 space-y-1">
+                      <!-- Populated by JS -->
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="w-full flex items-center justify-between mt-2 text-[10px] sm:text-xs text-slate-400 font-medium px-1">
+                <span>&larr;</span><span>8.000 mm</span><span>&rarr;</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Unassigned Racks Area (If any rolls have no shelf or invalid shelf) -->
+          <div id="unassigned-area" class="hidden mt-6 p-3 bg-rose-50 border border-rose-200 rounded-xl">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <i class="bi bi-exclamation-triangle-fill text-rose-600"></i>
+                <span class="font-bold text-xs sm:text-sm text-rose-900">Cuộn chưa gán vị trí chuẩn hoặc chưa xếp kệ</span>
+                <span id="unassigned-count-badge" class="badge bg-rose-600 text-white text-[10px]">0 cuộn</span>
+              </div>
+              <button id="btn-view-unassigned" class="btn btn-xs btn-outline-danger text-xs py-1 px-2.5 rounded">
+                Xem chi tiết
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
   </div>
-  <!-- Sidebar JS (auto-injects sidebar + topbar) -->
+
+  <!-- ==================== SHELF DETAIL MODAL ==================== -->
+  <div class="modal fade" id="shelfDetailModal" tabindex="-1" aria-labelledby="shelfDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content shadow-2xl border-0 rounded-2xl overflow-hidden">
+        
+        <!-- Modal Header -->
+        <div class="modal-header bg-slate-900 text-white px-4 py-3 border-0">
+          <div class="d-flex align-items-center gap-2">
+            <div class="w-9 h-9 rounded-xl bg-red-600 text-white flex items-center justify-center font-bold text-base shadow-sm">
+              <span id="modalShelfTitleCircle">--</span>
+            </div>
+            <div>
+              <h5 class="modal-title font-bold text-base sm:text-lg mb-0" id="shelfDetailModalLabel">
+                Chi tiết Kệ <span id="modalShelfName">--</span>
+              </h5>
+              <div class="text-[11px] text-slate-300 flex items-center gap-2 mt-0.5">
+                <span id="modalShelfRollCount">0 cuộn</span> • 
+                <span id="modalShelfTotalKg">0 Kg</span>
+              </div>
+            </div>
+          </div>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <!-- Modal Body -->
+        <div class="modal-body p-4 bg-slate-50">
+          
+          <!-- Actions & Search Row inside Modal -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 bg-white p-3 rounded-xl border border-slate-200">
+            <div class="relative flex-1 max-w-sm">
+              <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+              <input
+                type="text"
+                id="modalSearchInput"
+                class="form-control form-control-sm pl-8 text-xs rounded-lg"
+                placeholder="Lọc nhanh cuộn ID, Mã VT, Batch..."
+              />
+            </div>
+
+            <div class="flex items-center gap-2">
+              <button id="btnExportShelfExcel" class="btn btn-sm btn-success d-flex items-center gap-1.5 rounded-lg px-3 shadow-sm">
+                <i class="bi bi-file-earmark-excel-fill"></i>
+                <span>Tải file Excel (.xlsx)</span>
+              </button>
+              <a id="btnNavigateLocationLookup" href="#" class="btn btn-sm btn-outline-primary d-flex items-center gap-1.5 rounded-lg px-3 shadow-sm">
+                <i class="bi bi-box-arrow-up-right"></i>
+                <span>Mở trang quét cuộn</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- Table Content -->
+          <div class="table-responsive bg-white rounded-xl border border-slate-200 shadow-sm max-h-[55vh] custom-scrollbar">
+            <table class="table table-hover table-striped align-middle mb-0 text-xs">
+              <thead class="table-light sticky-top shadow-xs">
+                <tr class="text-slate-600 font-semibold text-[11px] uppercase tracking-wider">
+                  <th class="text-center" style="width: 45px;">STT</th>
+                  <th style="width: 85px;">Kho</th>
+                  <th style="width: 130px;">Cuộn ID</th>
+                  <th style="width: 140px;">Mã vật tư</th>
+                  <th>Tên vật tư</th>
+                  <th style="width: 110px;">Batch</th>
+                  <th class="text-end" style="width: 110px;">Khối lượng</th>
+                  <th class="text-center" style="width: 100px;">Ngày nhập</th>
+                  <th class="text-center" style="width: 85px;">Lưu kho</th>
+                  <th style="width: 140px;">Công trình</th>
+                </tr>
+              </thead>
+              <tbody id="modalShelfTableBody">
+                <!-- Populated by JS -->
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="modal-footer bg-white px-4 py-2.5 border-t border-slate-200 d-flex justify-content-between align-items-center">
+          <div class="text-xs text-slate-500">
+            Hiển thị <span id="modalVisibleCount" class="font-bold text-slate-800">0</span> cuộn
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm px-4 rounded-lg" data-bs-dismiss="modal">Đóng</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SCRIPTS ==================== -->
+  <!-- Supabase JS CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  
+  <!-- Core Services -->
+  <script src="/assets/js/core/supabase-config.js?v=2.0.8"></script>
+  <script src="/assets/js/core/inventory-lock-service.js?v=2.0.8"></script>
+  <script src="/assets/js/core/qr-scanner-service.js?v=2.0.8"></script>
+
+  <!-- Sidebar & Layout JS -->
   <script src="/assets/js/components/sidebar.js"></script>
   <script src="/assets/js/trang-chu/home.js"></script>
-  <!-- Link tới file JavaScript -->
-  <script type="module" src="/assets/js/5s/5s-so-do-phoi-cuon.js"></script>
+
+  <!-- Bootstrap JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Page Main Script -->
+  <script src="/assets/js/5s/5s-so-do-phoi-cuon.js?v=2.0.8"></script>
 </body>
 
 </html>

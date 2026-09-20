@@ -1,655 +1,860 @@
-// Configuration
-const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1vnI5KSTKNqqe4nrnn958gF2duFzcZffkwVw2DhxaRIE/gviz/tq?tqx=out:csv&gid=0';
-const shelvesA = Array.from({ length: 14 }, (_, i) => `A${14 - i}`);
-const shelvesB = Array.from({ length: 14 }, (_, i) => `B${14 - i}`);
-const allShelves = [...shelvesA, ...shelvesB];
+/* =============================================================================
+   5S SƠ ĐỒ KHO PHÔI CUỘN - JAVASCRIPT
+   Quản lý và hiển thị mặt bằng kho phôi cuộn theo thời gian thực
+   Tích hợp dữ liệu từ Supabase (Kho Xà gồ & Kho Tole), lọc đa kho,
+   tìm kiếm highlight, modal chi tiết kệ và xuất Excel.
+================================================================================ */
 
-// State
-let shelvesData = {};
-let materialsData = [];
-let searchQuery = '';
-let isSearchFocused = false;
-let highlightedShelves = [];
-let hoveredShelf = null;
+// IIFE to protect global namespace while exposing necessary interfaces
+(function () {
+  'use strict';
 
-// DOM Elements
-const appEl = document.getElementById('app');
-
-let domCache = null;
-
-function initDomCache() {
-  domCache = {
-    mainTitle: document.getElementById('main-title'),
-    centerAisle: document.getElementById('center-aisle'),
-    bottomArea: document.getElementById('bottom-area'),
-    gratingArea: document.getElementById('grating-area'),
-    shelves: {}
-  };
-  allShelves.forEach(shelfId => {
-    domCache.shelves[shelfId] = {
-      shelfEl: document.getElementById(`shelf-${shelfId}`),
-      hoverEffectsEl: document.querySelector(`#shelf-${shelfId} .hover-effects`),
-      shelfCircleEl: document.querySelector(`#shelf-${shelfId} .shelf-circle`),
-      svgRectEl: document.querySelector(`#shelf-${shelfId} .svg-rect`),
-      pulseEl: document.querySelector(`#shelf-${shelfId} .highlight-pulse`),
-      badgeEl: document.querySelector(`#shelf-${shelfId} .search-badge`),
-      tooltipEl: document.querySelector(`#shelf-${shelfId} .shelf-tooltip > div`),
-      tooltipTitleEl: document.querySelector(`#shelf-${shelfId} .shelf-tooltip h3`)
-    };
+  // Sơ đồ kệ tiêu chuẩn: A14 -> A01 và B14 -> B01
+  const SHELVES_A = Array.from({ length: 14 }, (_, i) => {
+    const num = 14 - i;
+    return `A${String(num).padStart(2, '0')}`;
   });
-}
 
-// Initialize
-async function init() {
-  renderLoading();
-  try {
-    const data = await fetchWarehouseData();
-    shelvesData = data.shelves;
-    materialsData = data.materials;
-    renderMainApp();
-  } catch (err) {
-    renderError(err.message || "Không thể tải dữ liệu từ Google Sheets.");
+  const SHELVES_B = Array.from({ length: 14 }, (_, i) => {
+    const num = 14 - i;
+    return `B${String(num).padStart(2, '0')}`;
+  });
+
+  const ALL_STANDARD_SHELVES = [...SHELVES_B, ...SHELVES_A, 'GRATING'];
+
+  // Định mức an toàn tối đa cho từng kệ (cuộn)
+  function getMaxCapacity(shelfId) {
+    if (['B12', 'B13', 'B14'].includes(shelfId)) return 50;
+    if (shelfId === 'GRATING') return 100;
+    return 20;
   }
-}
 
-function fetchWarehouseData() {
-  return new Promise((resolve, reject) => {
-    Papa.parse(SHEET_URL, {
-      download: true,
-      header: false,
-      skipEmptyLines: true,
-      complete: (results) => {
-        const rows = results.data;
-        const materialsMap = new Map();
-        const shelvesMap = new Map();
+  // State
+  let allActiveRolls = []; // Toàn bộ cuộn đang tồn trong cả 2 kho
+  let currentWarehouseFilter = 'all'; // 'all' | 'xg' | 'tole'
+  let searchQuery = '';
+  let selectedShelfForModal = null;
+  let modalFilterQuery = '';
 
-        allShelves.forEach(id => shelvesMap.set(id, { id, materials: [] }));
+  // Realtime & Broadcast channels
+  const xgBroadcast = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('xg_sync_channel') : null;
+  const toleBroadcast = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('tole_sync_channel') : null;
+  let realtimeSubscriptions = [];
 
-        for (let i = 1; i < rows.length; i++) {
-          const row = rows[i];
-          if (row.length < 5) continue;
+  // ==================== UTILITIES ====================
+  function debounce(fn, delay) {
+    let timer = null;
+    return function (...args) {
+      clearTimeout(timer);
+      timer = setTimeout(() => fn.apply(this, args), delay);
+    };
+  }
 
-          const shelfStr = row[2]?.trim().toUpperCase();
-          const code = row[3]?.trim();
-          const name = row[4]?.trim();
-          const weight = row[7]?.trim() || '0';
+  function formatNumber(num) {
+    if (num === null || num === undefined || isNaN(num)) return '0';
+    return Number(num).toLocaleString('vi-VN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  }
 
-          if (!code || !shelfStr) continue;
-
-          const shelfIds = shelfStr.split(',').map(s => s.trim()).filter(s => allShelves.includes(s));
-          if (shelfIds.length === 0) continue;
-
-          if (!materialsMap.has(code)) {
-            materialsMap.set(code, { code, name, weight, shelves: [], count: 0 });
-          }
-          const material = materialsMap.get(code);
-          material.count += 1;
-
-          shelfIds.forEach(shelfId => {
-            if (!material.shelves.includes(shelfId)) {
-              material.shelves.push(shelfId);
-            }
-            const shelfData = shelvesMap.get(shelfId);
-            if (shelfData) {
-              shelfData.materials.push({ code, name, weight });
-            }
-          });
+  function formatDate(dateValue) {
+    if (!dateValue) return '';
+    let date = null;
+    if (typeof dateValue === 'string') {
+      const iso = dateValue.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (iso) {
+        date = new Date(parseInt(iso[1]), parseInt(iso[2]) - 1, parseInt(iso[3]));
+      } else {
+        const m = dateValue.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+        if (m) {
+          let y = parseInt(m[3], 10);
+          if (y < 100) y += y < 50 ? 2000 : 1900;
+          date = new Date(y, parseInt(m[2], 10) - 1, parseInt(m[1], 10));
         }
+      }
+    } else if (dateValue instanceof Date) {
+      date = dateValue;
+    }
+    if (!date || isNaN(date.getTime())) return String(dateValue);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  }
 
-        resolve({
-          shelves: Object.fromEntries(shelvesMap),
-          materials: Array.from(materialsMap.values())
-        });
-      },
-      error: (err) => reject(err)
-    });
-  });
-}
+  function calculateStorageDays(dateValue) {
+    if (!dateValue) return 0;
+    let date = null;
+    if (typeof dateValue === 'string') {
+      const iso = dateValue.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (iso) {
+        date = new Date(parseInt(iso[1]), parseInt(iso[2]) - 1, parseInt(iso[3]));
+      } else {
+        const m = dateValue.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+        if (m) {
+          let y = parseInt(m[3], 10);
+          if (y < 100) y += y < 50 ? 2000 : 1900;
+          date = new Date(y, parseInt(m[2], 10) - 1, parseInt(m[1], 10));
+        }
+      }
+    } else if (dateValue instanceof Date) {
+      date = dateValue;
+    }
+    if (!date || isNaN(date.getTime())) return 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    date.setHours(0, 0, 0, 0);
+    const diffTime = today - date;
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays >= 0 ? diffDays : 0;
+  }
 
-// Render Functions
-function renderLoading() {
-  appEl.innerHTML = `
-    <div class="flex flex-col items-center justify-center py-20">
-      <i data-lucide="loader-2" class="w-10 h-10 text-red-500 animate-spin mb-4"></i>
-      <p class="text-gray-500 font-medium animate-pulse">Đang tải dữ liệu...</p>
-    </div>
-  `;
-  lucide.createIcons();
-}
+  /**
+   * Chuẩn hóa mã kệ: A1 -> A01, A01 -> A01, B3 -> B03, Grating -> GRATING
+   */
+  function normalizeRackId(rawLocation) {
+    if (!rawLocation) return null;
+    const clean = String(rawLocation).trim().toUpperCase();
+    if (!clean) return null;
 
-function renderError(msg) {
-  appEl.innerHTML = `
-    <div class="flex flex-col items-center justify-center py-20 text-center px-4">
-      <i data-lucide="alert-circle" class="w-12 h-12 text-red-500 mb-4"></i>
-      <p class="text-red-600 font-medium mb-2">Lỗi tải dữ liệu</p>
-      <p class="text-gray-500 text-sm max-w-md">${msg}</p>
-    </div>
-  `;
-  lucide.createIcons();
-}
-
-function renderMainApp() {
-  appEl.innerHTML = `
-    <h1 id="main-title" class="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-extrabold text-red-600 text-center mb-6 md:mb-10 tracking-wider transition-all duration-400">
-      SƠ ĐỒ CHI TIẾT KHO PHÔI CUỘN
-    </h1>
-
-    <!-- Search Bar -->
-    <div class="relative max-w-xl mx-auto mb-8 md:mb-12 z-50">
-      <div class="relative flex items-center">
-        <i data-lucide="search" class="absolute left-4 text-gray-400 w-5 h-5"></i>
-        <input
-          id="search-input"
-          type="text"
-          placeholder="Tìm kiếm mã vật tư hoặc tên vật tư..."
-          class="w-full pl-12 pr-10 py-3 sm:py-4 rounded-2xl border-2 border-gray-100 shadow-sm focus:ring-4 focus:ring-red-500/20 focus:border-red-500 outline-none transition-all text-sm sm:text-base bg-white"
-        />
-        <button id="clear-search" class="hidden absolute right-4 text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
-      </div>
-      <div id="search-results" class="hidden absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 max-h-[60vh] overflow-y-auto py-2">
-      </div>
-    </div>
-
-    <!-- Map Area -->
-    <div class="relative px-4 md:px-12">
-      <div class="grid grid-cols-[1fr_40px_1fr] sm:grid-cols-[1fr_60px_1fr] md:grid-cols-[1fr_80px_1fr] gap-x-2 md:gap-x-4 relative">
-        
-        <!-- Left Shelves (B) -->
-        <div id="shelves-left" class="flex flex-col"></div>
-
-        <!-- Center Aisle -->
-        <div id="center-aisle" class="bg-[#82c97c] flex items-center justify-center rounded-sm relative shadow-inner transition-all duration-400">
-          <div class="text-white font-bold tracking-[0.2em] sm:tracking-[0.3em] uppercase text-xs sm:text-sm md:text-lg opacity-90" style="writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg);">
-            Lối đi giữa xưởng
-          </div>
-          <div class="absolute -bottom-3 sm:-bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center z-40">
-            <div class="w-8 h-8 sm:w-10 sm:h-10 bg-green-900 rounded-full border-2 border-red-500 flex items-center justify-center shadow-lg relative">
-              <div class="text-white text-[6px] sm:text-[7px] font-bold leading-tight text-center">
-                YOU ARE<br/>HERE
-              </div>
-              <div class="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] sm:border-l-[6px] border-l-transparent border-r-[5px] sm:border-r-[6px] border-r-transparent border-t-[6px] sm:border-t-[8px] border-t-red-500"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Right Shelves (A) -->
-        <div id="shelves-right" class="flex flex-col"></div>
-
-      </div>
-
-      <!-- Dimensions -->
-      <div class="hidden lg:flex absolute -right-4 top-0 bottom-0 flex-col items-center justify-between py-2 opacity-60">
-        <div class="w-full flex justify-center"><div class="w-3 border-t-2 border-gray-400"></div></div>
-        <div class="flex-1 w-[2px] bg-gray-400 relative">
-          <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap text-gray-600 text-sm font-medium bg-white py-4" style="writing-mode: vertical-rl; transform: rotate(180deg);">
-            Từ cột 15 đến cột 18: 28.000 mm
-          </div>
-        </div>
-        <div class="w-full flex justify-center"><div class="w-3 border-b-2 border-gray-400"></div></div>
-      </div>
-    </div>
-
-    <!-- Bottom Area -->
-    <div id="bottom-area" class="grid grid-cols-[1fr_40px_1fr] sm:grid-cols-[1fr_60px_1fr] md:grid-cols-[1fr_80px_1fr] gap-x-2 md:gap-x-4 mt-8 md:mt-12 px-4 md:px-12 transition-all duration-400">
-      <div class="flex flex-col items-center justify-start pt-2 sm:pt-4">
-        <div class="text-center font-semibold text-xs sm:text-sm md:text-base text-gray-800">
-          Đường xe vào nhập/xuất hàng
-        </div>
-        <div class="w-full flex items-center justify-between mt-4 sm:mt-8 text-[10px] sm:text-xs text-gray-500 font-medium">
-          <span>&larr;</span><span>8.000 mm</span><span>&rarr;</span>
-        </div>
-      </div>
-
-      <div class="flex flex-col justify-end pb-1">
-         <div class="text-[8px] sm:text-[10px] text-gray-400 text-center font-medium">1.000 mm</div>
-      </div>
-
-      <div class="flex flex-col relative">
-        <div id="grating-area" class="grating-container bg-[#f1c232] p-3 sm:p-4 md:p-8 flex items-center justify-center text-center font-semibold text-xs sm:text-sm md:text-base text-gray-900 min-h-[80px] sm:min-h-[100px] md:min-h-[120px] rounded-md shadow-sm border border-yellow-500/30 cursor-pointer relative z-10">
-          
-          <div class="grating-effects hidden absolute inset-0 pointer-events-none z-0 overflow-hidden rounded-md">
-            <div class="absolute inset-0 opacity-[0.06] bg-[repeating-linear-gradient(45deg,#000,#000_2px,transparent_2px,transparent_8px)]"></div>
-            <div class="absolute top-0 bottom-0 w-[50%] bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
-            <svg class="absolute inset-0 w-full h-full pointer-events-none z-0">
-              <rect x="1.5" y="1.5" width="calc(100% - 3px)" height="calc(100% - 3px)" fill="none" stroke="#d97706" stroke-width="3" stroke-dasharray="10 10" class="animate-marching-ants" rx="6" />
-            </svg>
-          </div>
-
-          <span class="relative z-10">Khu vực để Grating<br/>và tập kết hàng hóa</span>
-          
-          <div class="grating-tooltip absolute bottom-full mb-4 w-48 md:w-64 bg-white p-3 md:p-4 rounded-xl shadow-2xl border border-yellow-200 z-50 pointer-events-none text-left">
-            <h3 class="font-bold text-yellow-600 border-b pb-2 mb-3 text-sm md:text-base">Khu vực tập kết</h3>
-            <div class="text-xs md:text-sm text-gray-700 space-y-2">
-              <p class="flex justify-between items-center">
-                <span class="text-gray-500">Trạng thái:</span>
-                <span class="font-medium text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded-full">Đang hoạt động</span>
-              </p>
-              <p class="flex justify-between items-center">
-                <span class="text-gray-500">Diện tích:</span>
-                <span class="font-semibold">40 m²</span>
-              </p>
-              <p class="flex justify-between items-center">
-                <span class="text-gray-500">Sức chứa:</span>
-                <span class="font-semibold text-blue-600">50 tấn</span>
-              </p>
-            </div>
-          </div>
-        </div>
-        <div class="w-full flex items-center justify-between mt-2 text-[10px] sm:text-xs text-gray-500 font-medium">
-          <span>&larr;</span><span>8.000 mm</span><span>&rarr;</span>
-        </div>
-        
-        <div class="hidden lg:flex absolute -right-16 top-0 bottom-8 flex-col items-center justify-between opacity-60">
-          <div class="w-full flex justify-center"><div class="w-3 border-t-2 border-gray-400"></div></div>
-          <div class="flex-1 w-[2px] bg-gray-400 relative">
-            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap text-gray-600 text-xs font-medium bg-white py-2" style="writing-mode: vertical-rl; transform: rotate(180deg);">
-              5.000 mm
-            </div>
-          </div>
-          <div class="w-full flex justify-center"><div class="w-3 border-b-2 border-gray-400"></div></div>
-        </div>
-      </div>
-    </div>
-  `;
-
-  renderShelvesList('shelves-left', shelvesB, 'left');
-  renderShelvesList('shelves-right', shelvesA, 'right');
-
-  initDomCache();
-
-  lucide.createIcons();
-  attachEventListeners();
-}
-
-function getSeparatorHTML() {
-  return `
-    <div class="w-full h-2 md:h-3 flex items-center px-0.5">
-      <svg width="100%" height="100%" preserveAspectRatio="none" viewBox="0 0 100 10">
-        <defs>
-          <marker id="arrowhead-left" markerWidth="3" markerHeight="3" refX="0" refY="1.5" orient="auto">
-            <polygon points="3,0 0,1.5 3,3" fill="#2b6b9c" />
-          </marker>
-          <marker id="arrowhead-right" markerWidth="3" markerHeight="3" refX="3" refY="1.5" orient="auto">
-            <polygon points="0,0 3,1.5 0,3" fill="#2b6b9c" />
-          </marker>
-        </defs>
-        <line x1="1" y1="5" x2="99" y2="5" stroke="#2b6b9c" stroke-width="1.5" marker-start="url(#arrowhead-left)" marker-end="url(#arrowhead-right)" />
-      </svg>
-    </div>
-  `;
-}
-
-function renderShelvesList(containerId, shelfIds, side) {
-  const container = document.getElementById(containerId);
-  let html = getSeparatorHTML();
-
-  shelfIds.forEach(id => {
-    const data = shelvesData[id];
-    const materialsCount = data?.materials.length || 0;
-    const maxCapacity = ['B12', 'B13', 'B14'].includes(id) ? 50 : 20;
-    const isOverCapacity = materialsCount > maxCapacity;
-
-    const justifyClass = side === 'left' ? 'justify-end pr-1 sm:pr-2' : 'justify-start pl-1 sm:pl-2';
-    const tooltipSideClass = side === 'left' ? 'left-side left-full pl-3 md:pl-5' : 'right-side right-full pr-3 md:pr-5';
-
-    let materialsHTML = '';
-    if (materialsCount > 0) {
-      materialsHTML = data.materials.map(m => `
-        <div class="bg-gray-50 border border-gray-100 rounded-md p-2 text-xs flex justify-between items-start gap-3">
-          <div class="min-w-0">
-            <div class="font-bold text-gray-800">${m.code}</div>
-            <div class="text-gray-600 truncate" title="${m.name}">${m.name}</div>
-          </div>
-          <div class="flex-shrink-0 font-mono font-semibold text-red-600 bg-red-50 px-1.5 py-0.5 rounded border border-red-100">
-            ${m.weight} kg
-          </div>
-        </div>
-      `).join('');
-    } else {
-      materialsHTML = `<div class="text-center py-4 text-gray-400 text-xs italic">Kệ trống, chưa có vật tư</div>`;
+    if (clean.includes('GRAT') || clean === 'GR-01' || clean === 'GR-02' || clean.includes('TẬP KẾT')) {
+      return 'GRATING';
     }
 
-    html += `
-      <div id="shelf-${id}" class="shelf-container ${side}-side relative h-8 sm:h-10 md:h-12 flex items-center ${justifyClass} cursor-pointer rounded-sm ${isOverCapacity ? 'bg-red-200 ring-1 ring-red-400' : 'bg-[#f4c7b3]'}" data-id="${id}">
-        
-        <div class="highlight-pulse hidden absolute inset-0 rounded-sm ring-4 ring-blue-400/50 animate-pulse pointer-events-none"></div>
+    const matchA = clean.match(/^A-?0?(\d{1,2})$/);
+    if (matchA) {
+      const num = parseInt(matchA[1], 10);
+      if (num >= 1 && num <= 14) {
+        return `A${String(num).padStart(2, '0')}`;
+      }
+    }
 
-        <div class="hover-effects hidden absolute inset-0 pointer-events-none z-0 overflow-hidden rounded-sm">
-          <div class="absolute inset-0 opacity-[0.06] bg-[repeating-linear-gradient(45deg,#000,#000_2px,transparent_2px,transparent_8px)]"></div>
-          <div class="absolute top-0 bottom-0 w-[50%] bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shimmer"></div>
-          <svg class="absolute inset-0 w-full h-full pointer-events-none z-0">
-            <rect x="1" y="1" width="calc(100% - 2px)" height="calc(100% - 2px)" fill="none" stroke="#dc2626" stroke-width="2" stroke-dasharray="8 8" class="animate-marching-ants svg-rect" rx="2" />
-          </svg>
-        </div>
+    const matchB = clean.match(/^B-?0?(\d{1,2})$/);
+    if (matchB) {
+      const num = parseInt(matchB[1], 10);
+      if (num >= 1 && num <= 14) {
+        return `B${String(num).padStart(2, '0')}`;
+      }
+    }
 
-        <div class="shelf-circle w-6 h-6 sm:w-8 sm:h-8 rounded-full border-[1.5px] flex items-center justify-center font-bold text-[10px] sm:text-xs md:text-sm z-10 shadow-sm border-red-500 text-red-600 bg-white transition-all duration-300">
-          ${id}
-        </div>
+    return null;
+  }
 
-        <div class="search-badge hidden absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none">
-          <div class="bg-blue-600 text-white text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-full shadow-md whitespace-nowrap badge-text">
-            0 cuộn
-          </div>
-        </div>
+  // ==================== DATA FETCHING & SYNC ====================
+  async function loadWarehouseData() {
+    // 1. Cố gắng lấy tức thì từ LocalStorage Cache (0ms)
+    tryReadLocalCache();
 
-        <div class="shelf-tooltip ${tooltipSideClass} absolute top-1/2 z-50">
-          <div class="w-auto min-w-[256px] max-w-[450px] bg-white p-3 md:p-4 rounded-xl shadow-2xl border ${isOverCapacity ? 'border-red-300' : 'border-red-100'} pointer-events-auto text-left">
-            <h3 class="font-bold ${isOverCapacity ? 'text-red-700' : 'text-red-600'} border-b pb-2 mb-2 text-sm md:text-base flex justify-between items-center gap-4">
-              <span>Kệ ${id}</span>
-              <div class="flex flex-col items-end">
-                <span class="text-[10px] font-medium px-2 py-0.5 rounded-full ${isOverCapacity ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500'}">
-                  ${materialsCount}/${maxCapacity} cuộn
-                </span>
-              </div>
-            </h3>
-            <div class="max-h-64 overflow-y-auto pr-1 space-y-1.5 mt-2 custom-scrollbar">
-              ${materialsHTML}
-            </div>
-          </div>
+    // 2. Fetch nền song song từ Supabase
+    try {
+      const fetchFunc = typeof window.fetchAllFromSupabase === 'function'
+        ? window.fetchAllFromSupabase
+        : async (tbl, col) => {
+            if (!window.supabase) return [];
+            let rows = [], from = 0, batchSize = 1000, hasMore = true;
+            while (hasMore) {
+              const { data, error } = await window.supabase
+                .from(tbl)
+                .select(col || '*')
+                .order('id', { ascending: true })
+                .range(from, from + batchSize - 1);
+              if (error) throw error;
+              if (data && data.length > 0) {
+                rows = rows.concat(data);
+                if (data.length < batchSize) hasMore = false;
+                else from += batchSize;
+              } else {
+                hasMore = false;
+              }
+            }
+            return rows;
+          };
+
+      const [xgNhapAll, xgXuatAll, toleNhapAll, toleXuatAll] = await Promise.all([
+        fetchFunc('xg-nhap', '*').catch(() => []),
+        fetchFunc('xg-xuat', '"Cuộn ID"').catch(() => []),
+        fetchFunc('tole-nhap', '*').catch(() => []),
+        fetchFunc('tole-xuat', '"Cuộn ID"').catch(() => [])
+      ]);
+
+      const xgExportedIds = new Set(
+        xgXuatAll.map(r => String(r['Cuộn ID'] || '').trim().toLowerCase()).filter(Boolean)
+      );
+      const toleExportedIds = new Set(
+        toleXuatAll.map(r => String(r['Cuộn ID'] || '').trim().toLowerCase()).filter(Boolean)
+      );
+
+      // Tính tồn Xà gồ
+      const activeXg = xgNhapAll.filter(row => {
+        const cid = String(row['Cuộn ID'] || '').trim().toLowerCase();
+        return cid && !xgExportedIds.has(cid);
+      }).map(row => ({
+        _warehouse: 'xg',
+        _warehouseName: 'Kho Xà gồ',
+        id: row.id,
+        cuonId: String(row['Cuộn ID'] || '').trim(),
+        maVatTu: String(row['Mã vật tư'] || '').trim(),
+        tenVatTu: String(row['Tên vật tư'] || '').trim(),
+        batch: String(row['Batch'] || '').trim(),
+        weight: parseFloat(row['Số lượng (Kg)']) || 0,
+        importDate: row['Ngày nhập'] || '',
+        storageDays: calculateStorageDays(row['Ngày nhập']),
+        rawLocation: row['Vị trí'] || '',
+        rackId: normalizeRackId(row['Vị trí']),
+        projectCode: row['Mã công trình'] || '',
+        projectName: row['Tên công trình'] || '',
+        note: row['Ghi chú'] || ''
+      }));
+
+      // Tính tồn Tole
+      const activeTole = toleNhapAll.filter(row => {
+        const cid = String(row['Cuộn ID'] || '').trim().toLowerCase();
+        return cid && !toleExportedIds.has(cid);
+      }).map(row => ({
+        _warehouse: 'tole',
+        _warehouseName: 'Kho Tole',
+        id: row.id,
+        cuonId: String(row['Cuộn ID'] || '').trim(),
+        maVatTu: String(row['Mã vật tư'] || '').trim(),
+        tenVatTu: String(row['Tên vật tư'] || '').trim(),
+        batch: String(row['Batch'] || '').trim(),
+        weight: parseFloat(row['Số lượng (Kg)']) || 0,
+        lengthM: parseFloat(row['Số lượng (m)']) || 0,
+        importDate: row['Ngày nhập'] || '',
+        storageDays: calculateStorageDays(row['Ngày nhập']),
+        rawLocation: row['Vị trí'] || '',
+        rackId: normalizeRackId(row['Vị trí']),
+        projectCode: row['Mã công trình'] || '',
+        projectName: row['Tên công trình'] || '',
+        note: row['Ghi chú'] || ''
+      }));
+
+      allActiveRolls = [...activeXg, ...activeTole];
+
+      // Lưu cache local để trang mở nhanh lần sau
+      try {
+        localStorage.setItem('cached_5s_phoi_cuon', JSON.stringify({
+          timestamp: Date.now(),
+          rolls: allActiveRolls
+        }));
+      } catch (e) {}
+
+      finishLoadingAndRender();
+
+    } catch (err) {
+      console.error('Lỗi nạp dữ liệu tồn kho từ Supabase:', err);
+      // Nếu đã có cache từ trước thì vẫn tiếp tục hiển thị
+      if (allActiveRolls.length > 0) {
+        finishLoadingAndRender();
+      } else {
+        renderErrorState(err.message || 'Không thể kết nối với cơ sở dữ liệu Supabase.');
+      }
+    }
+  }
+
+  function tryReadLocalCache() {
+    try {
+      const cached = localStorage.getItem('cached_5s_phoi_cuon');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && Array.isArray(parsed.rolls) && parsed.rolls.length > 0) {
+          allActiveRolls = parsed.rolls;
+          finishLoadingAndRender();
+        }
+      }
+    } catch (e) {}
+  }
+
+  function finishLoadingAndRender() {
+    const loadingEl = document.getElementById('loading-state');
+    const layoutEl = document.getElementById('main-content-layout');
+
+    if (loadingEl) loadingEl.style.display = 'none';
+    if (layoutEl) layoutEl.classList.remove('hidden');
+
+    renderAll();
+  }
+
+  function renderErrorState(msg) {
+    const loadingEl = document.getElementById('loading-state');
+    if (loadingEl) {
+      loadingEl.innerHTML = `
+        <div class="text-center py-10 px-4">
+          <i class="bi bi-exclamation-octagon-fill text-danger text-4xl mb-3"></i>
+          <h5 class="text-danger font-bold">Lỗi đồng bộ dữ liệu</h5>
+          <p class="text-slate-600 text-sm max-w-md mx-auto mb-4">${msg}</p>
+          <button id="btn-retry" class="btn btn-sm btn-primary rounded-lg px-4">
+            <i class="bi bi-arrow-clockwise me-1"></i> Thử lại
+          </button>
         </div>
+      `;
+      const btnRetry = document.getElementById('btn-retry');
+      if (btnRetry) btnRetry.addEventListener('click', () => loadWarehouseData());
+    }
+  }
+
+  // ==================== RENDERING LOGIC ====================
+  function getFilteredRolls() {
+    if (currentWarehouseFilter === 'xg') {
+      return allActiveRolls.filter(r => r._warehouse === 'xg');
+    }
+    if (currentWarehouseFilter === 'tole') {
+      return allActiveRolls.filter(r => r._warehouse === 'tole');
+    }
+    return allActiveRolls;
+  }
+
+  function renderAll() {
+    renderKPIs();
+    renderMap();
+    if (lucide && lucide.createIcons) {
+      lucide.createIcons();
+    }
+  }
+
+  function renderKPIs() {
+    const filtered = getFilteredRolls();
+    const totalRolls = filtered.length;
+    const totalWeight = filtered.reduce((sum, r) => sum + r.weight, 0);
+    const totalTons = totalWeight / 1000;
+
+    const xgRolls = allActiveRolls.filter(r => r._warehouse === 'xg');
+    const toleRolls = allActiveRolls.filter(r => r._warehouse === 'tole');
+    const xgWeight = xgRolls.reduce((sum, r) => sum + r.weight, 0);
+    const toleWeight = toleRolls.reduce((sum, r) => sum + r.weight, 0);
+
+    // Tính tỷ lệ sử dụng kệ
+    const occupiedRacks = new Set(filtered.map(r => r.rackId).filter(Boolean));
+    const totalPossibleRacks = ALL_STANDARD_SHELVES.length;
+    const utilizationPct = totalPossibleRacks > 0
+      ? Math.round((occupiedRacks.size / totalPossibleRacks) * 100)
+      : 0;
+
+    // Elements
+    const elTotalRolls = document.getElementById('kpi-total-rolls');
+    const elTotalWeight = document.getElementById('kpi-total-weight');
+    const elTotalTons = document.getElementById('kpi-total-tons');
+    const elRackUtil = document.getElementById('kpi-rack-utilization');
+
+    const elXgRolls = document.getElementById('kpi-xg-rolls');
+    const elXgWeight = document.getElementById('kpi-xg-weight');
+    const elToleRolls = document.getElementById('kpi-tole-rolls');
+    const elToleWeight = document.getElementById('kpi-tole-weight');
+
+    const badgeAll = document.getElementById('badge-count-all');
+    const badgeXg = document.getElementById('badge-count-xg');
+    const badgeTole = document.getElementById('badge-count-tole');
+
+    if (elTotalRolls) elTotalRolls.textContent = formatNumber(totalRolls);
+    if (elTotalWeight) elTotalWeight.textContent = formatNumber(totalWeight);
+    if (elTotalTons) elTotalTons.textContent = `${totalTons.toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 2 })} tấn`;
+    if (elRackUtil) elRackUtil.textContent = `${occupiedRacks.size}/${totalPossibleRacks} kệ (${utilizationPct}%)`;
+
+    if (elXgRolls) elXgRolls.textContent = formatNumber(xgRolls.length);
+    if (elXgWeight) elXgWeight.textContent = `${formatNumber(xgWeight)} Kg`;
+    if (elToleRolls) elToleRolls.textContent = formatNumber(toleRolls.length);
+    if (elToleWeight) elToleWeight.textContent = `${formatNumber(toleWeight)} Kg`;
+
+    if (badgeAll) badgeAll.textContent = allActiveRolls.length;
+    if (badgeXg) badgeXg.textContent = xgRolls.length;
+    if (badgeTole) badgeTole.textContent = toleRolls.length;
+  }
+
+  function getSeparatorHTML() {
+    return `
+      <div class="shelf-separator w-full h-2 md:h-3 flex items-center px-0.5 opacity-60">
+        <svg width="100%" height="100%" preserveAspectRatio="none" viewBox="0 0 100 10">
+          <defs>
+            <marker id="arrowhead-left" markerWidth="3" markerHeight="3" refX="0" refY="1.5" orient="auto">
+              <polygon points="3,0 0,1.5 3,3" fill="#2b6b9c" />
+            </marker>
+            <marker id="arrowhead-right" markerWidth="3" markerHeight="3" refX="3" refY="1.5" orient="auto">
+              <polygon points="0,0 3,1.5 0,3" fill="#2b6b9c" />
+            </marker>
+          </defs>
+          <line x1="1" y1="5" x2="99" y2="5" stroke="#2b6b9c" stroke-width="1.5" marker-start="url(#arrowhead-left)" marker-end="url(#arrowhead-right)" />
+        </svg>
       </div>
     `;
-    html += getSeparatorHTML();
-  });
-
-  container.innerHTML = html;
-}
-
-function attachEventListeners() {
-  const searchInput = document.getElementById('search-input');
-  const clearSearchBtn = document.getElementById('clear-search');
-  const searchResultsEl = document.getElementById('search-results');
-  const gratingArea = document.getElementById('grating-area');
-
-  // Search Input
-  searchInput.addEventListener('input', (e) => {
-    searchQuery = e.target.value;
-    isSearchFocused = true;
-    if (searchQuery === '') {
-      highlightedShelves = [];
-    }
-    updateSearchUI();
-  });
-
-  searchInput.addEventListener('focus', () => {
-    isSearchFocused = true;
-    updateSearchUI();
-  });
-
-  // Clear Search
-  clearSearchBtn.addEventListener('click', () => {
-    searchQuery = '';
-    searchInput.value = '';
-    highlightedShelves = [];
-    isSearchFocused = false;
-    updateSearchUI();
-  });
-
-  // Click outside search
-  document.addEventListener('click', (e) => {
-    if (!searchInput.contains(e.target) && !searchResultsEl.contains(e.target) && !clearSearchBtn.contains(e.target)) {
-      isSearchFocused = false;
-      updateSearchUI();
-    }
-  });
-
-  // Hover on Shelves
-  allShelves.forEach(id => {
-    const shelfEl = document.getElementById(`shelf-${id}`);
-    if (shelfEl) {
-      shelfEl.addEventListener('mouseenter', () => setHoverState(id));
-      shelfEl.addEventListener('mouseleave', () => setHoverState(null));
-    }
-  });
-
-  // Hover on Grating
-  gratingArea.addEventListener('mouseenter', () => setHoverState('grating'));
-  gratingArea.addEventListener('mouseleave', () => setHoverState(null));
-}
-
-function setHoverState(id) {
-  hoveredShelf = id;
-  if (!domCache) return;
-
-  const mainTitle = domCache.mainTitle;
-  const centerAisle = domCache.centerAisle;
-  const bottomArea = domCache.bottomArea;
-  const gratingArea = domCache.gratingArea;
-
-  if (mainTitle) {
-    if (id) {
-      mainTitle.style.opacity = '0.4';
-      mainTitle.style.transform = 'scale(0.98)';
-    } else {
-      mainTitle.style.opacity = '1';
-      mainTitle.style.transform = 'scale(1)';
-    }
   }
 
-  // Update center aisle
-  if (centerAisle) {
-    if (id && id !== 'grating') {
-      centerAisle.style.opacity = '0.5';
-    } else {
-      centerAisle.style.opacity = '1';
-    }
+  function renderMap() {
+    const filteredRolls = getFilteredRolls();
+
+    // Map: rackId -> Array of rolls
+    const rackMap = new Map();
+    ALL_STANDARD_SHELVES.forEach(id => rackMap.set(id, []));
+
+    const unassignedRolls = [];
+
+    filteredRolls.forEach(roll => {
+      if (roll.rackId && rackMap.has(roll.rackId)) {
+        rackMap.get(roll.rackId).push(roll);
+      } else {
+        unassignedRolls.push(roll);
+      }
+    });
+
+    // Render Dãy B (Trái) & Dãy A (Phải)
+    renderShelfColumn('shelves-left', SHELVES_B, rackMap, 'left');
+    renderShelfColumn('shelves-right', SHELVES_A, rackMap, 'right');
+
+    // Render Grating
+    renderGrating(rackMap.get('GRATING') || []);
+
+    // Render Unassigned Warning
+    renderUnassignedSection(unassignedRolls);
+
+    // Áp dụng trạng thái tìm kiếm nếu có
+    applySearchHighlight();
   }
 
-  // Update bottom area
-  if (bottomArea) {
-    if (id && id !== 'grating') {
-      bottomArea.style.opacity = '0.3';
-    } else {
-      bottomArea.style.opacity = '1';
-    }
-  }
+  function renderShelfColumn(containerId, shelfIds, rackMap, side) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
 
-  // Update grating
-  if (gratingArea) {
-    if (id === 'grating') {
-      gratingArea.classList.add('hovered');
-      gratingArea.classList.remove('dimmed');
-      const gratingEffects = gratingArea.querySelector('.grating-effects');
-      if (gratingEffects) gratingEffects.classList.remove('hidden');
-    } else if (id !== null) {
-      gratingArea.classList.remove('hovered');
-      gratingArea.classList.add('dimmed');
-      const gratingEffects = gratingArea.querySelector('.grating-effects');
-      if (gratingEffects) gratingEffects.classList.add('hidden');
-    } else {
-      gratingArea.classList.remove('hovered', 'dimmed');
-      const gratingEffects = gratingArea.querySelector('.grating-effects');
-      if (gratingEffects) gratingEffects.classList.add('hidden');
-    }
-  }
+    let html = getSeparatorHTML();
 
-  // Update all shelves
-  allShelves.forEach(shelfId => {
-    const cache = domCache.shelves[shelfId];
-    if (!cache || !cache.shelfEl) return;
+    shelfIds.forEach(shelfId => {
+      const rolls = rackMap.get(shelfId) || [];
+      const count = rolls.length;
+      const maxCap = getMaxCapacity(shelfId);
+      const isOverloaded = count > maxCap;
+      const isEmpty = count === 0;
 
-    const shelfEl = cache.shelfEl;
-    if (id === shelfId) {
-      shelfEl.classList.add('hovered');
-      shelfEl.classList.remove('dimmed');
-      if (cache.hoverEffectsEl) cache.hoverEffectsEl.classList.remove('hidden');
-      if (cache.shelfCircleEl) cache.shelfCircleEl.style.transform = 'scale(1.1)';
+      let statusClass = 'shelf-occupied';
+      if (isEmpty) statusClass = 'shelf-empty';
+      else if (isOverloaded) statusClass = 'shelf-full';
 
-      // Update SVG stroke color based on highlight
-      const isHighlighted = shelfEl.classList.contains('highlighted');
-      if (cache.svgRectEl) cache.svgRectEl.setAttribute('stroke', isHighlighted ? '#3b82f6' : '#dc2626');
+      const justifyClass = side === 'left' ? 'justify-end pr-1.5 sm:pr-2.5' : 'justify-start pl-1.5 sm:pl-2.5';
+      const tooltipSideClass = side === 'left' ? 'left-side' : 'right-side';
 
-    } else if (id !== null) {
-      shelfEl.classList.remove('hovered');
-      shelfEl.classList.add('dimmed');
-      if (cache.hoverEffectsEl) cache.hoverEffectsEl.classList.add('hidden');
-      if (cache.shelfCircleEl) cache.shelfCircleEl.style.transform = 'scale(1)';
-    } else {
-      shelfEl.classList.remove('hovered', 'dimmed');
-      if (cache.hoverEffectsEl) cache.hoverEffectsEl.classList.add('hidden');
-      if (cache.shelfCircleEl) cache.shelfCircleEl.style.transform = 'scale(1)';
-    }
-  });
-}
-
-function updateSearchUI() {
-  const clearSearchBtn = document.getElementById('clear-search');
-  const searchResultsEl = document.getElementById('search-results');
-
-  if (searchQuery) {
-    clearSearchBtn.classList.remove('hidden');
-  } else {
-    clearSearchBtn.classList.add('hidden');
-  }
-
-  // Calculate matches
-  let results = [];
-  if (searchQuery.trim()) {
-    const query = searchQuery.toLowerCase();
-    results = materialsData.filter(m =>
-      m.code.toLowerCase().includes(query) ||
-      m.name.toLowerCase().includes(query)
-    ).slice(0, 10);
-  }
-
-  // Calculate shelf match counts
-  const shelfMatchCounts = {};
-  if (searchQuery.trim()) {
-    const query = searchQuery.toLowerCase();
-    const isExactMatch = !isSearchFocused && highlightedShelves.length > 0;
-
-    Object.values(shelvesData).forEach(shelf => {
-      let count = 0;
-      shelf.materials.forEach(m => {
-        if (isExactMatch) {
-          if (m.code.toLowerCase() === query) count++;
-        } else {
-          if (m.code.toLowerCase().includes(query) || m.name.toLowerCase().includes(query)) {
-            count++;
-          }
-        }
-      });
+      // Preview top 4 cuộn
+      let previewHTML = '';
       if (count > 0) {
-        shelfMatchCounts[shelf.id] = count;
+        const totalKg = rolls.reduce((sum, r) => sum + r.weight, 0);
+        const topRolls = rolls.slice(0, 4);
+        previewHTML = `
+          <div class="font-bold text-slate-800 border-b border-slate-100 pb-1 mb-2 flex items-center justify-between text-xs">
+            <span>Kệ ${shelfId}</span>
+            <span class="badge ${isOverloaded ? 'bg-danger' : 'bg-primary'} text-[10px]">
+              ${count}/${maxCap} cuộn (${formatNumber(totalKg)} Kg)
+            </span>
+          </div>
+          <div class="space-y-1 max-h-48 overflow-y-auto custom-scrollbar">
+            ${topRolls.map(r => `
+              <div class="p-1.5 rounded bg-slate-50 border border-slate-100 text-[11px] flex justify-between items-center gap-2">
+                <div class="min-w-0">
+                  <div class="font-bold text-slate-900 truncate">${r.cuonId}</div>
+                  <div class="text-slate-500 truncate text-[10px]" title="${r.maVatTu} - ${r.tenVatTu}">${r.maVatTu}</div>
+                </div>
+                <div class="text-end flex-shrink-0">
+                  <span class="font-semibold text-red-600">${formatNumber(r.weight)} Kg</span>
+                  <div class="text-[9px] text-slate-400">${r._warehouse === 'xg' ? 'XG' : 'Tole'}</div>
+                </div>
+              </div>
+            `).join('')}
+            ${count > 4 ? `<div class="text-center text-[10px] text-slate-400 italic pt-1">+ ${count - 4} cuộn khác (Nhấp để xem tất cả)</div>` : ''}
+          </div>
+        `;
+      } else {
+        previewHTML = `
+          <div class="font-bold text-slate-700 border-b border-slate-100 pb-1 mb-1 text-xs">Kệ ${shelfId}</div>
+          <div class="text-center py-2 text-slate-400 text-xs italic">Kệ trống, chưa có cuộn nào</div>
+        `;
+      }
+
+      html += `
+        <div id="shelf-${shelfId}" class="shelf-container ${side}-side relative h-8 sm:h-10 md:h-12 flex items-center ${justifyClass} cursor-pointer rounded-md ${statusClass}" data-id="${shelfId}">
+          
+          <!-- Circle Badge -->
+          <div class="shelf-circle w-6 h-6 sm:w-8 sm:h-8 rounded-full border-[1.5px] flex items-center justify-center font-bold text-[10px] sm:text-xs md:text-sm z-10">
+            ${shelfId}
+          </div>
+
+          <!-- Roll count on shelf (When occupied) -->
+          ${count > 0 ? `
+            <div class="shelf-mini-badge absolute ${side === 'left' ? 'left-2' : 'right-2'} text-[10px] font-bold px-1.5 py-0.5 rounded ${isOverloaded ? 'bg-red-600 text-white' : 'bg-white/80 text-slate-700'} hidden sm:block">
+              ${count} cuộn
+            </div>
+          ` : ''}
+
+          <!-- Search Match Badge -->
+          <div class="search-match-badge hidden absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none">
+            <span class="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md whitespace-nowrap">
+              <span class="match-count">0</span> cuộn
+            </span>
+          </div>
+
+          <!-- Hover Tooltip -->
+          <div class="shelf-tooltip ${tooltipSideClass}">
+            <div class="min-w-[240px] max-w-[320px] bg-white p-3 rounded-xl shadow-2xl border border-slate-200 text-left">
+              ${previewHTML}
+            </div>
+          </div>
+
+        </div>
+      `;
+      html += getSeparatorHTML();
+    });
+
+    container.innerHTML = html;
+    bindShelfClickEvents(container);
+  }
+
+  function renderGrating(rolls) {
+    const elCount = document.getElementById('grating-roll-count');
+    const elKg = document.getElementById('grating-kg-count');
+    const elPreview = document.getElementById('grating-preview-content');
+
+    const count = rolls.length;
+    const totalKg = rolls.reduce((sum, r) => sum + r.weight, 0);
+
+    if (elCount) elCount.textContent = `${count} cuộn`;
+    if (elKg) elKg.textContent = `${formatNumber(totalKg)} Kg`;
+
+    if (elPreview) {
+      if (count > 0) {
+        const topRolls = rolls.slice(0, 4);
+        elPreview.innerHTML = `
+          <div class="space-y-1 max-h-48 overflow-y-auto custom-scrollbar">
+            ${topRolls.map(r => `
+              <div class="p-1 rounded bg-amber-50 border border-amber-200 text-[11px] flex justify-between items-center gap-2">
+                <div class="min-w-0">
+                  <div class="font-bold text-slate-900 truncate">${r.cuonId}</div>
+                  <div class="text-slate-500 truncate text-[10px]">${r.maVatTu}</div>
+                </div>
+                <div class="text-end flex-shrink-0">
+                  <span class="font-semibold text-amber-800">${formatNumber(r.weight)} Kg</span>
+                  <div class="text-[9px] text-slate-400">${r._warehouse === 'xg' ? 'XG' : 'Tole'}</div>
+                </div>
+              </div>
+            `).join('')}
+            ${count > 4 ? `<div class="text-center text-[10px] text-amber-700 italic pt-1">+ ${count - 4} cuộn khác (Nhấp để xem)</div>` : ''}
+          </div>
+        `;
+      } else {
+        elPreview.innerHTML = `<div class="text-center py-2 text-slate-400 italic">Khu vực Grating hiện không có cuộn tập kết</div>`;
+      }
+    }
+
+    const gratingArea = document.getElementById('grating-area');
+    if (gratingArea) {
+      gratingArea.onclick = () => openShelfDetailModal('GRATING');
+    }
+  }
+
+  function renderUnassignedSection(rolls) {
+    const unassignedArea = document.getElementById('unassigned-area');
+    const countBadge = document.getElementById('unassigned-count-badge');
+    const btnView = document.getElementById('btn-view-unassigned');
+
+    if (!unassignedArea) return;
+
+    if (rolls.length > 0) {
+      unassignedArea.classList.remove('hidden');
+      if (countBadge) countBadge.textContent = `${rolls.length} cuộn`;
+      if (btnView) {
+        btnView.onclick = () => openShelfDetailModal('CHƯA XẾP KỆ', rolls);
+      }
+    } else {
+      unassignedArea.classList.add('hidden');
+    }
+  }
+
+  function bindShelfClickEvents(container) {
+    container.querySelectorAll('.shelf-container').forEach(el => {
+      const shelfId = el.getAttribute('data-id');
+      if (shelfId) {
+        el.onclick = () => openShelfDetailModal(shelfId);
       }
     });
   }
 
-  // Render dropdown
-  if (isSearchFocused && searchQuery) {
-    searchResultsEl.classList.remove('hidden');
-    if (results.length > 0) {
-      searchResultsEl.innerHTML = results.map(material => `
-        <div class="px-4 py-3 hover:bg-red-50 cursor-pointer flex items-center justify-between group transition-colors" onclick="selectMaterial('${material.code}', '${material.shelves.join(',')}')">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 group-hover:bg-red-500 group-hover:text-white transition-colors flex-shrink-0">
-              <i data-lucide="package" class="w-5 h-5"></i>
-            </div>
-            <div class="min-w-0">
-              <div class="font-bold text-gray-800 truncate flex items-center gap-2">
-                ${material.code}
-                <span class="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full font-normal">
-                  ${material.count} cuộn
-                </span>
-              </div>
-              <div class="text-xs text-gray-500 truncate">${material.name}</div>
-            </div>
-          </div>
-          <div class="flex flex-wrap justify-end gap-1 ml-2 max-w-[120px]">
-            ${material.shelves.map(s => `
-              <span class="text-[10px] font-medium text-blue-600 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded-md whitespace-nowrap">
-                Kệ ${s}
-              </span>
-            `).join('')}
-          </div>
-        </div>
-      `).join('');
-      lucide.createIcons();
-    } else {
-      searchResultsEl.innerHTML = `<div class="px-4 py-8 text-center text-gray-500">Không tìm thấy vật tư nào phù hợp.</div>`;
+  // ==================== SEARCH & HIGHLIGHT ====================
+  function applySearchHighlight() {
+    const query = searchQuery.trim().toLowerCase();
+    const searchFeedback = document.getElementById('search-feedback');
+    const clearBtn = document.getElementById('clear-search');
+
+    if (clearBtn) {
+      clearBtn.classList.toggle('hidden', query === '');
     }
-  } else {
-    searchResultsEl.classList.add('hidden');
+
+    const filteredRolls = getFilteredRolls();
+
+    if (!query) {
+      if (searchFeedback) searchFeedback.classList.add('hidden');
+      document.querySelectorAll('.shelf-container').forEach(el => {
+        el.classList.remove('highlighted', 'dimmed');
+        const badge = el.querySelector('.search-match-badge');
+        if (badge) badge.classList.add('hidden');
+      });
+      return;
+    }
+
+    // Đếm cuộn khớp theo từng kệ
+    const matchCountByShelf = new Map();
+    let totalMatchedRolls = 0;
+
+    filteredRolls.forEach(roll => {
+      const textToSearch = `${roll.cuonId} ${roll.maVatTu} ${roll.tenVatTu} ${roll.batch} ${roll.projectCode}`.toLowerCase();
+      if (textToSearch.includes(query)) {
+        totalMatchedRolls++;
+        const sId = roll.rackId || 'UNASSIGNED';
+        matchCountByShelf.set(sId, (matchCountByShelf.get(sId) || 0) + 1);
+      }
+    });
+
+    // Cập nhật giao diện feedback
+    if (searchFeedback) {
+      searchFeedback.classList.remove('hidden');
+      searchFeedback.innerHTML = `Tìm thấy <strong class="text-blue-600">${totalMatchedRolls}</strong> cuộn khớp từ khóa trên <strong class="text-slate-800">${matchCountByShelf.size}</strong> vị trí kệ.`;
+    }
+
+    document.querySelectorAll('.shelf-container').forEach(el => {
+      const sId = el.getAttribute('data-id');
+      const matches = matchCountByShelf.get(sId) || 0;
+      const matchBadge = el.querySelector('.search-match-badge');
+      const countSpan = el.querySelector('.match-count');
+
+      if (matches > 0) {
+        el.classList.remove('dimmed');
+        el.classList.add('highlighted');
+        if (matchBadge) {
+          matchBadge.classList.remove('hidden');
+          if (countSpan) countSpan.textContent = matches;
+        }
+      } else {
+        el.classList.remove('highlighted');
+        el.classList.add('dimmed');
+        if (matchBadge) matchBadge.classList.add('hidden');
+      }
+    });
   }
 
-  // Update shelf highlights
-  allShelves.forEach(id => {
-    const cache = domCache ? domCache.shelves[id] : null;
-    const shelfEl = cache ? cache.shelfEl : document.getElementById(`shelf-${id}`);
-    if (!shelfEl) return;
+  // ==================== MODAL & EXCEL EXPORT ====================
+  function openShelfDetailModal(shelfId, customRolls = null) {
+    selectedShelfForModal = shelfId;
+    modalFilterQuery = '';
 
-    const isHighlighted = highlightedShelves.includes(id) || (isSearchFocused && !!shelfMatchCounts[id]);
-    const matchCount = shelfMatchCounts[id];
+    const modalSearchInput = document.getElementById('modalSearchInput');
+    if (modalSearchInput) modalSearchInput.value = '';
 
-    const circleEl = cache ? cache.shelfCircleEl : shelfEl.querySelector('.shelf-circle');
-    const pulseEl = cache ? cache.pulseEl : shelfEl.querySelector('.highlight-pulse');
-    const badgeEl = cache ? cache.badgeEl : shelfEl.querySelector('.search-badge');
-    const tooltipEl = cache ? cache.tooltipEl : shelfEl.querySelector('.shelf-tooltip > div');
-    const tooltipTitleEl = cache ? cache.tooltipTitleEl : shelfEl.querySelector('.shelf-tooltip h3');
+    const modalShelfName = document.getElementById('modalShelfName');
+    const modalShelfTitleCircle = document.getElementById('modalShelfTitleCircle');
+    const btnLocation = document.getElementById('btnNavigateLocationLookup');
 
-    if (isHighlighted) {
-      shelfEl.classList.add('highlighted', 'bg-blue-200', 'ring-2', 'ring-blue-500', 'shadow-[0_0_15px_rgba(59,130,246,0.5)]');
-      shelfEl.classList.remove('bg-[#f4c7b3]', 'bg-red-200', 'ring-1', 'ring-red-400');
+    if (modalShelfName) modalShelfName.textContent = shelfId;
+    if (modalShelfTitleCircle) modalShelfTitleCircle.textContent = shelfId === 'GRATING' ? 'GR' : shelfId;
 
-      circleEl.classList.add('border-blue-500', 'text-blue-700');
-      circleEl.classList.remove('border-red-500', 'text-red-600');
-      circleEl.style.backgroundColor = shelfEl.classList.contains('hovered') ? '#dbeafe' : '#eff6ff';
-
-      pulseEl.classList.remove('hidden');
-
-      tooltipEl.classList.add('border-blue-200');
-      tooltipEl.classList.remove('border-red-100', 'border-red-300');
-
-      tooltipTitleEl.classList.add('text-blue-600');
-      tooltipTitleEl.classList.remove('text-red-600', 'text-red-700');
-
-      if (matchCount > 0) {
-        badgeEl.classList.remove('hidden');
-        badgeEl.querySelector('.badge-text').textContent = `${matchCount} cuộn`;
-      } else {
-        badgeEl.classList.add('hidden');
-      }
-
-    } else {
-      shelfEl.classList.remove('highlighted', 'bg-blue-200', 'ring-2', 'ring-blue-500', 'shadow-[0_0_15px_rgba(59,130,246,0.5)]');
-
-      const data = shelvesData[id];
-      const isOverCapacity = (data?.materials.length || 0) > (['B12', 'B13', 'B14'].includes(id) ? 50 : 20);
-
-      if (isOverCapacity) {
-        shelfEl.classList.add('bg-red-200', 'ring-1', 'ring-red-400');
-        tooltipEl.classList.add('border-red-300');
-        tooltipTitleEl.classList.add('text-red-700');
-      } else {
-        shelfEl.classList.add('bg-[#f4c7b3]');
-        tooltipEl.classList.add('border-red-100');
-        tooltipTitleEl.classList.add('text-red-600');
-      }
-
-      circleEl.classList.add('border-red-500', 'text-red-600');
-      circleEl.classList.remove('border-blue-500', 'text-blue-700');
-      circleEl.style.backgroundColor = shelfEl.classList.contains('hovered') ? '#fee2e2' : '#ffffff';
-
-      pulseEl.classList.add('hidden');
-      badgeEl.classList.add('hidden');
-
-      tooltipEl.classList.remove('border-blue-200');
-      tooltipTitleEl.classList.remove('text-blue-600');
+    if (btnLocation) {
+      btnLocation.href = `/pages/tem-nhan-kiem-ke/vi-tri-ton.html?vitri=${encodeURIComponent(shelfId)}`;
     }
+
+    renderModalRollsTable(customRolls);
+
+    // Mở Bootstrap Modal
+    const modalEl = document.getElementById('shelfDetailModal');
+    if (modalEl && window.bootstrap && window.bootstrap.Modal) {
+      const modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
+      modal.show();
+    }
+  }
+
+  function renderModalRollsTable(customRolls = null) {
+    const tableBody = document.getElementById('modalShelfTableBody');
+    const visibleCountEl = document.getElementById('modalVisibleCount');
+    const rollCountHeader = document.getElementById('modalShelfRollCount');
+    const totalKgHeader = document.getElementById('modalShelfTotalKg');
+
+    if (!tableBody) return;
+
+    let rolls = customRolls;
+    if (!rolls) {
+      const filtered = getFilteredRolls();
+      rolls = filtered.filter(r => r.rackId === selectedShelfForModal);
+    }
+
+    const totalCount = rolls.length;
+    const totalKg = rolls.reduce((sum, r) => sum + r.weight, 0);
+
+    if (rollCountHeader) rollCountHeader.textContent = `${totalCount} cuộn`;
+    if (totalKgHeader) totalKgHeader.textContent = `${formatNumber(totalKg)} Kg`;
+
+    // Filter by modal search input if any
+    let displayedRolls = rolls;
+    if (modalFilterQuery.trim()) {
+      const q = modalFilterQuery.trim().toLowerCase();
+      displayedRolls = rolls.filter(r => {
+        return `${r.cuonId} ${r.maVatTu} ${r.tenVatTu} ${r.batch} ${r.projectCode} ${r.projectName}`.toLowerCase().includes(q);
+      });
+    }
+
+    if (visibleCountEl) visibleCountEl.textContent = displayedRolls.length;
+
+    if (displayedRolls.length === 0) {
+      tableBody.innerHTML = `
+        <tr>
+          <td colspan="10" class="text-center py-6 text-slate-400 italic">
+            ${totalCount === 0 ? 'Kệ này hiện chưa có cuộn nào.' : 'Không tìm thấy cuộn phù hợp với từ khóa lọc.'}
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tableBody.innerHTML = displayedRolls.map((roll, idx) => {
+      const isXg = roll._warehouse === 'xg';
+      const whBadge = isXg
+        ? '<span class="badge bg-indigo-100 text-indigo-700">Xà gồ</span>'
+        : '<span class="badge bg-emerald-100 text-emerald-700">Tole</span>';
+
+      return `
+        <tr>
+          <td class="text-center text-slate-500 font-medium">${idx + 1}</td>
+          <td>${whBadge}</td>
+          <td class="font-bold text-slate-900">${roll.cuonId}</td>
+          <td class="font-semibold text-slate-700">${roll.maVatTu}</td>
+          <td class="text-slate-600 truncate max-w-[200px]" title="${roll.tenVatTu}">${roll.tenVatTu}</td>
+          <td><span class="badge bg-slate-100 text-slate-700 border border-slate-200">${roll.batch || '--'}</span></td>
+          <td class="text-end font-bold text-red-600">${formatNumber(roll.weight)}</td>
+          <td class="text-center text-slate-600">${formatDate(roll.importDate)}</td>
+          <td class="text-center">
+            <span class="badge ${roll.storageDays > 90 ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'}">
+              ${roll.storageDays} ngày
+            </span>
+          </td>
+          <td class="text-slate-600 truncate max-w-[150px]" title="${roll.projectCode} - ${roll.projectName}">
+            ${roll.projectCode || '--'}
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function exportShelfToExcel() {
+    if (!selectedShelfForModal) return;
+
+    const filtered = getFilteredRolls();
+    const rolls = filtered.filter(r => r.rackId === selectedShelfForModal);
+
+    if (rolls.length === 0) {
+      alert(`Kệ ${selectedShelfForModal} không có dữ liệu cuộn để xuất Excel.`);
+      return;
+    }
+
+    if (typeof XLSX === 'undefined') {
+      alert('Thư viện SheetJS chưa được tải xong. Vui lòng thử lại sau giây lát.');
+      return;
+    }
+
+    const excelData = rolls.map((r, i) => ({
+      'STT': i + 1,
+      'Kho': r._warehouseName,
+      'Vị trí kệ': selectedShelfForModal,
+      'Cuộn ID': r.cuonId,
+      'Mã vật tư': r.maVatTu,
+      'Tên vật tư': r.tenVatTu,
+      'Batch': r.batch,
+      'Khối lượng (Kg)': r.weight,
+      'Ngày nhập': formatDate(r.importDate),
+      'Thời gian lưu kho (ngày)': r.storageDays,
+      'Mã công trình': r.projectCode,
+      'Tên công trình': r.projectName,
+      'Ghi chú': r.note
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, `Ke_${selectedShelfForModal}`);
+
+    const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const filename = `Ton_Kho_Ke_${selectedShelfForModal}_${todayStr}.xlsx`;
+    XLSX.writeFile(workbook, filename);
+  }
+
+  // ==================== EVENT LISTENERS & SETUP ====================
+  function attachGlobalEventListeners() {
+    // Warehouse Filter Tabs
+    document.querySelectorAll('.warehouse-filter-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.warehouse-filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentWarehouseFilter = btn.getAttribute('data-warehouse') || 'all';
+        renderAll();
+      });
+    });
+
+    // KPI Card Click Triggers
+    document.querySelectorAll('[data-filter-trigger]').forEach(card => {
+      card.addEventListener('click', () => {
+        const trigger = card.getAttribute('data-filter-trigger');
+        const targetBtn = document.querySelector(`.warehouse-filter-btn[data-warehouse="${trigger}"]`);
+        if (targetBtn) targetBtn.click();
+      });
+    });
+
+    // Search Input
+    const searchInput = document.getElementById('search-input');
+    const clearSearch = document.getElementById('clear-search');
+
+    if (searchInput) {
+      searchInput.addEventListener('input', debounce((e) => {
+        searchQuery = e.target.value;
+        applySearchHighlight();
+      }, 200));
+    }
+
+    if (clearSearch) {
+      clearSearch.addEventListener('click', () => {
+        if (searchInput) searchInput.value = '';
+        searchQuery = '';
+        applySearchHighlight();
+      });
+    }
+
+    // Modal Search Input
+    const modalSearchInput = document.getElementById('modalSearchInput');
+    if (modalSearchInput) {
+      modalSearchInput.addEventListener('input', debounce((e) => {
+        modalFilterQuery = e.target.value;
+        renderModalRollsTable();
+      }, 150));
+    }
+
+    // Export Excel Button
+    const btnExportExcel = document.getElementById('btnExportShelfExcel');
+    if (btnExportExcel) {
+      btnExportExcel.addEventListener('click', exportShelfToExcel);
+    }
+
+    // Refresh Button
+    const btnRefresh = document.getElementById('btn-refresh');
+    if (btnRefresh) {
+      btnRefresh.addEventListener('click', () => {
+        const icon = btnRefresh.querySelector('i');
+        if (icon) icon.classList.add('animate-spin');
+        loadWarehouseData().finally(() => {
+          if (icon) icon.classList.remove('animate-spin');
+        });
+      });
+    }
+
+    // Broadcast channel listener
+    const handleBroadcastMsg = (msg) => {
+      if (msg && msg.type) {
+        console.log('Received broadcast inventory event, refreshing coil map:', msg.type);
+        loadWarehouseData();
+      }
+    };
+
+    if (xgBroadcast) xgBroadcast.onmessage = (e) => handleBroadcastMsg(e.data);
+    if (toleBroadcast) toleBroadcast.onmessage = (e) => handleBroadcastMsg(e.data);
+  }
+
+  // ==================== INITIALIZATION ====================
+  window.addEventListener('DOMContentLoaded', () => {
+    attachGlobalEventListeners();
+    loadWarehouseData();
   });
-}
 
-// Global function for onclick
-window.selectMaterial = function (code, shelvesStr) {
-  const searchInput = document.getElementById('search-input');
-  highlightedShelves = shelvesStr.split(',');
-  isSearchFocused = false;
-  searchQuery = code;
-  searchInput.value = code;
-  updateSearchUI();
-};
-
-// Start
-init();
+})();
