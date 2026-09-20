@@ -537,9 +537,7 @@
         throw new Error('Định dạng dữ liệu Google Sheets trả về không hợp lệ.');
       }
       const data = JSON.parse(rawText.substring(start, end + 1));
-      if (!data.table || !data.table.rows || data.table.rows.length === 0) {
-        throw new Error('Google Sheet mb51 hiện không có dòng dữ liệu nào.');
-      }
+      const gvizRows = (data.table && Array.isArray(data.table.rows)) ? data.table.rows : [];
 
       if (btnEl) {
         btnEl.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Đang phân tích dữ liệu...';
@@ -596,8 +594,8 @@
       const nowIso = new Date().toISOString();
 
       // Duyệt qua tất cả các dòng
-      for (let i = 0; i < data.table.rows.length; i++) {
-        const row = data.table.rows[i].c;
+      for (let i = 0; i < gvizRows.length; i++) {
+        const row = gvizRows[i].c;
         if (!row) continue;
 
         const doc = getVal(row[2]);
@@ -651,18 +649,20 @@
         }
       }
 
-      if (records.length === 0) {
-        throw new Error('Không trích xuất được dòng dữ liệu hợp lệ nào từ Google Sheets.');
-      }
-
       if (btnEl) {
-        btnEl.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status"></span> Đang lưu ${records.length.toLocaleString('vi-VN')} dòng vào Supabase...`;
+        btnEl.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status"></span> Đang cập nhật Supabase...`;
       }
 
-      // 3. Làm sạch bảng cũ trên Supabase
+      // 3. Làm sạch bảng cũ trên Supabase để khớp chính xác dữ liệu Google Sheets
       const { error: delErr } = await window.supabase.from('xg_sap_mb51').delete().gt('id', 0);
       if (delErr) {
         console.warn('[XgSapLookup] Cảnh báo khi xóa bảng cũ:', delErr);
+      }
+
+      // Trường hợp Google Sheet không có dòng dữ liệu nào
+      if (records.length === 0) {
+        showAutofillToast('✓ Google Sheet hiện không có dữ liệu. Đã xóa sạch toàn bộ dữ liệu trên Supabase (0 dòng)!');
+        return;
       }
 
       // 4. Batch insert theo chunks 1.000 dòng
@@ -678,6 +678,7 @@
       }
 
       showAutofillToast(`✓ Đã đồng bộ thành công ${records.length.toLocaleString('vi-VN')} dòng từ Google Sheets sang Supabase!`);
+
 
       // Kích hoạt tìm kiếm lại nếu ô Phiếu nhập đang có chữ
       const activeInput = document.querySelector('#addDataForm input[name="col_3"]') ||
