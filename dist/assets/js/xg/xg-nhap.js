@@ -1177,6 +1177,16 @@ function openAddDataModal() {
   const btnAddRoll = document.getElementById('btnAddRoll');
   if (btnAddRoll) btnAddRoll.onclick = () => addRollRow();
 
+  // Nút đồng bộ Google Sheets trên card Thông tin chung
+  const btnSyncGgSheet = document.getElementById('btnSyncGgSheet');
+  if (btnSyncGgSheet) {
+    btnSyncGgSheet.onclick = () => {
+      if (window.XgSapLookup && window.XgSapLookup.syncFromGoogleSheets) {
+        window.XgSapLookup.syncFromGoogleSheets(btnSyncGgSheet);
+      }
+    };
+  }
+
   new bootstrap.Modal(modalEl).show();
 }
 
@@ -1260,6 +1270,16 @@ function openEditDataModal() {
 
   const btnEditAddRoll = document.getElementById('btnEditAddRoll');
   if (btnEditAddRoll) btnEditAddRoll.onclick = () => addEditRollRow();
+
+  // Nút đồng bộ Google Sheets trên card Thông tin chung modal Sửa
+  const btnEditSyncGgSheet = document.getElementById('btnEditSyncGgSheet');
+  if (btnEditSyncGgSheet) {
+    btnEditSyncGgSheet.onclick = () => {
+      if (window.XgSapLookup && window.XgSapLookup.syncFromGoogleSheets) {
+        window.XgSapLookup.syncFromGoogleSheets(btnEditSyncGgSheet);
+      }
+    };
+  }
 
   new bootstrap.Modal(modalEl).show();
 }
