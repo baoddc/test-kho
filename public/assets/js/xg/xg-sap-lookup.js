@@ -506,73 +506,83 @@
 
   /**
    * Đồng bộ trực tiếp dữ liệu từ Google Sheets sang Supabase
+   * Sử dụng Google GViz JSON endpoint (hỗ trợ CORS trực tiếp trên trình duyệt)
    * @param {HTMLElement} btnEl - Nút bấm kích hoạt đồng bộ
    */
   async function syncFromGoogleSheets(btnEl) {
-    if (!window.XLSX) {
-      alert('Thư viện xử lý Excel (SheetJS) chưa sẵn sàng. Vui lòng thử lại sau.');
-      return;
-    }
-
     if (!window.supabase) {
       alert('Kết nối Supabase chưa sẵn sàng. Vui lòng tải lại trang.');
       return;
     }
 
-    const SPREADSHEET_EXPORT_URL = 'https://docs.google.com/spreadsheets/d/1BPY6k2bQuDu-RNpkRc3BhS57CuM1Ol__FYXvY8ezRjs/export?format=xlsx';
+    const GVIZ_URL = 'https://docs.google.com/spreadsheets/d/1BPY6k2bQuDu-RNpkRc3BhS57CuM1Ol__FYXvY8ezRjs/gviz/tq?tqx=out:json&sheet=mb51';
     const originalHtml = btnEl ? btnEl.innerHTML : '';
     if (btnEl) {
       btnEl.disabled = true;
-      btnEl.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Đang kết nối Google Sheets...';
+      btnEl.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Đang tải Google Sheets...';
     }
 
     try {
       showAutofillToast('Đang tải dữ liệu mới nhất từ Google Sheets...');
 
-      // 1. Tải file XLSX trực tiếp từ Google Sheets
-      const response = await fetch(SPREADSHEET_EXPORT_URL);
+      // 1. Tải dữ liệu JSON trực tiếp qua Google GViz API (Hỗ trợ CORS đầy đủ)
+      const response = await fetch(GVIZ_URL);
       if (!response.ok) {
-        throw new Error(`Không thể tải Google Sheet (Mã lỗi ${response.status}).`);
+        throw new Error(`Không thể kết nối Google Sheets (Mã HTTP ${response.status}).`);
       }
-      const arrayBuffer = await response.arrayBuffer();
+      const rawText = await response.text();
+      const start = rawText.indexOf('{');
+      const end = rawText.lastIndexOf('}');
+      if (start === -1 || end === -1) {
+        throw new Error('Định dạng dữ liệu Google Sheets trả về không hợp lệ.');
+      }
+      const data = JSON.parse(rawText.substring(start, end + 1));
+      if (!data.table || !data.table.rows || data.table.rows.length === 0) {
+        throw new Error('Google Sheet mb51 hiện không có dòng dữ liệu nào.');
+      }
 
       if (btnEl) {
         btnEl.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Đang phân tích dữ liệu...';
       }
 
-      // 2. Parse file Excel bằng SheetJS
-      const workbook = window.XLSX.read(arrayBuffer, { type: 'array' });
-      const ws = workbook.Sheets['mb51'] || workbook.Sheets[workbook.SheetNames[0]];
-      if (!ws) throw new Error('Không tìm thấy sheet mb51 trong Google Sheets.');
+      // Helper lấy giá trị text từ cell GViz
+      const getVal = (c) => {
+        if (!c || c.v === null || c.v === undefined) return null;
+        const s = String(c.v).trim();
+        return s ? s : null;
+      };
 
-      const rawRows = window.XLSX.utils.sheet_to_json(ws, { header: 1 });
-      const records = [];
-      const nowIso = new Date().toISOString();
-
-      // Hàm parse ngày an toàn
-      const parseDate = (val) => {
+      // Helper parse ngày an toàn
+      const parseGvizDate = (c) => {
+        if (!c) return null;
+        const val = c.f || c.v;
         if (!val) return null;
-        if (typeof val === 'number') {
-          const d = new Date(Math.round((val - 25569) * 86400 * 1000));
-          if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
-        }
         const s = String(val).trim();
-        const m_iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-        if (m_iso) return `${m_iso[1]}-${String(m_iso[2]).padStart(2, '0')}-${String(m_iso[3]).padStart(2, '0')}`;
-        const m_vn = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
-        if (m_vn) {
-          let y = parseInt(m_vn[3], 10);
+        const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+        if (iso) return `${iso[1]}-${String(iso[2]).padStart(2, '0')}-${String(iso[3]).padStart(2, '0')}`;
+        const vn = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+        if (vn) {
+          let y = parseInt(vn[3], 10);
           if (y < 100) y += y < 50 ? 2000 : 1900;
-          return `${y}-${String(m_vn[2]).padStart(2, '0')}-${String(m_vn[1]).padStart(2, '0')}`;
+          return `${y}-${String(vn[2]).padStart(2, '0')}-${String(vn[1]).padStart(2, '0')}`;
+        }
+        if (typeof val === 'string') {
+          const m = val.match(/Date\((\d+),(\d+),(\d+)/);
+          if (m) {
+            const y = m[1];
+            const month = parseInt(m[2], 10) + 1;
+            const day = parseInt(m[3], 10);
+            return `${y}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          }
         }
         return null;
       };
 
-      // Hàm parse số thực an toàn
-      const parseNum = (val) => {
-        if (val === null || val === undefined || val === '') return 0;
-        if (typeof val === 'number') return val;
-        let s = String(val).trim().replace(/\s+/g, '');
+      // Helper parse số thực
+      const parseNum = (c) => {
+        if (!c || c.v === null || c.v === undefined) return 0;
+        if (typeof c.v === 'number') return c.v;
+        let s = String(c.v).trim().replace(/\s+/g, '');
         if (s.includes(',') && s.includes('.')) {
           s = s.lastIndexOf(',') > s.lastIndexOf('.') ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
         } else if (s.includes(',')) {
@@ -582,64 +592,86 @@
         return isNaN(n) ? 0 : n;
       };
 
-      // Duyệt qua tất cả các dòng
-      for (let i = 0; i < rawRows.length; i++) {
-        const r = rawRows[i];
-        if (!r) continue;
+      const records = [];
+      const nowIso = new Date().toISOString();
 
-        // Dạng chuẩn: Cột C (index 2) là Material Document
-        if (r[2] && String(r[2]).trim() !== '' && !String(r[2]).includes('Material Document')) {
-          records.push({
-            material_document: String(r[2]).trim(),
-            posting_date: parseDate(r[3]),
-            material: r[5] ? String(r[5]).trim() : null,
-            material_description: r[6] ? String(r[6]).trim() : null,
-            batch: r[7] ? String(r[7]).trim() : null,
-            quantity: parseNum(r[9]),
-            unit_of_entry: r[8] ? String(r[8]).trim() : null,
-            project_id: r[10] ? String(r[10]).trim() : null,
-            project_name: r[11] ? String(r[11]).trim() : null,
-            storage_location: r[12] ? String(r[12]).trim() : null,
-            movement_type: r[13] ? String(r[13]).trim() : null,
-            movement_type_text: r[14] ? String(r[14]).trim() : null,
-            plant: r[16] ? String(r[16]).trim() : null,
-            vendor_name: r[24] ? String(r[24]).trim() : null,
-            synced_at: nowIso
-          });
+      // Duyệt qua tất cả các dòng
+      for (let i = 0; i < data.table.rows.length; i++) {
+        const row = data.table.rows[i].c;
+        if (!row) continue;
+
+        const doc = getVal(row[2]);
+        const date = parseGvizDate(row[3]);
+        const mat = getVal(row[5]);
+        const matDesc = getVal(row[6]);
+        const batch = getVal(row[7]);
+
+        // Bỏ qua dòng tiêu đề
+        if (doc && (doc.toLowerCase().includes('material') || (date && date.includes('Posting')))) {
+          continue;
         }
-        // Dạng lệch cột: Cột AF (index 31) là Material Document
-        else if (r[31] && String(r[31]).trim() !== '' && !String(r[31]).includes('Material Document')) {
+
+        // Định dạng cột chuẩn (Cột C / index 2 là Material Document)
+        if (doc) {
           records.push({
-            material_document: String(r[31]).trim(),
-            posting_date: parseDate(r[3]),
-            material: r[5] ? String(r[5]).trim() : null,
-            material_description: r[6] ? String(r[6]).trim() : null,
-            batch: r[7] ? String(r[7]).trim() : null,
-            quantity: parseNum(r[28]),
-            unit_of_entry: r[32] ? String(r[32]).trim() : null,
-            project_id: r[10] ? String(r[10]).trim() : null,
-            project_name: r[33] ? String(r[33]).trim() : null,
-            vendor_name: r[24] ? String(r[24]).trim() : null,
+            material_document: doc,
+            posting_date: date,
+            material: mat,
+            material_description: matDesc,
+            batch: batch,
+            quantity: parseNum(row[9]),
+            unit_of_entry: getVal(row[8]),
+            project_id: getVal(row[10]),
+            project_name: getVal(row[11]),
+            storage_location: getVal(row[12]),
+            movement_type: getVal(row[13]),
+            movement_type_text: getVal(row[14]),
+            plant: getVal(row[16]),
+            vendor_name: getVal(row[24]),
             synced_at: nowIso
           });
+        } else {
+          // Định dạng lệch cột (Cột AF / index 31 hoặc 36)
+          const docAlt = getVal(row[31]) || getVal(row[36]);
+          if (docAlt && !docAlt.toLowerCase().includes('material')) {
+            records.push({
+              material_document: docAlt,
+              posting_date: date,
+              material: mat,
+              material_description: matDesc,
+              batch: batch,
+              quantity: parseNum(row[28]) || parseNum(row[9]),
+              unit_of_entry: getVal(row[32]) || getVal(row[8]),
+              project_id: getVal(row[10]),
+              project_name: getVal(row[33]) || getVal(row[11]),
+              vendor_name: getVal(row[24]),
+              synced_at: nowIso
+            });
+          }
         }
       }
 
       if (records.length === 0) {
-        throw new Error('Không trích xuất được dòng dữ liệu hợp lệ nào.');
+        throw new Error('Không trích xuất được dòng dữ liệu hợp lệ nào từ Google Sheets.');
       }
 
       if (btnEl) {
-        btnEl.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status"></span> Đang lưu ${records.length} dòng...`;
+        btnEl.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status"></span> Đang lưu ${records.length.toLocaleString('vi-VN')} dòng vào Supabase...`;
       }
 
       // 3. Làm sạch bảng cũ trên Supabase
-      await window.supabase.from('xg_sap_mb51').delete().gt('id', 0);
+      const { error: delErr } = await window.supabase.from('xg_sap_mb51').delete().gt('id', 0);
+      if (delErr) {
+        console.warn('[XgSapLookup] Cảnh báo khi xóa bảng cũ:', delErr);
+      }
 
       // 4. Batch insert theo chunks 1.000 dòng
       const batchSize = 1000;
       const totalBatches = Math.ceil(records.length / batchSize);
       for (let b = 0; b < totalBatches; b++) {
+        if (btnEl) {
+          btnEl.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status"></span> Đang lưu (${b + 1}/${totalBatches})...`;
+        }
         const chunk = records.slice(b * batchSize, (b + 1) * batchSize);
         const { error: insertErr } = await window.supabase.from('xg_sap_mb51').insert(chunk);
         if (insertErr) throw insertErr;
