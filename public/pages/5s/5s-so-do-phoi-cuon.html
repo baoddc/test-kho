@@ -6,6 +6,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Sơ đồ kho phôi cuộn - 5S</title>
 
+  <!-- Script khởi tạo theme ngay tức thì trước khi render DOM để chống flash trắng -->
+  <script>
+    (function () {
+      var theme = localStorage.getItem('ddc_theme') || 'dark';
+      document.documentElement.setAttribute('data-bs-theme', theme);
+    })();
+  </script>
+
   <!-- Logo hiển thị trên tab -->
   <link rel="icon" type="image/png" href="/assets/images/logos/Logo-DDC.png">
 
@@ -30,43 +38,197 @@
   <!-- Sidebar & Core CSS -->
   <link rel="stylesheet" href="/assets/css/sidebar.css">
   <link rel="stylesheet" href="/assets/css/trang-chu/home.css">
-  <!-- Link tới file CSS tùy chỉnh -->
-  <link rel="stylesheet" href="/assets/css/5s/5s-so-do-phoi-cuon.css">
+  <!-- Link tới file CSS tùy chỉnh có cache-busting -->
+  <link rel="stylesheet" href="/assets/css/5s/5s-so-do-phoi-cuon.css?v=2.1.0">
+
+  <!-- Style trực tiếp ưu tiên cao nhất chống cache trình duyệt cho Dark Theme -->
+  <style id="dark-theme-5s-override">
+    [data-bs-theme="dark"] body {
+      background-color: #0f1117 !important;
+      color: #e2e8f0 !important;
+    }
+    [data-bs-theme="dark"] #app {
+      background-color: #1a1d2d !important;
+      border-color: #2b324a !important;
+      color: #e2e8f0 !important;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5) !important;
+    }
+    [data-bs-theme="dark"] .kpi-card {
+      background: #202538 !important;
+      background-image: none !important;
+      border-color: #2e3652 !important;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
+    }
+    [data-bs-theme="dark"] .kpi-card:hover {
+      border-color: #434e73 !important;
+    }
+    [data-bs-theme="dark"] #search-toolbar {
+      background-color: #141724 !important;
+      border-color: #2b324a !important;
+    }
+    [data-bs-theme="dark"] #search-tabs-box {
+      background-color: #1a1d2d !important;
+      border-color: #2b324a !important;
+    }
+    [data-bs-theme="dark"] #search-input {
+      background-color: #141724 !important;
+      border-color: #2e3652 !important;
+      color: #f8fafc !important;
+    }
+    [data-bs-theme="dark"] #search-input::placeholder {
+      color: #64748b !important;
+    }
+    [data-bs-theme="dark"] #map-box {
+      background-color: #141724 !important;
+      border-color: #2b324a !important;
+    }
+    [data-bs-theme="dark"] #road-entrance {
+      background-color: #1a1d2d !important;
+      border-color: #2b324a !important;
+    }
+    [data-bs-theme="dark"] .shelf-empty {
+      background-color: #202538 !important;
+      border-color: #2f3754 !important;
+    }
+    [data-bs-theme="dark"] .shelf-empty .shelf-circle {
+      background-color: #141724 !important;
+      color: #64748b !important;
+      border-color: #2f3754 !important;
+    }
+    [data-bs-theme="dark"] .shelf-occupied {
+      background-color: #4a2318 !important;
+      border-color: #c2410c !important;
+    }
+    [data-bs-theme="dark"] .shelf-occupied .shelf-circle {
+      background-color: #1a1d2d !important;
+      color: #f87171 !important;
+      border-color: #ef4444 !important;
+    }
+    [data-bs-theme="dark"] .shelf-full {
+      background-color: #5c1818 !important;
+      border-color: #ef4444 !important;
+    }
+    [data-bs-theme="dark"] .shelf-full .shelf-circle {
+      background-color: #dc2626 !important;
+      color: #ffffff !important;
+      border-color: #b91c1c !important;
+    }
+    [data-bs-theme="dark"] .shelf-mini-badge {
+      background-color: rgba(20, 23, 36, 0.9) !important;
+      color: #f1f5f9 !important;
+      border: 1px solid #37405e !important;
+    }
+    [data-bs-theme="dark"] #center-aisle {
+      background-color: #174b35 !important;
+    }
+    [data-bs-theme="dark"] #grating-area {
+      background-color: #3b2b06 !important;
+      border-color: #92400e !important;
+      color: #fef3c7 !important;
+    }
+    [data-bs-theme="dark"] #grating-area * {
+      color: #fde68a !important;
+    }
+    [data-bs-theme="dark"] #grating-area .badge {
+      color: #ffffff !important;
+    }
+    [data-bs-theme="dark"] .shelf-tooltip > div {
+      background-color: #1a1d2d !important;
+      border-color: #37405e !important;
+      color: #e2e8f0 !important;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6) !important;
+    }
+    [data-bs-theme="dark"] .shelf-tooltip .p-1.5,
+    [data-bs-theme="dark"] .shelf-tooltip .p-1 {
+      background-color: #141724 !important;
+      border-color: #2b324a !important;
+    }
+    [data-bs-theme="dark"] .modal-content {
+      background-color: #1a1d2d !important;
+      border-color: #323954 !important;
+      color: #e2e8f0 !important;
+    }
+    [data-bs-theme="dark"] .modal-header,
+    [data-bs-theme="dark"] .modal-footer {
+      background-color: #141724 !important;
+      border-color: #2b324a !important;
+    }
+    [data-bs-theme="dark"] .modal-body {
+      background-color: #10121c !important;
+    }
+    [data-bs-theme="dark"] .modal-body .bg-white {
+      background-color: #1a1d2d !important;
+      border-color: #2b324a !important;
+    }
+    [data-bs-theme="dark"] input#modalSearchInput {
+      background-color: #141724 !important;
+      border-color: #2e3652 !important;
+      color: #f8fafc !important;
+    }
+    [data-bs-theme="dark"] input#modalSearchInput::placeholder {
+      color: #64748b !important;
+    }
+    [data-bs-theme="dark"] .table {
+      color: #cbd5e1 !important;
+      border-color: #2b324a !important;
+    }
+    [data-bs-theme="dark"] .table-light,
+    [data-bs-theme="dark"] thead.table-light tr,
+    [data-bs-theme="dark"] thead.table-light th {
+      background-color: #141724 !important;
+      color: #94a3b8 !important;
+      border-color: #2b324a !important;
+    }
+    [data-bs-theme="dark"] #modalShelfTableBody tr {
+      background-color: #1a1d2d !important;
+      color: #cbd5e1 !important;
+    }
+    [data-bs-theme="dark"] #modalShelfTableBody tr:nth-of-type(odd) {
+      background-color: #171926 !important;
+    }
+    [data-bs-theme="dark"] #modalShelfTableBody tr:hover {
+      background-color: #242940 !important;
+    }
+    [data-bs-theme="dark"] #modalShelfTableBody td {
+      border-color: #252b3f !important;
+      color: #cbd5e1 !important;
+    }
+  </style>
 </head>
 
-<body class="bg-slate-50 font-sans min-h-screen text-slate-800">
+<body class="bg-slate-50 dark:bg-[#0f1117] font-sans min-h-screen text-slate-800 dark:text-slate-100 transition-colors duration-200">
   
   <div class="main-content container-fluid px-3 px-md-4 py-3 max-w-7xl mx-auto">
     <!-- App Container -->
-    <div id="app" class="w-full bg-white p-4 sm:p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 relative">
+    <div id="app" class="w-full bg-white dark:bg-[#1a1d2d] p-4 sm:p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 dark:border-[#2b324a] relative transition-colors duration-200">
       
       <!-- Loading State -->
       <div id="loading-state" class="flex flex-col items-center justify-center py-20">
         <div class="spinner-border text-danger mb-3" role="status" style="width: 3rem; height: 3rem;">
           <span class="visually-hidden">Đang tải...</span>
         </div>
-        <p class="text-slate-600 font-semibold text-base animate-pulse">Đang đồng bộ dữ liệu tồn kho phôi cuộn từ Supabase...</p>
-        <span class="text-xs text-slate-400 mt-1">Đang tính toán tồn thực tế kho Xà gồ & Kho Tole</span>
+        <p class="text-slate-600 dark:text-slate-300 font-semibold text-base animate-pulse">Đang đồng bộ dữ liệu tồn kho phôi cuộn từ Supabase...</p>
+        <span class="text-xs text-slate-400 dark:text-slate-500 mt-1">Đang tính toán tồn thực tế kho Xà gồ & Kho Tole</span>
       </div>
 
       <!-- Main Layout (Hidden during initial load) -->
       <div id="main-content-layout" class="hidden">
         
         <!-- Header & Title -->
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-100">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-100 dark:border-[#2b324a]">
           <div>
             <div class="flex items-center gap-2 mb-1">
-              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 dark:bg-[#3b1d24] text-red-700 dark:text-red-400">
                 <i class="bi bi-diagram-3-fill me-1"></i> Quản Lý Kho 5S
               </span>
-              <span id="sync-badge" class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span id="sync-badge" class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 dark:bg-[#064e3b] text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 me-1.5 animate-ping"></span> Realtime Supabase
               </span>
             </div>
-            <h1 class="text-xl sm:text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+            <h1 class="text-xl sm:text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
               SƠ ĐỒ MẶT BẰNG KHO PHÔI CUỘN
             </h1>
-            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">
+            <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
               Theo dõi tồn kho thực tế, sức chứa và vị trí kệ phôi cuộn (Kho Xà gồ & Kho Tole)
             </p>
           </div>
@@ -77,7 +239,7 @@
               <i id="theme-toggle-icon" class="bi bi-moon-fill"></i>
               <span id="theme-toggle-text" class="hidden sm:inline">Chế độ tối</span>
             </button>
-            <button id="btn-refresh" class="btn btn-sm btn-outline-secondary d-flex items-center gap-1.5 px-3 py-1.5 rounded-lg shadow-sm hover:bg-slate-100">
+            <button id="btn-refresh" class="btn btn-sm btn-outline-secondary d-flex items-center gap-1.5 px-3 py-1.5 rounded-lg shadow-sm">
               <i class="bi bi-arrow-clockwise"></i>
               <span class="hidden sm:inline">Làm mới</span>
             </button>
@@ -91,90 +253,90 @@
         <!-- Quick KPI Summary Banner -->
         <div id="quick-kpi-banner" class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
           <!-- Total Rolls -->
-          <div class="kpi-card bg-gradient-to-br from-red-50 to-white border border-red-100 rounded-xl p-3.5 shadow-sm">
+          <div class="kpi-card bg-gradient-to-br from-red-50 to-white dark:from-[#2d1a21] dark:to-[#1a1d2d] border border-red-100 dark:border-[#45242c] rounded-xl p-3.5 shadow-sm">
             <div class="flex items-center justify-between">
-              <span class="text-xs font-semibold text-red-700 uppercase tracking-wider">Tổng Tồn Cuộn</span>
-              <div class="w-8 h-8 rounded-lg bg-red-100 text-red-600 flex items-center justify-center text-sm font-bold">
+              <span class="text-xs font-semibold text-red-700 dark:text-red-400 uppercase tracking-wider">Tổng Tồn Cuộn</span>
+              <div class="w-8 h-8 rounded-lg bg-red-100 dark:bg-[#451c24] text-red-600 dark:text-red-400 flex items-center justify-center text-sm font-bold">
                 <i class="bi bi-disc-fill"></i>
               </div>
             </div>
             <div class="mt-2 flex items-baseline gap-2">
-              <span id="kpi-total-rolls" class="text-2xl sm:text-3xl font-extrabold text-slate-900">0</span>
-              <span class="text-xs font-semibold text-slate-500">cuộn</span>
+              <span id="kpi-total-rolls" class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">0</span>
+              <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">cuộn</span>
             </div>
-            <div class="text-[11px] text-slate-500 mt-1 flex items-center justify-between">
+            <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center justify-between">
               <span>Đang lưu trữ trên sơ đồ</span>
-              <span id="kpi-rack-utilization" class="font-medium text-red-600">0% kệ dùng</span>
+              <span id="kpi-rack-utilization" class="font-medium text-red-600 dark:text-red-400">0% kệ dùng</span>
             </div>
           </div>
 
           <!-- Total Weight -->
-          <div class="kpi-card bg-gradient-to-br from-blue-50 to-white border border-blue-100 rounded-xl p-3.5 shadow-sm">
+          <div class="kpi-card bg-gradient-to-br from-blue-50 to-white dark:from-[#17253b] dark:to-[#1a1d2d] border border-blue-100 dark:border-[#22385c] rounded-xl p-3.5 shadow-sm">
             <div class="flex items-center justify-between">
-              <span class="text-xs font-semibold text-blue-700 uppercase tracking-wider">Tổng Khối Lượng</span>
-              <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-bold">
+              <span class="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wider">Tổng Khối Lượng</span>
+              <div class="w-8 h-8 rounded-lg bg-blue-100 dark:bg-[#1e3a66] text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm font-bold">
                 <i class="bi bi-box-seam-fill"></i>
               </div>
             </div>
             <div class="mt-2 flex items-baseline gap-2">
-              <span id="kpi-total-weight" class="text-2xl sm:text-3xl font-extrabold text-slate-900">0</span>
-              <span class="text-xs font-semibold text-slate-500">Kg</span>
+              <span id="kpi-total-weight" class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">0</span>
+              <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">Kg</span>
             </div>
-            <div class="text-[11px] text-slate-500 mt-1 flex items-center justify-between">
+            <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center justify-between">
               <span>Quy đổi:</span>
-              <span id="kpi-total-tons" class="font-semibold text-blue-700">0 tấn</span>
+              <span id="kpi-total-tons" class="font-semibold text-blue-700 dark:text-blue-400">0 tấn</span>
             </div>
           </div>
 
           <!-- Xa Go Breakdown -->
-          <div class="kpi-card bg-gradient-to-br from-indigo-50 to-white border border-indigo-100 rounded-xl p-3.5 shadow-sm cursor-pointer hover:border-indigo-300 transition-colors" data-filter-trigger="xg">
+          <div class="kpi-card bg-gradient-to-br from-indigo-50 to-white dark:from-[#1e1e3b] dark:to-[#1a1d2d] border border-indigo-100 dark:border-[#343163] rounded-xl p-3.5 shadow-sm cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-500 transition-colors" data-filter-trigger="xg">
             <div class="flex items-center justify-between">
-              <span class="text-xs font-semibold text-indigo-700 uppercase tracking-wider">Kho Xà Gồ</span>
-              <span class="badge bg-indigo-100 text-indigo-700 text-[10px]">XG</span>
+              <span class="text-xs font-semibold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider">Kho Xà Gồ</span>
+              <span class="badge bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 text-[10px]">XG</span>
             </div>
             <div class="mt-2 flex items-baseline gap-2">
-              <span id="kpi-xg-rolls" class="text-2xl sm:text-3xl font-extrabold text-indigo-900">0</span>
-              <span class="text-xs font-medium text-slate-500">cuộn</span>
+              <span id="kpi-xg-rolls" class="text-2xl sm:text-3xl font-extrabold text-indigo-900 dark:text-indigo-200">0</span>
+              <span class="text-xs font-medium text-slate-500 dark:text-slate-400">cuộn</span>
             </div>
-            <div class="text-[11px] text-slate-500 mt-1 flex items-center justify-between">
+            <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center justify-between">
               <span>Khối lượng:</span>
-              <span id="kpi-xg-weight" class="font-medium text-indigo-700">0 Kg</span>
+              <span id="kpi-xg-weight" class="font-medium text-indigo-700 dark:text-indigo-300">0 Kg</span>
             </div>
           </div>
 
           <!-- Tole Breakdown -->
-          <div class="kpi-card bg-gradient-to-br from-emerald-50 to-white border border-emerald-100 rounded-xl p-3.5 shadow-sm cursor-pointer hover:border-emerald-300 transition-colors" data-filter-trigger="tole">
+          <div class="kpi-card bg-gradient-to-br from-emerald-50 to-white dark:from-[#122e23] dark:to-[#1a1d2d] border border-emerald-100 dark:border-[#1c4d3f] rounded-xl p-3.5 shadow-sm cursor-pointer hover:border-emerald-300 dark:hover:border-emerald-500 transition-colors" data-filter-trigger="tole">
             <div class="flex items-center justify-between">
-              <span class="text-xs font-semibold text-emerald-700 uppercase tracking-wider">Kho Tole</span>
-              <span class="badge bg-emerald-100 text-emerald-700 text-[10px]">Tole</span>
+              <span class="text-xs font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">Kho Tole</span>
+              <span class="badge bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[10px]">Tole</span>
             </div>
             <div class="mt-2 flex items-baseline gap-2">
-              <span id="kpi-tole-rolls" class="text-2xl sm:text-3xl font-extrabold text-emerald-900">0</span>
-              <span class="text-xs font-medium text-slate-500">cuộn</span>
+              <span id="kpi-tole-rolls" class="text-2xl sm:text-3xl font-extrabold text-emerald-900 dark:text-emerald-200">0</span>
+              <span class="text-xs font-medium text-slate-500 dark:text-slate-400">cuộn</span>
             </div>
-            <div class="text-[11px] text-slate-500 mt-1 flex items-center justify-between">
+            <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center justify-between">
               <span>Khối lượng:</span>
-              <span id="kpi-tole-weight" class="font-medium text-emerald-700">0 Kg</span>
+              <span id="kpi-tole-weight" class="font-medium text-emerald-700 dark:text-emerald-300">0 Kg</span>
             </div>
           </div>
         </div>
 
         <!-- Filter & Search Toolbar -->
-        <div class="bg-slate-50 p-3 sm:p-4 rounded-xl border border-slate-200 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div id="search-toolbar" class="bg-slate-50 dark:bg-[#141724] p-3 sm:p-4 rounded-xl border border-slate-200 dark:border-[#2b324a] mb-6 flex flex-col md:flex-row md:items-center justify-between gap-3">
           
           <!-- Warehouse Filter Tabs -->
-          <div class="flex items-center gap-1.5 bg-white p-1 rounded-lg border border-slate-200 shadow-sm overflow-x-auto">
-            <button class="warehouse-filter-btn active px-3.5 py-1.5 rounded-md text-xs sm:text-sm font-semibold transition-all" data-warehouse="all">
+          <div id="search-tabs-box" class="flex items-center gap-1.5 bg-white dark:bg-[#1a1d2d] p-1 rounded-lg border border-slate-200 dark:border-[#2b324a] shadow-sm overflow-x-auto">
+            <button class="warehouse-filter-btn active px-3.5 py-1.5 rounded-md text-xs sm:text-sm font-semibold transition-all text-slate-600 dark:text-slate-300" data-warehouse="all">
               <i class="bi bi-grid-fill me-1"></i> Tất cả
-              <span id="badge-count-all" class="ms-1 px-1.5 py-0.2 bg-slate-100 text-slate-600 rounded-full text-[10px]">0</span>
+              <span id="badge-count-all" class="ms-1 px-1.5 py-0.2 bg-slate-100 dark:bg-[#202538] text-slate-600 dark:text-slate-300 rounded-full text-[10px]">0</span>
             </button>
-            <button class="warehouse-filter-btn px-3.5 py-1.5 rounded-md text-xs sm:text-sm font-semibold transition-all text-slate-600 hover:text-indigo-600" data-warehouse="xg">
+            <button class="warehouse-filter-btn px-3.5 py-1.5 rounded-md text-xs sm:text-sm font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300" data-warehouse="xg">
               <i class="bi bi-layers-fill me-1 text-indigo-500"></i> Kho Xà gồ
-              <span id="badge-count-xg" class="ms-1 px-1.5 py-0.2 bg-indigo-50 text-indigo-600 rounded-full text-[10px]">0</span>
+              <span id="badge-count-xg" class="ms-1 px-1.5 py-0.2 bg-indigo-50 dark:bg-[#202538] text-indigo-600 dark:text-indigo-300 rounded-full text-[10px]">0</span>
             </button>
-            <button class="warehouse-filter-btn px-3.5 py-1.5 rounded-md text-xs sm:text-sm font-semibold transition-all text-slate-600 hover:text-emerald-600" data-warehouse="tole">
+            <button class="warehouse-filter-btn px-3.5 py-1.5 rounded-md text-xs sm:text-sm font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-300" data-warehouse="tole">
               <i class="bi bi-circle-square me-1 text-emerald-500"></i> Kho Tole
-              <span id="badge-count-tole" class="ms-1 px-1.5 py-0.2 bg-emerald-50 text-emerald-600 rounded-full text-[10px]">0</span>
+              <span id="badge-count-tole" class="ms-1 px-1.5 py-0.2 bg-emerald-50 dark:bg-[#202538] text-emerald-600 dark:text-emerald-300 rounded-full text-[10px]">0</span>
             </button>
           </div>
 
@@ -186,51 +348,51 @@
                 id="search-input"
                 type="text"
                 placeholder="Tìm kiếm Mã vật tư, Tên vật tư, Batch, Cuộn ID..."
-                class="w-full pl-10 pr-9 py-2 bg-white border border-slate-200 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all shadow-sm"
+                class="w-full pl-10 pr-9 py-2 bg-white dark:bg-[#141724] border border-slate-200 dark:border-[#2e3652] text-slate-800 dark:text-white rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all shadow-sm"
               />
-              <button id="clear-search" class="hidden absolute right-2.5 text-slate-400 hover:text-slate-600 p-1">
+              <button id="clear-search" class="hidden absolute right-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1">
                 <i class="bi bi-x-circle-fill"></i>
               </button>
             </div>
             <!-- Search match summary -->
-            <div id="search-feedback" class="hidden text-[11px] text-slate-500 mt-1 ps-1 font-medium"></div>
+            <div id="search-feedback" class="hidden text-[11px] text-slate-500 dark:text-slate-400 mt-1 ps-1 font-medium"></div>
           </div>
         </div>
 
         <!-- Legend / Notes -->
-        <div class="flex flex-wrap items-center justify-between gap-2 px-1 mb-4 text-xs text-slate-500">
+        <div class="flex flex-wrap items-center justify-between gap-2 px-1 mb-4 text-xs text-slate-500 dark:text-slate-400">
           <div class="flex items-center gap-4 flex-wrap">
             <div class="flex items-center gap-1.5">
-              <span class="w-3 h-3 rounded-sm bg-[#f4c7b3] border border-orange-300"></span>
+              <span class="w-3 h-3 rounded-sm bg-[#f4c7b3] dark:bg-[#4a2318] border border-orange-300 dark:border-[#c2410c]"></span>
               <span>Kệ có cuộn</span>
             </div>
             <div class="flex items-center gap-1.5">
-              <span class="w-3 h-3 rounded-sm bg-slate-100 border border-slate-300"></span>
+              <span class="w-3 h-3 rounded-sm bg-slate-100 dark:bg-[#202538] border border-slate-300 dark:border-[#2f3754]"></span>
               <span>Kệ trống</span>
             </div>
             <div class="flex items-center gap-1.5">
-              <span class="w-3 h-3 rounded-sm bg-red-200 border border-red-400"></span>
+              <span class="w-3 h-3 rounded-sm bg-red-200 dark:bg-[#5c1818] border border-red-400 dark:border-[#ef4444]"></span>
               <span>Quá tải / Cảnh báo</span>
             </div>
             <div class="flex items-center gap-1.5">
-              <span class="w-3 h-3 rounded-sm bg-amber-200 border border-amber-400"></span>
+              <span class="w-3 h-3 rounded-sm bg-amber-200 dark:bg-[#3b2b06] border border-amber-400 dark:border-[#92400e]"></span>
               <span>Khu vực Grating</span>
             </div>
           </div>
-          <div class="text-[11px] text-slate-400">
+          <div class="text-[11px] text-slate-400 dark:text-slate-500">
             <i class="bi bi-info-circle me-1"></i> Rê chuột để xem nhanh, Nhấp vào kệ để mở chi tiết & xuất Excel
           </div>
         </div>
 
         <!-- Interactive Map Wrapper -->
-        <div class="relative bg-white p-3 sm:p-6 rounded-2xl border border-slate-200 shadow-inner">
+        <div id="map-box" class="relative bg-white dark:bg-[#141724] p-3 sm:p-6 rounded-2xl border border-slate-200 dark:border-[#2b324a] shadow-inner transition-colors duration-200">
           <div class="grid grid-cols-[1fr_40px_1fr] sm:grid-cols-[1fr_60px_1fr] md:grid-cols-[1fr_80px_1fr] gap-x-2 md:gap-x-4 relative">
             
             <!-- Left Shelves (B14 -> B01) -->
             <div id="shelves-left" class="flex flex-col"></div>
 
             <!-- Center Aisle -->
-            <div id="center-aisle" class="bg-[#82c97c] flex items-center justify-center rounded-sm relative shadow-inner transition-all duration-400 min-h-[500px]">
+            <div id="center-aisle" class="bg-[#82c97c] dark:bg-[#174b35] flex items-center justify-center rounded-sm relative shadow-inner transition-all duration-400 min-h-[500px]">
               <div class="text-white font-bold tracking-[0.2em] sm:tracking-[0.3em] uppercase text-xs sm:text-sm md:text-lg opacity-90 select-none" style="writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg);">
                 Lối đi giữa xưởng
               </div>
@@ -252,58 +414,58 @@
           <!-- Bottom Area -->
           <div id="bottom-area" class="grid grid-cols-[1fr_40px_1fr] sm:grid-cols-[1fr_60px_1fr] md:grid-cols-[1fr_80px_1fr] gap-x-2 md:gap-x-4 mt-8 md:mt-12 transition-all duration-400">
             <!-- Road entrance -->
-            <div class="flex flex-col items-center justify-start pt-2 sm:pt-4 bg-slate-50 rounded-lg p-3 border border-dashed border-slate-300">
-              <div class="text-center font-bold text-xs sm:text-sm text-slate-700 flex items-center gap-1.5">
-                <i class="bi bi-truck text-slate-500"></i> Đường xe vào nhập / xuất hàng
+            <div id="road-entrance" class="flex flex-col items-center justify-start pt-2 sm:pt-4 bg-slate-50 dark:bg-[#1a1d2d] rounded-lg p-3 border border-dashed border-slate-300 dark:border-[#2b324a]">
+              <div class="text-center font-bold text-xs sm:text-sm text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <i class="bi bi-truck text-slate-500 dark:text-slate-400"></i> Đường xe vào nhập / xuất hàng
               </div>
-              <div class="w-full flex items-center justify-between mt-3 text-[10px] sm:text-xs text-slate-400 font-medium">
+              <div class="w-full flex items-center justify-between mt-3 text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 font-medium">
                 <span>&larr;</span><span>8.000 mm</span><span>&rarr;</span>
               </div>
             </div>
 
             <div class="flex flex-col justify-end pb-1 text-center">
-              <span class="text-[9px] text-slate-400 font-medium">1.000 mm</span>
+              <span class="text-[9px] text-slate-400 dark:text-slate-500 font-medium">1.000 mm</span>
             </div>
 
             <!-- Grating Area -->
             <div class="flex flex-col relative">
-              <div id="grating-area" class="shelf-container bg-amber-300 hover:bg-amber-400 p-3 sm:p-4 md:p-6 flex flex-col items-center justify-center text-center font-bold text-xs sm:text-sm text-slate-900 rounded-lg shadow-sm border-2 border-amber-400 cursor-pointer transition-all duration-300 relative group" data-id="GRATING">
+              <div id="grating-area" class="shelf-container bg-amber-300 hover:bg-amber-400 dark:bg-[#3b2b06] dark:hover:bg-[#4d3607] p-3 sm:p-4 md:p-6 flex flex-col items-center justify-center text-center font-bold text-xs sm:text-sm text-slate-900 dark:text-amber-200 rounded-lg shadow-sm border-2 border-amber-400 dark:border-[#92400e] cursor-pointer transition-all duration-300 relative group" data-id="GRATING">
                 
-                <div class="flex items-center gap-1.5 text-amber-950 font-bold mb-1">
-                  <i class="bi bi-grid-3x3-gap-fill text-amber-700"></i>
+                <div class="flex items-center gap-1.5 text-amber-950 dark:text-amber-300 font-bold mb-1">
+                  <i class="bi bi-grid-3x3-gap-fill text-amber-700 dark:text-amber-400"></i>
                   <span>KHU VỰC GRATING & TẬP KẾT HÀNG</span>
                 </div>
-                <div class="text-[11px] font-medium text-amber-900">
+                <div class="text-[11px] font-medium text-amber-900 dark:text-amber-200">
                   <span id="grating-roll-count" class="badge bg-amber-600 text-white me-1">0 cuộn</span>
-                  <span id="grating-kg-count" class="text-slate-800">0 Kg</span>
+                  <span id="grating-kg-count" class="text-slate-800 dark:text-amber-100">0 Kg</span>
                 </div>
 
                 <!-- Grating Tooltip -->
                 <div class="shelf-tooltip right-side absolute bottom-full mb-2 z-50">
-                  <div class="min-w-[260px] bg-white p-3 rounded-xl shadow-2xl border border-amber-300 text-left pointer-events-auto">
-                    <div class="font-bold text-amber-800 border-b border-amber-100 pb-1.5 mb-2 flex items-center justify-between text-xs sm:text-sm">
+                  <div class="min-w-[260px] bg-white dark:bg-[#1a1d2d] p-3 rounded-xl shadow-2xl border border-amber-300 dark:border-[#92400e] text-left pointer-events-auto">
+                    <div class="font-bold text-amber-800 dark:text-amber-400 border-b border-amber-100 dark:border-[#92400e] pb-1.5 mb-2 flex items-center justify-between text-xs sm:text-sm">
                       <span>Khu vực Grating</span>
-                      <span class="badge bg-amber-100 text-amber-800 text-[10px]">Tập kết</span>
+                      <span class="badge bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-[10px]">Tập kết</span>
                     </div>
-                    <div id="grating-preview-content" class="text-xs text-slate-600 space-y-1">
+                    <div id="grating-preview-content" class="text-xs text-slate-600 dark:text-slate-300 space-y-1">
                       <!-- Populated by JS -->
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div class="w-full flex items-center justify-between mt-2 text-[10px] sm:text-xs text-slate-400 font-medium px-1">
+              <div class="w-full flex items-center justify-between mt-2 text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 font-medium px-1">
                 <span>&larr;</span><span>8.000 mm</span><span>&rarr;</span>
               </div>
             </div>
           </div>
 
           <!-- Unassigned Racks Area (If any rolls have no shelf or invalid shelf) -->
-          <div id="unassigned-area" class="hidden mt-6 p-3 bg-rose-50 border border-rose-200 rounded-xl">
+          <div id="unassigned-area" class="hidden mt-6 p-3 bg-rose-50 dark:bg-[#331118] border border-rose-200 dark:border-[#6b1426] rounded-xl">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2">
-                <i class="bi bi-exclamation-triangle-fill text-rose-600"></i>
-                <span class="font-bold text-xs sm:text-sm text-rose-900">Cuộn chưa gán vị trí chuẩn hoặc chưa xếp kệ</span>
+                <i class="bi bi-exclamation-triangle-fill text-rose-600 dark:text-rose-400"></i>
+                <span class="font-bold text-xs sm:text-sm text-rose-900 dark:text-rose-200">Cuộn chưa gán vị trí chuẩn hoặc chưa xếp kệ</span>
                 <span id="unassigned-count-badge" class="badge bg-rose-600 text-white text-[10px]">0 cuộn</span>
               </div>
               <button id="btn-view-unassigned" class="btn btn-xs btn-outline-danger text-xs py-1 px-2.5 rounded">
@@ -325,7 +487,7 @@
       <div class="modal-content shadow-2xl border-0 rounded-2xl overflow-hidden">
         
         <!-- Modal Header -->
-        <div class="modal-header bg-slate-900 text-white px-4 py-3 border-0">
+        <div class="modal-header bg-slate-900 dark:bg-[#141724] text-white px-4 py-3 border-0">
           <div class="d-flex align-items-center gap-2">
             <div class="w-9 h-9 rounded-xl bg-red-600 text-white flex items-center justify-center font-bold text-base shadow-sm">
               <span id="modalShelfTitleCircle">--</span>
@@ -334,7 +496,7 @@
               <h5 class="modal-title font-bold text-base sm:text-lg mb-0" id="shelfDetailModalLabel">
                 Chi tiết Kệ <span id="modalShelfName">--</span>
               </h5>
-              <div class="text-[11px] text-slate-300 flex items-center gap-2 mt-0.5">
+              <div class="text-[11px] text-slate-300 dark:text-slate-400 flex items-center gap-2 mt-0.5">
                 <span id="modalShelfRollCount">0 cuộn</span> • 
                 <span id="modalShelfTotalKg">0 Kg</span>
               </div>
@@ -344,16 +506,16 @@
         </div>
 
         <!-- Modal Body -->
-        <div class="modal-body p-4 bg-slate-50">
+        <div class="modal-body p-4 bg-slate-50 dark:bg-[#10121c]">
           
           <!-- Actions & Search Row inside Modal -->
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 bg-white p-3 rounded-xl border border-slate-200">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 bg-white dark:bg-[#1a1d2d] p-3 rounded-xl border border-slate-200 dark:border-[#2b324a]">
             <div class="relative flex-1 max-w-sm">
               <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
               <input
                 type="text"
                 id="modalSearchInput"
-                class="form-control form-control-sm pl-8 text-xs rounded-lg"
+                class="form-control form-control-sm pl-8 text-xs rounded-lg bg-white dark:bg-[#141724] text-slate-800 dark:text-white border-slate-200 dark:border-[#2b324a]"
                 placeholder="Lọc nhanh cuộn ID, Mã VT, Batch..."
               />
             </div>
@@ -371,7 +533,7 @@
           </div>
 
           <!-- Table Content -->
-          <div class="table-responsive bg-white rounded-xl border border-slate-200 shadow-sm max-h-[55vh] custom-scrollbar">
+          <div class="table-responsive bg-white dark:bg-[#1a1d2d] rounded-xl border border-slate-200 dark:border-[#2b324a] shadow-sm max-h-[55vh] custom-scrollbar">
             <table class="table table-hover table-striped align-middle mb-0 text-xs">
               <thead class="table-light sticky-top shadow-xs">
                 <tr class="text-slate-600 font-semibold text-[11px] uppercase tracking-wider">
@@ -396,9 +558,9 @@
         </div>
 
         <!-- Modal Footer -->
-        <div class="modal-footer bg-white px-4 py-2.5 border-t border-slate-200 d-flex justify-content-between align-items-center">
-          <div class="text-xs text-slate-500">
-            Hiển thị <span id="modalVisibleCount" class="font-bold text-slate-800">0</span> cuộn
+        <div class="modal-footer bg-white dark:bg-[#141724] px-4 py-2.5 border-t border-slate-200 dark:border-[#2b324a] d-flex justify-content-between align-items-center">
+          <div class="text-xs text-slate-500 dark:text-slate-400">
+            Hiển thị <span id="modalVisibleCount" class="font-bold text-slate-800 dark:text-white">0</span> cuộn
           </div>
           <button type="button" class="btn btn-secondary btn-sm px-4 rounded-lg" data-bs-dismiss="modal">Đóng</button>
         </div>
@@ -412,19 +574,19 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   
   <!-- Core Services -->
-  <script src="/assets/js/core/supabase-config.js?v=2.0.8"></script>
-  <script src="/assets/js/core/inventory-lock-service.js?v=2.0.8"></script>
-  <script src="/assets/js/core/qr-scanner-service.js?v=2.0.8"></script>
+  <script src="/assets/js/core/supabase-config.js?v=2.1.0"></script>
+  <script src="/assets/js/core/inventory-lock-service.js?v=2.1.0"></script>
+  <script src="/assets/js/core/qr-scanner-service.js?v=2.1.0"></script>
 
   <!-- Sidebar & Layout JS -->
-  <script src="/assets/js/components/sidebar.js"></script>
-  <script src="/assets/js/trang-chu/home.js"></script>
+  <script src="/assets/js/components/sidebar.js?v=2.1.0"></script>
+  <script src="/assets/js/trang-chu/home.js?v=2.1.0"></script>
 
   <!-- Bootstrap JS Bundle -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-  <!-- Page Main Script -->
-  <script src="/assets/js/5s/5s-so-do-phoi-cuon.js?v=2.0.8"></script>
+  <!-- Page Main Script có cache-busting -->
+  <script src="/assets/js/5s/5s-so-do-phoi-cuon.js?v=2.1.0"></script>
 </body>
 
 </html>

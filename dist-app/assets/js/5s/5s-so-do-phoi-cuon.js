@@ -878,11 +878,16 @@
     // Toggle button handler
     if (themeBtn) {
       themeBtn.addEventListener('click', () => {
-        const current = document.documentElement.getAttribute('data-bs-theme') || 'dark';
-        const next = current === 'light' ? 'dark' : 'light';
-        document.documentElement.setAttribute('data-bs-theme', next);
-        localStorage.setItem('ddc_theme', next);
-        updateThemeUI(next);
+        const topbarThemeBtn = document.getElementById('themeToggleBtn');
+        if (topbarThemeBtn) {
+          topbarThemeBtn.click();
+        } else {
+          const current = document.documentElement.getAttribute('data-bs-theme') || 'dark';
+          const next = current === 'light' ? 'dark' : 'light';
+          document.documentElement.setAttribute('data-bs-theme', next);
+          localStorage.setItem('ddc_theme', next);
+          updateThemeUI(next);
+        }
       });
     }
 
