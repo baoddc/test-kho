@@ -1,36 +1,66 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* =============================================================================
+   5S SƠ ĐỒ KHO PHÔI CUỘN - STYLES & ANIMATIONS
+   Thiết kế giao diện mặt bằng kho 5S, trạng thái kệ và hiệu ứng tương tác
+================================================================================ */
 
-@layer utilities {
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 4px;
-  }
-
-  .custom-scrollbar::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
-  }
-
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 4px;
-  }
-
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
-  }
+/* Custom Scrollbars */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
-/* Hiệu ứng chiều sâu chạy qua chạy lại mượt mà */
-@keyframes shimmer {
-  0% {
-    transform: translateX(-100%);
-  }
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
 
-  100% {
-    transform: translateX(200%);
-  }
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Warehouse Filter Tabs */
+.warehouse-filter-btn {
+  color: #64748b;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.warehouse-filter-btn:hover {
+  background-color: #f8fafc;
+}
+
+.warehouse-filter-btn.active {
+  background-color: #dc2626 !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.25);
+}
+
+.warehouse-filter-btn.active span {
+  background-color: rgba(255, 255, 255, 0.25) !important;
+  color: #ffffff !important;
+}
+
+/* KPI Cards */
+.kpi-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+}
+
+/* Keyframes & Animations */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
 }
 
 .animate-shimmer {
@@ -38,98 +68,147 @@
 }
 
 @keyframes marching-ants {
-  to {
-    stroke-dashoffset: -16;
-  }
+  to { stroke-dashoffset: -16; }
 }
 
 .animate-marching-ants {
   animation: marching-ants 1s linear infinite;
 }
 
-/* Transitions for shelves */
-.shelf-container {
-  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7);
+    transform: scale(1);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(37, 99, 235, 0);
+    transform: scale(1.03);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+    transform: scale(1);
+  }
 }
 
+/* Shelf Containers */
+.shelf-container {
+  transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  user-select: none;
+}
+
+/* Shelf Status Themes */
+.shelf-empty {
+  background-color: #f1f5f9 !important;
+  border: 1px dashed #cbd5e1 !important;
+}
+
+.shelf-empty .shelf-circle {
+  background-color: #ffffff !important;
+  color: #94a3b8 !important;
+  border-color: #cbd5e1 !important;
+}
+
+.shelf-occupied {
+  background-color: #f4c7b3;
+  border: 1px solid #f97316;
+}
+
+.shelf-occupied .shelf-circle {
+  background-color: #ffffff;
+  color: #dc2626;
+  border-color: #dc2626;
+}
+
+.shelf-full {
+  background-color: #fee2e2 !important;
+  border: 1.5px solid #ef4444 !important;
+}
+
+.shelf-full .shelf-circle {
+  background-color: #ef4444 !important;
+  color: #ffffff !important;
+  border-color: #b91c1c !important;
+}
+
+/* Shelf States */
 .shelf-container.dimmed {
   opacity: 0.25;
   transform: scale(0.97);
+  filter: grayscale(80%);
   z-index: 0;
 }
 
 .shelf-container.dimmed.left-side {
-  transform: scale(0.95) translateX(-20px);
+  transform: scale(0.95) translateX(-12px);
 }
 
 .shelf-container.dimmed.right-side {
-  transform: scale(0.95) translateX(20px);
+  transform: scale(0.95) translateX(12px);
 }
 
 .shelf-container.hovered {
-  transform: scale(1.1);
+  transform: scale(1.06);
   z-index: 50;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
 }
 
 .shelf-container.highlighted {
-  z-index: 40;
+  z-index: 45;
+  animation: pulse-ring 1.8s infinite;
+  border-color: #2563eb !important;
 }
 
-/* Tooltip animations */
+/* Tooltip Positioning & Animations */
 .shelf-tooltip {
   opacity: 0;
   visibility: hidden;
+  position: absolute;
+  top: 50%;
   transform: translateY(-50%) scale(0.95);
-  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  pointer-events: none;
+  z-index: 60;
 }
 
 .shelf-container.hovered .shelf-tooltip {
   opacity: 1;
   visibility: visible;
+  pointer-events: auto;
   transform: translateY(-50%) scale(1);
 }
 
 .shelf-tooltip.left-side {
-  transform: translateY(-50%) translateX(-10px) scale(0.95);
-}
-
-.shelf-container.hovered .shelf-tooltip.left-side {
-  transform: translateY(-50%) translateX(0) scale(1);
+  left: 100%;
+  padding-left: 12px;
 }
 
 .shelf-tooltip.right-side {
-  transform: translateY(-50%) translateX(10px) scale(0.95);
+  right: 100%;
+  padding-right: 12px;
 }
 
-.shelf-container.hovered .shelf-tooltip.right-side {
-  transform: translateY(-50%) translateX(0) scale(1);
+/* Shelf Circle Badge */
+.shelf-circle {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, background-color 0.2s ease;
 }
 
-/* Grating animations */
-.grating-container {
-  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+.shelf-container:hover .shelf-circle {
+  transform: scale(1.08);
 }
 
-.grating-container.dimmed {
-  opacity: 0.4;
-  transform: scale(0.98);
+/* Separator SVG Line */
+.shelf-separator {
+  user-select: none;
+  pointer-events: none;
 }
 
-.grating-container.hovered {
-  transform: scale(1.05);
-  z-index: 50;
-  box-shadow: 0px 10px 30px rgba(241, 194, 50, 0.5), inset 0px 0px 20px rgba(241, 194, 50, 0.3);
+/* Modal Table Styling */
+#modalShelfTableBody tr {
+  transition: background-color 0.15s ease;
 }
 
-.grating-tooltip {
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(-20px) scale(0.9);
-  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.grating-container.hovered .grating-tooltip {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(-10px) scale(1);
+#modalShelfTableBody tr:hover {
+  background-color: #f8fafc;
 }
