@@ -9,6 +9,7 @@ const CONFIG = {
     API_KEY: 'AKfycbxZAj6Wcs3JBtw8RzxQySZ7Woq4n7q1ieI59ffau6ABBLsa1w8tXWZ4F6H8rLsowhBs',
     SPREADSHEET_ID: '1keZMSZqlHFIe7la0H2eR-PDmO2S2ChHo5vn3-H1uoh8', // Using existing ID from project as fallback
     APPS_SCRIPT_URL_HSE: 'https://script.google.com/macros/s/AKfycbxZAj6Wcs3JBtw8RzxQySZ7Woq4n7q1ieI59ffau6ABBLsa1w8tXWZ4F6H8rLsowhBs/exec', // <--- ĐIỀN LINK WEB APP (Mới deploy) TẠI ĐÂY
+    R2_WORKER_URL: '', // <--- ĐIỀN URL CLOUDFLARE WORKER TẠI ĐÂY (VD: https://hse-r2-api.<subdomain>.workers.dev)
     PDF_FOLDER_ID: '1oiPaOOwPzeFuNCMH27l_PeNvMoghP97c', // <--- ĐIỀN ID THƯ MỤC LƯU PDF TẠI ĐÂY (VD: 1Ke...)
     SIMULATE_DATA: false // Set to false when API Key is provided
 };
@@ -894,75 +895,112 @@ class DashboardManager {
         const file = event.target.files[0];
         if (!file) return;
 
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            const dataUrl = e.target.result;
-            const today = new Date().toLocaleDateString('vi-VN');
+        if (!CONFIG.R2_WORKER_URL && !CONFIG.APPS_SCRIPT_URL_HSE) {
+            alert('Chưa cấu hình API! Hãy xem hướng dẫn tại thư mục cloudflare-r2 và dán R2_WORKER_URL vào file hse.js.');
+            event.target.value = '';
+            return;
+        }
 
-            // Extract base64 and mime type
-            const base64Data = dataUrl.split(',')[1];
-            const mimeType = file.type;
+        const today = new Date().toLocaleDateString('vi-VN');
+        const previewUrl = URL.createObjectURL(file);
+        const moduleDef = this.modules.find(m => m.id === moduleId);
+        const sheetName = moduleDef ? moduleDef.sheetName : 'Ảnh mẫu kho';
 
-            const moduleDef = this.modules.find(m => m.id === moduleId);
-            const sheetName = moduleDef ? moduleDef.sheetName : 'Ảnh mẫu kho';
-
-            // Temporary block with spinner status
-            const tempId = 'upload_' + Date.now();
-            const newHtml = `
-                <div class="gallery-item" id="${tempId}" style="animation: fadeIn 0.5s; position: relative;">
-                    <img src="${dataUrl}" alt="${file.name}" class="img-thumb" style="opacity: 0.5;">
-                    <div class="gallery-info" style="margin-top: 0.5rem;">
-                        <p style="font-weight: 600; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${file.name}">${file.name}</p>
-                        <p style="color: var(--warning); font-size: 0.8rem; font-weight: 600;">Đang tải lên hệ thống...</p>
-                        <p style="font-size: 0.8rem; margin-top: 0.25rem;">(Vui lòng chờ)</p>
-                    </div>
+        // Temporary block with spinner status
+        const tempId = 'upload_' + Date.now();
+        const newHtml = `
+            <div class="gallery-item" id="${tempId}" style="animation: fadeIn 0.5s; position: relative;">
+                <img src="${previewUrl}" alt="${file.name}" class="img-thumb" style="opacity: 0.5;">
+                <div class="gallery-info" style="margin-top: 0.5rem;">
+                    <p style="font-weight: 600; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${file.name}">${file.name}</p>
+                    <p class="upload-status-text" style="color: var(--warning); font-size: 0.8rem; font-weight: 600;">Đang tải lên Cloudflare R2...</p>
+                    <p class="upload-sub-text" style="font-size: 0.8rem; margin-top: 0.25rem;">(Vui lòng chờ)</p>
                 </div>
-            `;
+            </div>
+        `;
 
-            if (moduleId === 'clean-photos' || moduleId === '5s-race') {
-                let currentGroup = this.modalBody.querySelector(`.gallery-date-group[data-date="${today}"] .gallery-grid`);
-                if (!currentGroup) {
-                    const newGroupHtml = `<div class="gallery-date-group" data-date="${today}">
-                        <h4 style="margin-top: 0rem; margin-bottom: 1rem; color: var(--text); padding-left: 0.5rem; border-left: 4px solid var(--primary); font-size: 1.1rem; text-align: left;">Ngày chụp: ${today}</h4>
-                        <div class="gallery-grid"></div>
-                    </div>`;
-                    const uploadSection = this.modalBody.querySelector('.upload-section');
-                    if (uploadSection) {
-                        uploadSection.insertAdjacentHTML('afterend', newGroupHtml);
-                    } else {
-                        this.modalBody.insertAdjacentHTML('afterbegin', newGroupHtml);
-                    }
-                    currentGroup = this.modalBody.querySelector(`.gallery-date-group[data-date="${today}"] .gallery-grid`);
+        if (moduleId === 'clean-photos' || moduleId === '5s-race') {
+            let currentGroup = this.modalBody.querySelector(`.gallery-date-group[data-date="${today}"] .gallery-grid`);
+            if (!currentGroup) {
+                const newGroupHtml = `<div class="gallery-date-group" data-date="${today}">
+                    <h4 style="margin-top: 0rem; margin-bottom: 1rem; color: var(--text); padding-left: 0.5rem; border-left: 4px solid var(--primary); font-size: 1.1rem; text-align: left;">Ngày chụp: ${today}</h4>
+                    <div class="gallery-grid"></div>
+                </div>`;
+                const uploadSection = this.modalBody.querySelector('.upload-section');
+                if (uploadSection) {
+                    uploadSection.insertAdjacentHTML('afterend', newGroupHtml);
+                } else {
+                    this.modalBody.insertAdjacentHTML('afterbegin', newGroupHtml);
                 }
-                if (currentGroup) {
-                    currentGroup.insertAdjacentHTML('afterbegin', newHtml);
+                currentGroup = this.modalBody.querySelector(`.gallery-date-group[data-date="${today}"] .gallery-grid`);
+            }
+            if (currentGroup) {
+                currentGroup.insertAdjacentHTML('afterbegin', newHtml);
+            }
+        } else {
+            const galleryGrid = this.modalBody.querySelector('.gallery-grid');
+            if (galleryGrid) {
+                galleryGrid.insertAdjacentHTML('afterbegin', newHtml);
+            }
+        }
+
+        const el = document.getElementById(tempId);
+
+        try {
+            let finalImageUrl = '';
+
+            // 1. Ưu tiên tải trực tiếp lên Cloudflare R2 Worker
+            if (CONFIG.R2_WORKER_URL) {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('folder', moduleId);
+
+                const workerUrl = CONFIG.R2_WORKER_URL.replace(/\/+$/, '') + '/upload';
+                const r2Response = await fetch(workerUrl, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const r2Result = await r2Response.json();
+                if (r2Result.status !== 'success' || !r2Result.fileUrl) {
+                    throw new Error(r2Result.message || 'Lỗi khi tải ảnh lên Cloudflare R2');
                 }
-            } else {
-                const galleryGrid = this.modalBody.querySelector('.gallery-grid');
-                if (galleryGrid) {
-                    galleryGrid.insertAdjacentHTML('afterbegin', newHtml);
-                }
+                finalImageUrl = r2Result.fileUrl;
             }
 
-            if (!CONFIG.APPS_SCRIPT_URL_HSE) {
-                alert('Thiếu APPS_SCRIPT_URL_HSE! Hãy xem Hướng dẫn và dán URL vào file hse.js để tính năng hoạt động.');
-                const el = document.getElementById(tempId);
-                el.querySelector('img').style.opacity = '1';
-                el.querySelector('.gallery-info p:nth-child(2)').textContent = 'Mới tải lên (Chỉ nháp)';
-                el.querySelector('.gallery-info p:nth-child(2)').style.color = 'var(--text-muted)';
-                el.querySelector('.gallery-info p:nth-child(3)').textContent = 'Chưa lưu vì chưa có API';
-                return;
+            // 2. Ghi nhận thông tin vào Google Sheets qua Apps Script
+            if (el) {
+                const statusP = el.querySelector('.upload-status-text');
+                if (statusP) statusP.textContent = 'Đang lưu vào Google Sheet...';
             }
 
-            try {
-                const payload = {
-                    action: 'uploadImageRow',
-                    sheetName: sheetName,
-                    fileName: file.name,
-                    mimeType: mimeType,
-                    fileData: base64Data,
-                    date: today
-                };
+            if (CONFIG.APPS_SCRIPT_URL_HSE) {
+                let payload;
+                if (finalImageUrl) {
+                    payload = {
+                        action: 'recordImageRow',
+                        sheetName: sheetName,
+                        fileName: file.name,
+                        fileUrl: finalImageUrl,
+                        date: today
+                    };
+                } else {
+                    // Fallback: Chế độ cũ nếu chưa có R2_WORKER_URL
+                    const reader = new FileReader();
+                    const base64Data = await new Promise((res, rej) => {
+                        reader.onload = () => res(reader.result.split(',')[1]);
+                        reader.onerror = rej;
+                        reader.readAsDataURL(file);
+                    });
+                    payload = {
+                        action: 'uploadImageRow',
+                        sheetName: sheetName,
+                        fileName: file.name,
+                        mimeType: file.type,
+                        fileData: base64Data,
+                        date: today
+                    };
+                }
 
                 const bodyParams = new URLSearchParams();
                 bodyParams.set('contents', JSON.stringify(payload));
@@ -974,28 +1012,50 @@ class DashboardManager {
                 });
 
                 const result = await response.json();
-
-                if (result.status === 'success') {
-                    const el = document.getElementById(tempId);
-                    el.querySelector('img').style.opacity = '1';
-                    el.querySelector('img').onclick = () => window.open(result.fileUrl, '_blank');
-                    el.querySelector('.gallery-info p:nth-child(2)').textContent = today;
-                    el.querySelector('.gallery-info p:nth-child(2)').style.color = 'var(--text-muted)';
-                    el.querySelector('.gallery-info p:nth-child(3)').textContent = '(Đã lưu thành công)';
-                    el.querySelector('.gallery-info p:nth-child(3)').style.color = 'var(--primary)';
-                } else {
-                    throw new Error(result.message || 'Server error');
+                if (result.status !== 'success') {
+                    throw new Error(result.message || 'Lỗi ghi nhận vào Google Sheet');
                 }
-            } catch (error) {
-                console.error(error);
-                alert('Có lỗi xảy ra khi lưu trữ: ' + error.message);
-                const el = document.getElementById(tempId);
-                el.querySelector('img').style.opacity = '1';
-                el.querySelector('.gallery-info p:nth-child(2)').textContent = 'Lưu thất bại';
-                el.querySelector('.gallery-info p:nth-child(2)').style.color = 'var(--danger)';
+                if (!finalImageUrl && result.fileUrl) {
+                    finalImageUrl = result.fileUrl;
+                }
             }
-        };
-        reader.readAsDataURL(file);
+
+            // Hoàn tất thành công
+            if (el) {
+                const img = el.querySelector('img');
+                img.style.opacity = '1';
+                img.onclick = () => app.openImageLightbox(finalImageUrl);
+                const p2 = el.querySelector('.gallery-info p:nth-child(2)');
+                if (p2) {
+                    p2.textContent = today;
+                    p2.style.color = 'var(--text-muted)';
+                }
+                const p3 = el.querySelector('.gallery-info p:nth-child(3)');
+                if (p3) {
+                    p3.textContent = '(Đã lưu thành công)';
+                    p3.style.color = 'var(--primary)';
+                }
+            }
+        } catch (error) {
+            console.error('Lỗi upload ảnh:', error);
+            alert('Có lỗi xảy ra: ' + error.message);
+            if (el) {
+                const img = el.querySelector('img');
+                if (img) img.style.opacity = '1';
+                const p2 = el.querySelector('.gallery-info p:nth-child(2)');
+                if (p2) {
+                    p2.textContent = 'Lưu thất bại';
+                    p2.style.color = 'var(--danger)';
+                }
+                const p3 = el.querySelector('.gallery-info p:nth-child(3)');
+                if (p3) {
+                    p3.textContent = `(${error.message || 'Lỗi mạng'})`;
+                    p3.style.color = 'var(--danger)';
+                }
+            }
+        } finally {
+            event.target.value = '';
+        }
     }
 
     async deleteImage(event, moduleId, imageUrl, btnElement) {
@@ -1003,7 +1063,7 @@ class DashboardManager {
 
         if (!this.checkPermission()) return;
 
-        if (!confirm('Bạn có chắc chắn muốn xóa mục này không? (Hành động này sẽ xóa cả trên Drive và Sheet)')) return;
+        if (!confirm('Bạn có chắc chắn muốn xóa mục này không? (Hành động này sẽ xóa trên Cloudflare R2/Drive và Sheet)')) return;
 
         const moduleDef = this.modules.find(m => m.id === moduleId);
         const sheetName = moduleDef ? moduleDef.sheetName : 'Ảnh mẫu kho';
@@ -1017,6 +1077,21 @@ class DashboardManager {
         }
 
         try {
+            // 1. Nếu là ảnh R2, gọi Worker để xóa tệp trong bucket
+            if (CONFIG.R2_WORKER_URL && !imageUrl.includes('drive.google.com')) {
+                try {
+                    const deleteUrl = CONFIG.R2_WORKER_URL.replace(/\/+$/, '') + '/delete';
+                    await fetch(deleteUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ fileUrl: imageUrl })
+                    });
+                } catch (r2Err) {
+                    console.warn('Lỗi gọi API xóa trên Cloudflare R2:', r2Err);
+                }
+            }
+
+            // 2. Gọi Apps Script để xóa dòng trên Google Sheet
             const payload = {
                 action: 'deleteImageRow',
                 sheetName: sheetName,
@@ -1501,65 +1576,99 @@ class DashboardManager {
         if (!file || !row || !column) return;
 
         // Show generic loading in the modal
-        const originalContent = this.modalBody.innerHTML;
         const loadingHtml = `
             <div class="upload-progress-overlay" style="position: absolute; inset: 0; background: rgba(0,0,0,0.7); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; border-radius: 8px;">
                 <div class="spinner"></div>
-                <p style="margin-top: 1rem; color: white;">Đang tải lên và cập nhật dòng ${row}, cột ${column}...</p>
+                <p id="tableUploadStatusText" style="margin-top: 1rem; color: white;">Đang tải ảnh lên Cloudflare R2 (dòng ${row}, cột ${column})...</p>
             </div>
         `;
         this.modalBody.style.position = 'relative';
         this.modalBody.insertAdjacentHTML('beforeend', loadingHtml);
 
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            const dataUrl = e.target.result;
-            const base64Data = dataUrl.split(',')[1];
-            const mimeType = file.type;
+        const statusEl = document.getElementById('tableUploadStatusText');
+        const moduleDef = this.modules.find(m => m.id === this.currentModuleId);
+        const sheetName = moduleDef ? moduleDef.sheetName : 'Khắc phục 5S';
 
-            const moduleDef = this.modules.find(m => m.id === this.currentModuleId);
-            const sheetName = moduleDef ? moduleDef.sheetName : 'Khắc phục 5S';
+        try {
+            let finalImageUrl = '';
 
-            try {
-                const payload = {
+            // 1. Tải lên Cloudflare R2 nếu đã cấu hình R2_WORKER_URL
+            if (CONFIG.R2_WORKER_URL) {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('folder', '5s-fix');
+
+                const workerUrl = CONFIG.R2_WORKER_URL.replace(/\/+$/, '') + '/upload';
+                const r2Response = await fetch(workerUrl, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const r2Result = await r2Response.json();
+                if (r2Result.status !== 'success' || !r2Result.fileUrl) {
+                    throw new Error(r2Result.message || 'Lỗi khi tải ảnh lên Cloudflare R2');
+                }
+                finalImageUrl = r2Result.fileUrl;
+            }
+
+            if (statusEl) {
+                statusEl.textContent = `Đang cập nhật vào Google Sheet (dòng ${row}, cột ${column})...`;
+            }
+
+            // 2. Ghi nhận link vào Google Sheet
+            let payload;
+            if (finalImageUrl) {
+                payload = {
+                    action: 'recordImageCell',
+                    sheetName: sheetName,
+                    row: parseInt(row),
+                    column: column,
+                    fileUrl: finalImageUrl
+                };
+            } else {
+                // Fallback cũ nếu chưa có R2_WORKER_URL
+                const reader = new FileReader();
+                const base64Data = await new Promise((res, rej) => {
+                    reader.onload = () => res(reader.result.split(',')[1]);
+                    reader.onerror = rej;
+                    reader.readAsDataURL(file);
+                });
+                payload = {
                     action: 'updateImageCell',
                     sheetName: sheetName,
                     row: parseInt(row),
                     column: column,
                     fileName: file.name,
-                    mimeType: mimeType,
+                    mimeType: file.type,
                     fileData: base64Data
                 };
-
-                const bodyParams = new URLSearchParams();
-                bodyParams.set('contents', JSON.stringify(payload));
-
-                const response = await fetch(CONFIG.APPS_SCRIPT_URL_HSE, {
-                    method: 'POST',
-                    body: bodyParams,
-                    redirect: 'follow'
-                });
-
-                const result = await response.json();
-
-                if (result.status === 'success') {
-                    // Success! Reload data to show updated image
-                    alert('Cập nhật hình ảnh thành công!');
-                    await this.openDetail(this.currentModuleId);
-                } else {
-                    throw new Error(result.message || 'Lỗi server');
-                }
-            } catch (err) {
-                console.error(err);
-                alert('Lỗi tải lên: ' + err.message);
-                // Remove overlay
-                const overlay = this.modalBody.querySelector('.upload-progress-overlay');
-                if (overlay) overlay.remove();
-            } finally {
-                input.value = ''; // Reset input
             }
-        };
-        reader.readAsDataURL(file);
+
+            const bodyParams = new URLSearchParams();
+            bodyParams.set('contents', JSON.stringify(payload));
+
+            const response = await fetch(CONFIG.APPS_SCRIPT_URL_HSE, {
+                method: 'POST',
+                body: bodyParams,
+                redirect: 'follow'
+            });
+
+            const result = await response.json();
+
+            if (result.status === 'success') {
+                alert('Cập nhật hình ảnh thành công!');
+                await this.openDetail(this.currentModuleId);
+            } else {
+                throw new Error(result.message || 'Lỗi server');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Lỗi tải lên: ' + err.message);
+            const overlay = this.modalBody.querySelector('.upload-progress-overlay');
+            if (overlay) overlay.remove();
+        } finally {
+            input.value = '';
+        }
     }
 
     async deleteTableCellImage(row, column, url) {
@@ -1577,6 +1686,21 @@ class DashboardManager {
         this.modalBody.insertAdjacentHTML('beforeend', loadingHtml);
 
         try {
+            // 1. Xóa trên R2 nếu là link R2
+            if (CONFIG.R2_WORKER_URL && url && !url.includes('drive.google.com')) {
+                try {
+                    const deleteUrl = CONFIG.R2_WORKER_URL.replace(/\/+$/, '') + '/delete';
+                    await fetch(deleteUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ fileUrl: url })
+                    });
+                } catch (r2Err) {
+                    console.warn('Lỗi gọi API xóa trên Cloudflare R2:', r2Err);
+                }
+            }
+
+            // 2. Xóa ô trong Google Sheet
             const moduleDef = this.modules.find(m => m.id === this.currentModuleId);
             const sheetName = moduleDef ? moduleDef.sheetName : 'Khắc phục 5S';
 
