@@ -9,6 +9,21 @@ body {
   font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
+/* Reset triệt để xung đột với rule legacy header trong home.css */
+header,
+.scrap-header {
+  position: static !important;
+  background: transparent !important;
+  gap: 0 !important;
+  padding: 0 !important;
+  backdrop-filter: none !important;
+  z-index: auto !important;
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  display: block !important;
+}
+
 /* Custom Scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
@@ -26,9 +41,18 @@ body {
   background: rgba(150, 150, 150, 0.55);
 }
 
+/* KPI Cards */
+.kpi-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
 /* Map Areas Styling */
 .map-area {
-  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease, filter 0.2s ease;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease, filter 0.2s ease, border-color 0.2s ease;
   user-select: none;
 }
 .map-area:hover {
@@ -55,12 +79,24 @@ body {
 }
 
 /* Dark Theme Overrides */
+[data-bs-theme="dark"] body {
+  background-color: #0f1117 !important;
+  color: #e2e8f0 !important;
+}
+
+[data-bs-theme="dark"] #app {
+  background-color: #1a1d2d !important;
+  border-color: #2b324a !important;
+  color: #e2e8f0 !important;
+}
+
 [data-bs-theme="dark"] .bg-white {
   background-color: #1a1d2d !important;
   color: #e2e8f0;
 }
 [data-bs-theme="dark"] .bg-gray-50,
-[data-bs-theme="dark"] .bg-gray-50\/50 {
+[data-bs-theme="dark"] .bg-gray-50\/50,
+[data-bs-theme="dark"] .bg-slate-50 {
   background-color: #141724 !important;
   color: #cbd5e1;
 }
@@ -72,26 +108,36 @@ body {
 }
 [data-bs-theme="dark"] .border-gray-100,
 [data-bs-theme="dark"] .border-gray-200,
-[data-bs-theme="dark"] .border-gray-300 {
+[data-bs-theme="dark"] .border-gray-300,
+[data-bs-theme="dark"] .border-slate-100,
+[data-bs-theme="dark"] .border-slate-200 {
   border-color: #2b324a !important;
 }
 [data-bs-theme="dark"] .text-gray-700,
 [data-bs-theme="dark"] .text-gray-800,
-[data-bs-theme="dark"] .text-gray-900 {
+[data-bs-theme="dark"] .text-gray-900,
+[data-bs-theme="dark"] .text-slate-700,
+[data-bs-theme="dark"] .text-slate-800,
+[data-bs-theme="dark"] .text-slate-900 {
   color: #f1f5f9 !important;
 }
 [data-bs-theme="dark"] .text-gray-400,
 [data-bs-theme="dark"] .text-gray-500,
-[data-bs-theme="dark"] .text-gray-600 {
+[data-bs-theme="dark"] .text-gray-600,
+[data-bs-theme="dark"] .text-slate-400,
+[data-bs-theme="dark"] .text-slate-500 {
   color: #94a3b8 !important;
 }
+
 [data-bs-theme="dark"] .status-item {
-  background-color: #141724 !important;
+  background-color: #1a1d2d !important;
   border-color: #2b324a !important;
 }
 [data-bs-theme="dark"] .status-item:hover {
   background-color: #202538 !important;
+  border-color: #3b4261 !important;
 }
+
 [data-bs-theme="dark"] .form-select,
 [data-bs-theme="dark"] .form-control {
   background-color: #141724 !important;
@@ -101,8 +147,10 @@ body {
 [data-bs-theme="dark"] .form-control::placeholder {
   color: #64748b !important;
 }
+
 [data-bs-theme="dark"] .modal-content {
   background-color: #1a1d2d !important;
+  border-color: #2b324a !important;
   color: #e2e8f0 !important;
 }
 [data-bs-theme="dark"] .table-light {

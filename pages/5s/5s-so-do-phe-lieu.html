@@ -38,7 +38,7 @@
   <!-- Sidebar & Core CSS -->
   <link rel="stylesheet" href="/assets/css/sidebar.css">
   <link rel="stylesheet" href="/assets/css/trang-chu/home.css">
-  <link rel="stylesheet" href="/assets/css/5s/5s-so-do-phe-lieu.css?v=2.0.0">
+  <link rel="stylesheet" href="/assets/css/5s/5s-so-do-phe-lieu.css?v=2.1.0">
 
   <!-- Style trực tiếp ưu tiên cao nhất chống cache trình duyệt cho Dark Theme -->
   <style id="dark-theme-5s-override">
@@ -51,19 +51,31 @@
       background-color: #1a1d2d !important;
       border-color: #2b324a !important;
       color: #e2e8f0 !important;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5) !important;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
     }
 
     [data-bs-theme="dark"] .kpi-card {
       background: #202538 !important;
       border-color: #2e3652 !important;
     }
+
+    /* Đè triệt để header từ home.css */
+    header {
+      position: static !important;
+      background: transparent !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      display: block !important;
+      backdrop-filter: none !important;
+    }
   </style>
 </head>
 
-<body class="min-h-screen bg-[#f8f9fa] font-sans text-[#333]">
-  <div id="app" class="max-w-7xl mx-auto p-4 md:p-6 my-4 bg-white rounded-2xl shadow-xl border border-gray-200 transition-colors">
-    <!-- Nội dung chính sẽ được render động từ 5s-so-do-phe-lieu.js -->
+<body class="bg-slate-50 dark:bg-[#0f1117] font-sans min-h-screen text-slate-800 dark:text-slate-100 transition-colors duration-200">
+  <div class="main-content container-fluid px-3 px-md-4 py-3 max-w-7xl mx-auto">
+    <div id="app" class="w-full bg-white dark:bg-[#1a1d2d] p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-[#2b324a] relative transition-colors duration-200">
+      <!-- Nội dung chính sẽ được render động từ 5s-so-do-phe-lieu.js -->
+    </div>
   </div>
 
   <!-- Modal Chi Tiết Khu Vực Phế Liệu -->
@@ -88,7 +100,7 @@
   <!-- Supabase config (URL + anon key) -->
   <script src="/assets/js/core/supabase-config.js"></script>
   <!-- Logic Sơ đồ phế liệu -->
-  <script src="/assets/js/5s/5s-so-do-phe-lieu.js?v=2.0.0"></script>
+  <script src="/assets/js/5s/5s-so-do-phe-lieu.js?v=2.1.0"></script>
 </body>
 
 </html>
