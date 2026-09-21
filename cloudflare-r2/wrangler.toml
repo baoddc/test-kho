@@ -1,0 +1,12 @@
+name = "hse-r2-api"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+# Bindings to R2 Bucket
+[[r2_buckets]]
+binding = "HSE_BUCKET"
+bucket_name = "ten-bucket-cua-ban" # Thay bằng tên Bucket R2 thực tế của bạn
+
+# Tùy chọn: Thêm tên miền công khai nếu bạn đã bật R2.dev hoặc Custom Domain
+# [vars]
+# PUBLIC_URL = "https://pub-xxxx.r2.dev"
