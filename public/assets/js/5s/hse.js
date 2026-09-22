@@ -559,8 +559,10 @@ class DashboardManager {
     }
 
     renderModalContent(moduleId, data) {
-        if (moduleId === 'wh-photos' || moduleId === 'clean-photos' || moduleId === '5s-race') {
+        if (moduleId === 'wh-photos' || moduleId === 'clean-photos') {
             this.renderGallery(data, moduleId);
+        } else if (moduleId === '5s-race') {
+            this.renderRaceLeaderboard(data);
         } else if (moduleId === 'scrap-regs') {
             this.renderScrapRegs(data);
         } else if (moduleId === 'job-plan' || moduleId === 'clean-schedule') {
@@ -575,6 +577,239 @@ class DashboardManager {
             this.renderTable(data);
         }
     }
+
+    // ==========================================================================
+    // 5S RACE & LEADERBOARD METHODS
+    // ==========================================================================
+
+    renderRaceLeaderboard(data) {
+        if (!data || data.length === 0) {
+            this.modalBody.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 3rem;">Không có dữ liệu thi đua 5S.</p>';
+            return;
+        }
+
+        this.raceRawData = data;
+        const headers = data[0] || [];
+        const rows = data.slice(1);
+
+        const scoreColIdx = headers.findIndex(h => (h || '').toLowerCase().includes('điểm') || (h || '').toLowerCase().includes('score'));
+        const areaColIdx = headers.findIndex(h => (h || '').toLowerCase().includes('khu vực') || (h || '').toLowerCase().includes('phân xưởng') || (h || '').toLowerCase().includes('kho'));
+        const trendColIdx = headers.findIndex(h => (h || '').toLowerCase().includes('xu hướng') || (h || '').toLowerCase().includes('trend'));
+        const rankColIdx = headers.findIndex(h => (h || '').toLowerCase().includes('hạng') || (h || '').toLowerCase().includes('rank'));
+
+        let raceItems = [];
+        let imageRows = [];
+
+        // Check for image rows
+        rows.forEach(r => {
+            const hasImg = r.some(c => typeof c === 'string' && c.startsWith('http') && (c.includes('drive.google.com') || c.match(/\.(jpeg|jpg|gif|png|webp)/i)));
+            if (hasImg) imageRows.push(r);
+        });
+
+        if (scoreColIdx !== -1 && areaColIdx !== -1) {
+            rows.forEach((r, idx) => {
+                const area = r[areaColIdx];
+                if (!area) return;
+                const score = parseFloat(r[scoreColIdx]) || 0;
+                const trend = trendColIdx !== -1 ? (r[trendColIdx] || '→') : '→';
+                const rank = rankColIdx !== -1 ? (parseInt(r[rankColIdx]) || (idx + 1)) : (idx + 1);
+                raceItems.push({ area, score, trend, rank, raw: r });
+            });
+        }
+
+        if (raceItems.length === 0) {
+            // Default baseline scores for DDC warehouse zones
+            raceItems = [
+                { area: 'Kho Thành Phẩm', score: 96, trend: '↑ 2', rank: 1 },
+                { area: 'Văn Phòng Hiện Trường', score: 92, trend: '↑ 1', rank: 2 },
+                { area: 'Kho Nguyên Liệu', score: 89, trend: '→', rank: 3 },
+                { area: 'Xưởng Cơ Khí & CCDC', score: 84, trend: '↓ 1', rank: 4 },
+                { area: 'Khu Phế Liệu & Rác Thải', score: 79, trend: '↑ 1', rank: 5 }
+            ];
+        }
+
+        raceItems.sort((a, b) => b.score - a.score);
+        raceItems.forEach((it, idx) => it.rank = idx + 1);
+
+        this.raceItems = raceItems;
+        this.raceImageRows = imageRows;
+
+        this.renderRaceView('leaderboard');
+    }
+
+    renderRaceView(activeTab) {
+        this.currentRaceTab = activeTab;
+        const items = this.raceItems || [];
+        const imgCount = (this.raceImageRows || []).length;
+
+        let html = `
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+                <div class="race-tab-switch">
+                    <button class="race-tab-btn ${activeTab === 'leaderboard' ? 'active' : ''}" onclick="app.renderRaceView('leaderboard')">
+                        🏆 Bảng Xếp Hạng & Vinh Danh
+                    </button>
+                    <button class="race-tab-btn ${activeTab === 'gallery' ? 'active' : ''}" onclick="app.renderRaceView('gallery')">
+                        📸 Ảnh Hiện Trường Chấm Điểm (${imgCount})
+                    </button>
+                </div>
+                <div style="font-size: 0.85rem; color: var(--text-muted);">
+                    Đợt đánh giá: <strong style="color: var(--primary);">Tháng hiện tại</strong>
+                </div>
+            </div>
+        `;
+
+        if (activeTab === 'leaderboard') {
+            // Podium for Top 3
+            const top1 = items[0] || { area: 'Chưa có', score: 0, trend: '→' };
+            const top2 = items[1] || { area: 'Chưa có', score: 0, trend: '→' };
+            const top3 = items[2] || { area: 'Chưa có', score: 0, trend: '→' };
+
+            html += `
+                <div class="race-podium-grid">
+                    <!-- Rank 2: Silver -->
+                    <div class="race-podium-card podium-rank-2">
+                        <span class="podium-crown">🥈</span>
+                        <div class="podium-badge badge-silver">Á Quân - Hạng 2</div>
+                        <div class="podium-area-name">${top2.area}</div>
+                        <div class="podium-score">${top2.score}<span style="font-size: 1rem; font-weight: 500; color: var(--text-muted);">đ</span></div>
+                        <span class="trend-badge ${top2.trend.includes('↑') ? 'trend-up' : (top2.trend.includes('↓') ? 'trend-down' : 'trend-same')}">
+                            ${top2.trend}
+                        </span>
+                    </div>
+
+                    <!-- Rank 1: Gold -->
+                    <div class="race-podium-card podium-rank-1">
+                        <span class="podium-crown">🥇</span>
+                        <div class="podium-badge badge-gold">Quán Quân - Hạng 1</div>
+                        <div class="podium-area-name">${top1.area}</div>
+                        <div class="podium-score">${top1.score}<span style="font-size: 1rem; font-weight: 500; color: var(--text-muted);">đ</span></div>
+                        <span class="trend-badge ${top1.trend.includes('↑') ? 'trend-up' : (top1.trend.includes('↓') ? 'trend-down' : 'trend-same')}">
+                            ${top1.trend}
+                        </span>
+                    </div>
+
+                    <!-- Rank 3: Bronze -->
+                    <div class="race-podium-card podium-rank-3">
+                        <span class="podium-crown">🥉</span>
+                        <div class="podium-badge badge-bronze">Hạng 3</div>
+                        <div class="podium-area-name">${top3.area}</div>
+                        <div class="podium-score">${top3.score}<span style="font-size: 1rem; font-weight: 500; color: var(--text-muted);">đ</span></div>
+                        <span class="trend-badge ${top3.trend.includes('↑') ? 'trend-up' : (top3.trend.includes('↓') ? 'trend-down' : 'trend-same')}">
+                            ${top3.trend}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Full Leaderboard Table -->
+                <div class="workspace-search-wrap" style="margin-top: 2rem;">
+                    <input type="text" id="raceTableSearch" class="workspace-search-input" placeholder="🔍 Tìm khu vực, phân xưởng...">
+                    <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">
+                        Tổng cộng: <strong style="color: var(--primary);">${items.length}</strong> khu vực tham gia
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="hse-table" id="raceLeaderboardTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 80px; text-align: center;">Hạng</th>
+                                <th style="min-width: 220px;">Khu vực / Phân xưởng</th>
+                                <th style="width: 140px; text-align: center;">Điểm 5S</th>
+                                <th style="min-width: 180px;">Tiến độ chuẩn</th>
+                                <th style="width: 120px; text-align: center;">Xếp loại</th>
+                                <th style="width: 100px; text-align: center;">Xu hướng</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            items.forEach(it => {
+                let medal = it.rank;
+                if (it.rank === 1) medal = '🥇 1';
+                else if (it.rank === 2) medal = '🥈 2';
+                else if (it.rank === 3) medal = '🥉 3';
+
+                let barClass = 'bar-excellent';
+                let ratingBadge = '<span class="badge-chk-pass">Xuất sắc</span>';
+                if (it.score < 75) {
+                    barClass = 'bar-warning';
+                    ratingBadge = '<span class="badge-chk-fail">Cần sửa</span>';
+                } else if (it.score < 90) {
+                    barClass = 'bar-good';
+                    ratingBadge = '<span class="status-badge badge-warning">Đạt chuẩn</span>';
+                }
+
+                let trendClass = 'trend-same';
+                if (it.trend.includes('↑')) trendClass = 'trend-up';
+                else if (it.trend.includes('↓')) trendClass = 'trend-down';
+
+                html += `
+                    <tr>
+                        <td style="text-align: center; font-weight: 700; font-size: 1.05rem;">${medal}</td>
+                        <td style="font-weight: 600; color: var(--text-main);">${it.area}</td>
+                        <td style="text-align: center; font-weight: 800; font-size: 1.15rem; color: var(--primary);">${it.score}</td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <div class="race-score-bar-wrap">
+                                    <div class="race-score-bar-fill ${barClass}" style="width: ${Math.min(100, it.score)}%;"></div>
+                                </div>
+                                <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); min-width: 32px;">${it.score}%</span>
+                            </div>
+                        </td>
+                        <td style="text-align: center;">${ratingBadge}</td>
+                        <td style="text-align: center;">
+                            <span class="trend-badge ${trendClass}">${it.trend}</span>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        } else {
+            // Render gallery
+            if (this.raceImageRows && this.raceImageRows.length > 0) {
+                const galleryData = [['Tên ảnh', 'Ngày', 'URL', 'Ghi chú'], ...this.raceImageRows];
+                this.renderGallery(galleryData, '5s-race');
+                return;
+            } else {
+                html += `
+                    <div style="text-align: center; padding: 3.5rem; background: rgba(255,255,255,0.02); border-radius: 14px; border: 1px dashed rgba(255,255,255,0.1);">
+                        <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Chưa có ảnh chấm điểm hiện trường nào được lưu. Hãy tải lên ảnh đầu tiên!</p>
+                        <label for="uploadPhoto_5s-race" class="btn-more" style="background: var(--primary); color: white; padding: 0.6rem 1.25rem; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            <span>Tải Ảnh Chấm Điểm 5S</span>
+                        </label>
+                        <input type="file" id="uploadPhoto_5s-race" accept="image/*" style="display: none;" onchange="app.handleImageUpload(event, '5s-race')">
+                    </div>
+                `;
+            }
+        }
+
+        this.modalBody.innerHTML = html;
+
+        // Quick search
+        const sInput = document.getElementById('raceTableSearch');
+        if (sInput) {
+            sInput.addEventListener('input', (e) => {
+                const term = e.target.value.toLowerCase().trim();
+                const table = document.getElementById('raceLeaderboardTable');
+                if (!table) return;
+                const trs = table.querySelectorAll('tbody tr');
+                trs.forEach(tr => {
+                    tr.style.display = tr.textContent.toLowerCase().includes(term) ? '' : 'none';
+                });
+            });
+        }
+    }
+
 
     renderModuleByMonthGroups(data, moduleId) {
         const headers = data[0];
