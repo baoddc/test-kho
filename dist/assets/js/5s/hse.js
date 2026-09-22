@@ -1625,91 +1625,123 @@ class DashboardManager {
         const monthKey = currentCard ? currentCard.monthKey : (this.selectedRaceMonth || '2026-07');
         const monthLabel = currentCard ? currentCard.monthLabel : 'Tháng hiện tại';
 
-        // Monthly calibrated scores for 6 standard warehouses
+        // Monthly calibrated scores for 6 standard warehouses directly from official scorecard sheets
         const monthlyScoresMap = {
-            '2026-07': [
-                { area: 'Thép tấm', score: 94, trend: '↑ 1', rank: 1 },
-                { area: 'Kho vật tư', score: 94, trend: '↑ 1', rank: 1 },
-                { area: 'Kho thép cuộn', score: 93, trend: '→', rank: 3 },
-                { area: 'Thép hình', score: 92, trend: '→', rank: 4 },
-                { area: 'Kho sơn', score: 90, trend: '↓ 1', rank: 5 },
-                { area: 'Kho vật liệu hàn', score: 87, trend: '↓ 2', rank: 6 }
-            ],
-            '2026-06': [
-                { area: 'Kho vật tư', score: 95, trend: '↑ 2', rank: 1 },
-                { area: 'Kho sơn', score: 94, trend: '↓ 1', rank: 2 },
-                { area: 'Thép tấm', score: 92, trend: '↓ 1', rank: 3 },
-                { area: 'Kho thép cuộn', score: 90, trend: '→', rank: 4 },
-                { area: 'Thép hình', score: 85, trend: '↓ 1', rank: 5 },
-                { area: 'Kho vật liệu hàn', score: 85, trend: '↓ 1', rank: 5 }
-            ],
-            '2026-05': [
-                { area: 'Kho sơn', score: 100, trend: '↑ 1', rank: 1 },
-                { area: 'Kho vật liệu hàn', score: 95, trend: '↑ 2', rank: 2 },
-                { area: 'Thép tấm', score: 94, trend: '→', rank: 3 },
-                { area: 'Thép hình', score: 92, trend: '→', rank: 4 },
-                { area: 'Kho thép cuộn', score: 88, trend: '↓ 1', rank: 5 },
-                { area: 'Kho vật tư', score: 84, trend: '↓ 1', rank: 6 }
-            ],
-            '2026-04': [
-                { area: 'Kho sơn', score: 98, trend: '↑ 1', rank: 1 },
-                { area: 'Thép tấm', score: 94, trend: '↑ 1', rank: 2 },
-                { area: 'Kho vật liệu hàn', score: 91, trend: '→', rank: 3 },
-                { area: 'Thép hình', score: 90, trend: '→', rank: 4 },
-                { area: 'Kho thép cuộn', score: 89, trend: '↓ 1', rank: 5 },
-                { area: 'Kho vật tư', score: 85, trend: '→', rank: 6 }
-            ],
-            '2026-03': [
-                { area: 'Thép tấm', score: 96, trend: '↑ 2', rank: 1 },
-                { area: 'Kho sơn', score: 94, trend: '↑ 1', rank: 2 },
-                { area: 'Kho thép cuộn', score: 92, trend: '→', rank: 3 },
-                { area: 'Kho vật liệu hàn', score: 89, trend: '↓ 1', rank: 4 },
-                { area: 'Thép hình', score: 88, trend: '→', rank: 5 },
-                { area: 'Kho vật tư', score: 85, trend: '↓ 1', rank: 6 }
-            ],
-            '2026-02': [
-                { area: 'Thép hình', score: 95, trend: '↑ 3', rank: 1 },
-                { area: 'Kho thép cuộn', score: 93, trend: '↑ 1', rank: 2 },
-                { area: 'Thép tấm', score: 91, trend: '↓ 1', rank: 3 },
-                { area: 'Kho sơn', score: 90, trend: '↓ 1', rank: 4 },
-                { area: 'Kho vật liệu hàn', score: 90, trend: '→', rank: 4 },
-                { area: 'Kho vật tư', score: 86, trend: '→', rank: 6 }
-            ],
-            '2026-01': [
-                { area: 'Kho thép cuộn', score: 96, trend: '↑ 2', rank: 1 },
-                { area: 'Kho sơn', score: 94, trend: '→', rank: 2 },
-                { area: 'Thép tấm', score: 93, trend: '→', rank: 3 },
-                { area: 'Kho vật liệu hàn', score: 90, trend: '↑ 1', rank: 4 },
-                { area: 'Thép hình', score: 87, trend: '↓ 2', rank: 5 },
-                { area: 'Kho vật tư', score: 86, trend: '→', rank: 6 }
-            ],
-            '2025-12': [
-                { area: 'Kho sơn', score: 95, trend: '↑ 1', rank: 1 },
-                { area: 'Kho thép cuộn', score: 93, trend: '→', rank: 2 },
-                { area: 'Thép tấm', score: 92, trend: '→', rank: 3 },
-                { area: 'Thép hình', score: 90, trend: '↑ 1', rank: 4 },
-                { area: 'Kho vật liệu hàn', score: 88, trend: '↓ 2', rank: 5 },
-                { area: 'Kho vật tư', score: 85, trend: '→', rank: 6 }
-            ],
-            '2025-11': [
-                { area: 'Thép tấm', score: 95, trend: '↑ 1', rank: 1 },
-                { area: 'Kho thép cuộn', score: 93, trend: '↑ 1', rank: 2 },
-                { area: 'Kho sơn', score: 92, trend: '↓ 1', rank: 3 },
-                { area: 'Kho vật liệu hàn', score: 91, trend: '→', rank: 4 },
-                { area: 'Thép hình', score: 88, trend: '→', rank: 5 },
-                { area: 'Kho vật tư', score: 84, trend: '↓ 1', rank: 6 }
-            ],
-            '2025-10': [
-                { area: 'Thép tấm', score: 94, trend: '→', rank: 1 },
-                { area: 'Kho sơn', score: 93, trend: '→', rank: 2 },
-                { area: 'Kho thép cuộn', score: 91, trend: '→', rank: 3 },
-                { area: 'Kho vật liệu hàn', score: 90, trend: '→', rank: 4 },
-                { area: 'Thép hình', score: 87, trend: '→', rank: 5 },
-                { area: 'Kho vật tư', score: 85, trend: '→', rank: 6 }
-            ]
+            '2026-07': {
+                xuongAvg: '91.4',
+                items: [
+                    { area: 'Kho sơn', score: 96, trend: '↑ 2', s1: 24, s2: 24, s3: 14, s4: 19, s5: 15 },
+                    { area: 'Kho vật tư', score: 94, trend: '↓ 1', s1: 24, s2: 24, s3: 14, s4: 17, s5: 15 },
+                    { area: 'Thép tấm', score: 90, trend: '↓ 2', s1: 23, s2: 22, s3: 13, s4: 18, s5: 14 },
+                    { area: 'Kho thép cuộn', score: 90, trend: '→', s1: 23, s2: 22, s3: 13, s4: 17, s5: 15 },
+                    { area: 'Kho vật liệu hàn', score: 87, trend: '↑ 1', s1: 22, s2: 22, s3: 12, s4: 18, s5: 13 }
+                ]
+            },
+            '2026-06': {
+                xuongAvg: '90.0',
+                items: [
+                    { area: 'Kho vật tư', score: 95, trend: '→', s1: 24, s2: 25, s3: 14, s4: 17, s5: 15 },
+                    { area: 'Kho sơn', score: 94, trend: '→', s1: 23, s2: 24, s3: 14, s4: 19, s5: 14 },
+                    { area: 'Thép tấm', score: 92, trend: '→', s1: 23, s2: 24, s3: 13, s4: 18, s5: 14 },
+                    { area: 'Kho thép cuộn', score: 90, trend: '↓ 1', s1: 23, s2: 22, s3: 12, s4: 18, s5: 15 },
+                    { area: 'Kho vật liệu hàn', score: 86, trend: '↑ 1', s1: 22, s2: 21, s3: 12, s4: 18, s5: 13 },
+                    { area: 'Thép hình', score: 85, trend: '↓ 4', s1: 20, s2: 20, s3: 13, s4: 18, s5: 14 }
+                ]
+            },
+            '2026-05': {
+                xuongAvg: '91.0',
+                items: [
+                    { area: 'Kho vật tư', score: 95, trend: '↑ 1', s1: 23, s2: 24, s3: 14, s4: 19, s5: 15 },
+                    { area: 'Kho sơn', score: 94, trend: '↑ 1', s1: 23, s2: 24, s3: 14, s4: 18, s5: 15 },
+                    { area: 'Thép tấm', score: 92, trend: '↓ 2', s1: 23, s2: 23, s3: 15, s4: 18, s5: 13 },
+                    { area: 'Kho thép cuộn', score: 91, trend: '→', s1: 23, s2: 22, s3: 13, s4: 18, s5: 15 },
+                    { area: 'Thép hình', score: 89, trend: '→', s1: 22, s2: 22, s3: 13, s4: 18, s5: 14 },
+                    { area: 'Kho vật liệu hàn', score: 85, trend: '↑ 5', s1: 21, s2: 21, s3: 12, s4: 17, s5: 14 }
+                ]
+            },
+            '2026-04': {
+                xuongAvg: '90.2',
+                items: [
+                    { area: 'Thép tấm', score: 94, trend: '↑ 2', s1: 23, s2: 24, s3: 13, s4: 19, s5: 15 },
+                    { area: 'Kho vật tư', score: 94, trend: '↓ 1', s1: 23, s2: 23, s3: 14, s4: 19, s5: 15 },
+                    { area: 'Kho sơn', score: 93, trend: '↓ 1', s1: 21, s2: 24, s3: 14, s4: 19, s5: 15 },
+                    { area: 'Kho thép cuộn', score: 91, trend: '↑ 1', s1: 23, s2: 22, s3: 13, s4: 18, s5: 15 },
+                    { area: 'Thép hình', score: 89, trend: '↑ 2', s1: 22, s2: 22, s3: 12, s4: 18, s5: 15 },
+                    { area: 'Kho vật liệu hàn', score: 80, trend: '→', s1: 18, s2: 19, s3: 12, s4: 17, s5: 14 }
+                ]
+            },
+            '2026-03': {
+                xuongAvg: '89.5',
+                items: [
+                    { area: 'Kho vật tư', score: 95, trend: '↑ 5', s1: 23, s2: 24, s3: 14, s4: 19, s5: 15 },
+                    { area: 'Kho sơn', score: 93, trend: '↑ 11', s1: 24, s2: 23, s3: 13, s4: 18, s5: 15 },
+                    { area: 'Thép tấm', score: 92, trend: '↑ 4', s1: 23, s2: 23, s3: 13, s4: 18, s5: 15 },
+                    { area: 'Kho thép cuộn', score: 90, trend: '↑ 90', s1: 23, s2: 22, s3: 13, s4: 18, s5: 14 },
+                    { area: 'Thép hình', score: 87, trend: '↓ 2', s1: 22, s2: 21, s3: 12, s4: 17, s5: 15 },
+                    { area: 'Kho vật liệu hàn', score: 80, trend: '↑ 1', s1: 18, s2: 19, s3: 12, s4: 17, s5: 14 }
+                ]
+            },
+            '2026-02': {
+                xuongAvg: '85.6',
+                items: [
+                    { area: 'Kho vật tư', score: 90, trend: '↓ 2', s1: 22, s2: 22, s3: 13, s4: 18, s5: 15 },
+                    { area: 'Thép hình', score: 89, trend: '↑ 1', s1: 22, s2: 23, s3: 13, s4: 18, s5: 13 },
+                    { area: 'Thép tấm', score: 88, trend: '↑ 11', s1: 21, s2: 22, s3: 12, s4: 18, s5: 15 },
+                    { area: 'Kho sơn', score: 82, trend: '↓ 1', s1: 20, s2: 20, s3: 12, s4: 17, s5: 13 },
+                    { area: 'Kho vật liệu hàn', score: 79, trend: '→', s1: 18, s2: 18, s3: 12, s4: 17, s5: 14 },
+                    { area: 'Kho thép cuộn', score: 0, trend: '→', s1: 0, s2: 0, s3: 0, s4: 0, s5: 0 }
+                ]
+            },
+            '2026-01': {
+                xuongAvg: '83.4',
+                items: [
+                    { area: 'Kho vật tư', score: 92, trend: '↑ 12', s1: 24, s2: 24, s3: 13, s4: 15, s5: 16 },
+                    { area: 'Thép hình', score: 88, trend: '↑ 5', s1: 22, s2: 22, s3: 13, s4: 17, s5: 14 },
+                    { area: 'Kho sơn', score: 83, trend: '↑ 7', s1: 21, s2: 18, s3: 13, s4: 16, s5: 15 },
+                    { area: 'Kho thép cuộn', score: 81.5, trend: '↑ 4.5', s1: 19, s2: 22.5, s3: 10, s4: 14, s5: 16 },
+                    { area: 'Kho vật liệu hàn', score: 79, trend: '↑ 4', s1: 24, s2: 17, s3: 14, s4: 10, s5: 14 },
+                    { area: 'Thép tấm', score: 77, trend: '↓ 2', s1: 18, s2: 19, s3: 13, s4: 13, s5: 14 }
+                ]
+            },
+            '2025-12': {
+                xuongAvg: '78.3',
+                items: [
+                    { area: 'Thép hình', score: 83, trend: '→', s1: 20, s2: 20, s3: 12, s4: 18, s5: 13 },
+                    { area: 'Kho vật tư', score: 80, trend: '↑ 3', s1: 20, s2: 20, s3: 12, s4: 16, s5: 12 },
+                    { area: 'Thép tấm', score: 79, trend: '↑ 7', s1: 20, s2: 20, s3: 12, s4: 15, s5: 12 },
+                    { area: 'Kho thép cuộn', score: 77, trend: '↑ 2', s1: 19, s2: 19, s3: 11, s4: 15, s5: 13 },
+                    { area: 'Kho sơn', score: 76, trend: '↑ 1', s1: 18, s2: 18, s3: 12, s4: 16, s5: 12 },
+                    { area: 'Kho vật liệu hàn', score: 75, trend: '↓ 2', s1: 20, s2: 15, s3: 12, s4: 16, s5: 12 }
+                ]
+            },
+            '2025-11': {
+                xuongAvg: '75.9',
+                items: [
+                    { area: 'Thép hình', score: 83, trend: '↓ 5', s1: 20, s2: 21, s3: 11, s4: 15, s5: 16 },
+                    { area: 'Kho vật tư', score: 77, trend: '↓ 2', s1: 20, s2: 19, s3: 14, s4: 12, s5: 12 },
+                    { area: 'Kho vật liệu hàn', score: 77, trend: '→', s1: 18, s2: 20, s3: 13, s4: 14, s5: 12 },
+                    { area: 'Kho sơn', score: 75, trend: '↓ 1', s1: 19, s2: 19, s3: 10, s4: 14, s5: 13 },
+                    { area: 'Kho thép cuộn', score: 75, trend: '↑ 1', s1: 17, s2: 17, s3: 13, s4: 15, s5: 13 },
+                    { area: 'Thép tấm', score: 72, trend: '↓ 16', s1: 15, s2: 18, s3: 12, s4: 15, s5: 12 }
+                ]
+            },
+            '2025-10': {
+                xuongAvg: '72.5',
+                items: [
+                    { area: 'Thép tấm', score: 88, trend: '→', s1: 23, s2: 22, s3: 14, s4: 14, s5: 15 },
+                    { area: 'Thép hình', score: 88, trend: '→', s1: 23, s2: 22, s3: 14, s4: 14, s5: 15 },
+                    { area: 'Kho vật tư', score: 79, trend: '→', s1: 24, s2: 22, s3: 10, s4: 12, s5: 11 },
+                    { area: 'Kho vật liệu hàn', score: 77, trend: '→', s1: 22, s2: 21, s3: 10, s4: 12, s5: 12 },
+                    { area: 'Kho sơn', score: 76, trend: '→', s1: 21, s2: 21, s3: 10, s4: 13, s5: 11 },
+                    { area: 'Kho thép cuộn', score: 74, trend: '→', s1: 21, s2: 20, s3: 10, s4: 12, s5: 11 }
+                ]
+            }
         };
 
-        const items = monthlyScoresMap[monthKey] || monthlyScoresMap['2026-07'];
+        const monthConfig = monthlyScoresMap[monthKey] || monthlyScoresMap['2026-07'];
+        const items = [...monthConfig.items];
+        const xuongAvg = monthConfig.xuongAvg || '90.0';
+
         items.sort((a, b) => b.score - a.score);
         items.forEach((it, idx) => it.rank = idx + 1);
 
@@ -1814,7 +1846,7 @@ class DashboardManager {
                 <div class="workspace-search-wrap" style="margin-top: 2rem;">
                     <input type="text" id="raceTableSearch" class="workspace-search-input" placeholder="🔍 Tìm nhanh kho trong bảng điểm...">
                     <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">
-                        Kỳ đánh giá: <strong style="color: var(--primary);">${monthLabel}</strong> (${items.length} kho tham gia)
+                        Kỳ đánh giá: <strong style="color: var(--primary);">${monthLabel}</strong> • Điểm TB toàn xưởng: <strong style="color: #34d399;">${xuongAvg}đ</strong>
                     </div>
                 </div>
 
@@ -1822,12 +1854,13 @@ class DashboardManager {
                     <table class="hse-table" id="raceLeaderboardTable">
                         <thead>
                             <tr>
-                                <th style="width: 80px; text-align: center;">Hạng</th>
-                                <th style="min-width: 220px;">Kho / Khu vực chuẩn</th>
-                                <th style="width: 140px; text-align: center;">Điểm 5S</th>
-                                <th style="min-width: 180px;">Tiến độ đạt chuẩn</th>
-                                <th style="width: 120px; text-align: center;">Xếp loại</th>
-                                <th style="width: 100px; text-align: center;">Xu hướng</th>
+                                <th style="width: 70px; text-align: center;">Hạng</th>
+                                <th style="min-width: 180px;">Kho / Phân xưởng</th>
+                                <th style="width: 110px; text-align: center;">Tổng Điểm</th>
+                                <th style="min-width: 250px;">Chi tiết 5S (S1 • S2 • S3 • S4 • S5)</th>
+                                <th style="min-width: 150px;">Tiến độ</th>
+                                <th style="width: 110px; text-align: center;">Xếp loại</th>
+                                <th style="width: 90px; text-align: center;">Xu hướng</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1841,7 +1874,9 @@ class DashboardManager {
 
                 let barClass = 'bar-excellent';
                 let ratingBadge = '<span class="badge-chk-pass">Xuất sắc</span>';
-                if (it.score < 75) {
+                if (it.score === 0) {
+                    ratingBadge = '<span style="color: var(--text-muted); font-size: 0.85rem;">Chưa chấm</span>';
+                } else if (it.score < 75) {
                     barClass = 'bar-warning';
                     ratingBadge = '<span class="badge-chk-fail">Cần sửa</span>';
                 } else if (it.score < 90) {
@@ -1853,11 +1888,22 @@ class DashboardManager {
                 if (it.trend.includes('↑')) trendClass = 'trend-up';
                 else if (it.trend.includes('↓')) trendClass = 'trend-down';
 
+                const sDetailHtml = (it.s1 !== undefined && it.score > 0) ? `
+                    <div style="font-size: 0.78rem; color: var(--text-muted); display: flex; gap: 0.35rem; flex-wrap: wrap;">
+                        <span style="background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px;" title="S1: Sàng lọc (max 24đ)">S1: <strong style="color: var(--text-main);">${it.s1}</strong></span>
+                        <span style="background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px;" title="S2: Sắp xếp (max 25đ)">S2: <strong style="color: var(--text-main);">${it.s2}</strong></span>
+                        <span style="background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px;" title="S3: Sạch sẽ (max 15đ)">S3: <strong style="color: var(--text-main);">${it.s3}</strong></span>
+                        <span style="background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px;" title="S4: Săn sóc (max 20đ)">S4: <strong style="color: var(--text-main);">${it.s4}</strong></span>
+                        <span style="background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px;" title="S5: Sẵn sàng (max 16đ)">S5: <strong style="color: var(--text-main);">${it.s5}</strong></span>
+                    </div>
+                ` : `<span style="font-size: 0.8rem; color: var(--text-muted);">--</span>`;
+
                 html += `
                     <tr>
                         <td style="text-align: center; font-weight: 700; font-size: 1.05rem;">${medal}</td>
                         <td style="font-weight: 600; color: var(--text-main);">${it.area}</td>
-                        <td style="text-align: center; font-weight: 800; font-size: 1.15rem; color: var(--primary);">${it.score}</td>
+                        <td style="text-align: center; font-weight: 800; font-size: 1.15rem; color: var(--primary);">${it.score > 0 ? it.score : '--'}</td>
+                        <td>${sDetailHtml}</td>
                         <td>
                             <div style="display: flex; align-items: center; gap: 0.75rem;">
                                 <div class="race-score-bar-wrap">
