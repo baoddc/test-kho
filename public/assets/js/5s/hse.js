@@ -571,8 +571,10 @@ class DashboardManager {
             this.renderScrapCategories(data);
         } else if (moduleId === 'scrap-regs') {
             this.renderScrapRegs(data);
-        } else if (moduleId === 'job-plan' || moduleId === 'clean-schedule') {
-            this.renderModuleByMonthGroups(data, moduleId);
+        } else if (moduleId === 'job-plan') {
+            this.renderJobPlanWorkspace(data);
+        } else if (moduleId === 'clean-schedule') {
+            this.renderCleanScheduleWorkspace(data);
         } else if (moduleId === 'equipment-checklist') {
             this.renderEquipmentChecklist(data);
         } else {
@@ -583,6 +585,404 @@ class DashboardManager {
             this.renderTable(data);
         }
     }
+
+    // ==========================================================================
+    // JOB PLAN METHODS (KẾ HOẠCH CÔNG VIỆC)
+    // ==========================================================================
+
+    renderJobPlanWorkspace(data) {
+        if (!data || data.length === 0) {
+            this.modalBody.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 3rem;">Không có dữ liệu kế hoạch công việc.</p>';
+            return;
+        }
+
+        this.jobPlanRawData = data;
+        const headers = data[0] || [];
+        const rows = data.slice(1);
+
+        const titleIdx = headers.findIndex(h => /tiêu đề|công việc|nội dung|hạng mục/i.test(h || ''));
+        const descIdx = headers.findIndex(h => /mô tả|chi tiết/i.test(h || ''));
+        const assignIdx = headers.findIndex(h => /người phụ trách|phụ trách|người thực hiện|nhân sự/i.test(h || ''));
+        const dateIdx = headers.findIndex(h => /hạn định|ngày|thời hạn|deadline/i.test(h || ''));
+        const statusIdx = headers.findIndex(h => /trạng thái|tình trạng|tiến độ/i.test(h || ''));
+
+        if (titleIdx === -1 && dateIdx === -1) {
+            this.renderTable(data);
+            return;
+        }
+
+        // Group rows by month
+        const groups = {};
+        rows.forEach(r => {
+            const dateStr = dateIdx !== -1 ? (r[dateIdx] || '') : '';
+            let monthKey = 'Chưa xác định';
+            const parts = dateStr.split(/[-/]/);
+            if (parts.length === 3) {
+                if (parts[0].length === 4) monthKey = `${parts[1].padStart(2, '0')}/${parts[0]}`;
+                else monthKey = `${parts[1].padStart(2, '0')}/${parts[2]}`;
+            }
+            if (!groups[monthKey]) groups[monthKey] = [];
+            groups[monthKey].push(r);
+        });
+
+        const sortedMonths = Object.keys(groups).sort((a, b) => {
+            const [mA, yA] = a.split('/').map(Number);
+            const [mB, yB] = b.split('/').map(Number);
+            return (yB * 12 + mB) - (yA * 12 + mA);
+        });
+
+        const now = new Date();
+        const curMonthKey = `${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+        if (!this.currentJobPlanMonth || !groups[this.currentJobPlanMonth]) {
+            this.currentJobPlanMonth = groups[curMonthKey] ? curMonthKey : (sortedMonths[0] || curMonthKey);
+        }
+
+        this.jobPlanGroups = groups;
+        this.jobPlanMonths = sortedMonths;
+        this.jobPlanHeaders = headers;
+        this.jobPlanColIndices = { titleIdx, descIdx, assignIdx, dateIdx, statusIdx };
+        this.currentJobPlanStatusFilter = 'all';
+        this.currentJobPlanAssigneeFilter = 'all';
+
+        this.renderJobPlanMonthView();
+    }
+
+    selectJobPlanMonth(monthKey) {
+        this.currentJobPlanMonth = monthKey;
+        this.renderJobPlanMonthView();
+    }
+
+    renderJobPlanMonthView() {
+        const monthKey = this.currentJobPlanMonth;
+        const rows = this.jobPlanGroups[monthKey] || [];
+        const { titleIdx, descIdx, assignIdx, dateIdx, statusIdx } = this.jobPlanColIndices;
+
+        const statusFilter = this.currentJobPlanStatusFilter || 'all';
+        const assigneeFilter = this.currentJobPlanAssigneeFilter || 'all';
+
+        // Extract distinct assignees
+        const assignees = Array.from(new Set(rows.map(r => assignIdx !== -1 ? (r[assignIdx] || '').trim() : '').filter(Boolean)));
+
+        // Today for deadline calculations
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Compute KPIs for selected month
+        let completedCount = 0;
+        let inProgressCount = 0;
+        let overdueCount = 0;
+
+        const parsedItems = rows.map((r, idx) => {
+            const title = titleIdx !== -1 ? (r[titleIdx] || `Công việc ${idx + 1}`) : `Công việc ${idx + 1}`;
+            const desc = descIdx !== -1 ? (r[descIdx] || '') : '';
+            const assignee = assignIdx !== -1 ? (r[assignIdx] || 'Chưa giao') : 'Chưa giao';
+            const dateStr = dateIdx !== -1 ? (r[dateIdx] || '') : '';
+            const status = statusIdx !== -1 ? (r[statusIdx] || 'Đang thực hiện') : 'Đang thực hiện';
+
+            // Calculate deadline status
+            let isOverdue = false;
+            let isSoon = false;
+            let daysDiff = 0;
+
+            if (dateStr) {
+                const parts = dateStr.split(/[-/]/);
+                let dObj;
+                if (parts.length === 3) {
+                    if (parts[0].length === 4) dObj = new Date(parts[0], parts[1] - 1, parts[2]);
+                    else dObj = new Date(parts[2], parts[1] - 1, parts[0]);
+                }
+                if (dObj && !isNaN(dObj.getTime())) {
+                    dObj.setHours(0, 0, 0, 0);
+                    const diffTime = dObj.getTime() - today.getTime();
+                    daysDiff = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                    const isDone = /hoàn thành|xong|đã xong|done/i.test(status);
+                    if (!isDone) {
+                        if (daysDiff < 0) isOverdue = true;
+                        else if (daysDiff <= 2) isSoon = true;
+                    }
+                }
+            }
+
+            if (/hoàn thành|xong|đã xong|done/i.test(status)) completedCount++;
+            else if (isOverdue) overdueCount++;
+            else inProgressCount++;
+
+            return { title, desc, assignee, dateStr, status, isOverdue, isSoon, daysDiff, raw: r };
+        });
+
+        const totalTasks = rows.length;
+        const completeRate = totalTasks > 0 ? Math.round((completedCount / totalTasks) * 100) : 0;
+
+        // Filter items
+        const filtered = parsedItems.filter(it => {
+            let matchStatus = true;
+            if (statusFilter === 'done') matchStatus = /hoàn thành|xong/i.test(it.status);
+            else if (statusFilter === 'in_progress') matchStatus = /đang thực hiện|đang làm/i.test(it.status) && !it.isOverdue;
+            else if (statusFilter === 'overdue') matchStatus = it.isOverdue || /quá hạn/i.test(it.status);
+
+            const matchAssignee = assigneeFilter === 'all' || it.assignee === assigneeFilter;
+            return matchStatus && matchAssignee;
+        });
+
+        let html = `
+            <!-- Month Selector Tabs -->
+            <div class="chk-month-tabs">
+        `;
+
+        this.jobPlanMonths.forEach(m => {
+            const isActive = m === monthKey ? 'active' : '';
+            const count = (this.jobPlanGroups[m] || []).length;
+            html += `
+                <button type="button" class="chk-month-tab ${isActive}" onclick="app.selectJobPlanMonth('${m}')">
+                    Tháng ${m} (${count} việc)
+                </button>
+            `;
+        });
+
+        html += `
+            </div>
+
+            <!-- KPI Summary Cards -->
+            <div class="chk-kpi-grid">
+                <div class="chk-kpi-card">
+                    <div class="chk-kpi-icon icon-blue">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+                    </div>
+                    <div>
+                        <div class="chk-kpi-val">${totalTasks} <span style="font-size: 0.9rem; font-weight: 500; color: var(--text-muted);">(T${monthKey})</span></div>
+                        <div class="chk-kpi-label">Tổng đầu mục công việc</div>
+                    </div>
+                </div>
+                <div class="chk-kpi-card">
+                    <div class="chk-kpi-icon icon-green">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                    </div>
+                    <div>
+                        <div class="chk-kpi-val">${completeRate}% <span style="font-size: 0.9rem; font-weight: 500; color: var(--text-muted);">(${completedCount} xong)</span></div>
+                        <div class="chk-kpi-label">Tỷ lệ hoàn thành nhiệm vụ</div>
+                    </div>
+                </div>
+                <div class="chk-kpi-card">
+                    <div class="chk-kpi-icon icon-red">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    </div>
+                    <div>
+                        <div class="chk-kpi-val">${overdueCount}</div>
+                        <div class="chk-kpi-label">Công việc quá hạn / Cần xử lý</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Toolbar & Filter -->
+            <div class="tools-toolbar">
+                <div class="tools-filter-group">
+                    <button class="tool-filter-btn ${statusFilter === 'all' ? 'active' : ''}" onclick="app.setJobPlanFilter('all', '${assigneeFilter}')">Tất cả (${totalTasks})</button>
+                    <button class="tool-filter-btn ${statusFilter === 'in_progress' ? 'active' : ''}" onclick="app.setJobPlanFilter('in_progress', '${assigneeFilter}')">Đang làm (${inProgressCount})</button>
+                    <button class="tool-filter-btn ${statusFilter === 'done' ? 'active' : ''}" onclick="app.setJobPlanFilter('done', '${assigneeFilter}')">Hoàn thành (${completedCount})</button>
+                    <button class="tool-filter-btn ${statusFilter === 'overdue' ? 'active' : ''}" onclick="app.setJobPlanFilter('overdue', '${assigneeFilter}')" style="color: ${overdueCount > 0 ? '#f87171' : ''};">Quá hạn (${overdueCount})</button>
+                </div>
+
+                ${assignees.length > 0 ? `
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600;">Phụ trách:</span>
+                        <select class="chk-input-control" style="padding: 0.35rem 0.75rem; font-size: 0.85rem; width: auto;" onchange="app.setJobPlanFilter('${statusFilter}', this.value)">
+                            <option value="all" ${assigneeFilter === 'all' ? 'selected' : ''}>Tất cả nhân sự</option>
+                            ${assignees.map(a => `<option value="${a}" ${assigneeFilter === a ? 'selected' : ''}>${a}</option>`).join('')}
+                        </select>
+                    </div>
+                ` : ''}
+            </div>
+
+            <div class="workspace-search-wrap">
+                <input type="text" id="jobPlanSearchInput" class="workspace-search-input" placeholder="🔍 Lọc nhanh theo tiêu đề công việc, mô tả, người phụ trách...">
+                <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">
+                    Hiển thị: <strong style="color: var(--primary);">${filtered.length}</strong> đầu việc
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="hse-table" id="jobPlanTable">
+                    <thead>
+                        <tr>
+                            <th style="min-width: 220px;">Tiêu đề công việc</th>
+                            <th style="min-width: 240px;" class="col-content-wide">Nội dung / Mô tả</th>
+                            <th style="min-width: 150px;">Người phụ trách</th>
+                            <th style="min-width: 140px;">Hạn định</th>
+                            <th style="width: 140px; text-align: center;">Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        if (filtered.length === 0) {
+            html += `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 2.5rem;">Không có công việc nào phù hợp với bộ lọc hiện tại.</td></tr>`;
+        } else {
+            filtered.forEach(it => {
+                let statusBadge = '<span class="status-badge badge-warning">Đang thực hiện</span>';
+                if (/hoàn thành|xong/i.test(it.status)) {
+                    statusBadge = '<span class="deadline-badge-done">✓ Hoàn thành</span>';
+                } else if (it.isOverdue || /quá hạn/i.test(it.status)) {
+                    const lateText = it.daysDiff < 0 ? `Trễ ${Math.abs(it.daysDiff)} ngày` : 'Quá hạn';
+                    statusBadge = `<span class="deadline-badge-overdue">⚠️ ${lateText}</span>`;
+                } else if (it.isSoon) {
+                    statusBadge = `<span class="deadline-badge-soon">⏳ Hạn: ${it.daysDiff === 0 ? 'Hôm nay' : (it.daysDiff === 1 ? 'Ngày mai' : '2 ngày nữa')}</span>`;
+                }
+
+                html += `
+                    <tr>
+                        <td style="font-weight: 600; color: var(--text-main);">${it.title}</td>
+                        <td class="col-content-wide" style="color: var(--text-muted); font-size: 0.88rem;">${it.desc}</td>
+                        <td style="font-weight: 500;">${it.assignee}</td>
+                        <td>${it.dateStr}</td>
+                        <td style="text-align: center;">${statusBadge}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        this.modalBody.innerHTML = html;
+
+        // Search filter
+        const sInput = document.getElementById('jobPlanSearchInput');
+        if (sInput) {
+            sInput.addEventListener('input', (e) => {
+                const term = e.target.value.toLowerCase().trim();
+                const trs = document.querySelectorAll('#jobPlanTable tbody tr');
+                trs.forEach(tr => {
+                    tr.style.display = tr.textContent.toLowerCase().includes(term) ? '' : 'none';
+                });
+            });
+        }
+    }
+
+    setJobPlanFilter(status, assignee) {
+        this.currentJobPlanStatusFilter = status;
+        this.currentJobPlanAssigneeFilter = assignee;
+        this.renderJobPlanMonthView();
+    }
+
+    // ==========================================================================
+    // CLEAN SCHEDULE METHODS (LỊCH VỆ SINH)
+    // ==========================================================================
+
+    renderCleanScheduleWorkspace(data) {
+        if (!data || data.length === 0) {
+            this.modalBody.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 3rem;">Không có dữ liệu lịch vệ sinh.</p>';
+            return;
+        }
+
+        this.cleanScheduleRawData = data;
+        const headers = data[0] || [];
+        const rows = data.slice(1);
+
+        const areaIdx = headers.findIndex(h => /khu vực|vị trí|phân xưởng|kho/i.test(h || ''));
+        const dateIdx = headers.findIndex(h => /ngày|thứ|thời gian|lịch/i.test(h || ''));
+        const personIdx = headers.findIndex(h => /người|phụ trách|ca trực|nhân sự/i.test(h || ''));
+        const taskIdx = headers.findIndex(h => /hạng mục|nội dung|công việc/i.test(h || ''));
+
+        // Today info for Spotlight
+        const now = new Date();
+        const dayNames = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+        const todayWeekday = dayNames[now.getDay()];
+        const todayStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+
+        // Find today's duty row if matches
+        let todayDuty = rows.find(r => {
+            const cellVal = (r[dateIdx !== -1 ? dateIdx : 0] || '').toLowerCase();
+            return cellVal.includes(todayWeekday.toLowerCase()) || cellVal.includes(todayStr);
+        });
+
+        if (!todayDuty && rows.length > 0) {
+            todayDuty = rows[0]; // fallback to first row
+        }
+
+        const dutyArea = todayDuty && areaIdx !== -1 ? todayDuty[areaIdx] : 'Toàn bộ kho bãi & lối đi an toàn';
+        const dutyPerson = todayDuty && personIdx !== -1 ? todayDuty[personIdx] : 'Tổ An Toàn 5S Hiện Trường';
+        const dutyContent = todayDuty && taskIdx !== -1 ? todayDuty[taskIdx] : 'Quét dọn, thu gom rác thải và sắp xếp gọn gàng pallet';
+
+        let html = `
+            <!-- Today Duty Spotlight Card -->
+            <div class="duty-spotlight-card">
+                <div>
+                    <div style="display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(16, 185, 129, 0.2); color: #34d399; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; margin-bottom: 0.5rem;">
+                        <span>📅 CA TRỰC HÔM NAY: ${todayWeekday} (${todayStr})</span>
+                    </div>
+                    <h3 style="margin: 0 0 0.4rem 0; font-size: 1.2rem; font-weight: 700; color: var(--text-main);">
+                        🧹 Khu vực: ${dutyArea}
+                    </h3>
+                    <div style="font-size: 0.9rem; color: var(--text-muted); display: flex; gap: 1.5rem; flex-wrap: wrap;">
+                        <span>👤 Nhân sự phụ trách: <strong style="color: var(--primary);">${dutyPerson}</strong></span>
+                        <span>📋 Nội dung: ${dutyContent}</span>
+                    </div>
+                </div>
+
+                <div>
+                    <button class="btn-more" onclick="app.openWorkspace('clean-photos')" style="background: var(--primary); color: white; padding: 0.6rem 1.25rem; border-radius: 8px; font-weight: 600; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; border: none;">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                        <span>Kiểm Tra Ảnh Vệ Sinh Hiện Trường</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Schedule Table with Search -->
+            <div class="workspace-search-wrap">
+                <input type="text" id="cleanScheduleSearch" class="workspace-search-input" placeholder="🔍 Lọc tìm kiếm theo ngày, khu vực, người trực...">
+                <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">
+                    Lịch phân công: <strong style="color: var(--primary);">${rows.length}</strong> ca trực
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="hse-table" id="cleanScheduleTable">
+                    <thead>
+                        <tr>
+                            ${headers.map(h => `<th>${h}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        rows.forEach(r => {
+            html += `<tr>`;
+            r.forEach((cell, idx) => {
+                const header = headers[idx] || '';
+                let cellHtml = cell || '';
+                if (header.toLowerCase().includes('khu vực') || header.toLowerCase().includes('ngày')) {
+                    cellHtml = `<strong>${cell}</strong>`;
+                }
+                html += `<td>${cellHtml}</td>`;
+            });
+            html += `</tr>`;
+        });
+
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        this.modalBody.innerHTML = html;
+
+        // Search
+        const sInput = document.getElementById('cleanScheduleSearch');
+        if (sInput) {
+            sInput.addEventListener('input', (e) => {
+                const term = e.target.value.toLowerCase().trim();
+                const trs = document.querySelectorAll('#cleanScheduleTable tbody tr');
+                trs.forEach(tr => {
+                    tr.style.display = tr.textContent.toLowerCase().includes(term) ? '' : 'none';
+                });
+            });
+        }
+    }
+
 
     // ==========================================================================
     // SCRAP CATEGORIES METHODS (DANH MỤC PHẾ LIỆU MÃ MÀU)
