@@ -563,6 +563,10 @@ class DashboardManager {
             this.renderGallery(data, moduleId);
         } else if (moduleId === '5s-race') {
             this.renderRaceLeaderboard(data);
+        } else if (moduleId === 'tools-inventory') {
+            this.renderToolsInventory(data);
+        } else if (moduleId === 'disposal-standards') {
+            this.renderDisposalStandards(data);
         } else if (moduleId === 'scrap-regs') {
             this.renderScrapRegs(data);
         } else if (moduleId === 'job-plan' || moduleId === 'clean-schedule') {
@@ -577,6 +581,375 @@ class DashboardManager {
             this.renderTable(data);
         }
     }
+
+    // ==========================================================================
+    // TOOLS & INVENTORY METHODS (CCDC)
+    // ==========================================================================
+
+    renderToolsInventory(data) {
+        if (!data || data.length === 0) {
+            this.modalBody.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 3rem;">Không có dữ liệu CCDC.</p>';
+            return;
+        }
+
+        this.toolsRawData = data;
+        const headers = data[0] || [];
+        const rows = data.slice(1);
+
+        const nameIdx = headers.findIndex(h => /tên|dụng cụ|thiết bị|công cụ/i.test(h || ''));
+        const codeIdx = headers.findIndex(h => /mã|code|id/i.test(h || ''));
+        const groupIdx = headers.findIndex(h => /nhóm|loại|chủng loại|danh mục/i.test(h || ''));
+        const qtyIdx = headers.findIndex(h => /số lượng|sl|tồn/i.test(h || ''));
+        const statusIdx = headers.findIndex(h => /tình trạng|trạng thái/i.test(h || ''));
+        const locIdx = headers.findIndex(h => /vị trí|kho|kệ|khu vực/i.test(h || ''));
+
+        // If no recognizable columns, fallback to default table
+        if (nameIdx === -1) {
+            this.renderTable(data);
+            return;
+        }
+
+        const items = rows.map((r, idx) => {
+            const name = r[nameIdx] || `Công cụ ${idx + 1}`;
+            const code = codeIdx !== -1 ? (r[codeIdx] || `CCDC-${String(idx + 1).padStart(3, '0')}`) : `CCDC-${String(idx + 1).padStart(3, '0')}`;
+            const group = groupIdx !== -1 ? (r[groupIdx] || 'Chung') : 'Chung';
+            const qty = qtyIdx !== -1 ? (parseInt(r[qtyIdx]) || 1) : 1;
+            const status = statusIdx !== -1 ? (r[statusIdx] || 'Tốt') : 'Tốt';
+            const loc = locIdx !== -1 ? (r[locIdx] || 'Kho CCDC') : 'Kho CCDC';
+            return { name, code, group, qty, status, loc, raw: r };
+        });
+
+        this.toolsItems = items;
+        this.currentToolGroup = 'all';
+        this.currentToolStatus = 'all';
+        this.currentToolView = this.currentToolView || 'card';
+
+        this.renderToolsView();
+    }
+
+    renderToolsView() {
+        const allItems = this.toolsItems || [];
+        const activeGroup = this.currentToolGroup || 'all';
+        const activeStatus = this.currentToolStatus || 'all';
+        const viewMode = this.currentToolView || 'card';
+
+        // Extract distinct groups
+        const groups = Array.from(new Set(allItems.map(it => it.group).filter(Boolean)));
+
+        // Filter items
+        let filtered = allItems.filter(it => {
+            const matchGroup = activeGroup === 'all' || it.group === activeGroup;
+            let matchStatus = true;
+            if (activeStatus === 'good') matchStatus = /tốt|đạt|hoạt động|sẵn sàng/i.test(it.status);
+            else if (activeStatus === 'repair') matchStatus = /bảo dưỡng|sửa|hỏng|lỗi/i.test(it.status);
+            else if (activeStatus === 'scrap') matchStatus = /loại bỏ|thanh lý|hủy/i.test(it.status);
+            return matchGroup && matchStatus;
+        });
+
+        // Compute KPIs
+        const totalItems = allItems.length;
+        const totalQty = allItems.reduce((acc, it) => acc + it.qty, 0);
+        const goodCount = allItems.filter(it => /tốt|đạt|hoạt động|sẵn sàng/i.test(it.status)).length;
+        const repairCount = allItems.filter(it => /bảo dưỡng|sửa|hỏng|lỗi/i.test(it.status)).length;
+        const safeRate = totalItems > 0 ? Math.round((goodCount / totalItems) * 100) : 100;
+
+        let html = `
+            <!-- KPI Summary Cards -->
+            <div class="chk-kpi-grid">
+                <div class="chk-kpi-card">
+                    <div class="chk-kpi-icon icon-blue">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+                    </div>
+                    <div>
+                        <div class="chk-kpi-val">${totalItems} <span style="font-size: 0.9rem; font-weight: 500; color: var(--text-muted);">loại (${totalQty} cái)</span></div>
+                        <div class="chk-kpi-label">Tổng chủng loại CCDC</div>
+                    </div>
+                </div>
+                <div class="chk-kpi-card">
+                    <div class="chk-kpi-icon icon-green">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                    </div>
+                    <div>
+                        <div class="chk-kpi-val">${safeRate}%</div>
+                        <div class="chk-kpi-label">Tỷ lệ sẵn sàng sử dụng</div>
+                    </div>
+                </div>
+                <div class="chk-kpi-card">
+                    <div class="chk-kpi-icon icon-amber">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    </div>
+                    <div>
+                        <div class="chk-kpi-val">${repairCount}</div>
+                        <div class="chk-kpi-label">Cần bảo dưỡng / Sửa chữa</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Toolbar: Filter & View Mode Toggle -->
+            <div class="tools-toolbar">
+                <div class="tools-filter-group">
+                    <button class="tool-filter-btn ${activeGroup === 'all' ? 'active' : ''}" onclick="app.setToolFilter('all', '${activeStatus}')">Tất cả nhóm</button>
+                    ${groups.map(g => `
+                        <button class="tool-filter-btn ${activeGroup === g ? 'active' : ''}" onclick="app.setToolFilter('${g}', '${activeStatus}')">${g}</button>
+                    `).join('')}
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div class="view-mode-toggle">
+                        <button class="view-btn ${viewMode === 'card' ? 'active' : ''}" onclick="app.setToolViewMode('card')" title="Xem dạng thẻ">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                        </button>
+                        <button class="view-btn ${viewMode === 'table' ? 'active' : ''}" onclick="app.setToolViewMode('table')" title="Xem dạng bảng">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search bar -->
+            <div class="workspace-search-wrap">
+                <input type="text" id="toolsSearchInput" class="workspace-search-input" placeholder="🔍 Tìm kiếm tên công cụ, mã CCDC, vị trí...">
+                <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">
+                    Hiển thị: <strong style="color: var(--primary);" id="toolsCountDisplay">${filtered.length}</strong> CCDC
+                </div>
+            </div>
+        `;
+
+        if (viewMode === 'card') {
+            html += `<div class="tools-card-grid" id="toolsContainer">`;
+            filtered.forEach(it => {
+                let badgeClass = 'badge-chk-pass';
+                if (/bảo dưỡng|sửa/i.test(it.status)) badgeClass = 'status-badge badge-warning';
+                else if (/hỏng|loại bỏ|thanh lý/i.test(it.status)) badgeClass = 'status-badge badge-danger';
+
+                html += `
+                    <div class="tool-item-card" data-name="${it.name.toLowerCase()}" data-code="${it.code.toLowerCase()}" data-loc="${it.loc.toLowerCase()}">
+                        <div>
+                            <div class="tool-card-head">
+                                <span class="tool-code-badge">${it.code}</span>
+                                <span class="${badgeClass}">${it.status}</span>
+                            </div>
+                            <h4 class="tool-card-title">${it.name}</h4>
+                            <div style="font-size: 0.8rem; color: var(--primary); margin-top: 0.25rem; font-weight: 500;">Nhóm: ${it.group}</div>
+                        </div>
+
+                        <div style="margin-top: 1.25rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.06);">
+                            <div class="tool-meta-row">
+                                <span>Số lượng tồn kho:</span>
+                                <strong style="color: var(--text-main); font-size: 0.95rem;">${it.qty}</strong>
+                            </div>
+                            <div class="tool-meta-row">
+                                <span>Vị trí lưu trữ:</span>
+                                <span style="color: var(--text-muted);">${it.loc}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            html += `</div>`;
+        } else {
+            html += `
+                <div class="table-responsive">
+                    <table class="hse-table" id="toolsTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 130px;">Mã CCDC</th>
+                                <th style="min-width: 200px;">Tên công cụ dụng cụ</th>
+                                <th style="min-width: 140px;">Nhóm</th>
+                                <th style="width: 100px; text-align: center;">Số lượng</th>
+                                <th style="width: 130px; text-align: center;">Tình trạng</th>
+                                <th style="min-width: 150px;">Vị trí lưu kho</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            filtered.forEach(it => {
+                let badgeClass = 'badge-chk-pass';
+                if (/bảo dưỡng|sửa/i.test(it.status)) badgeClass = 'status-badge badge-warning';
+                else if (/hỏng|loại bỏ|thanh lý/i.test(it.status)) badgeClass = 'status-badge badge-danger';
+
+                html += `
+                    <tr>
+                        <td style="font-weight: 700; color: #60a5fa;">${it.code}</td>
+                        <td style="font-weight: 600;">${it.name}</td>
+                        <td style="color: var(--text-muted);">${it.group}</td>
+                        <td style="text-align: center; font-weight: 700; color: var(--text-main);">${it.qty}</td>
+                        <td style="text-align: center;"><span class="${badgeClass}">${it.status}</span></td>
+                        <td style="color: var(--text-muted);">${it.loc}</td>
+                    </tr>
+                `;
+            });
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        this.modalBody.innerHTML = html;
+
+        // Attach search
+        const sInput = document.getElementById('toolsSearchInput');
+        if (sInput) {
+            sInput.addEventListener('input', (e) => {
+                const term = e.target.value.toLowerCase().trim();
+                if (viewMode === 'card') {
+                    const cards = document.querySelectorAll('#toolsContainer .tool-item-card');
+                    let count = 0;
+                    cards.forEach(card => {
+                        const match = card.dataset.name.includes(term) || card.dataset.code.includes(term) || card.dataset.loc.includes(term);
+                        card.style.display = match ? '' : 'none';
+                        if (match) count++;
+                    });
+                    const cDisplay = document.getElementById('toolsCountDisplay');
+                    if (cDisplay) cDisplay.textContent = count;
+                } else {
+                    const trs = document.querySelectorAll('#toolsTable tbody tr');
+                    let count = 0;
+                    trs.forEach(tr => {
+                        const match = tr.textContent.toLowerCase().includes(term);
+                        tr.style.display = match ? '' : 'none';
+                        if (match) count++;
+                    });
+                    const cDisplay = document.getElementById('toolsCountDisplay');
+                    if (cDisplay) cDisplay.textContent = count;
+                }
+            });
+        }
+    }
+
+    setToolFilter(group, status) {
+        this.currentToolGroup = group;
+        this.currentToolStatus = status;
+        this.renderToolsView();
+    }
+
+    setToolViewMode(mode) {
+        this.currentToolView = mode;
+        this.renderToolsView();
+    }
+
+    // ==========================================================================
+    // DISPOSAL STANDARDS METHODS (TIÊU CHUẨN LOẠI BỎ CCDC)
+    // ==========================================================================
+
+    renderDisposalStandards(data) {
+        if (!data || data.length === 0) {
+            this.modalBody.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 3rem;">Không có dữ liệu tiêu chuẩn loại bỏ.</p>';
+            return;
+        }
+
+        const headers = data[0] || [];
+        const rows = data.slice(1);
+
+        const nameIdx = headers.findIndex(h => /tên|dụng cụ|thiết bị|công cụ|chủng loại/i.test(h || ''));
+        const rejectIdx = headers.findIndex(h => /loại bỏ|hư hỏng|không đạt|dấu hiệu/i.test(h || ''));
+        const warnIdx = headers.findIndex(h => /cảnh báo|kiểm tra|kiểm định/i.test(h || ''));
+        const actionIdx = headers.findIndex(h => /hướng dẫn|xử lý|thanh lý|quy trình/i.test(h || ''));
+
+        let items = [];
+        if (nameIdx !== -1) {
+            rows.forEach((r, idx) => {
+                const name = r[nameIdx];
+                if (!name) return;
+                const rejectCriterion = rejectIdx !== -1 ? r[rejectIdx] : (r[1] || 'Có dấu hiệu nứt gãy, biến dạng vượt mức an toàn.');
+                const warnCriterion = warnIdx !== -1 ? r[warnIdx] : (r[2] || 'Hao mòn bề mặt > 10%, cần đo kiểm định kỳ.');
+                const processAction = actionIdx !== -1 ? r[actionIdx] : (r[3] || 'Ngưng sử dụng ngay, dán nhãn HỎNG và bàn giao về kho CCDC.');
+                items.push({ name, rejectCriterion, warnCriterion, processAction });
+            });
+        }
+
+        if (items.length === 0) {
+            // Default standards baseline
+            items = [
+                {
+                    name: 'Dây bẹ cẩu hàng (Polyester Slings)',
+                    rejectCriterion: 'Rách viền biên > 10% chiều rộng, đứt sợi chỉ may chịu lực, cháy xém do nhiệt hoặc hóa chất ăn mòn.',
+                    warnCriterion: 'Bám nhiều dầu mỡ mạt sắt, bạc màu nhãn tải trọng SWL.',
+                    processAction: 'Cắt đứt đôi dây bẹ để tránh tái sử dụng nhầm lẫn, chuyển kho phế liệu.'
+                },
+                {
+                    name: 'Dây xích cẩu & Khóa nối (Chains & Shackles)',
+                    rejectCriterion: 'Mắt xích bị giãn dài > 5%, mòn quá 10% đường kính danh nghĩa, nứt chân ren móc cẩu hoặc cong vênh.',
+                    warnCriterion: 'Gỉ sét bề mặt, chốt khóa lỏng ren nhẹ.',
+                    processAction: 'Đánh dấu sơn đỏ, lập biên bản thanh lý thiết bị nâng hạ.'
+                },
+                {
+                    name: 'Máy mài / Máy cắt cầm tay',
+                    rejectCriterion: 'Vỏ máy nứt vỡ hở điện, mất ốp chắn bảo vệ đá mài (Safety Guard), công tắc kẹt không tự ngắt.',
+                    warnCriterion: 'Dây nguồn bị sờn vỏ cao su ngoài, chổi than đánh lửa mạnh.',
+                    processAction: 'Bàn giao tổ cơ điện sửa chữa hoặc tiêu hủy nếu cuộn dây bị cháy.'
+                },
+                {
+                    name: 'Dây đai an toàn toàn thân (Full Body Harness)',
+                    rejectCriterion: 'Dây đã từng chịu tải trọng rơi ngã, khóa móc kim loại bị nứt/biến dạng/không tự khóa lò xo.',
+                    warnCriterion: 'Dây bị bẩn, quá hạn kiểm định 12 tháng.',
+                    processAction: 'Cắt bỏ toàn bộ dây đai, tiêu hủy ngay lập tức.'
+                }
+            ];
+        }
+
+        let html = `
+            <div style="margin-bottom: 1.5rem;">
+                <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">Sổ Tay Tiêu Chuẩn Loại Bỏ & Thanh Lý CCDC</h3>
+                <p style="color: var(--text-muted); font-size: 0.88rem; margin: 0;">Hướng dẫn nhận diện các dấu hiệu hư hỏng bắt buộc phải ngưng sử dụng và thu hồi để đảm bảo an toàn lao động tuyệt đối.</p>
+            </div>
+
+            <div class="workspace-search-wrap">
+                <input type="text" id="disposalSearchInput" class="workspace-search-input" placeholder="🔍 Tra cứu tiêu chuẩn theo tên CCDC hoặc dấu hiệu...">
+                <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">
+                    Tổng cộng: <strong style="color: var(--primary);">${items.length}</strong> quy chuẩn thiết bị
+                </div>
+            </div>
+
+            <div class="disposal-grid" id="disposalContainer">
+        `;
+
+        items.forEach(it => {
+            html += `
+                <div class="disposal-card" data-name="${it.name.toLowerCase()} ${it.rejectCriterion.toLowerCase()}">
+                    <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.75rem;">
+                        <span style="font-size: 1.4rem;">🛑</span>
+                        <h4 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--text-main);">${it.name}</h4>
+                    </div>
+
+                    <div class="criterion-box criterion-danger">
+                        <div style="font-weight: 700; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.35rem;">
+                            <span>❌ DẤU HIỆU LOẠI BỎ NGAY (CẤM DÙNG):</span>
+                        </div>
+                        <div>${it.rejectCriterion}</div>
+                    </div>
+
+                    <div class="criterion-box criterion-warning">
+                        <div style="font-weight: 700; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.35rem;">
+                            <span>⚠️ DẤU HIỆU CẦN KIỂM ĐỊNH LẠI:</span>
+                        </div>
+                        <div>${it.warnCriterion}</div>
+                    </div>
+
+                    <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.06); font-size: 0.82rem; color: var(--text-muted);">
+                        <strong style="color: var(--primary);">📋 Hướng dẫn xử lý:</strong> ${it.processAction}
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `</div>`;
+        this.modalBody.innerHTML = html;
+
+        // Quick search
+        const sInput = document.getElementById('disposalSearchInput');
+        if (sInput) {
+            sInput.addEventListener('input', (e) => {
+                const term = e.target.value.toLowerCase().trim();
+                const cards = document.querySelectorAll('#disposalContainer .disposal-card');
+                cards.forEach(c => {
+                    c.style.display = c.dataset.name.includes(term) ? '' : 'none';
+                });
+            });
+        }
+    }
+
 
     // ==========================================================================
     // 5S RACE & LEADERBOARD METHODS
