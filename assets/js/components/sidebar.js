@@ -197,7 +197,11 @@
     'in-tem-cuon',
     'in-tem-cuon.html',
     'hse',
-    'hse.html'
+    'hse.html',
+    '5s-so-do-phoi-cuon',
+    '5s-so-do-phoi-cuon.html',
+    '5s-so-do-phe-lieu',
+    '5s-so-do-phe-lieu.html'
   ];
 
   function checkRoutePermissionInIframe() {
