@@ -2905,9 +2905,14 @@ class DashboardManager {
 
     renderScrapRegs(data) {
         const rows = (data && data.length > 1) ? data.slice(1) : [];
+        const driveFolderUrl = `https://drive.google.com/drive/folders/${CONFIG.PDF_FOLDER_ID}`;
 
         if (this.workspaceActions) {
             this.workspaceActions.innerHTML = `
+                <a href="${driveFolderUrl}" target="_blank" rel="noopener noreferrer" class="btn-more" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3); padding: 0.55rem 1.1rem; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.5rem; transition: var(--transition);">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM19 18H6c-2.21 0-4-1.79-4-4 0-2.05 1.53-3.76 3.56-3.97l1.07-.11.5-.95C8.08 7.14 9.94 6 12 6c2.62 0 4.88 1.86 5.39 4.43l.3 1.5 1.53.11c1.56.1 2.78 1.41 2.78 2.96 0 1.65-1.35 3-3 3z"/></svg>
+                    <span>Mở Thư Mục Google Drive</span>
+                </a>
                 <button class="btn-more" onclick="app.triggerPdfUpload()" style="background: var(--primary); color: white; padding: 0.55rem 1.1rem; border-radius: 8px; border: none; font-weight: 600; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer;">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                     <span>Tải lên Quy định (PDF)</span>
@@ -2916,17 +2921,58 @@ class DashboardManager {
         }
 
         let html = `
-            <div class="scrap-regs-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <!-- Drive Storage Banner -->
+            <div class="glass-card" style="margin-bottom: 1.25rem; padding: 1rem 1.25rem; border-left: 4px solid #3b82f6; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; background: rgba(59, 130, 246, 0.06);">
+                <div style="display: flex; align-items: center; gap: 0.85rem;">
+                    <div style="width: 38px; height: 38px; border-radius: 8px; background: rgba(59, 130, 246, 0.15); display: flex; align-items: center; justify-content: center; color: #3b82f6; font-size: 1.2rem;">
+                        📁
+                    </div>
+                    <div>
+                        <div style="font-weight: 600; font-size: 0.95rem; color: var(--text);">
+                            Thư mục lưu trữ: <span style="color: #60a5fa;">File phân loại phế liệu (Google Drive)</span>
+                        </div>
+                        <div style="color: var(--text-muted); font-size: 0.8rem; margin-top: 2px;">
+                            ID: <code style="background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px; color: #93c5fd;">${CONFIG.PDF_FOLDER_ID}</code>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <a href="${driveFolderUrl}" target="_blank" rel="noopener noreferrer" style="background: #2563eb; color: white; padding: 0.45rem 0.95rem; border-radius: 6px; font-size: 0.82rem; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; transition: var(--transition);">
+                        <span>Mở trên Drive ↗</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="scrap-regs-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
                 <p style="color: var(--text-muted); font-size: 0.95rem; margin: 0;">Danh sách quy định phân loại phế liệu đã ban hành (${rows.length} tài liệu).</p>
-                <button class="btn-more" onclick="app.triggerPdfUpload()" style="background: var(--primary); color: white; padding: 0.5rem 1rem; border-radius: 8px; border: none; font-weight: 600; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem; transition: var(--transition);">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                    Tải lên Quy định (PDF)
-                </button>
+                <div style="display: flex; gap: 0.6rem;">
+                    <button class="btn-more" onclick="app.triggerPdfUpload()" style="background: var(--primary); color: white; padding: 0.5rem 1rem; border-radius: 8px; border: none; font-weight: 600; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem; transition: var(--transition);">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        Tải lên Quy định (PDF)
+                    </button>
+                </div>
             </div>
         `;
 
         if (rows.length === 0) {
-            html += '<p style="text-align: center; color: var(--text-muted); padding: 3rem; background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px dashed rgba(255,255,255,0.1);">Chưa có quy định nào được tải lên. Hãy sử dụng nút phía trên để bắt đầu.</p>';
+            html += `
+                <div style="text-align: center; color: var(--text-muted); padding: 3rem 2rem; background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px dashed rgba(255,255,255,0.12);">
+                    <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">📄</div>
+                    <h4 style="color: var(--text); margin: 0 0 0.5rem 0; font-size: 1.05rem;">Chưa có tài liệu quy định nào trong bảng danh mục</h4>
+                    <p style="max-width: 560px; margin: 0 auto 1.5rem auto; font-size: 0.88rem; line-height: 1.6; color: var(--text-muted);">
+                        Toàn bộ tài liệu quy định PDF được lưu trữ tập trung tại Google Drive trong thư mục <strong>"File phân loại phế liệu"</strong>. Nhấn nút <strong>"Tải lên Quy định (PDF)"</strong> để tải tài liệu vào thư mục Drive và tự động hiển thị tại đây.
+                    </p>
+                    <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+                        <button class="btn-more" onclick="app.triggerPdfUpload()" style="background: var(--primary); color: white; padding: 0.6rem 1.25rem; border-radius: 8px; border: none; font-weight: 600; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                            <span>Tải lên Quy định (PDF)</span>
+                        </button>
+                        <a href="${driveFolderUrl}" target="_blank" rel="noopener noreferrer" class="btn-more" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3); padding: 0.6rem 1.25rem; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+                            <span>Mở Thư Mục Google Drive ↗</span>
+                        </a>
+                    </div>
+                </div>
+            `;
         } else {
             html += `<div class="regs-list" style="display: grid; gap: 1rem;">`;
             rows.forEach((row, rowIndex) => {
