@@ -14,6 +14,16 @@ const CONFIG = {
     SIMULATE_DATA: false // Set to false when API Key is provided
 };
 
+// --- 6 Standard DDC Warehouses ---
+const HSE_WAREHOUSES = [
+    { id: 'kho-son', name: 'Kho sơn', shortName: 'Kho sơn', tag: 'sơn' },
+    { id: 'thep-tam', name: 'Thép tấm', shortName: 'Thép tấm', tag: 'thép tấm' },
+    { id: 'thep-hinh', name: 'Thép hình', shortName: 'Thép hình', tag: 'thép hình' },
+    { id: 'kho-vat-tu', name: 'Kho vật tư', shortName: 'Kho vật tư', tag: 'vật tư' },
+    { id: 'vat-lieu-han', name: 'Kho vật liệu hàn', shortName: 'Kho vật liệu hàn', tag: 'hàn' },
+    { id: 'thep-cuon', name: 'Kho thép cuộn', shortName: 'Kho thép cuộn', tag: 'cuộn' }
+];
+
 // --- Module Definitions ---
 const HSE_MODULES = [
     {
@@ -166,9 +176,12 @@ const MockData = {
     ],
     '5s-race': [
         ['Khu vực', 'Điểm 5S', 'Xếp hạng', 'Xu hướng'],
-        ['Kho Thành phẩm', '95', '1', '↑'],
-        ['Kho Nguyên liệu', '88', '2', '↓'],
-        ['Khu vực Sản xuất', '82', '3', '→']
+        ['Thép tấm', '96', '1', '↑'],
+        ['Kho thép cuộn', '93', '2', '↑'],
+        ['Kho vật liệu hàn', '90', '3', '→'],
+        ['Thép hình', '87', '4', '↓'],
+        ['Kho vật tư', '84', '5', '↑'],
+        ['Kho sơn', '81', '6', '→']
     ]
     // Add more mock data as needed for other modules
 };
@@ -931,6 +944,19 @@ class DashboardManager {
                 </div>
             </div>
 
+            <!-- Clean Schedule 6 Warehouses Filter Toolbar -->
+            <div class="tools-toolbar" style="margin-bottom: 1rem;">
+                <div class="tools-filter-group">
+                    <button class="tool-filter-btn clean-wh-btn active" data-wh="" onclick="app.filterCleanScheduleByWarehouse('')">Tất cả kho (6 kho)</button>
+                    <button class="tool-filter-btn clean-wh-btn" data-wh="sơn" onclick="app.filterCleanScheduleByWarehouse('sơn')">Kho sơn</button>
+                    <button class="tool-filter-btn clean-wh-btn" data-wh="thép tấm" onclick="app.filterCleanScheduleByWarehouse('thép tấm')">Thép tấm</button>
+                    <button class="tool-filter-btn clean-wh-btn" data-wh="thép hình" onclick="app.filterCleanScheduleByWarehouse('thép hình')">Thép hình</button>
+                    <button class="tool-filter-btn clean-wh-btn" data-wh="vật tư" onclick="app.filterCleanScheduleByWarehouse('vật tư')">Kho vật tư</button>
+                    <button class="tool-filter-btn clean-wh-btn" data-wh="hàn" onclick="app.filterCleanScheduleByWarehouse('hàn')">Kho vật liệu hàn</button>
+                    <button class="tool-filter-btn clean-wh-btn" data-wh="cuộn" onclick="app.filterCleanScheduleByWarehouse('cuộn')">Kho thép cuộn</button>
+                </div>
+            </div>
+
             <!-- Schedule Table with Search -->
             <div class="workspace-search-wrap">
                 <input type="text" id="cleanScheduleSearch" class="workspace-search-input" placeholder="🔍 Lọc tìm kiếm theo ngày, khu vực, người trực...">
@@ -981,6 +1007,24 @@ class DashboardManager {
                 });
             });
         }
+    }
+
+    filterCleanScheduleByWarehouse(whTag) {
+        const btns = this.modalBody.querySelectorAll('.clean-wh-btn');
+        btns.forEach(b => {
+            if ((!whTag && b.dataset.wh === '') || (whTag && b.dataset.wh === whTag)) {
+                b.classList.add('active');
+            } else {
+                b.classList.remove('active');
+            }
+        });
+
+        const trs = document.querySelectorAll('#cleanScheduleTable tbody tr');
+        trs.forEach(tr => {
+            const text = tr.textContent.toLowerCase();
+            const match = !whTag || text.includes(whTag.toLowerCase());
+            tr.style.display = match ? '' : 'none';
+        });
     }
 
 
@@ -1547,13 +1591,14 @@ class DashboardManager {
         }
 
         if (raceItems.length === 0) {
-            // Default baseline scores for DDC warehouse zones
+            // Standard 6 DDC Warehouses baseline for 5S Race
             raceItems = [
-                { area: 'Kho Thành Phẩm', score: 96, trend: '↑ 2', rank: 1 },
-                { area: 'Văn Phòng Hiện Trường', score: 92, trend: '↑ 1', rank: 2 },
-                { area: 'Kho Nguyên Liệu', score: 89, trend: '→', rank: 3 },
-                { area: 'Xưởng Cơ Khí & CCDC', score: 84, trend: '↓ 1', rank: 4 },
-                { area: 'Khu Phế Liệu & Rác Thải', score: 79, trend: '↑ 1', rank: 5 }
+                { area: 'Thép tấm', score: 96, trend: '↑ 2', rank: 1 },
+                { area: 'Kho thép cuộn', score: 93, trend: '↑ 1', rank: 2 },
+                { area: 'Kho vật liệu hàn', score: 90, trend: '→', rank: 3 },
+                { area: 'Thép hình', score: 87, trend: '↓ 1', rank: 4 },
+                { area: 'Kho vật tư', score: 84, trend: '↑ 1', rank: 5 },
+                { area: 'Kho sơn', score: 81, trend: '→', rank: 6 }
             ];
         }
 
@@ -2009,11 +2054,13 @@ class DashboardManager {
             <!-- Gallery Filter Toolbar -->
             <div class="tools-toolbar" style="margin-bottom: 1rem;">
                 <div class="tools-filter-group">
-                    <button class="tool-filter-btn active" onclick="app.filterGalleryByTag('')">Tất cả</button>
-                    <button class="tool-filter-btn" onclick="app.filterGalleryByTag('thành phẩm')">Kho Thành phẩm</button>
-                    <button class="tool-filter-btn" onclick="app.filterGalleryByTag('nguyên liệu')">Kho Nguyên liệu</button>
-                    <button class="tool-filter-btn" onclick="app.filterGalleryByTag('ccdc')">Khu CCDC</button>
-                    <button class="tool-filter-btn" onclick="app.filterGalleryByTag('lối đi')">Lối đi</button>
+                    <button class="tool-filter-btn active" onclick="app.filterGalleryByTag('')">Tất cả (6 kho)</button>
+                    <button class="tool-filter-btn" onclick="app.filterGalleryByTag('sơn')">Kho sơn</button>
+                    <button class="tool-filter-btn" onclick="app.filterGalleryByTag('thép tấm')">Thép tấm</button>
+                    <button class="tool-filter-btn" onclick="app.filterGalleryByTag('thép hình')">Thép hình</button>
+                    <button class="tool-filter-btn" onclick="app.filterGalleryByTag('vật tư')">Kho vật tư</button>
+                    <button class="tool-filter-btn" onclick="app.filterGalleryByTag('hàn')">Kho VL hàn</button>
+                    <button class="tool-filter-btn" onclick="app.filterGalleryByTag('cuộn')">Kho thép cuộn</button>
                 </div>
             </div>
 
@@ -2077,6 +2124,11 @@ class DashboardManager {
                     const match = it.textContent.toLowerCase().includes(term);
                     it.style.display = match ? '' : 'none';
                 });
+                const dateGroups = this.modalBody.querySelectorAll('.gallery-date-group');
+                dateGroups.forEach(group => {
+                    const visibleItems = group.querySelectorAll('.gallery-item:not([style*="display: none"])');
+                    group.style.display = visibleItems.length > 0 ? '' : 'none';
+                });
             });
         }
     }
@@ -2084,7 +2136,7 @@ class DashboardManager {
     filterGalleryByTag(tag) {
         const btns = this.modalBody.querySelectorAll('.tools-filter-group .tool-filter-btn');
         btns.forEach(b => {
-            if ((!tag && b.textContent === 'Tất cả') || (tag && b.textContent.toLowerCase().includes(tag))) {
+            if ((!tag && b.textContent.includes('Tất cả')) || (tag && b.textContent.toLowerCase().includes(tag.toLowerCase()))) {
                 b.classList.add('active');
             } else {
                 b.classList.remove('active');
@@ -2096,6 +2148,12 @@ class DashboardManager {
             const text = it.textContent.toLowerCase();
             const match = !tag || text.includes(tag.toLowerCase());
             it.style.display = match ? '' : 'none';
+        });
+
+        const dateGroups = this.modalBody.querySelectorAll('.gallery-date-group');
+        dateGroups.forEach(group => {
+            const visibleItems = group.querySelectorAll('.gallery-item:not([style*="display: none"])');
+            group.style.display = visibleItems.length > 0 ? '' : 'none';
         });
     }
 
