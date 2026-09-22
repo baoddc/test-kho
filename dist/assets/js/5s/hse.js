@@ -1860,7 +1860,7 @@ class DashboardManager {
                     </div>
                     <div>
                         <div class="chk-kpi-val">${safeRate}%</div>
-                        <div class="chk-kpi-label">Tỷ lệ đạt chuẩn an toàn</div>
+                        <div class="chk-kpi-label">Tỷ lệ đã kiểm tra</div>
                     </div>
                 </div>
                 <div class="chk-kpi-card">
@@ -1869,7 +1869,7 @@ class DashboardManager {
                     </div>
                     <div>
                         <div class="chk-kpi-val">${failCount}</div>
-                        <div class="chk-kpi-label">Điểm không đạt (X)</div>
+                        <div class="chk-kpi-label">Chưa kiểm tra (X)</div>
                     </div>
                 </div>
             </div>
@@ -1900,7 +1900,7 @@ class DashboardManager {
 
                     <div style="margin-bottom: 0.75rem; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;">
                         <span>⚙️ ĐÁNH GIÁ TÌNH TRẠNG THIẾT BỊ:</span>
-                        <button type="button" class="btn-quick-pass" onclick="app.quickCheckAllPass()">⚡ Đánh dấu tất cả ĐẠT</button>
+                        <button type="button" class="btn-quick-pass" onclick="app.quickCheckAllPass()">⚡ Đánh dấu tất cả ĐÃ KIỂM TRA</button>
                     </div>
 
                     <div class="chk-device-list" id="chkDeviceList">
@@ -1914,10 +1914,10 @@ class DashboardManager {
                     <div class="chk-toggle-group" data-device="${dev}">
                         <input type="hidden" name="device_${devId}" id="deviceVal_${devId}" value="O">
                         <button type="button" class="chk-toggle-btn btn-pass active" id="btnPass_${devId}" onclick="app.setDeviceStatus('${devId}', 'O')">
-                            ✓ Đạt (O)
+                            ✓ Đã kiểm tra (O)
                         </button>
                         <button type="button" class="chk-toggle-btn btn-fail" id="btnFail_${devId}" onclick="app.setDeviceStatus('${devId}', 'X')">
-                            ✕ Không đạt (X)
+                            ✕ Chưa kiểm tra (X)
                         </button>
                     </div>
                 </div>
@@ -2017,9 +2017,9 @@ class DashboardManager {
                     const val = (row[dIdx + 2] || '').trim().toUpperCase();
                     let badgeHtml = '';
                     if (val === 'O') {
-                        badgeHtml = `<span class="badge-chk-pass">✓ Đạt</span>`;
+                        badgeHtml = `<span class="badge-chk-pass">✓ Đã kiểm tra</span>`;
                     } else if (val === 'X') {
-                        badgeHtml = `<span class="badge-chk-fail">✕ Hỏng</span>`;
+                        badgeHtml = `<span class="badge-chk-fail">✕ Chưa kiểm tra</span>`;
                     } else {
                         badgeHtml = `<span class="badge-chk-na">-</span>`;
                     }
