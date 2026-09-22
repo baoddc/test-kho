@@ -2902,10 +2902,54 @@ class DashboardManager {
         lightbox.style.display = 'flex';
         setTimeout(() => lightbox.style.opacity = '1', 10);
     }
+    toDrivePreviewUrl(rawUrl) {
+        if (!rawUrl) return '';
+        const m = rawUrl.match(/\/d\/([-\w]{25,})/);
+        if (m && m[1]) return `https://drive.google.com/file/d/${m[1]}/preview`;
+        if (rawUrl.includes('drive.google.com/file/d/')) return rawUrl.replace(/\/view(\?.*)?$/, '/preview');
+        return `https://docs.google.com/viewer?url=${encodeURIComponent(rawUrl)}&embedded=true`;
+    }
+
+    switchScrapPdf(url, name, btnEl) {
+        const previewUrl = this.toDrivePreviewUrl(url);
+        const iframe = document.getElementById('scrap-inline-pdf-viewer');
+        const titleEl = document.getElementById('scrap-viewing-title');
+        const openTabBtn = document.getElementById('scrap-open-tab-btn');
+        const fullBtn = document.getElementById('scrap-fullscreen-btn');
+        
+        if (iframe) iframe.src = previewUrl;
+        if (titleEl) titleEl.textContent = name || 'Quy định PDF';
+        if (openTabBtn) openTabBtn.href = url;
+        if (fullBtn) fullBtn.onclick = () => app.openPdfLightbox(url);
+
+        const items = this.modalBody.querySelectorAll('.scrap-doc-card');
+        items.forEach(it => {
+            it.style.borderColor = 'rgba(255,255,255,0.08)';
+            it.style.background = 'rgba(255,255,255,0.02)';
+        });
+        if (btnEl) {
+            const card = btnEl.closest('.scrap-doc-card');
+            if (card) {
+                card.style.borderColor = 'var(--primary)';
+                card.style.background = 'rgba(16, 185, 129, 0.08)';
+            }
+        }
+    }
 
     renderScrapRegs(data) {
-        const rows = (data && data.length > 1) ? data.slice(1) : [];
+        let rows = (data && data.length > 1) ? data.slice(1) : [];
         const driveFolderUrl = `https://drive.google.com/drive/folders/${CONFIG.PDF_FOLDER_ID}`;
+
+        // Đảm bảo luôn có tệp quy định chuẩn nếu sheet chưa tải kịp
+        if (rows.length === 0) {
+            rows = [
+                ['SOP.01.CCD Quy trình thu hồi, phân loại, thanh lý phế liệu.pdf', '19/09/2026', 'https://drive.google.com/file/d/1xw9hk11YtXdvXAi3U5azVUNna9icTI4m/view', 'Quy trình thu hồi, phân loại và thanh lý phế liệu']
+            ];
+        }
+
+        const activeFile = rows[0];
+        const [activeName, activeDate, activeUrl] = activeFile;
+        const activePreviewUrl = this.toDrivePreviewUrl(activeUrl);
 
         if (this.workspaceActions) {
             this.workspaceActions.innerHTML = `
@@ -2922,87 +2966,101 @@ class DashboardManager {
 
         let html = `
             <!-- Drive Storage Banner -->
-            <div class="glass-card" style="margin-bottom: 1.25rem; padding: 1rem 1.25rem; border-left: 4px solid #3b82f6; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; background: rgba(59, 130, 246, 0.06);">
+            <div class="glass-card" style="margin-bottom: 1.25rem; padding: 0.85rem 1.25rem; border-left: 4px solid #3b82f6; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; background: rgba(59, 130, 246, 0.06);">
                 <div style="display: flex; align-items: center; gap: 0.85rem;">
-                    <div style="width: 38px; height: 38px; border-radius: 8px; background: rgba(59, 130, 246, 0.15); display: flex; align-items: center; justify-content: center; color: #3b82f6; font-size: 1.2rem;">
+                    <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(59, 130, 246, 0.15); display: flex; align-items: center; justify-content: center; color: #3b82f6; font-size: 1.2rem;">
                         📁
                     </div>
                     <div>
-                        <div style="font-weight: 600; font-size: 0.95rem; color: var(--text);">
+                        <div style="font-weight: 600; font-size: 0.9rem; color: var(--text);">
                             Thư mục lưu trữ: <span style="color: #60a5fa;">File phân loại phế liệu (Google Drive)</span>
                         </div>
-                        <div style="color: var(--text-muted); font-size: 0.8rem; margin-top: 2px;">
+                        <div style="color: var(--text-muted); font-size: 0.78rem; margin-top: 1px;">
                             ID: <code style="background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px; color: #93c5fd;">${CONFIG.PDF_FOLDER_ID}</code>
                         </div>
                     </div>
                 </div>
-                <div>
-                    <a href="${driveFolderUrl}" target="_blank" rel="noopener noreferrer" style="background: #2563eb; color: white; padding: 0.45rem 0.95rem; border-radius: 6px; font-size: 0.82rem; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; transition: var(--transition);">
+                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                    <button class="btn-more" onclick="app.triggerPdfUpload()" style="background: var(--primary); color: white; padding: 0.45rem 0.95rem; border-radius: 6px; border: none; font-weight: 600; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        Tải lên PDF mới
+                    </button>
+                    <a href="${driveFolderUrl}" target="_blank" rel="noopener noreferrer" style="background: #2563eb; color: white; padding: 0.45rem 0.95rem; border-radius: 6px; font-size: 0.82rem; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem;">
                         <span>Mở trên Drive ↗</span>
                     </a>
                 </div>
             </div>
 
-            <div class="scrap-regs-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
-                <p style="color: var(--text-muted); font-size: 0.95rem; margin: 0;">Danh sách quy định phân loại phế liệu đã ban hành (${rows.length} tài liệu).</p>
-                <div style="display: flex; gap: 0.6rem;">
-                    <button class="btn-more" onclick="app.triggerPdfUpload()" style="background: var(--primary); color: white; padding: 0.5rem 1rem; border-radius: 8px; border: none; font-weight: 600; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem; transition: var(--transition);">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                        Tải lên Quy định (PDF)
-                    </button>
-                </div>
-            </div>
+            <!-- Header & Document Selector -->
+            <div style="margin-bottom: 1.25rem;">
+                <h3 style="margin: 0 0 0.75rem 0; font-size: 1.05rem; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 0.5rem;">
+                    <span>📋 Danh Sách Quy Định Phân Loại Phế Liệu</span>
+                    <span style="font-size: 0.8rem; background: rgba(16, 185, 129, 0.15); color: #10b981; padding: 2px 8px; border-radius: 20px; font-weight: 500;">${rows.length} tài liệu</span>
+                </h3>
+                <div class="scrap-docs-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 0.75rem;">
         `;
 
-        if (rows.length === 0) {
+        rows.forEach((row, rowIndex) => {
+            const [name, date, url, note] = row;
+            const isFirst = rowIndex === 0;
+            const borderStyle = isFirst ? 'border: 1px solid var(--primary); background: rgba(16, 185, 129, 0.08);' : 'border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.02);';
+
             html += `
-                <div style="text-align: center; color: var(--text-muted); padding: 3rem 2rem; background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px dashed rgba(255,255,255,0.12);">
-                    <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">📄</div>
-                    <h4 style="color: var(--text); margin: 0 0 0.5rem 0; font-size: 1.05rem;">Chưa có tài liệu quy định nào trong bảng danh mục</h4>
-                    <p style="max-width: 560px; margin: 0 auto 1.5rem auto; font-size: 0.88rem; line-height: 1.6; color: var(--text-muted);">
-                        Toàn bộ tài liệu quy định PDF được lưu trữ tập trung tại Google Drive trong thư mục <strong>"File phân loại phế liệu"</strong>. Nhấn nút <strong>"Tải lên Quy định (PDF)"</strong> để tải tài liệu vào thư mục Drive và tự động hiển thị tại đây.
-                    </p>
-                    <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
-                        <button class="btn-more" onclick="app.triggerPdfUpload()" style="background: var(--primary); color: white; padding: 0.6rem 1.25rem; border-radius: 8px; border: none; font-weight: 600; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                            <span>Tải lên Quy định (PDF)</span>
+                <div class="glass-card scrap-doc-card" style="padding: 0.9rem 1.1rem; border-radius: 10px; transition: var(--transition); display: flex; flex-direction: column; justify-content: space-between; gap: 0.6rem; cursor: pointer; ${borderStyle}" onclick="app.switchScrapPdf('${url}', '${name.replace(/'/g, "\\'")}', this)">
+                    <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
+                        <div style="width: 34px; height: 34px; border-radius: 6px; background: rgba(239, 68, 68, 0.15); color: #ef4444; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.75rem; flex-shrink: 0; border: 1px solid rgba(239, 68, 68, 0.25);">
+                            PDF
+                        </div>
+                        <div style="overflow: hidden; flex: 1;">
+                            <h4 style="margin: 0 0 0.25rem 0; font-size: 0.92rem; font-weight: 600; color: var(--text); line-height: 1.4; word-break: break-word;">${name || 'Tài liệu quy định'}</h4>
+                            <div style="display: flex; gap: 0.85rem; color: var(--text-muted); font-size: 0.78rem;">
+                                <span>📅 ${date || '19/09/2026'}</span>
+                                <span style="color: #10b981;">● Đang hiển thị</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="display: flex; justify-content: flex-end; gap: 0.4rem; padding-top: 0.4rem; border-top: 1px solid rgba(255,255,255,0.04);" onclick="event.stopPropagation()">
+                        <button class="btn-more" onclick="app.openPdfLightbox('${url}')" style="padding: 0.35rem 0.75rem; font-size: 0.78rem; background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 6px;" title="Phóng to toàn màn hình">
+                            ⛶ Toàn màn hình
                         </button>
-                        <a href="${driveFolderUrl}" target="_blank" rel="noopener noreferrer" class="btn-more" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3); padding: 0.6rem 1.25rem; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.5rem;">
-                            <span>Mở Thư Mục Google Drive ↗</span>
+                        <a href="${url}" target="_blank" rel="noopener noreferrer" class="btn-more" style="padding: 0.35rem 0.75rem; font-size: 0.78rem; background: rgba(59, 130, 246, 0.12); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 6px; text-decoration: none;" title="Mở trên tab mới">
+                            ↗ Tab mới
                         </a>
+                        <button class="btn-delete-img" onclick="app.deleteImage(event, 'scrap-regs', '${url}', this)" title="Xóa tài liệu" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); padding: 0.35rem 0.5rem; border-radius: 6px;">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        </button>
                     </div>
                 </div>
             `;
-        } else {
-            html += `<div class="regs-list" style="display: grid; gap: 1rem;">`;
-            rows.forEach((row, rowIndex) => {
-                const [name, date, url, note] = row;
-                const isPdf = url && (url.toLowerCase().includes('.pdf') || url.includes('drive.google.com'));
+        });
 
-                html += `
-                    <div class="glass-card reg-item" style="padding: 1.25rem; display: flex; justify-content: space-between; align-items: center; transition: var(--transition);">
-                        <div class="reg-info">
-                            <h4 style="margin: 0 0 0.25rem 0; font-size: 1.05rem; font-weight: 600;">${name || 'Chưa đặt tên'}</h4>
-                            <div style="display: flex; gap: 1.5rem; color: var(--text-muted); font-size: 0.85rem;">
-                                <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> ${date || '--/--/----'}</span>
-                                ${note ? `<span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> ${note}</span>` : ''}
-                            </div>
-                        </div>
-                        <div class="reg-actions" style="display: flex; gap: 0.75rem;">
-                            ${isPdf ? `
-                                <button class="btn-more" onclick="app.openPdfLightbox('${url}')" style="padding: 0.5rem 1rem; font-size: 0.85rem; background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2);">
-                                    Xem trực tiếp
-                                </button>
-                            ` : ''}
-                            <button class="btn-delete-img" onclick="app.deleteImage(event, 'scrap-regs', '${url}', this)" title="Xóa" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); padding: 0.5rem; border-radius: 6px;">
-                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                            </button>
-                        </div>
+        html += `
+                </div>
+            </div>
+
+            <!-- INLINE EMBEDDED PDF VIEWER (HIỂN THỊ TỆP TRỰC TIẾP TRONG HỆ THỐNG) -->
+            <div class="glass-card" style="border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 8px 32px rgba(0,0,0,0.4); margin-top: 1.5rem;">
+                <div style="background: rgba(15, 23, 42, 0.85); padding: 0.75rem 1.25rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.08); flex-wrap: wrap; gap: 0.75rem;">
+                    <div style="display: flex; align-items: center; gap: 0.6rem;">
+                        <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981;"></span>
+                        <span style="font-size: 0.85rem; color: var(--text-muted);">Đang đọc trực tiếp:</span>
+                        <strong id="scrap-viewing-title" style="color: var(--text); font-size: 0.95rem; font-weight: 600;">${activeName}</strong>
                     </div>
-                `;
-            });
-            html += `</div>`;
-        }
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <button id="scrap-fullscreen-btn" class="btn-more" onclick="app.openPdfLightbox('${activeUrl}')" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.4rem 0.85rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem;">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+                            Phóng to toàn màn hình
+                        </button>
+                        <a id="scrap-open-tab-btn" href="${activeUrl}" target="_blank" rel="noopener noreferrer" class="btn-more" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); padding: 0.4rem 0.85rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem;">
+                            Mở tab mới ↗
+                        </a>
+                    </div>
+                </div>
+                <div style="position: relative; width: 100%; height: 80vh; min-height: 750px; background: #1e1e1e;">
+                    <iframe id="scrap-inline-pdf-viewer" src="${activePreviewUrl}" style="width: 100%; height: 100%; border: none; display: block;" allow="autoplay; encrypted-media; fullscreen" loading="lazy"></iframe>
+                </div>
+            </div>
+        `;
 
         // Add hidden PDF input if not exists
         if (!document.getElementById('pdfFileInput')) {
@@ -3011,12 +3069,12 @@ class DashboardManager {
 
         this.modalBody.innerHTML = html;
 
-        // Add some styles for hover effects
-        if (!document.getElementById('reg-item-styles')) {
+        // Add hover styles
+        if (!document.getElementById('scrap-doc-styles')) {
             const style = document.createElement('style');
-            style.id = 'reg-item-styles';
+            style.id = 'scrap-doc-styles';
             style.textContent = `
-                .reg-item:hover { background: rgba(255,255,255,0.03) !important; transform: translateY(-2px); }
+                .scrap-doc-card:hover { transform: translateY(-2px); border-color: rgba(16, 185, 129, 0.4) !important; }
             `;
             document.head.appendChild(style);
         }
