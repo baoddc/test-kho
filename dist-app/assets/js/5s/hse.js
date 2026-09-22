@@ -9,7 +9,7 @@ const CONFIG = {
     API_KEY: 'AKfycbxZAj6Wcs3JBtw8RzxQySZ7Woq4n7q1ieI59ffau6ABBLsa1w8tXWZ4F6H8rLsowhBs',
     SPREADSHEET_ID: '1keZMSZqlHFIe7la0H2eR-PDmO2S2ChHo5vn3-H1uoh8', // Using existing ID from project as fallback
     APPS_SCRIPT_URL_HSE: 'https://script.google.com/macros/s/AKfycbxZAj6Wcs3JBtw8RzxQySZ7Woq4n7q1ieI59ffau6ABBLsa1w8tXWZ4F6H8rLsowhBs/exec', // <--- ĐIỀN LINK WEB APP (Mới deploy) TẠI ĐÂY
-    R2_WORKER_URL: '', // <--- ĐIỀN URL CLOUDFLARE WORKER TẠI ĐÂY (VD: https://hse-r2-api.<subdomain>.workers.dev)
+    R2_WORKER_URL: 'https://hse-r2-api.thaibao06061997.workers.dev/', // <--- ĐIỀN URL CLOUDFLARE WORKER TẠI ĐÂY (VD: https://hse-r2-api.<subdomain>.workers.dev)
     PDF_FOLDER_ID: '1oiPaOOwPzeFuNCMH27l_PeNvMoghP97c', // <--- ĐIỀN ID THƯ MỤC LƯU PDF TẠI ĐÂY (VD: 1Ke...)
     SIMULATE_DATA: false // Set to false when API Key is provided
 };
@@ -472,8 +472,8 @@ class DashboardManager {
         if (btnCloseModal) {
             btnCloseModal.onclick = () => this.closeModal();
         }
-        window.onclick = (e) => { 
-            if (this.modal && e.target === this.modal) this.closeModal(); 
+        window.onclick = (e) => {
+            if (this.modal && e.target === this.modal) this.closeModal();
         };
 
         // Keyboard navigation (ESC to close, ArrowLeft/Right to switch images)

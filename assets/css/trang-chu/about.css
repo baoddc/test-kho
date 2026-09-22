@@ -244,6 +244,8 @@ body {
 .qr-logo i { color: #38bdf8; }
 .pwa-logo i { color: #f59e0b; }
 .exe-logo i { color: #8b5cf6; }
+.r2-logo i { color: #f38020; }
+.sap-logo i { color: #008fd3; }
 
 .tech-item:hover .html-logo { border-color: rgba(227, 79, 38, 0.5); box-shadow: 0 0 20px rgba(227, 79, 38, 0.2); }
 .tech-item:hover .js-logo { border-color: rgba(247, 223, 30, 0.5); box-shadow: 0 0 20px rgba(247, 223, 30, 0.2); }
@@ -253,6 +255,8 @@ body {
 .tech-item:hover .qr-logo { border-color: rgba(56, 189, 248, 0.5); box-shadow: 0 0 20px rgba(56, 189, 248, 0.2); }
 .tech-item:hover .pwa-logo { border-color: rgba(245, 158, 11, 0.5); box-shadow: 0 0 20px rgba(245, 158, 11, 0.2); }
 .tech-item:hover .exe-logo { border-color: rgba(139, 92, 246, 0.5); box-shadow: 0 0 20px rgba(139, 92, 246, 0.2); }
+.tech-item:hover .r2-logo { border-color: rgba(243, 128, 32, 0.5); box-shadow: 0 0 20px rgba(243, 128, 32, 0.2); }
+.tech-item:hover .sap-logo { border-color: rgba(0, 143, 211, 0.5); box-shadow: 0 0 20px rgba(0, 143, 211, 0.2); }
 
 .tech-name {
   font-size: 0.9rem;

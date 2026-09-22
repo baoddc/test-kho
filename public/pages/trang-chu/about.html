@@ -48,24 +48,36 @@
             <span>Supabase Cloud: B+ Tree & Realtime Sync</span>
           </div>
           <div class="status-pill">
+            <span class="status-dot" style="background-color: #f38020; color: #f38020;"></span>
+            <span>Cloudflare R2: Global CDN Storage Siêu Tốc</span>
+          </div>
+          <div class="status-pill">
+            <span class="status-dot blue"></span>
+            <span>Digital Twin: Sơ Đồ Kho 2D & Heatmap Tồn Kho</span>
+          </div>
+          <div class="status-pill">
+            <span class="status-dot green"></span>
+            <span>SAP MB51: Tự Động Đối Soát & Auto-Sync Sheets</span>
+          </div>
+          <div class="status-pill">
             <span class="status-dot blue"></span>
             <span>Barcode & QR: 360° Camera Scanner</span>
           </div>
           <div class="status-pill">
             <span class="status-dot purple"></span>
-            <span>AI Vision: OCR Tự Động Hóa Nhập Liệu</span>
+            <span>AI Vision: OCR Tự Động Bóc Tách Phiếu Cân</span>
           </div>
           <div class="status-pill">
             <span class="status-dot yellow"></span>
-            <span>RBAC Security: data-perm & Khóa 24h</span>
+            <span>RBAC Security: data-perm & Khóa An Toàn 24h</span>
           </div>
           <div class="status-pill">
             <span class="status-dot green"></span>
-            <span>ACID Transactions: Bảo Vệ Toàn Vẹn Xuất Nhập</span>
+            <span>ACID Transactions: Row Lock Chống Âm Kho</span>
           </div>
           <div class="status-pill">
             <span class="status-dot purple"></span>
-            <span>PWA & Desktop EXE: Offline First Active</span>
+            <span>PWA & Desktop EXE: Offline-First & Auto Update</span>
           </div>
         </div>
       </div>
@@ -75,7 +87,7 @@
         <h2 class="text-center mb-4"><span class="highlight-line">Các Phân Hệ Nghiệp Vụ Kho</span></h2>
         <div class="row g-4">
           <!-- Phân hệ 1: Xà Gồ -->
-          <div class="col-md-6 col-lg-4">
+          <div class="col-md-6 col-lg-3">
             <div class="glass-card">
               <div class="card-icon"><i class="fa-solid fa-cubes"></i></div>
               <h3>Xà Gồ C/Z (XG)</h3>
@@ -84,7 +96,7 @@
           </div>
 
           <!-- Phân hệ 2: Tole -->
-          <div class="col-md-6 col-lg-4">
+          <div class="col-md-6 col-lg-3">
             <div class="glass-card">
               <div class="card-icon"><i class="fa-solid fa-layer-group"></i></div>
               <h3>Tole Cuộn & Tấm</h3>
@@ -92,35 +104,53 @@
             </div>
           </div>
 
-          <!-- Phân hệ 3: Tem QR & Kiểm kê -->
-          <div class="col-md-6 col-lg-4">
+          <!-- Phân hệ 3: Sơ Đồ Kho Số Hóa 2D (Digital Twin) -->
+          <div class="col-md-6 col-lg-3">
+            <div class="glass-card">
+              <div class="card-icon"><i class="fa-solid fa-map-location-dot"></i></div>
+              <h3>Bản Đồ Số Hóa Kho 2D</h3>
+              <p>Sơ đồ tương tác trực quan 2D cho kho Phôi Cuộn và Kho Phế Liệu; kết nối trực tiếp dữ liệu live Supabase, heatmap tỷ lệ lấp đầy kệ, lọc chu kỳ và xem chi tiết tức thì từng cuộn/mặt hàng theo vị trí kệ.</p>
+            </div>
+          </div>
+
+          <!-- Phân hệ 4: Đối Soát SAP & Google Sheets -->
+          <div class="col-md-6 col-lg-3">
+            <div class="glass-card">
+              <div class="card-icon"><i class="fa-solid fa-arrow-right-arrow-left"></i></div>
+              <h3>Đối Soát SAP & Sheets</h3>
+              <p>Tự động gợi ý mã SAP khi lập phiếu, đối soát phát hiện sai lệch số liệu giữa nhập xuất thực tế và sổ sách kế toán SAP MB51; tích hợp đồng bộ tự động 2 chiều linh hoạt với Google Sheets qua Google Apps Script.</p>
+            </div>
+          </div>
+
+          <!-- Phân hệ 5: Tem QR & Kiểm kê -->
+          <div class="col-md-6 col-lg-3">
             <div class="glass-card">
               <div class="card-icon"><i class="fa-solid fa-qrcode"></i></div>
               <h3>Tem QR & Kiểm Kê Kho</h3>
-              <p>In mã QR vị trí kệ hàng loạt (hỗ trợ xuất ZIP); quét QR tra cứu tức thì tồn kho theo kệ; kiểm kê hiện trường bằng camera smartphone đối soát trực tiếp với file Excel tồn kho sổ sách.</p>
+              <p>In mã QR vị trí kệ hàng loạt (hỗ trợ xuất ZIP); in tem cuộn chuẩn công nghiệp; quét QR đối soát hiện trường 1:1 với file Excel tồn kho sổ sách, phát hiện ngay cuộn thừa, thiếu hoặc đặt sai kệ.</p>
             </div>
           </div>
 
-          <!-- Phân hệ 4: Phế Liệu -->
-          <div class="col-md-6 col-lg-4">
+          <!-- Phân hệ 6: Phế Liệu -->
+          <div class="col-md-6 col-lg-3">
             <div class="glass-card">
               <div class="card-icon"><i class="fa-solid fa-recycle"></i></div>
               <h3>Phế Liệu Sản Xuất (PL)</h3>
-              <p>Quản lý quy trình thu hồi Cần thu - Chưa thu - Đã thu; theo dõi phiếu cân phế liệu thực tế, quản lý lịch sử giao dịch và tự động lập phiếu in xuất bán / xuất trả phế liệu chuẩn quy cách.</p>
+              <p>Quản lý quy trình thu hồi khép kín Cần thu - Chưa thu - Đã thu; theo dõi phiếu cân phế liệu thực tế, quản lý lịch sử giao dịch và tự động lập phiếu in xuất bán / xuất trả phế liệu chuẩn mẫu DDC.</p>
             </div>
           </div>
 
-          <!-- Phân hệ 5: 5S & HSE -->
-          <div class="col-md-6 col-lg-4">
+          <!-- Phân hệ 7: 5S & HSE -->
+          <div class="col-md-6 col-lg-3">
             <div class="glass-card">
               <div class="card-icon"><i class="fa-solid fa-shield-heart"></i></div>
               <h3>Quy Trình 5S & HSE</h3>
-              <p>Báo cáo checklist đánh giá hoạt động 5S định kỳ tại từng khu vực kho; nhật ký theo dõi an toàn lao động, vệ sinh môi trường (HSE), duy trì chuẩn mực an toàn công nghiệp DDC.</p>
+              <p>Báo cáo checklist đánh giá 5S định kỳ tại từng khu vực kho; nhật ký theo dõi an toàn lao động (HSE), vệ sinh công nghiệp kèm chức năng upload ảnh sự cố tốc độ cao qua Cloudflare R2 CDN.</p>
             </div>
           </div>
 
-          <!-- Phân hệ 6: Công Việc & Lịch Hẹn -->
-          <div class="col-md-6 col-lg-4">
+          <!-- Phân hệ 8: Công Việc & Lịch Hẹn -->
+          <div class="col-md-6 col-lg-3">
             <div class="glass-card">
               <div class="card-icon"><i class="fa-solid fa-list-check"></i></div>
               <h3>Công Việc & Nhắc Hẹn</h3>
@@ -152,6 +182,14 @@
             <span class="tech-name">Supabase (Postgres)</span>
           </div>
           <div class="tech-item">
+            <div class="tech-logo r2-logo"><i class="fa-solid fa-cloud-bolt"></i></div>
+            <span class="tech-name">Cloudflare R2</span>
+          </div>
+          <div class="tech-item">
+            <div class="tech-logo sap-logo"><i class="fa-solid fa-file-excel"></i></div>
+            <span class="tech-name">SAP & Google Sync</span>
+          </div>
+          <div class="tech-item">
             <div class="tech-logo ai-logo"><i class="fa-solid fa-brain"></i></div>
             <span class="tech-name">AI Vision / OCR</span>
           </div>
@@ -177,7 +215,7 @@
         </div>
 
         <!-- Card 1: Supabase Engine -->
-        <div class="col-md-6 col-lg-3 mb-4">
+        <div class="col-md-6 col-lg-4 mb-4">
           <div class="spotlight-card">
             <div class="spotlight-icon icon-cyan"><i class="fa-solid fa-bolt"></i></div>
             <h4 class="icon-cyan">Supabase Data Engine</h4>
@@ -186,25 +224,34 @@
         </div>
 
         <!-- Card 2: ACID Transactions -->
-        <div class="col-md-6 col-lg-3 mb-4">
+        <div class="col-md-6 col-lg-4 mb-4">
           <div class="spotlight-card">
             <div class="spotlight-icon icon-emerald"><i class="fa-solid fa-scale-balanced"></i></div>
             <h4 class="icon-emerald">ACID & Concurrency Control</h4>
-            <p>Xử lý giao dịch kho nguyên tử (Atomic) qua Supabase RPC / Stored Procedures. Kiểm tra tồn kho khả dụng theo thời gian thực, triệt tiêu nguy cơ âm kho và xung đột ghi đè đồng thời.</p>
+            <p>Xử lý giao dịch kho nguyên tử (Atomic) qua Supabase RPC / Stored Procedures với khóa dòng (Row-level Lock). Kiểm tra tồn kho khả dụng thời gian thực, triệt tiêu nguy cơ âm kho và xung đột đồng thời.</p>
           </div>
         </div>
 
-        <!-- Card 3: Barcode & QR Scanner -->
-        <div class="col-md-6 col-lg-3 mb-4">
+        <!-- Card 3: Cloudflare R2 CDN -->
+        <div class="col-md-6 col-lg-4 mb-4">
           <div class="spotlight-card">
-            <div class="spotlight-icon icon-blue"><i class="fa-solid fa-camera"></i></div>
-            <h4 class="icon-blue">Trình Quét Barcode Công Nghiệp</h4>
-            <p>Quét mã vạch cuộn và QR vị trí kệ trực tiếp bằng camera di động: Tích hợp trợ lực Zoom, đèn Flash rọi sáng, rung phản hồi (Haptic) và thuật toán nhận diện đa hướng 360 độ siêu nhạy.</p>
+            <div class="spotlight-icon icon-orange"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+            <h4 class="icon-orange">Cloudflare R2 Storage & CDN</h4>
+            <p>Lưu trữ hình ảnh hiện trường HSE và chứng từ siêu tốc qua Cloudflare Worker API; tải ảnh tức thì không độ trễ qua Global CDN, giải phóng hoàn toàn giới hạn quota và độ trễ chậm của Google Drive.</p>
           </div>
         </div>
 
-        <!-- Card 4: AI OCR Autofill -->
-        <div class="col-md-6 col-lg-3 mb-4">
+        <!-- Card 4: Bản Đồ Số Hóa Kho 2D (Digital Twin) -->
+        <div class="col-md-6 col-lg-4 mb-4">
+          <div class="spotlight-card">
+            <div class="spotlight-icon icon-blue"><i class="fa-solid fa-map"></i></div>
+            <h4 class="icon-blue">Sơ Đồ Kho 2D & Heatmap Live</h4>
+            <p>Mô phỏng không gian kho bãi 2D thời gian thực; trực quan hóa vị trí kệ, heatmap mật độ tồn, tự động đổi màu theo tỷ lệ lấp đầy dựa trên dữ liệu tồn kho Supabase và truy xuất nguồn gốc từng cuộn hàng.</p>
+          </div>
+        </div>
+
+        <!-- Card 5: AI OCR Autofill -->
+        <div class="col-md-6 col-lg-4 mb-4">
           <div class="spotlight-card">
             <div class="spotlight-icon icon-purple"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
             <h4 class="icon-purple">AI Vision OCR Tự Động Hóa</h4>
@@ -212,8 +259,26 @@
           </div>
         </div>
 
-        <!-- Card 5: RBAC & data-perm -->
-        <div class="col-md-6 col-lg-3 mb-4">
+        <!-- Card 6: Đối Soát SAP & Auto-Sync -->
+        <div class="col-md-6 col-lg-4 mb-4">
+          <div class="spotlight-card">
+            <div class="spotlight-icon icon-teal"><i class="fa-solid fa-table-columns"></i></div>
+            <h4 class="icon-teal">Đối Soát SAP MB51 & Auto-Sync</h4>
+            <p>Thuật toán tự động so khớp dữ liệu xuất nhập kho thực tế với bảng kế toán SAP MB51 (<code>xg_sap_mb51</code>), tự động phát hiện chênh lệch số liệu và hỗ trợ batch sync hai chiều với Google Sheets.</p>
+          </div>
+        </div>
+
+        <!-- Card 7: Barcode & QR Scanner -->
+        <div class="col-md-6 col-lg-4 mb-4">
+          <div class="spotlight-card">
+            <div class="spotlight-icon icon-blue"><i class="fa-solid fa-camera"></i></div>
+            <h4 class="icon-blue">Trình Quét Barcode Công Nghiệp</h4>
+            <p>Quét mã vạch cuộn và QR vị trí kệ trực tiếp bằng camera di động: Tích hợp trợ lực Zoom, đèn Flash rọi sáng, rung phản hồi (Haptic) và thuật toán nhận diện đa hướng 360 độ siêu nhạy.</p>
+          </div>
+        </div>
+
+        <!-- Card 8: RBAC & data-perm -->
+        <div class="col-md-6 col-lg-4 mb-4">
           <div class="spotlight-card">
             <div class="spotlight-icon icon-amber"><i class="fa-solid fa-user-shield"></i></div>
             <h4 class="icon-amber">Phân Quyền RBAC & data-perm</h4>
@@ -221,8 +286,8 @@
           </div>
         </div>
 
-        <!-- Card 6: 24h Lock -->
-        <div class="col-md-6 col-lg-3 mb-4">
+        <!-- Card 9: 24h Lock -->
+        <div class="col-md-6 col-lg-4 mb-4">
           <div class="spotlight-card">
             <div class="spotlight-icon icon-rose"><i class="fa-solid fa-lock"></i></div>
             <h4 class="icon-rose">Khóa Dữ Liệu Sau 24 Giờ</h4>
@@ -230,21 +295,12 @@
           </div>
         </div>
 
-        <!-- Card 7: PWA & Offline First -->
-        <div class="col-md-6 col-lg-3 mb-4">
+        <!-- Card 10: PWA & Offline First & Desktop EXE -->
+        <div class="col-md-6 col-lg-4 mb-4">
           <div class="spotlight-card">
             <div class="spotlight-icon icon-teal"><i class="fa-solid fa-cloud-arrow-down"></i></div>
-            <h4 class="icon-teal">PWA & Offline-First Caching</h4>
-            <p>Service Worker thông minh lưu cache tài nguyên tĩnh, cho phép nhân viên vận hành kho tra cứu và duyệt dữ liệu liên tục ngay cả khi mạng chập chờn hoặc hoàn toàn mất kết nối Internet.</p>
-          </div>
-        </div>
-
-        <!-- Card 8: Multi-Tab & Event Delegation -->
-        <div class="col-md-6 col-lg-3 mb-4">
-          <div class="spotlight-card">
-            <div class="spotlight-icon icon-orange"><i class="fa-solid fa-layer-group"></i></div>
-            <h4 class="icon-orange">Multi-Tab & Event Delegation</h4>
-            <p>Quản lý nhiều tab làm việc với hỗ trợ kéo thả sắp xếp (Drag-to-sort), đồng bộ URL, giữ nguyên trang phân trang khi thao tác CRUD và ủy quyền sự kiện tập trung chống rò rỉ bộ nhớ DOM.</p>
+            <h4 class="icon-teal">PWA Mobile & Desktop EXE</h4>
+            <p>Service Worker thông minh lưu cache tài nguyên tĩnh, cho phép tra cứu khi mất kết nối mạng; đóng gói EXE cho máy trạm công nghiệp kèm hệ thống Update Checker tự động thông báo phiên bản mới.</p>
           </div>
         </div>
       </div>
@@ -283,35 +339,47 @@
               <thead>
                 <tr>
                   <th>Chỉ Số Kỹ Thuật</th>
-                  <th>Ngưỡng Xanh (Tối ưu)</th>
-                  <th>Ngưỡng Vàng (Ổn định)</th>
-                  <th>Ngưỡng Mở Rộng (Supabase Server)</th>
+                  <th>Phương Thức Cũ / Thủ Công</th>
+                  <th>Ngưỡng Tiêu Chuẩn</th>
+                  <th>Hệ Thống DDC Hiện Tại (Đột Phá)</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td>Tốc độ truy vấn dữ liệu</td>
+                  <td>Tốc độ truy vấn dữ liệu kho</td>
+                  <td>2 - 5 giây (truy vấn chậm)</td>
                   <td>&lt; 1 giây</td>
-                  <td>2 - 4 giây</td>
-                  <td>&lt; 0.5 giây (Server SQL)</td>
+                  <td>&lt; 0.5 giây (Supabase Server Cache B+ Tree)</td>
                 </tr>
                 <tr>
-                  <td>Độ trễ Tìm kiếm & Lọc</td>
-                  <td>Tức thì (0s)</td>
-                  <td>Nhẹ (~0.2s)</td>
-                  <td>Được lập chỉ mục Index SQL</td>
+                  <td>Tải ảnh sự cố HSE & chứng từ</td>
+                  <td>3 - 5 giây (Google Drive dễ nghẽn)</td>
+                  <td>1 - 2 giây</td>
+                  <td>&lt; 0.2 giây (Cloudflare R2 Global CDN)</td>
                 </tr>
                 <tr>
-                  <td>Bộ nhớ Trình duyệt (RAM)</td>
-                  <td>~35MB - 50MB</td>
+                  <td>Đối soát SAP & Kiểm kê hiện trường</td>
+                  <td>Mất nhiều giờ (dò giấy thủ công)</td>
+                  <td>15 - 30 phút</td>
+                  <td>&lt; 30 giây (Quét QR & Đối soát Excel tự động)</td>
+                </tr>
+                <tr>
+                  <td>Độ trễ Tìm kiếm & Lọc dữ liệu</td>
+                  <td>1 - 3 giây</td>
+                  <td>~0.2 giây</td>
+                  <td>Tức thì (0ms - In-memory Filter Index)</td>
+                </tr>
+                <tr>
+                  <td>Bộ nhớ Trình duyệt (RAM máy trạm)</td>
+                  <td>Dễ tràn RAM khi nhiều dòng</td>
                   <td>80MB - 150MB</td>
-                  <td>Luôn cố định (~50MB)</td>
+                  <td>Luôn ổn định (~35MB - 50MB)</td>
                 </tr>
                 <tr>
                   <td>Kiểm soát Giao dịch Đồng thời</td>
-                  <td>Đồng bộ Realtime</td>
+                  <td>Dễ bị ghi đè / âm kho</td>
                   <td>Optimistic Locking</td>
-                  <td>ACID Row Lock & RPC Safe</td>
+                  <td>ACID Row-level Lock & RPC Safe</td>
                 </tr>
               </tbody>
             </table>
@@ -319,8 +387,8 @@
 
           <!-- Supabase Optimization Note Card -->
           <div class="supabase-note-card">
-            <h5><i class="fa-solid fa-lightbulb me-2"></i>Tối Ưu Hóa Toàn Diện với Supabase Data Engine & Stored Procedures</h5>
-            <p>Khi quy mô dữ liệu kho phôi cuộn và xà gồ vượt qua hàng chục nghìn chứng từ, trình duyệt web sẽ gặp giới hạn về bộ nhớ render DOM. Ứng dụng giải quyết triệt để bài toán này bằng việc kết hợp <strong>Server-side Range Pagination</strong>, <strong>B+ Tree Block Cache</strong> và các hàm <strong>PostgreSQL Stored Procedures (RPC)</strong>. Kết quả: Tốc độ tải luôn duy trì ở mức <strong>&lt; 0.5 giây</strong> và tài nguyên phần cứng tại máy trạm luôn được giải phóng tối đa.</p>
+            <h5><i class="fa-solid fa-lightbulb me-2"></i>Tối Ưu Hóa Toàn Diện với Supabase Data Engine, Cloudflare R2 & Bản Đồ Số Hóa 2D</h5>
+            <p>Khi quy mô dữ liệu kho phôi cuộn và xà gồ vượt qua hàng chục nghìn chứng từ, trình duyệt web sẽ gặp giới hạn về bộ nhớ render DOM. Ứng dụng giải quyết triệt để bài toán này bằng việc kết hợp <strong>Server-side Range Pagination</strong>, <strong>B+ Tree Block Cache</strong>, lưu trữ ảnh CDN qua <strong>Cloudflare R2</strong> và các hàm <strong>PostgreSQL Stored Procedures (RPC)</strong>. Kết quả: Tốc độ tải luôn duy trì ở mức <strong>&lt; 0.5 giây</strong> và tài nguyên phần cứng tại máy trạm luôn được giải phóng tối đa.</p>
           </div>
         </div>
       </div>
