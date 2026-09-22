@@ -123,6 +123,81 @@ function columnLetterToNumber(letter) {
 }
 
 // =========================================================================
+// ACTION XỬ LÝ LƯU CHECKLIST KIỂM TRA THIẾT BỊ HÀNG NGÀY
+// =========================================================================
+
+function handleEquipmentChecklistAction(data) {
+  var SPREADSHEET_ID = '1keZMSZqlHFIe7la0H2eR-PDmO2S2ChHo5vn3-H1uoh8'; // ID Google Sheet HSE
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+
+  if (data.action === 'saveEquipmentChecklist') {
+    var sheet = ss.getSheetByName(data.sheetName || 'Checklist kiểm tra thiết bị');
+    if (!sheet) {
+      return { status: 'error', message: 'Không tìm thấy sheet: ' + data.sheetName };
+    }
+
+    var values = sheet.getDataRange().getValues();
+    if (values.length === 0) {
+      return { status: 'error', message: 'Sheet rỗng' };
+    }
+
+    var headers = values[0]; // [Ngày, Người kiểm tra, Dây bẹ 4m, Dây bẹ 6m, Dây xích cẩu 3m, ...]
+    var targetDate = (data.date || '').trim();
+    var inspector = data.inspector || '';
+    var deviceResults = data.deviceResults || {};
+
+    // Tìm dòng theo ngày (Cột A)
+    var targetRowIndex = -1;
+    for (var i = 1; i < values.length; i++) {
+      var rowDate = values[i][0];
+      var rowDateStr = '';
+      if (rowDate instanceof Date) {
+        var d = String(rowDate.getDate()).padStart(2, '0');
+        var m = String(rowDate.getMonth() + 1).padStart(2, '0');
+        var y = rowDate.getFullYear();
+        rowDateStr = d + '/' + m + '/' + y;
+      } else {
+        rowDateStr = String(rowDate).trim();
+      }
+
+      if (rowDateStr === targetDate) {
+        targetRowIndex = i + 1; // 1-based index in Sheet
+        break;
+      }
+    }
+
+    // Chuẩn bị mảng giá trị cho toàn bộ dòng
+    var rowData = [targetDate, inspector];
+    for (var h = 2; h < headers.length; h++) {
+      var devName = headers[h];
+      rowData.push(deviceResults[devName] || '');
+    }
+
+    if (targetRowIndex > 0) {
+      // Cập nhật dòng hiện có
+      sheet.getRange(targetRowIndex, 1, 1, rowData.length).setValues([rowData]);
+      return {
+        status: 'success',
+        message: 'Đã cập nhật kiểm tra thiết bị ngày ' + targetDate,
+        date: targetDate,
+        isNew: false
+      };
+    } else {
+      // Thêm dòng mới
+      sheet.appendRow(rowData);
+      return {
+        status: 'success',
+        message: 'Đã thêm mới kiểm tra thiết bị ngày ' + targetDate,
+        date: targetDate,
+        isNew: true
+      };
+    }
+  }
+
+  return null;
+}
+
+// =========================================================================
 // MẪU TÍCH HỢP VÀO doPost(e) HIỆN TẠI
 // =========================================================================
 /*
@@ -142,7 +217,14 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    // 2. Các xử lý cũ (uploadImageRow dạng base64, v.v...) giữ nguyên ở dưới
+    // 2. Xử lý lưu Checklist kiểm tra thiết bị
+    var chkResult = handleEquipmentChecklistAction(data);
+    if (chkResult !== null) {
+      return ContentService.createTextOutput(JSON.stringify(chkResult))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 3. Các xử lý cũ (uploadImageRow dạng base64, v.v...) giữ nguyên ở dưới
     // ... code cũ của bạn ...
 
   } catch (error) {
@@ -153,3 +235,4 @@ function doPost(e) {
   }
 }
 */
+

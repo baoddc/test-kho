@@ -565,6 +565,8 @@ class DashboardManager {
             this.renderScrapRegs(data);
         } else if (moduleId === 'job-plan' || moduleId === 'clean-schedule') {
             this.renderModuleByMonthGroups(data, moduleId);
+        } else if (moduleId === 'equipment-checklist') {
+            this.renderEquipmentChecklist(data);
         } else {
             if (!data || data.length === 0) {
                 this.modalBody.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 3rem;">Không có dữ liệu hiển thị.</p>';
@@ -1736,7 +1738,514 @@ class DashboardManager {
             if (overlay) overlay.remove();
         }
     }
+
+    // ==========================================================================
+    // EQUIPMENT CHECKLIST BY MONTH METHODS
+    // ==========================================================================
+
+    renderEquipmentChecklist(data) {
+        if (!data || data.length < 2) {
+            this.modalBody.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 3rem;">Không có dữ liệu checklist thiết bị.</p>';
+            return;
+        }
+
+        this.equipmentFullData = data;
+        const headers = data[0];
+        this.equipmentHeaders = headers;
+        // Devices start from column index 2 (after Ngày, Người kiểm tra)
+        this.equipmentDevices = headers.slice(2).filter(h => h && h.trim());
+
+        const rows = data.slice(1);
+        const groups = {};
+
+        rows.forEach((row, idx) => {
+            const dateStr = (row[0] || '').trim();
+            if (!dateStr) return;
+            const parts = dateStr.split(/[-/]/);
+            let monthKey = 'Chưa xác định';
+            if (parts.length === 3) {
+                if (parts[0].length === 4) {
+                    monthKey = `${parts[1].padStart(2, '0')}/${parts[0]}`;
+                } else {
+                    monthKey = `${parts[1].padStart(2, '0')}/${parts[2]}`;
+                }
+            }
+            if (!groups[monthKey]) groups[monthKey] = [];
+            groups[monthKey].push({ row, rowIndex: idx + 2 });
+        });
+
+        this.equipmentGroups = groups;
+        const sortedMonths = Object.keys(groups).sort((a, b) => {
+            const [mA, yA] = a.split('/').map(Number);
+            const [mB, yB] = b.split('/').map(Number);
+            return (yB * 12 + mB) - (yA * 12 + mA);
+        });
+
+        this.equipmentMonths = sortedMonths;
+
+        // Choose current active month
+        const now = new Date();
+        const curMonthKey = `${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+        if (!this.currentChecklistMonth || !groups[this.currentChecklistMonth]) {
+            this.currentChecklistMonth = groups[curMonthKey] ? curMonthKey : (sortedMonths[0] || curMonthKey);
+        }
+
+        this.renderEquipmentWorkspace();
+    }
+
+    selectEquipmentMonth(monthKey) {
+        this.currentChecklistMonth = monthKey;
+        this.renderEquipmentWorkspace();
+    }
+
+    renderEquipmentWorkspace() {
+        const monthKey = this.currentChecklistMonth;
+        const monthItems = this.equipmentGroups[monthKey] || [];
+        const devices = this.equipmentDevices;
+
+        // Calculate stats
+        const totalDays = monthItems.length;
+        let passCount = 0;
+        let failCount = 0;
+
+        monthItems.forEach(item => {
+            const row = item.row;
+            for (let i = 2; i < row.length; i++) {
+                const val = (row[i] || '').trim().toUpperCase();
+                if (val === 'O') passCount++;
+                else if (val === 'X') failCount++;
+            }
+        });
+
+        const totalChecks = passCount + failCount;
+        const safeRate = totalChecks > 0 ? Math.round((passCount / totalChecks) * 100) : 100;
+
+        // Today format for HTML date picker (YYYY-MM-DD)
+        const now = new Date();
+        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const currentUser = localStorage.getItem('currentUser') || 'Nguyễn Văn Học';
+
+        let html = `
+            <!-- Month Selector Tabs -->
+            <div class="chk-month-tabs">
+        `;
+
+        this.equipmentMonths.forEach(m => {
+            const isActive = m === monthKey ? 'active' : '';
+            const count = (this.equipmentGroups[m] || []).length;
+            html += `
+                <button type="button" class="chk-month-tab ${isActive}" onclick="app.selectEquipmentMonth('${m}')">
+                    Tháng ${m} (${count} ngày)
+                </button>
+            `;
+        });
+
+        html += `
+            </div>
+
+            <!-- KPI Summary Cards -->
+            <div class="chk-kpi-grid">
+                <div class="chk-kpi-card">
+                    <div class="chk-kpi-icon icon-blue">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    </div>
+                    <div>
+                        <div class="chk-kpi-val">${totalDays}</div>
+                        <div class="chk-kpi-label">Số ngày đã kiểm tra (T${monthKey})</div>
+                    </div>
+                </div>
+                <div class="chk-kpi-card">
+                    <div class="chk-kpi-icon icon-green">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg>
+                    </div>
+                    <div>
+                        <div class="chk-kpi-val">${safeRate}%</div>
+                        <div class="chk-kpi-label">Tỷ lệ đạt chuẩn an toàn</div>
+                    </div>
+                </div>
+                <div class="chk-kpi-card">
+                    <div class="chk-kpi-icon icon-red">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    </div>
+                    <div>
+                        <div class="chk-kpi-val">${failCount}</div>
+                        <div class="chk-kpi-label">Điểm không đạt (X)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Daily Inspection Form Card -->
+            <div class="chk-form-card" id="chkFormCard">
+                <form id="equipmentChecklistForm" onsubmit="app.handleEquipmentChecklistSubmit(event)">
+                    <div class="chk-form-header">
+                        <div class="chk-form-title">
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                            <span id="chkFormModeTitle">Phiếu Ghi Nhận Kiểm Tra Thiết Bị Hàng Ngày</span>
+                        </div>
+                        <button type="button" class="btn-edit-row" onclick="app.resetEquipmentForm()" style="display:none;" id="btnCancelEdit">
+                            Hủy chỉnh sửa
+                        </button>
+                    </div>
+
+                    <div class="chk-form-inputs">
+                        <div class="chk-input-group">
+                            <label for="chkDateInput">📅 Ngày kiểm tra</label>
+                            <input type="date" id="chkDateInput" class="chk-input-control" value="${todayStr}" required>
+                        </div>
+                        <div class="chk-input-group">
+                            <label for="chkInspectorInput">👤 Người kiểm tra</label>
+                            <input type="text" id="chkInspectorInput" class="chk-input-control" value="${currentUser}" placeholder="Họ và tên..." required>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 0.75rem; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;">
+                        <span>⚙️ ĐÁNH GIÁ TÌNH TRẠNG THIẾT BỊ:</span>
+                        <button type="button" class="btn-quick-pass" onclick="app.quickCheckAllPass()">⚡ Đánh dấu tất cả ĐẠT</button>
+                    </div>
+
+                    <div class="chk-device-list" id="chkDeviceList">
+        `;
+
+        devices.forEach(dev => {
+            const devId = encodeURIComponent(dev);
+            html += `
+                <div class="chk-device-item">
+                    <div class="chk-device-name">🔧 ${dev}</div>
+                    <div class="chk-toggle-group" data-device="${dev}">
+                        <input type="hidden" name="device_${devId}" id="deviceVal_${devId}" value="O">
+                        <button type="button" class="chk-toggle-btn btn-pass active" id="btnPass_${devId}" onclick="app.setDeviceStatus('${devId}', 'O')">
+                            ✓ Đạt (O)
+                        </button>
+                        <button type="button" class="chk-toggle-btn btn-fail" id="btnFail_${devId}" onclick="app.setDeviceStatus('${devId}', 'X')">
+                            ✕ Không đạt (X)
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `
+                    </div>
+
+                    <div class="chk-form-actions">
+                        <div style="font-size: 0.82rem; color: var(--text-muted);">
+                            * Dữ liệu đồng bộ trực tiếp với Google Sheet "Checklist kiểm tra thiết bị".
+                        </div>
+                        <button type="submit" class="btn-chk-save" id="btnSaveChecklist">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                            <span>Lưu kết quả kiểm tra</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Table of Month History -->
+            <div class="workspace-search-wrap" style="margin-top: 2rem;">
+                <input type="text" id="chkTableSearch" class="workspace-search-input" placeholder="🔍 Lọc tìm kiếm theo ngày, người kiểm tra...">
+                <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">
+                    Tháng ${monthKey}: <strong style="color: var(--primary);">${monthItems.length}</strong> ngày ghi nhận
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="hse-table" id="equipmentChecklistTable">
+                    <thead>
+                        <tr>
+                            <th style="min-width: 140px;">Ngày</th>
+                            <th style="min-width: 160px;">Người kiểm tra</th>
+        `;
+
+        devices.forEach(dev => {
+            html += `<th style="text-align: center; min-width: 120px;">${dev}</th>`;
+        });
+
+        html += `
+                            <th style="text-align: center; min-width: 90px;">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        // Sort items by date ascending
+        const sortedItems = [...monthItems].sort((a, b) => {
+            const parseDate = (dStr) => {
+                const p = (dStr || '').split(/[-/]/);
+                if (p.length === 3) {
+                    if (p[0].length === 4) return new Date(p[0], p[1] - 1, p[2]);
+                    return new Date(p[2], p[1] - 1, p[0]);
+                }
+                return new Date(0);
+            };
+            return parseDate(a.row[0]) - parseDate(b.row[0]);
+        });
+
+        if (sortedItems.length === 0) {
+            html += `<tr><td colspan="${devices.length + 3}" style="text-align: center; color: var(--text-muted); padding: 2rem;">Chưa có dữ liệu kiểm tra trong tháng này. Hãy nhập phiếu kiểm tra ở trên!</td></tr>`;
+        } else {
+            sortedItems.forEach(item => {
+                const row = item.row;
+                const rawDate = row[0] || '';
+                const inspector = row[1] || '';
+
+                // Calculate weekday
+                let dateDisplay = rawDate;
+                const parts = rawDate.split(/[-/]/);
+                if (parts.length === 3) {
+                    let dObj;
+                    if (parts[0].length === 4) dObj = new Date(parts[0], parts[1] - 1, parts[2]);
+                    else dObj = new Date(parts[2], parts[1] - 1, parts[0]);
+                    if (!isNaN(dObj.getTime())) {
+                        const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+                        dateDisplay = `${rawDate} <span style="color: var(--text-muted); font-size: 0.8rem;">(${dayNames[dObj.getDay()]})</span>`;
+                    }
+                }
+
+                // Prepare device results for edit json
+                const devObj = {};
+                devices.forEach((dev, dIdx) => {
+                    devObj[dev] = (row[dIdx + 2] || '').trim().toUpperCase();
+                });
+                const devDataAttr = encodeURIComponent(JSON.stringify(devObj));
+
+                html += `
+                    <tr>
+                        <td style="font-weight: 600;">${dateDisplay}</td>
+                        <td>${inspector}</td>
+                `;
+
+                devices.forEach((dev, dIdx) => {
+                    const val = (row[dIdx + 2] || '').trim().toUpperCase();
+                    let badgeHtml = '';
+                    if (val === 'O') {
+                        badgeHtml = `<span class="badge-chk-pass">✓ Đạt</span>`;
+                    } else if (val === 'X') {
+                        badgeHtml = `<span class="badge-chk-fail">✕ Hỏng</span>`;
+                    } else {
+                        badgeHtml = `<span class="badge-chk-na">-</span>`;
+                    }
+                    html += `<td style="text-align: center;">${badgeHtml}</td>`;
+                });
+
+                html += `
+                        <td style="text-align: center;">
+                            <button type="button" class="btn-edit-row" onclick="app.populateChecklistForEdit('${rawDate}', '${inspector}', '${devDataAttr}')" title="Sửa dữ liệu ngày này">
+                                ✏️ Sửa
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        this.modalBody.innerHTML = html;
+
+        // Attach quick filter
+        const searchInput = document.getElementById('chkTableSearch');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                const term = e.target.value.toLowerCase().trim();
+                const table = document.getElementById('equipmentChecklistTable');
+                if (!table) return;
+                const trs = table.querySelectorAll('tbody tr');
+                trs.forEach(tr => {
+                    const text = tr.textContent.toLowerCase();
+                    tr.style.display = text.includes(term) ? '' : 'none';
+                });
+            });
+        }
+    }
+
+    setDeviceStatus(devId, status) {
+        const input = document.getElementById(`deviceVal_${devId}`);
+        const btnPass = document.getElementById(`btnPass_${devId}`);
+        const btnFail = document.getElementById(`btnFail_${devId}`);
+
+        if (input) input.value = status;
+        if (btnPass && btnFail) {
+            if (status === 'O') {
+                btnPass.classList.add('active');
+                btnFail.classList.remove('active');
+            } else {
+                btnPass.classList.remove('active');
+                btnFail.classList.add('active');
+            }
+        }
+    }
+
+    quickCheckAllPass() {
+        if (!this.equipmentDevices) return;
+        this.equipmentDevices.forEach(dev => {
+            const devId = encodeURIComponent(dev);
+            this.setDeviceStatus(devId, 'O');
+        });
+    }
+
+    populateChecklistForEdit(rawDate, inspector, encodedDevData) {
+        const dateInput = document.getElementById('chkDateInput');
+        const inspectorInput = document.getElementById('chkInspectorInput');
+        const titleEl = document.getElementById('chkFormModeTitle');
+        const btnCancel = document.getElementById('btnCancelEdit');
+
+        if (rawDate && dateInput) {
+            // Convert DD/MM/YYYY to YYYY-MM-DD
+            const parts = rawDate.split(/[-/]/);
+            if (parts.length === 3) {
+                let y, m, d;
+                if (parts[0].length === 4) { y = parts[0]; m = parts[1]; d = parts[2]; }
+                else { y = parts[2]; m = parts[1]; d = parts[0]; }
+                dateInput.value = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+            }
+        }
+
+        if (inspector && inspectorInput) {
+            inspectorInput.value = inspector;
+        }
+
+        if (encodedDevData) {
+            try {
+                const devObj = JSON.parse(decodeURIComponent(encodedDevData));
+                this.equipmentDevices.forEach(dev => {
+                    const devId = encodeURIComponent(dev);
+                    const val = devObj[dev] || 'O';
+                    this.setDeviceStatus(devId, val);
+                });
+            } catch (err) {
+                console.warn('Error parsing dev data for edit:', err);
+            }
+        }
+
+        if (titleEl) titleEl.textContent = `✏️ Chỉnh Sửa Kiểm Tra Ngày ${rawDate}`;
+        if (btnCancel) btnCancel.style.display = 'inline-block';
+
+        const formCard = document.getElementById('chkFormCard');
+        if (formCard) {
+            formCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            formCard.style.borderColor = 'var(--primary)';
+        }
+    }
+
+    resetEquipmentForm() {
+        const now = new Date();
+        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const dateInput = document.getElementById('chkDateInput');
+        const inspectorInput = document.getElementById('chkInspectorInput');
+        const titleEl = document.getElementById('chkFormModeTitle');
+        const btnCancel = document.getElementById('btnCancelEdit');
+
+        if (dateInput) dateInput.value = todayStr;
+        if (inspectorInput) inspectorInput.value = localStorage.getItem('currentUser') || 'Nguyễn Văn Học';
+        if (titleEl) titleEl.textContent = 'Phiếu Ghi Nhận Kiểm Tra Thiết Bị Hàng Ngày';
+        if (btnCancel) btnCancel.style.display = 'none';
+
+        this.quickCheckAllPass();
+    }
+
+    async handleEquipmentChecklistSubmit(event) {
+        event.preventDefault();
+        const currentUser = localStorage.getItem('currentUser');
+        if (!currentUser) {
+            this.showPermissionDeniedModal();
+            return;
+        }
+
+        const dateInput = document.getElementById('chkDateInput');
+        const inspectorInput = document.getElementById('chkInspectorInput');
+        const btnSave = document.getElementById('btnSaveChecklist');
+
+        if (!dateInput || !inspectorInput) return;
+
+        const dateVal = dateInput.value; // YYYY-MM-DD
+        const inspector = inspectorInput.value.trim();
+
+        if (!dateVal) {
+            alert('Vui lòng chọn ngày kiểm tra');
+            return;
+        }
+        if (!inspector) {
+            alert('Vui lòng nhập người kiểm tra');
+            return;
+        }
+
+        // Format to DD/MM/YYYY
+        const [y, m, d] = dateVal.split('-');
+        const dateFormatted = `${d}/${m}/${y}`;
+        const monthKey = `${m}/${y}`;
+
+        // Collect device results
+        const deviceResults = {};
+        this.equipmentDevices.forEach(dev => {
+            const devId = encodeURIComponent(dev);
+            const input = document.getElementById(`deviceVal_${devId}`);
+            deviceResults[dev] = input ? input.value : 'O';
+        });
+
+        // Set button loading
+        const origBtnText = btnSave.innerHTML;
+        btnSave.disabled = true;
+        btnSave.innerHTML = `<div class="spinner" style="width: 16px; height: 16px; border-width: 2px;"></div> Đang lưu...`;
+
+        try {
+            const payload = {
+                action: 'saveEquipmentChecklist',
+                sheetName: 'Checklist kiểm tra thiết bị',
+                date: dateFormatted,
+                inspector: inspector,
+                deviceResults: deviceResults
+            };
+
+            if (CONFIG.APPS_SCRIPT_URL_HSE) {
+                const bodyParams = new URLSearchParams();
+                bodyParams.set('contents', JSON.stringify(payload));
+
+                const response = await fetch(CONFIG.APPS_SCRIPT_URL_HSE, {
+                    method: 'POST',
+                    body: bodyParams,
+                    redirect: 'follow'
+                });
+                const result = await response.json();
+                console.log('Save checklist response:', result);
+                if (result.status !== 'success') {
+                    throw new Error(result.message || 'Lỗi lưu dữ liệu');
+                }
+            }
+
+            // Optimistic update local data
+            const rowIndex = this.equipmentFullData.findIndex((r, idx) => idx > 0 && r[0] === dateFormatted);
+            const newRow = [dateFormatted, inspector];
+            this.equipmentDevices.forEach(dev => {
+                newRow.push(deviceResults[dev] || '');
+            });
+
+            if (rowIndex > 0) {
+                this.equipmentFullData[rowIndex] = newRow;
+            } else {
+                this.equipmentFullData.push(newRow);
+            }
+
+            // Re-render checklist with current month
+            this.currentChecklistMonth = monthKey;
+            this.renderEquipmentChecklist(this.equipmentFullData);
+
+            alert(`✅ Đã lưu kết quả kiểm tra ngày ${dateFormatted} thành công!`);
+        } catch (err) {
+            console.error('Save checklist error:', err);
+            alert('Lỗi khi lưu kết quả kiểm tra: ' + err.message);
+        } finally {
+            if (btnSave) {
+                btnSave.disabled = false;
+                btnSave.innerHTML = origBtnText;
+            }
+        }
+    }
 }
 
 // Start Application
 const app = new DashboardManager();
+window.app = app;
+
