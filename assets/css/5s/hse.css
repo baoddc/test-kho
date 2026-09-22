@@ -1175,3 +1175,410 @@ h6 {
     color: #fff;
     border-color: var(--primary);
 }
+
+/* ==========================================================================
+   MODULE: 5S RACE (THI ĐUA 5S & BẢNG XẾP HẠNG LEADERBOARD)
+   ========================================================================== */
+.race-tab-switch {
+    display: inline-flex;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 1.5rem;
+    gap: 4px;
+}
+.race-tab-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    padding: 0.55rem 1.25rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.race-tab-btn.active {
+    background: var(--primary);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.race-podium-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+    align-items: end;
+    margin-bottom: 2rem;
+}
+.race-podium-card {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: var(--glass-blur);
+    border-radius: 16px;
+    padding: 1.5rem 1.25rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    transition: var(--transition);
+}
+.race-podium-card:hover {
+    transform: translateY(-4px);
+}
+.podium-rank-1 {
+    order: 2;
+    border-color: rgba(245, 158, 11, 0.5);
+    background: linear-gradient(180deg, rgba(245, 158, 11, 0.12) 0%, rgba(15, 23, 42, 0.7) 100%);
+    box-shadow: 0 12px 30px rgba(245, 158, 11, 0.15);
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+}
+.podium-rank-2 {
+    order: 1;
+    border-color: rgba(148, 163, 184, 0.4);
+    background: linear-gradient(180deg, rgba(148, 163, 184, 0.08) 0%, rgba(15, 23, 42, 0.7) 100%);
+}
+.podium-rank-3 {
+    order: 3;
+    border-color: rgba(217, 119, 6, 0.35);
+    background: linear-gradient(180deg, rgba(217, 119, 6, 0.08) 0%, rgba(15, 23, 42, 0.7) 100%);
+}
+
+.podium-crown {
+    font-size: 2.2rem;
+    margin-bottom: 0.3rem;
+    display: block;
+    animation: floatCrown 3s ease-in-out infinite;
+}
+@keyframes floatCrown {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+}
+.podium-badge {
+    display: inline-block;
+    padding: 0.2rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+}
+.badge-gold { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
+.badge-silver { background: rgba(148, 163, 184, 0.2); color: #e2e8f0; border: 1px solid rgba(148, 163, 184, 0.4); }
+.badge-bronze { background: rgba(217, 119, 6, 0.2); color: #f59e0b; border: 1px solid rgba(217, 119, 6, 0.4); }
+
+.podium-area-name {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 0.4rem;
+}
+.podium-score {
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+}
+.podium-rank-1 .podium-score { color: #fbbf24; text-shadow: 0 0 15px rgba(245, 158, 11, 0.4); }
+.podium-rank-2 .podium-score { color: #e2e8f0; }
+.podium-rank-3 .podium-score { color: #f59e0b; }
+
+.race-score-bar-wrap {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+    overflow: hidden;
+    position: relative;
+}
+.race-score-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.bar-excellent { background: linear-gradient(90deg, #10b981, #34d399); }
+.bar-good { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+.bar-warning { background: linear-gradient(90deg, #ef4444, #f87171); }
+
+.trend-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+.trend-up { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+.trend-down { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+.trend-same { background: rgba(148, 163, 184, 0.15); color: #94a3b8; }
+
+/* ==========================================================================
+   MODULE: TOOLS & INVENTORY (CCDC & TIÊU CHUẨN LOẠI BỎ)
+   ========================================================================== */
+.tools-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+.tools-filter-group {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+.tool-filter-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-muted);
+    padding: 0.4rem 0.85rem;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+}
+.tool-filter-btn.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}
+.view-mode-toggle {
+    display: inline-flex;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 2px;
+}
+.view-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    padding: 0.35rem 0.65rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+}
+.view-btn.active {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+}
+
+.tools-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.25rem;
+}
+.tool-item-card {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: var(--glass-blur);
+    border-radius: 14px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: var(--transition);
+}
+.tool-item-card:hover {
+    border-color: rgba(16, 185, 129, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+}
+.tool-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.75rem;
+}
+.tool-card-title {
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: var(--text-main);
+    margin: 0;
+}
+.tool-code-badge {
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+.tool-meta-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 0.35rem;
+}
+
+/* Disposal Standards Cards */
+.disposal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.25rem;
+}
+.disposal-card {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 14px;
+    padding: 1.35rem;
+    transition: var(--transition);
+}
+.disposal-card:hover {
+    border-color: rgba(239, 68, 68, 0.4);
+    transform: translateY(-2px);
+}
+.criterion-box {
+    border-radius: 8px;
+    padding: 0.75rem;
+    margin-top: 0.75rem;
+    font-size: 0.85rem;
+}
+.criterion-danger {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    color: #fca5a5;
+}
+.criterion-warning {
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.25);
+    color: #fde68a;
+}
+
+/* ==========================================================================
+   MODULE: SCRAP CATEGORIES (PHÂN LOẠI PHẾ LIỆU MÃ MÀU)
+   ========================================================================== */
+.scrap-matrix-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+.scrap-group-card {
+    background: var(--glass-bg);
+    border-radius: 16px;
+    padding: 1.5rem;
+    border: 1px solid var(--glass-border);
+    position: relative;
+    overflow: hidden;
+    transition: var(--transition);
+}
+.scrap-group-card:hover {
+    transform: translateY(-3px);
+}
+.scrap-yellow {
+    border-color: rgba(245, 158, 11, 0.4);
+    background: linear-gradient(180deg, rgba(245, 158, 11, 0.06) 0%, rgba(15, 23, 42, 0.6) 100%);
+}
+.scrap-blue {
+    border-color: rgba(59, 130, 246, 0.4);
+    background: linear-gradient(180deg, rgba(59, 130, 246, 0.06) 0%, rgba(15, 23, 42, 0.6) 100%);
+}
+.scrap-red {
+    border-color: rgba(239, 68, 68, 0.4);
+    background: linear-gradient(180deg, rgba(239, 68, 68, 0.06) 0%, rgba(15, 23, 42, 0.6) 100%);
+}
+.scrap-gray {
+    border-color: rgba(148, 163, 184, 0.4);
+    background: linear-gradient(180deg, rgba(148, 163, 184, 0.06) 0%, rgba(15, 23, 42, 0.6) 100%);
+}
+
+.scrap-head {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+.scrap-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 999px;
+    box-shadow: 0 0 10px currentColor;
+}
+.scrap-list-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.scrap-item-row {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+}
+
+/* ==========================================================================
+   MODULE: JOB PLAN & CLEAN SCHEDULE (KẾ HOẠCH & LỊCH TRỰC)
+   ========================================================================== */
+.duty-spotlight-card {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(59, 130, 246, 0.08) 100%);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+.deadline-badge-overdue {
+    background: rgba(239, 68, 68, 0.18);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    padding: 0.2rem 0.55rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+.deadline-badge-soon {
+    background: rgba(245, 158, 11, 0.18);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    padding: 0.2rem 0.55rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+.deadline-badge-done {
+    background: rgba(16, 185, 129, 0.18);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    padding: 0.2rem 0.55rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+@media (max-width: 768px) {
+    .race-podium-grid {
+        grid-template-columns: 1fr;
+    }
+    .podium-rank-1 { order: 1; }
+    .podium-rank-2 { order: 2; }
+    .podium-rank-3 { order: 3; }
+}
+

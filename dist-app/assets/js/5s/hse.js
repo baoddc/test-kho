@@ -559,12 +559,22 @@ class DashboardManager {
     }
 
     renderModalContent(moduleId, data) {
-        if (moduleId === 'wh-photos' || moduleId === 'clean-photos' || moduleId === '5s-race') {
+        if (moduleId === 'wh-photos' || moduleId === 'clean-photos') {
             this.renderGallery(data, moduleId);
+        } else if (moduleId === '5s-race') {
+            this.renderRaceLeaderboard(data);
+        } else if (moduleId === 'tools-inventory') {
+            this.renderToolsInventory(data);
+        } else if (moduleId === 'disposal-standards') {
+            this.renderDisposalStandards(data);
+        } else if (moduleId === 'scrap-categories') {
+            this.renderScrapCategories(data);
         } else if (moduleId === 'scrap-regs') {
             this.renderScrapRegs(data);
-        } else if (moduleId === 'job-plan' || moduleId === 'clean-schedule') {
-            this.renderModuleByMonthGroups(data, moduleId);
+        } else if (moduleId === 'job-plan') {
+            this.renderJobPlanWorkspace(data);
+        } else if (moduleId === 'clean-schedule') {
+            this.renderCleanScheduleWorkspace(data);
         } else if (moduleId === 'equipment-checklist') {
             this.renderEquipmentChecklist(data);
         } else {
@@ -575,6 +585,1160 @@ class DashboardManager {
             this.renderTable(data);
         }
     }
+
+    // ==========================================================================
+    // JOB PLAN METHODS (KẾ HOẠCH CÔNG VIỆC)
+    // ==========================================================================
+
+    renderJobPlanWorkspace(data) {
+        if (!data || data.length === 0) {
+            this.modalBody.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 3rem;">Không có dữ liệu kế hoạch công việc.</p>';
+            return;
+        }
+
+        this.jobPlanRawData = data;
+        const headers = data[0] || [];
+        const rows = data.slice(1);
+
+        const titleIdx = headers.findIndex(h => /tiêu đề|công việc|nội dung|hạng mục/i.test(h || ''));
+        const descIdx = headers.findIndex(h => /mô tả|chi tiết/i.test(h || ''));
+        const assignIdx = headers.findIndex(h => /người phụ trách|phụ trách|người thực hiện|nhân sự/i.test(h || ''));
+        const dateIdx = headers.findIndex(h => /hạn định|ngày|thời hạn|deadline/i.test(h || ''));
+        const statusIdx = headers.findIndex(h => /trạng thái|tình trạng|tiến độ/i.test(h || ''));
+
+        if (titleIdx === -1 && dateIdx === -1) {
+            this.renderTable(data);
+            return;
+        }
+
+        // Group rows by month
+        const groups = {};
+        rows.forEach(r => {
+            const dateStr = dateIdx !== -1 ? (r[dateIdx] || '') : '';
+            let monthKey = 'Chưa xác định';
+            const parts = dateStr.split(/[-/]/);
+            if (parts.length === 3) {
+                if (parts[0].length === 4) monthKey = `${parts[1].padStart(2, '0')}/${parts[0]}`;
+                else monthKey = `${parts[1].padStart(2, '0')}/${parts[2]}`;
+            }
+            if (!groups[monthKey]) groups[monthKey] = [];
+            groups[monthKey].push(r);
+        });
+
+        const sortedMonths = Object.keys(groups).sort((a, b) => {
+            const [mA, yA] = a.split('/').map(Number);
+            const [mB, yB] = b.split('/').map(Number);
+            return (yB * 12 + mB) - (yA * 12 + mA);
+        });
+
+        const now = new Date();
+        const curMonthKey = `${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+        if (!this.currentJobPlanMonth || !groups[this.currentJobPlanMonth]) {
+            this.currentJobPlanMonth = groups[curMonthKey] ? curMonthKey : (sortedMonths[0] || curMonthKey);
+        }
+
+        this.jobPlanGroups = groups;
+        this.jobPlanMonths = sortedMonths;
+        this.jobPlanHeaders = headers;
+        this.jobPlanColIndices = { titleIdx, descIdx, assignIdx, dateIdx, statusIdx };
+        this.currentJobPlanStatusFilter = 'all';
+        this.currentJobPlanAssigneeFilter = 'all';
+
+        this.renderJobPlanMonthView();
+    }
+
+    selectJobPlanMonth(monthKey) {
+        this.currentJobPlanMonth = monthKey;
+        this.renderJobPlanMonthView();
+    }
+
+    renderJobPlanMonthView() {
+        const monthKey = this.currentJobPlanMonth;
+        const rows = this.jobPlanGroups[monthKey] || [];
+        const { titleIdx, descIdx, assignIdx, dateIdx, statusIdx } = this.jobPlanColIndices;
+
+        const statusFilter = this.currentJobPlanStatusFilter || 'all';
+        const assigneeFilter = this.currentJobPlanAssigneeFilter || 'all';
+
+        // Extract distinct assignees
+        const assignees = Array.from(new Set(rows.map(r => assignIdx !== -1 ? (r[assignIdx] || '').trim() : '').filter(Boolean)));
+
+        // Today for deadline calculations
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Compute KPIs for selected month
+        let completedCount = 0;
+        let inProgressCount = 0;
+        let overdueCount = 0;
+
+        const parsedItems = rows.map((r, idx) => {
+            const title = titleIdx !== -1 ? (r[titleIdx] || `Công việc ${idx + 1}`) : `Công việc ${idx + 1}`;
+            const desc = descIdx !== -1 ? (r[descIdx] || '') : '';
+            const assignee = assignIdx !== -1 ? (r[assignIdx] || 'Chưa giao') : 'Chưa giao';
+            const dateStr = dateIdx !== -1 ? (r[dateIdx] || '') : '';
+            const status = statusIdx !== -1 ? (r[statusIdx] || 'Đang thực hiện') : 'Đang thực hiện';
+
+            // Calculate deadline status
+            let isOverdue = false;
+            let isSoon = false;
+            let daysDiff = 0;
+
+            if (dateStr) {
+                const parts = dateStr.split(/[-/]/);
+                let dObj;
+                if (parts.length === 3) {
+                    if (parts[0].length === 4) dObj = new Date(parts[0], parts[1] - 1, parts[2]);
+                    else dObj = new Date(parts[2], parts[1] - 1, parts[0]);
+                }
+                if (dObj && !isNaN(dObj.getTime())) {
+                    dObj.setHours(0, 0, 0, 0);
+                    const diffTime = dObj.getTime() - today.getTime();
+                    daysDiff = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                    const isDone = /hoàn thành|xong|đã xong|done/i.test(status);
+                    if (!isDone) {
+                        if (daysDiff < 0) isOverdue = true;
+                        else if (daysDiff <= 2) isSoon = true;
+                    }
+                }
+            }
+
+            if (/hoàn thành|xong|đã xong|done/i.test(status)) completedCount++;
+            else if (isOverdue) overdueCount++;
+            else inProgressCount++;
+
+            return { title, desc, assignee, dateStr, status, isOverdue, isSoon, daysDiff, raw: r };
+        });
+
+        const totalTasks = rows.length;
+        const completeRate = totalTasks > 0 ? Math.round((completedCount / totalTasks) * 100) : 0;
+
+        // Filter items
+        const filtered = parsedItems.filter(it => {
+            let matchStatus = true;
+            if (statusFilter === 'done') matchStatus = /hoàn thành|xong/i.test(it.status);
+            else if (statusFilter === 'in_progress') matchStatus = /đang thực hiện|đang làm/i.test(it.status) && !it.isOverdue;
+            else if (statusFilter === 'overdue') matchStatus = it.isOverdue || /quá hạn/i.test(it.status);
+
+            const matchAssignee = assigneeFilter === 'all' || it.assignee === assigneeFilter;
+            return matchStatus && matchAssignee;
+        });
+
+        let html = `
+            <!-- Month Selector Tabs -->
+            <div class="chk-month-tabs">
+        `;
+
+        this.jobPlanMonths.forEach(m => {
+            const isActive = m === monthKey ? 'active' : '';
+            const count = (this.jobPlanGroups[m] || []).length;
+            html += `
+                <button type="button" class="chk-month-tab ${isActive}" onclick="app.selectJobPlanMonth('${m}')">
+                    Tháng ${m} (${count} việc)
+                </button>
+            `;
+        });
+
+        html += `
+            </div>
+
+            <!-- KPI Summary Cards -->
+            <div class="chk-kpi-grid">
+                <div class="chk-kpi-card">
+                    <div class="chk-kpi-icon icon-blue">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+                    </div>
+                    <div>
+                        <div class="chk-kpi-val">${totalTasks} <span style="font-size: 0.9rem; font-weight: 500; color: var(--text-muted);">(T${monthKey})</span></div>
+                        <div class="chk-kpi-label">Tổng đầu mục công việc</div>
+                    </div>
+                </div>
+                <div class="chk-kpi-card">
+                    <div class="chk-kpi-icon icon-green">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                    </div>
+                    <div>
+                        <div class="chk-kpi-val">${completeRate}% <span style="font-size: 0.9rem; font-weight: 500; color: var(--text-muted);">(${completedCount} xong)</span></div>
+                        <div class="chk-kpi-label">Tỷ lệ hoàn thành nhiệm vụ</div>
+                    </div>
+                </div>
+                <div class="chk-kpi-card">
+                    <div class="chk-kpi-icon icon-red">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    </div>
+                    <div>
+                        <div class="chk-kpi-val">${overdueCount}</div>
+                        <div class="chk-kpi-label">Công việc quá hạn / Cần xử lý</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Toolbar & Filter -->
+            <div class="tools-toolbar">
+                <div class="tools-filter-group">
+                    <button class="tool-filter-btn ${statusFilter === 'all' ? 'active' : ''}" onclick="app.setJobPlanFilter('all', '${assigneeFilter}')">Tất cả (${totalTasks})</button>
+                    <button class="tool-filter-btn ${statusFilter === 'in_progress' ? 'active' : ''}" onclick="app.setJobPlanFilter('in_progress', '${assigneeFilter}')">Đang làm (${inProgressCount})</button>
+                    <button class="tool-filter-btn ${statusFilter === 'done' ? 'active' : ''}" onclick="app.setJobPlanFilter('done', '${assigneeFilter}')">Hoàn thành (${completedCount})</button>
+                    <button class="tool-filter-btn ${statusFilter === 'overdue' ? 'active' : ''}" onclick="app.setJobPlanFilter('overdue', '${assigneeFilter}')" style="color: ${overdueCount > 0 ? '#f87171' : ''};">Quá hạn (${overdueCount})</button>
+                </div>
+
+                ${assignees.length > 0 ? `
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600;">Phụ trách:</span>
+                        <select class="chk-input-control" style="padding: 0.35rem 0.75rem; font-size: 0.85rem; width: auto;" onchange="app.setJobPlanFilter('${statusFilter}', this.value)">
+                            <option value="all" ${assigneeFilter === 'all' ? 'selected' : ''}>Tất cả nhân sự</option>
+                            ${assignees.map(a => `<option value="${a}" ${assigneeFilter === a ? 'selected' : ''}>${a}</option>`).join('')}
+                        </select>
+                    </div>
+                ` : ''}
+            </div>
+
+            <div class="workspace-search-wrap">
+                <input type="text" id="jobPlanSearchInput" class="workspace-search-input" placeholder="🔍 Lọc nhanh theo tiêu đề công việc, mô tả, người phụ trách...">
+                <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">
+                    Hiển thị: <strong style="color: var(--primary);">${filtered.length}</strong> đầu việc
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="hse-table" id="jobPlanTable">
+                    <thead>
+                        <tr>
+                            <th style="min-width: 220px;">Tiêu đề công việc</th>
+                            <th style="min-width: 240px;" class="col-content-wide">Nội dung / Mô tả</th>
+                            <th style="min-width: 150px;">Người phụ trách</th>
+                            <th style="min-width: 140px;">Hạn định</th>
+                            <th style="width: 140px; text-align: center;">Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        if (filtered.length === 0) {
+            html += `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 2.5rem;">Không có công việc nào phù hợp với bộ lọc hiện tại.</td></tr>`;
+        } else {
+            filtered.forEach(it => {
+                let statusBadge = '<span class="status-badge badge-warning">Đang thực hiện</span>';
+                if (/hoàn thành|xong/i.test(it.status)) {
+                    statusBadge = '<span class="deadline-badge-done">✓ Hoàn thành</span>';
+                } else if (it.isOverdue || /quá hạn/i.test(it.status)) {
+                    const lateText = it.daysDiff < 0 ? `Trễ ${Math.abs(it.daysDiff)} ngày` : 'Quá hạn';
+                    statusBadge = `<span class="deadline-badge-overdue">⚠️ ${lateText}</span>`;
+                } else if (it.isSoon) {
+                    statusBadge = `<span class="deadline-badge-soon">⏳ Hạn: ${it.daysDiff === 0 ? 'Hôm nay' : (it.daysDiff === 1 ? 'Ngày mai' : '2 ngày nữa')}</span>`;
+                }
+
+                html += `
+                    <tr>
+                        <td style="font-weight: 600; color: var(--text-main);">${it.title}</td>
+                        <td class="col-content-wide" style="color: var(--text-muted); font-size: 0.88rem;">${it.desc}</td>
+                        <td style="font-weight: 500;">${it.assignee}</td>
+                        <td>${it.dateStr}</td>
+                        <td style="text-align: center;">${statusBadge}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        this.modalBody.innerHTML = html;
+
+        // Search filter
+        const sInput = document.getElementById('jobPlanSearchInput');
+        if (sInput) {
+            sInput.addEventListener('input', (e) => {
+                const term = e.target.value.toLowerCase().trim();
+                const trs = document.querySelectorAll('#jobPlanTable tbody tr');
+                trs.forEach(tr => {
+                    tr.style.display = tr.textContent.toLowerCase().includes(term) ? '' : 'none';
+                });
+            });
+        }
+    }
+
+    setJobPlanFilter(status, assignee) {
+        this.currentJobPlanStatusFilter = status;
+        this.currentJobPlanAssigneeFilter = assignee;
+        this.renderJobPlanMonthView();
+    }
+
+    // ==========================================================================
+    // CLEAN SCHEDULE METHODS (LỊCH VỆ SINH)
+    // ==========================================================================
+
+    renderCleanScheduleWorkspace(data) {
+        if (!data || data.length === 0) {
+            this.modalBody.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 3rem;">Không có dữ liệu lịch vệ sinh.</p>';
+            return;
+        }
+
+        this.cleanScheduleRawData = data;
+        const headers = data[0] || [];
+        const rows = data.slice(1);
+
+        const areaIdx = headers.findIndex(h => /khu vực|vị trí|phân xưởng|kho/i.test(h || ''));
+        const dateIdx = headers.findIndex(h => /ngày|thứ|thời gian|lịch/i.test(h || ''));
+        const personIdx = headers.findIndex(h => /người|phụ trách|ca trực|nhân sự/i.test(h || ''));
+        const taskIdx = headers.findIndex(h => /hạng mục|nội dung|công việc/i.test(h || ''));
+
+        // Today info for Spotlight
+        const now = new Date();
+        const dayNames = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+        const todayWeekday = dayNames[now.getDay()];
+        const todayStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+
+        // Find today's duty row if matches
+        let todayDuty = rows.find(r => {
+            const cellVal = (r[dateIdx !== -1 ? dateIdx : 0] || '').toLowerCase();
+            return cellVal.includes(todayWeekday.toLowerCase()) || cellVal.includes(todayStr);
+        });
+
+        if (!todayDuty && rows.length > 0) {
+            todayDuty = rows[0]; // fallback to first row
+        }
+
+        const dutyArea = todayDuty && areaIdx !== -1 ? todayDuty[areaIdx] : 'Toàn bộ kho bãi & lối đi an toàn';
+        const dutyPerson = todayDuty && personIdx !== -1 ? todayDuty[personIdx] : 'Tổ An Toàn 5S Hiện Trường';
+        const dutyContent = todayDuty && taskIdx !== -1 ? todayDuty[taskIdx] : 'Quét dọn, thu gom rác thải và sắp xếp gọn gàng pallet';
+
+        let html = `
+            <!-- Today Duty Spotlight Card -->
+            <div class="duty-spotlight-card">
+                <div>
+                    <div style="display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(16, 185, 129, 0.2); color: #34d399; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; margin-bottom: 0.5rem;">
+                        <span>📅 CA TRỰC HÔM NAY: ${todayWeekday} (${todayStr})</span>
+                    </div>
+                    <h3 style="margin: 0 0 0.4rem 0; font-size: 1.2rem; font-weight: 700; color: var(--text-main);">
+                        🧹 Khu vực: ${dutyArea}
+                    </h3>
+                    <div style="font-size: 0.9rem; color: var(--text-muted); display: flex; gap: 1.5rem; flex-wrap: wrap;">
+                        <span>👤 Nhân sự phụ trách: <strong style="color: var(--primary);">${dutyPerson}</strong></span>
+                        <span>📋 Nội dung: ${dutyContent}</span>
+                    </div>
+                </div>
+
+                <div>
+                    <button class="btn-more" onclick="app.openWorkspace('clean-photos')" style="background: var(--primary); color: white; padding: 0.6rem 1.25rem; border-radius: 8px; font-weight: 600; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; border: none;">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                        <span>Kiểm Tra Ảnh Vệ Sinh Hiện Trường</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Schedule Table with Search -->
+            <div class="workspace-search-wrap">
+                <input type="text" id="cleanScheduleSearch" class="workspace-search-input" placeholder="🔍 Lọc tìm kiếm theo ngày, khu vực, người trực...">
+                <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">
+                    Lịch phân công: <strong style="color: var(--primary);">${rows.length}</strong> ca trực
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="hse-table" id="cleanScheduleTable">
+                    <thead>
+                        <tr>
+                            ${headers.map(h => `<th>${h}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        rows.forEach(r => {
+            html += `<tr>`;
+            r.forEach((cell, idx) => {
+                const header = headers[idx] || '';
+                let cellHtml = cell || '';
+                if (header.toLowerCase().includes('khu vực') || header.toLowerCase().includes('ngày')) {
+                    cellHtml = `<strong>${cell}</strong>`;
+                }
+                html += `<td>${cellHtml}</td>`;
+            });
+            html += `</tr>`;
+        });
+
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        this.modalBody.innerHTML = html;
+
+        // Search
+        const sInput = document.getElementById('cleanScheduleSearch');
+        if (sInput) {
+            sInput.addEventListener('input', (e) => {
+                const term = e.target.value.toLowerCase().trim();
+                const trs = document.querySelectorAll('#cleanScheduleTable tbody tr');
+                trs.forEach(tr => {
+                    tr.style.display = tr.textContent.toLowerCase().includes(term) ? '' : 'none';
+                });
+            });
+        }
+    }
+
+
+    // ==========================================================================
+    // SCRAP CATEGORIES METHODS (DANH MỤC PHẾ LIỆU MÃ MÀU)
+    // ==========================================================================
+
+    renderScrapCategories(data) {
+        if (!data || data.length === 0) {
+            this.modalBody.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 3rem;">Không có dữ liệu danh mục phế liệu.</p>';
+            return;
+        }
+
+        const headers = data[0] || [];
+        const rows = data.slice(1);
+
+        const nameIdx = headers.findIndex(h => /tên|phế liệu|loại|chất thải/i.test(h || ''));
+        const codeIdx = headers.findIndex(h => /mã|code|id/i.test(h || ''));
+        const groupIdx = headers.findIndex(h => /nhóm|phân loại|màu/i.test(h || ''));
+        const guideIdx = headers.findIndex(h => /hướng dẫn|thu gom|vị trí|lưu trữ|quy cách/i.test(h || ''));
+
+        // Organize into 4 color buckets
+        const groups = {
+            yellow: {
+                title: 'Phế Liệu Kim Loại & Sản Xuất',
+                colorCode: 'Thùng Vàng 🟡',
+                colorHex: '#f59e0b',
+                cssClass: 'scrap-yellow',
+                items: []
+            },
+            blue: {
+                title: 'Chất Thải Tái Chế Thông Thường',
+                colorCode: 'Thùng Xanh Dương 🔵',
+                colorHex: '#3b82f6',
+                cssClass: 'scrap-blue',
+                items: []
+            },
+            red: {
+                title: 'Chất Thải Nguy Hại (Hazardous)',
+                colorCode: 'Thùng Đỏ Cảnh Báo 🔴',
+                colorHex: '#ef4444',
+                cssClass: 'scrap-red',
+                items: []
+            },
+            gray: {
+                title: 'Rác Thải Sinh Hoạt & Khác',
+                colorCode: 'Thùng Xám / Đen ⚫',
+                colorHex: '#94a3b8',
+                cssClass: 'scrap-gray',
+                items: []
+            }
+        };
+
+        if (nameIdx !== -1) {
+            rows.forEach((r, idx) => {
+                const name = r[nameIdx];
+                if (!name) return;
+                const code = codeIdx !== -1 ? (r[codeIdx] || `PL-${String(idx + 1).padStart(2, '0')}`) : `PL-${String(idx + 1).padStart(2, '0')}`;
+                const groupText = groupIdx !== -1 ? (r[groupIdx] || '') : '';
+                const guide = guideIdx !== -1 ? (r[guideIdx] || '') : '';
+
+                const combined = (name + ' ' + groupText).toLowerCase();
+                if (/nguy hại|dầu|sơn|pin|ắc quy|hóa chất|mỡ|giẻ dính|độc/i.test(combined)) {
+                    groups.red.items.push({ name, code, guide });
+                } else if (/kim loại|sắt|thép|nhôm|đồng|que hàn|bavia|phôi|hàn|tôn/i.test(combined)) {
+                    groups.yellow.items.push({ name, code, guide });
+                } else if (/carton|giấy|nhựa|bao bì|gỗ|pallet|chai|tái chế/i.test(combined)) {
+                    groups.blue.items.push({ name, code, guide });
+                } else {
+                    groups.gray.items.push({ name, code, guide });
+                }
+            });
+        }
+
+        // Baseline items if empty
+        if (groups.yellow.items.length === 0) {
+            groups.yellow.items = [
+                { code: 'PL-KL-01', name: 'Đầu mẩu que hàn & xỉ hàn', guide: 'Thu gom vào xô sắt chuyên dụng' },
+                { code: 'PL-KL-02', name: 'Thép hình vụn & phôi mạt cắt', guide: 'Gom về bãi tập kết phế liệu kim loại' },
+                { code: 'PL-KL-03', name: 'Bavia tôn & đầu cọc sắt thừa', guide: 'Đóng thùng phuy có dán nhãn kim loại' }
+            ];
+        }
+        if (groups.blue.items.length === 0) {
+            groups.blue.items = [
+                { code: 'PL-TC-01', name: 'Thùng giấy carton & bìa bọc hàng', guide: 'Gấp phẳng và buộc thành kiện' },
+                { code: 'PL-TC-02', name: 'Pallet gỗ hỏng / thanh nẹp gỗ', guide: 'Xếp ngay ngắn tại kho chứa bao bì' },
+                { code: 'PL-TC-03', name: 'Màng quấn pe & dây đai nhựa bọc hàng', guide: 'Thu gom vào túi bao tải dứa' }
+            ];
+        }
+        if (groups.red.items.length === 0) {
+            groups.red.items = [
+                { code: 'CTNH-01', name: 'Giẻ lau & găng tay dính dầu nhớt', guide: 'Thùng kín chống rò rỉ, nắp đậy chặt' },
+                { code: 'CTNH-02', name: 'Vỏ thùng sơn, dung môi, keo dán', guide: 'Để khu vực có mái che và gờ chống tràn' },
+                { code: 'CTNH-03', name: 'Pin, ắc quy hỏng & bóng đèn huỳnh quang', guide: 'Lưu trữ thùng nhựa riêng biệt có nhãn CTNH' }
+            ];
+        }
+        if (groups.gray.items.length === 0) {
+            groups.gray.items = [
+                { code: 'RTSH-01', name: 'Rác thải sinh hoạt văn phòng & hộp xốp', guide: 'Túi rác tự phân hủy, dọn cuối ngày' },
+                { code: 'RTSH-02', name: 'Bụi quét nền & rác vô cơ không tái chế', guide: 'Đưa vào xe gom rác thải công cộng' }
+            ];
+        }
+
+        let html = `
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+                <div>
+                    <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-main); margin: 0 0 0.25rem 0;">Bảng Màu Nhận Diện & Phân Loại Phế Liệu Tại Nguồn</h3>
+                    <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0;">Quy chuẩn màu thùng chứa rác thải áp dụng đồng bộ toàn nhà xưởng & văn phòng DDC.</p>
+                </div>
+                <button class="btn-more" onclick="app.openWorkspace('scrap-regs')" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.55rem 1.1rem; border-radius: 8px; font-weight: 600; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    <span>Xem Văn Bản Quy Định (PDF)</span>
+                </button>
+            </div>
+
+            <!-- Scrap 4-color Matrix -->
+            <div class="scrap-matrix-grid">
+        `;
+
+        Object.keys(groups).forEach(key => {
+            const g = groups[key];
+            html += `
+                <div class="scrap-group-card ${g.cssClass}">
+                    <div class="scrap-head">
+                        <div class="scrap-dot" style="background: ${g.colorHex}; color: ${g.colorHex};"></div>
+                        <div>
+                            <div style="font-size: 0.78rem; font-weight: 700; color: ${g.colorHex}; text-transform: uppercase;">${g.colorCode}</div>
+                            <h4 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--text-main);">${g.title}</h4>
+                        </div>
+                    </div>
+
+                    <div class="scrap-list-wrap">
+            `;
+
+            g.items.forEach(it => {
+                html += `
+                    <div class="scrap-item-row">
+                        <div>
+                            <div style="font-weight: 600; color: var(--text-main);">${it.name}</div>
+                            <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">${it.guide}</div>
+                        </div>
+                        <span class="tool-code-badge" style="background: rgba(255,255,255,0.06); color: var(--text-muted); border-color: rgba(255,255,255,0.1);">${it.code}</span>
+                    </div>
+                `;
+            });
+
+            html += `
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `</div>`;
+        this.modalBody.innerHTML = html;
+    }
+
+
+    // ==========================================================================
+    // TOOLS & INVENTORY METHODS (CCDC)
+    // ==========================================================================
+
+    renderToolsInventory(data) {
+        if (!data || data.length === 0) {
+            this.modalBody.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 3rem;">Không có dữ liệu CCDC.</p>';
+            return;
+        }
+
+        this.toolsRawData = data;
+        const headers = data[0] || [];
+        const rows = data.slice(1);
+
+        const nameIdx = headers.findIndex(h => /tên|dụng cụ|thiết bị|công cụ/i.test(h || ''));
+        const codeIdx = headers.findIndex(h => /mã|code|id/i.test(h || ''));
+        const groupIdx = headers.findIndex(h => /nhóm|loại|chủng loại|danh mục/i.test(h || ''));
+        const qtyIdx = headers.findIndex(h => /số lượng|sl|tồn/i.test(h || ''));
+        const statusIdx = headers.findIndex(h => /tình trạng|trạng thái/i.test(h || ''));
+        const locIdx = headers.findIndex(h => /vị trí|kho|kệ|khu vực/i.test(h || ''));
+
+        // If no recognizable columns, fallback to default table
+        if (nameIdx === -1) {
+            this.renderTable(data);
+            return;
+        }
+
+        const items = rows.map((r, idx) => {
+            const name = r[nameIdx] || `Công cụ ${idx + 1}`;
+            const code = codeIdx !== -1 ? (r[codeIdx] || `CCDC-${String(idx + 1).padStart(3, '0')}`) : `CCDC-${String(idx + 1).padStart(3, '0')}`;
+            const group = groupIdx !== -1 ? (r[groupIdx] || 'Chung') : 'Chung';
+            const qty = qtyIdx !== -1 ? (parseInt(r[qtyIdx]) || 1) : 1;
+            const status = statusIdx !== -1 ? (r[statusIdx] || 'Tốt') : 'Tốt';
+            const loc = locIdx !== -1 ? (r[locIdx] || 'Kho CCDC') : 'Kho CCDC';
+            return { name, code, group, qty, status, loc, raw: r };
+        });
+
+        this.toolsItems = items;
+        this.currentToolGroup = 'all';
+        this.currentToolStatus = 'all';
+        this.currentToolView = this.currentToolView || 'card';
+
+        this.renderToolsView();
+    }
+
+    renderToolsView() {
+        const allItems = this.toolsItems || [];
+        const activeGroup = this.currentToolGroup || 'all';
+        const activeStatus = this.currentToolStatus || 'all';
+        const viewMode = this.currentToolView || 'card';
+
+        // Extract distinct groups
+        const groups = Array.from(new Set(allItems.map(it => it.group).filter(Boolean)));
+
+        // Filter items
+        let filtered = allItems.filter(it => {
+            const matchGroup = activeGroup === 'all' || it.group === activeGroup;
+            let matchStatus = true;
+            if (activeStatus === 'good') matchStatus = /tốt|đạt|hoạt động|sẵn sàng/i.test(it.status);
+            else if (activeStatus === 'repair') matchStatus = /bảo dưỡng|sửa|hỏng|lỗi/i.test(it.status);
+            else if (activeStatus === 'scrap') matchStatus = /loại bỏ|thanh lý|hủy/i.test(it.status);
+            return matchGroup && matchStatus;
+        });
+
+        // Compute KPIs
+        const totalItems = allItems.length;
+        const totalQty = allItems.reduce((acc, it) => acc + it.qty, 0);
+        const goodCount = allItems.filter(it => /tốt|đạt|hoạt động|sẵn sàng/i.test(it.status)).length;
+        const repairCount = allItems.filter(it => /bảo dưỡng|sửa|hỏng|lỗi/i.test(it.status)).length;
+        const safeRate = totalItems > 0 ? Math.round((goodCount / totalItems) * 100) : 100;
+
+        let html = `
+            <!-- KPI Summary Cards -->
+            <div class="chk-kpi-grid">
+                <div class="chk-kpi-card">
+                    <div class="chk-kpi-icon icon-blue">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+                    </div>
+                    <div>
+                        <div class="chk-kpi-val">${totalItems} <span style="font-size: 0.9rem; font-weight: 500; color: var(--text-muted);">loại (${totalQty} cái)</span></div>
+                        <div class="chk-kpi-label">Tổng chủng loại CCDC</div>
+                    </div>
+                </div>
+                <div class="chk-kpi-card">
+                    <div class="chk-kpi-icon icon-green">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                    </div>
+                    <div>
+                        <div class="chk-kpi-val">${safeRate}%</div>
+                        <div class="chk-kpi-label">Tỷ lệ sẵn sàng sử dụng</div>
+                    </div>
+                </div>
+                <div class="chk-kpi-card">
+                    <div class="chk-kpi-icon icon-amber">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    </div>
+                    <div>
+                        <div class="chk-kpi-val">${repairCount}</div>
+                        <div class="chk-kpi-label">Cần bảo dưỡng / Sửa chữa</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Toolbar: Filter & View Mode Toggle -->
+            <div class="tools-toolbar">
+                <div class="tools-filter-group">
+                    <button class="tool-filter-btn ${activeGroup === 'all' ? 'active' : ''}" onclick="app.setToolFilter('all', '${activeStatus}')">Tất cả nhóm</button>
+                    ${groups.map(g => `
+                        <button class="tool-filter-btn ${activeGroup === g ? 'active' : ''}" onclick="app.setToolFilter('${g}', '${activeStatus}')">${g}</button>
+                    `).join('')}
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div class="view-mode-toggle">
+                        <button class="view-btn ${viewMode === 'card' ? 'active' : ''}" onclick="app.setToolViewMode('card')" title="Xem dạng thẻ">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                        </button>
+                        <button class="view-btn ${viewMode === 'table' ? 'active' : ''}" onclick="app.setToolViewMode('table')" title="Xem dạng bảng">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search bar -->
+            <div class="workspace-search-wrap">
+                <input type="text" id="toolsSearchInput" class="workspace-search-input" placeholder="🔍 Tìm kiếm tên công cụ, mã CCDC, vị trí...">
+                <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">
+                    Hiển thị: <strong style="color: var(--primary);" id="toolsCountDisplay">${filtered.length}</strong> CCDC
+                </div>
+            </div>
+        `;
+
+        if (viewMode === 'card') {
+            html += `<div class="tools-card-grid" id="toolsContainer">`;
+            filtered.forEach(it => {
+                let badgeClass = 'badge-chk-pass';
+                if (/bảo dưỡng|sửa/i.test(it.status)) badgeClass = 'status-badge badge-warning';
+                else if (/hỏng|loại bỏ|thanh lý/i.test(it.status)) badgeClass = 'status-badge badge-danger';
+
+                html += `
+                    <div class="tool-item-card" data-name="${it.name.toLowerCase()}" data-code="${it.code.toLowerCase()}" data-loc="${it.loc.toLowerCase()}">
+                        <div>
+                            <div class="tool-card-head">
+                                <span class="tool-code-badge">${it.code}</span>
+                                <span class="${badgeClass}">${it.status}</span>
+                            </div>
+                            <h4 class="tool-card-title">${it.name}</h4>
+                            <div style="font-size: 0.8rem; color: var(--primary); margin-top: 0.25rem; font-weight: 500;">Nhóm: ${it.group}</div>
+                        </div>
+
+                        <div style="margin-top: 1.25rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.06);">
+                            <div class="tool-meta-row">
+                                <span>Số lượng tồn kho:</span>
+                                <strong style="color: var(--text-main); font-size: 0.95rem;">${it.qty}</strong>
+                            </div>
+                            <div class="tool-meta-row">
+                                <span>Vị trí lưu trữ:</span>
+                                <span style="color: var(--text-muted);">${it.loc}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            html += `</div>`;
+        } else {
+            html += `
+                <div class="table-responsive">
+                    <table class="hse-table" id="toolsTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 130px;">Mã CCDC</th>
+                                <th style="min-width: 200px;">Tên công cụ dụng cụ</th>
+                                <th style="min-width: 140px;">Nhóm</th>
+                                <th style="width: 100px; text-align: center;">Số lượng</th>
+                                <th style="width: 130px; text-align: center;">Tình trạng</th>
+                                <th style="min-width: 150px;">Vị trí lưu kho</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            filtered.forEach(it => {
+                let badgeClass = 'badge-chk-pass';
+                if (/bảo dưỡng|sửa/i.test(it.status)) badgeClass = 'status-badge badge-warning';
+                else if (/hỏng|loại bỏ|thanh lý/i.test(it.status)) badgeClass = 'status-badge badge-danger';
+
+                html += `
+                    <tr>
+                        <td style="font-weight: 700; color: #60a5fa;">${it.code}</td>
+                        <td style="font-weight: 600;">${it.name}</td>
+                        <td style="color: var(--text-muted);">${it.group}</td>
+                        <td style="text-align: center; font-weight: 700; color: var(--text-main);">${it.qty}</td>
+                        <td style="text-align: center;"><span class="${badgeClass}">${it.status}</span></td>
+                        <td style="color: var(--text-muted);">${it.loc}</td>
+                    </tr>
+                `;
+            });
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        this.modalBody.innerHTML = html;
+
+        // Attach search
+        const sInput = document.getElementById('toolsSearchInput');
+        if (sInput) {
+            sInput.addEventListener('input', (e) => {
+                const term = e.target.value.toLowerCase().trim();
+                if (viewMode === 'card') {
+                    const cards = document.querySelectorAll('#toolsContainer .tool-item-card');
+                    let count = 0;
+                    cards.forEach(card => {
+                        const match = card.dataset.name.includes(term) || card.dataset.code.includes(term) || card.dataset.loc.includes(term);
+                        card.style.display = match ? '' : 'none';
+                        if (match) count++;
+                    });
+                    const cDisplay = document.getElementById('toolsCountDisplay');
+                    if (cDisplay) cDisplay.textContent = count;
+                } else {
+                    const trs = document.querySelectorAll('#toolsTable tbody tr');
+                    let count = 0;
+                    trs.forEach(tr => {
+                        const match = tr.textContent.toLowerCase().includes(term);
+                        tr.style.display = match ? '' : 'none';
+                        if (match) count++;
+                    });
+                    const cDisplay = document.getElementById('toolsCountDisplay');
+                    if (cDisplay) cDisplay.textContent = count;
+                }
+            });
+        }
+    }
+
+    setToolFilter(group, status) {
+        this.currentToolGroup = group;
+        this.currentToolStatus = status;
+        this.renderToolsView();
+    }
+
+    setToolViewMode(mode) {
+        this.currentToolView = mode;
+        this.renderToolsView();
+    }
+
+    // ==========================================================================
+    // DISPOSAL STANDARDS METHODS (TIÊU CHUẨN LOẠI BỎ CCDC)
+    // ==========================================================================
+
+    renderDisposalStandards(data) {
+        if (!data || data.length === 0) {
+            this.modalBody.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 3rem;">Không có dữ liệu tiêu chuẩn loại bỏ.</p>';
+            return;
+        }
+
+        const headers = data[0] || [];
+        const rows = data.slice(1);
+
+        const nameIdx = headers.findIndex(h => /tên|dụng cụ|thiết bị|công cụ|chủng loại/i.test(h || ''));
+        const rejectIdx = headers.findIndex(h => /loại bỏ|hư hỏng|không đạt|dấu hiệu/i.test(h || ''));
+        const warnIdx = headers.findIndex(h => /cảnh báo|kiểm tra|kiểm định/i.test(h || ''));
+        const actionIdx = headers.findIndex(h => /hướng dẫn|xử lý|thanh lý|quy trình/i.test(h || ''));
+
+        let items = [];
+        if (nameIdx !== -1) {
+            rows.forEach((r, idx) => {
+                const name = r[nameIdx];
+                if (!name) return;
+                const rejectCriterion = rejectIdx !== -1 ? r[rejectIdx] : (r[1] || 'Có dấu hiệu nứt gãy, biến dạng vượt mức an toàn.');
+                const warnCriterion = warnIdx !== -1 ? r[warnIdx] : (r[2] || 'Hao mòn bề mặt > 10%, cần đo kiểm định kỳ.');
+                const processAction = actionIdx !== -1 ? r[actionIdx] : (r[3] || 'Ngưng sử dụng ngay, dán nhãn HỎNG và bàn giao về kho CCDC.');
+                items.push({ name, rejectCriterion, warnCriterion, processAction });
+            });
+        }
+
+        if (items.length === 0) {
+            // Default standards baseline
+            items = [
+                {
+                    name: 'Dây bẹ cẩu hàng (Polyester Slings)',
+                    rejectCriterion: 'Rách viền biên > 10% chiều rộng, đứt sợi chỉ may chịu lực, cháy xém do nhiệt hoặc hóa chất ăn mòn.',
+                    warnCriterion: 'Bám nhiều dầu mỡ mạt sắt, bạc màu nhãn tải trọng SWL.',
+                    processAction: 'Cắt đứt đôi dây bẹ để tránh tái sử dụng nhầm lẫn, chuyển kho phế liệu.'
+                },
+                {
+                    name: 'Dây xích cẩu & Khóa nối (Chains & Shackles)',
+                    rejectCriterion: 'Mắt xích bị giãn dài > 5%, mòn quá 10% đường kính danh nghĩa, nứt chân ren móc cẩu hoặc cong vênh.',
+                    warnCriterion: 'Gỉ sét bề mặt, chốt khóa lỏng ren nhẹ.',
+                    processAction: 'Đánh dấu sơn đỏ, lập biên bản thanh lý thiết bị nâng hạ.'
+                },
+                {
+                    name: 'Máy mài / Máy cắt cầm tay',
+                    rejectCriterion: 'Vỏ máy nứt vỡ hở điện, mất ốp chắn bảo vệ đá mài (Safety Guard), công tắc kẹt không tự ngắt.',
+                    warnCriterion: 'Dây nguồn bị sờn vỏ cao su ngoài, chổi than đánh lửa mạnh.',
+                    processAction: 'Bàn giao tổ cơ điện sửa chữa hoặc tiêu hủy nếu cuộn dây bị cháy.'
+                },
+                {
+                    name: 'Dây đai an toàn toàn thân (Full Body Harness)',
+                    rejectCriterion: 'Dây đã từng chịu tải trọng rơi ngã, khóa móc kim loại bị nứt/biến dạng/không tự khóa lò xo.',
+                    warnCriterion: 'Dây bị bẩn, quá hạn kiểm định 12 tháng.',
+                    processAction: 'Cắt bỏ toàn bộ dây đai, tiêu hủy ngay lập tức.'
+                }
+            ];
+        }
+
+        let html = `
+            <div style="margin-bottom: 1.5rem;">
+                <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">Sổ Tay Tiêu Chuẩn Loại Bỏ & Thanh Lý CCDC</h3>
+                <p style="color: var(--text-muted); font-size: 0.88rem; margin: 0;">Hướng dẫn nhận diện các dấu hiệu hư hỏng bắt buộc phải ngưng sử dụng và thu hồi để đảm bảo an toàn lao động tuyệt đối.</p>
+            </div>
+
+            <div class="workspace-search-wrap">
+                <input type="text" id="disposalSearchInput" class="workspace-search-input" placeholder="🔍 Tra cứu tiêu chuẩn theo tên CCDC hoặc dấu hiệu...">
+                <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">
+                    Tổng cộng: <strong style="color: var(--primary);">${items.length}</strong> quy chuẩn thiết bị
+                </div>
+            </div>
+
+            <div class="disposal-grid" id="disposalContainer">
+        `;
+
+        items.forEach(it => {
+            html += `
+                <div class="disposal-card" data-name="${it.name.toLowerCase()} ${it.rejectCriterion.toLowerCase()}">
+                    <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.75rem;">
+                        <span style="font-size: 1.4rem;">🛑</span>
+                        <h4 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--text-main);">${it.name}</h4>
+                    </div>
+
+                    <div class="criterion-box criterion-danger">
+                        <div style="font-weight: 700; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.35rem;">
+                            <span>❌ DẤU HIỆU LOẠI BỎ NGAY (CẤM DÙNG):</span>
+                        </div>
+                        <div>${it.rejectCriterion}</div>
+                    </div>
+
+                    <div class="criterion-box criterion-warning">
+                        <div style="font-weight: 700; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.35rem;">
+                            <span>⚠️ DẤU HIỆU CẦN KIỂM ĐỊNH LẠI:</span>
+                        </div>
+                        <div>${it.warnCriterion}</div>
+                    </div>
+
+                    <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.06); font-size: 0.82rem; color: var(--text-muted);">
+                        <strong style="color: var(--primary);">📋 Hướng dẫn xử lý:</strong> ${it.processAction}
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `</div>`;
+        this.modalBody.innerHTML = html;
+
+        // Quick search
+        const sInput = document.getElementById('disposalSearchInput');
+        if (sInput) {
+            sInput.addEventListener('input', (e) => {
+                const term = e.target.value.toLowerCase().trim();
+                const cards = document.querySelectorAll('#disposalContainer .disposal-card');
+                cards.forEach(c => {
+                    c.style.display = c.dataset.name.includes(term) ? '' : 'none';
+                });
+            });
+        }
+    }
+
+
+    // ==========================================================================
+    // 5S RACE & LEADERBOARD METHODS
+    // ==========================================================================
+
+    renderRaceLeaderboard(data) {
+        if (!data || data.length === 0) {
+            this.modalBody.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 3rem;">Không có dữ liệu thi đua 5S.</p>';
+            return;
+        }
+
+        this.raceRawData = data;
+        const headers = data[0] || [];
+        const rows = data.slice(1);
+
+        const scoreColIdx = headers.findIndex(h => (h || '').toLowerCase().includes('điểm') || (h || '').toLowerCase().includes('score'));
+        const areaColIdx = headers.findIndex(h => (h || '').toLowerCase().includes('khu vực') || (h || '').toLowerCase().includes('phân xưởng') || (h || '').toLowerCase().includes('kho'));
+        const trendColIdx = headers.findIndex(h => (h || '').toLowerCase().includes('xu hướng') || (h || '').toLowerCase().includes('trend'));
+        const rankColIdx = headers.findIndex(h => (h || '').toLowerCase().includes('hạng') || (h || '').toLowerCase().includes('rank'));
+
+        let raceItems = [];
+        let imageRows = [];
+
+        // Check for image rows
+        rows.forEach(r => {
+            const hasImg = r.some(c => typeof c === 'string' && c.startsWith('http') && (c.includes('drive.google.com') || c.match(/\.(jpeg|jpg|gif|png|webp)/i)));
+            if (hasImg) imageRows.push(r);
+        });
+
+        if (scoreColIdx !== -1 && areaColIdx !== -1) {
+            rows.forEach((r, idx) => {
+                const area = r[areaColIdx];
+                if (!area) return;
+                const score = parseFloat(r[scoreColIdx]) || 0;
+                const trend = trendColIdx !== -1 ? (r[trendColIdx] || '→') : '→';
+                const rank = rankColIdx !== -1 ? (parseInt(r[rankColIdx]) || (idx + 1)) : (idx + 1);
+                raceItems.push({ area, score, trend, rank, raw: r });
+            });
+        }
+
+        if (raceItems.length === 0) {
+            // Default baseline scores for DDC warehouse zones
+            raceItems = [
+                { area: 'Kho Thành Phẩm', score: 96, trend: '↑ 2', rank: 1 },
+                { area: 'Văn Phòng Hiện Trường', score: 92, trend: '↑ 1', rank: 2 },
+                { area: 'Kho Nguyên Liệu', score: 89, trend: '→', rank: 3 },
+                { area: 'Xưởng Cơ Khí & CCDC', score: 84, trend: '↓ 1', rank: 4 },
+                { area: 'Khu Phế Liệu & Rác Thải', score: 79, trend: '↑ 1', rank: 5 }
+            ];
+        }
+
+        raceItems.sort((a, b) => b.score - a.score);
+        raceItems.forEach((it, idx) => it.rank = idx + 1);
+
+        this.raceItems = raceItems;
+        this.raceImageRows = imageRows;
+
+        this.renderRaceView('leaderboard');
+    }
+
+    renderRaceView(activeTab) {
+        this.currentRaceTab = activeTab;
+        const items = this.raceItems || [];
+        const imgCount = (this.raceImageRows || []).length;
+
+        let html = `
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+                <div class="race-tab-switch">
+                    <button class="race-tab-btn ${activeTab === 'leaderboard' ? 'active' : ''}" onclick="app.renderRaceView('leaderboard')">
+                        🏆 Bảng Xếp Hạng & Vinh Danh
+                    </button>
+                    <button class="race-tab-btn ${activeTab === 'gallery' ? 'active' : ''}" onclick="app.renderRaceView('gallery')">
+                        📸 Ảnh Hiện Trường Chấm Điểm (${imgCount})
+                    </button>
+                </div>
+                <div style="font-size: 0.85rem; color: var(--text-muted);">
+                    Đợt đánh giá: <strong style="color: var(--primary);">Tháng hiện tại</strong>
+                </div>
+            </div>
+        `;
+
+        if (activeTab === 'leaderboard') {
+            // Podium for Top 3
+            const top1 = items[0] || { area: 'Chưa có', score: 0, trend: '→' };
+            const top2 = items[1] || { area: 'Chưa có', score: 0, trend: '→' };
+            const top3 = items[2] || { area: 'Chưa có', score: 0, trend: '→' };
+
+            html += `
+                <div class="race-podium-grid">
+                    <!-- Rank 2: Silver -->
+                    <div class="race-podium-card podium-rank-2">
+                        <span class="podium-crown">🥈</span>
+                        <div class="podium-badge badge-silver">Á Quân - Hạng 2</div>
+                        <div class="podium-area-name">${top2.area}</div>
+                        <div class="podium-score">${top2.score}<span style="font-size: 1rem; font-weight: 500; color: var(--text-muted);">đ</span></div>
+                        <span class="trend-badge ${top2.trend.includes('↑') ? 'trend-up' : (top2.trend.includes('↓') ? 'trend-down' : 'trend-same')}">
+                            ${top2.trend}
+                        </span>
+                    </div>
+
+                    <!-- Rank 1: Gold -->
+                    <div class="race-podium-card podium-rank-1">
+                        <span class="podium-crown">🥇</span>
+                        <div class="podium-badge badge-gold">Quán Quân - Hạng 1</div>
+                        <div class="podium-area-name">${top1.area}</div>
+                        <div class="podium-score">${top1.score}<span style="font-size: 1rem; font-weight: 500; color: var(--text-muted);">đ</span></div>
+                        <span class="trend-badge ${top1.trend.includes('↑') ? 'trend-up' : (top1.trend.includes('↓') ? 'trend-down' : 'trend-same')}">
+                            ${top1.trend}
+                        </span>
+                    </div>
+
+                    <!-- Rank 3: Bronze -->
+                    <div class="race-podium-card podium-rank-3">
+                        <span class="podium-crown">🥉</span>
+                        <div class="podium-badge badge-bronze">Hạng 3</div>
+                        <div class="podium-area-name">${top3.area}</div>
+                        <div class="podium-score">${top3.score}<span style="font-size: 1rem; font-weight: 500; color: var(--text-muted);">đ</span></div>
+                        <span class="trend-badge ${top3.trend.includes('↑') ? 'trend-up' : (top3.trend.includes('↓') ? 'trend-down' : 'trend-same')}">
+                            ${top3.trend}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Full Leaderboard Table -->
+                <div class="workspace-search-wrap" style="margin-top: 2rem;">
+                    <input type="text" id="raceTableSearch" class="workspace-search-input" placeholder="🔍 Tìm khu vực, phân xưởng...">
+                    <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">
+                        Tổng cộng: <strong style="color: var(--primary);">${items.length}</strong> khu vực tham gia
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="hse-table" id="raceLeaderboardTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 80px; text-align: center;">Hạng</th>
+                                <th style="min-width: 220px;">Khu vực / Phân xưởng</th>
+                                <th style="width: 140px; text-align: center;">Điểm 5S</th>
+                                <th style="min-width: 180px;">Tiến độ chuẩn</th>
+                                <th style="width: 120px; text-align: center;">Xếp loại</th>
+                                <th style="width: 100px; text-align: center;">Xu hướng</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            items.forEach(it => {
+                let medal = it.rank;
+                if (it.rank === 1) medal = '🥇 1';
+                else if (it.rank === 2) medal = '🥈 2';
+                else if (it.rank === 3) medal = '🥉 3';
+
+                let barClass = 'bar-excellent';
+                let ratingBadge = '<span class="badge-chk-pass">Xuất sắc</span>';
+                if (it.score < 75) {
+                    barClass = 'bar-warning';
+                    ratingBadge = '<span class="badge-chk-fail">Cần sửa</span>';
+                } else if (it.score < 90) {
+                    barClass = 'bar-good';
+                    ratingBadge = '<span class="status-badge badge-warning">Đạt chuẩn</span>';
+                }
+
+                let trendClass = 'trend-same';
+                if (it.trend.includes('↑')) trendClass = 'trend-up';
+                else if (it.trend.includes('↓')) trendClass = 'trend-down';
+
+                html += `
+                    <tr>
+                        <td style="text-align: center; font-weight: 700; font-size: 1.05rem;">${medal}</td>
+                        <td style="font-weight: 600; color: var(--text-main);">${it.area}</td>
+                        <td style="text-align: center; font-weight: 800; font-size: 1.15rem; color: var(--primary);">${it.score}</td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <div class="race-score-bar-wrap">
+                                    <div class="race-score-bar-fill ${barClass}" style="width: ${Math.min(100, it.score)}%;"></div>
+                                </div>
+                                <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); min-width: 32px;">${it.score}%</span>
+                            </div>
+                        </td>
+                        <td style="text-align: center;">${ratingBadge}</td>
+                        <td style="text-align: center;">
+                            <span class="trend-badge ${trendClass}">${it.trend}</span>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        } else {
+            // Render gallery
+            if (this.raceImageRows && this.raceImageRows.length > 0) {
+                const galleryData = [['Tên ảnh', 'Ngày', 'URL', 'Ghi chú'], ...this.raceImageRows];
+                this.renderGallery(galleryData, '5s-race');
+                return;
+            } else {
+                html += `
+                    <div style="text-align: center; padding: 3.5rem; background: rgba(255,255,255,0.02); border-radius: 14px; border: 1px dashed rgba(255,255,255,0.1);">
+                        <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Chưa có ảnh chấm điểm hiện trường nào được lưu. Hãy tải lên ảnh đầu tiên!</p>
+                        <label for="uploadPhoto_5s-race" class="btn-more" style="background: var(--primary); color: white; padding: 0.6rem 1.25rem; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            <span>Tải Ảnh Chấm Điểm 5S</span>
+                        </label>
+                        <input type="file" id="uploadPhoto_5s-race" accept="image/*" style="display: none;" onchange="app.handleImageUpload(event, '5s-race')">
+                    </div>
+                `;
+            }
+        }
+
+        this.modalBody.innerHTML = html;
+
+        // Quick search
+        const sInput = document.getElementById('raceTableSearch');
+        if (sInput) {
+            sInput.addEventListener('input', (e) => {
+                const term = e.target.value.toLowerCase().trim();
+                const table = document.getElementById('raceLeaderboardTable');
+                if (!table) return;
+                const trs = table.querySelectorAll('tbody tr');
+                trs.forEach(tr => {
+                    tr.style.display = tr.textContent.toLowerCase().includes(term) ? '' : 'none';
+                });
+            });
+        }
+    }
+
 
     renderModuleByMonthGroups(data, moduleId) {
         const headers = data[0];
@@ -841,6 +2005,21 @@ class DashboardManager {
                 </label>
                 <input type="file" id="uploadPhoto_${moduleId}" accept="image/*" style="display: none;" onchange="app.handleImageUpload(event, '${moduleId}')">
             </div>
+
+            <!-- Gallery Filter Toolbar -->
+            <div class="tools-toolbar" style="margin-bottom: 1rem;">
+                <div class="tools-filter-group">
+                    <button class="tool-filter-btn active" onclick="app.filterGalleryByTag('')">Tất cả</button>
+                    <button class="tool-filter-btn" onclick="app.filterGalleryByTag('thành phẩm')">Kho Thành phẩm</button>
+                    <button class="tool-filter-btn" onclick="app.filterGalleryByTag('nguyên liệu')">Kho Nguyên liệu</button>
+                    <button class="tool-filter-btn" onclick="app.filterGalleryByTag('ccdc')">Khu CCDC</button>
+                    <button class="tool-filter-btn" onclick="app.filterGalleryByTag('lối đi')">Lối đi</button>
+                </div>
+            </div>
+
+            <div class="workspace-search-wrap" style="margin-bottom: 1.25rem;">
+                <input type="text" id="gallerySearchInput" class="workspace-search-input" placeholder="🔍 Tìm nhanh ảnh theo tên, ghi chú, khu vực...">
+            </div>
         `;
 
         let html = uploadSectionHtml;
@@ -887,6 +2066,37 @@ class DashboardManager {
         }
 
         this.modalBody.innerHTML = html;
+
+        // Gallery quick search
+        const sInput = document.getElementById('gallerySearchInput');
+        if (sInput) {
+            sInput.addEventListener('input', (e) => {
+                const term = e.target.value.toLowerCase().trim();
+                const items = this.modalBody.querySelectorAll('.gallery-item');
+                items.forEach(it => {
+                    const match = it.textContent.toLowerCase().includes(term);
+                    it.style.display = match ? '' : 'none';
+                });
+            });
+        }
+    }
+
+    filterGalleryByTag(tag) {
+        const btns = this.modalBody.querySelectorAll('.tools-filter-group .tool-filter-btn');
+        btns.forEach(b => {
+            if ((!tag && b.textContent === 'Tất cả') || (tag && b.textContent.toLowerCase().includes(tag))) {
+                b.classList.add('active');
+            } else {
+                b.classList.remove('active');
+            }
+        });
+
+        const items = this.modalBody.querySelectorAll('.gallery-item');
+        items.forEach(it => {
+            const text = it.textContent.toLowerCase();
+            const match = !tag || text.includes(tag.toLowerCase());
+            it.style.display = match ? '' : 'none';
+        });
     }
 
     async handleImageUpload(event, moduleId) {

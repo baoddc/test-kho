@@ -2005,6 +2005,21 @@ class DashboardManager {
                 </label>
                 <input type="file" id="uploadPhoto_${moduleId}" accept="image/*" style="display: none;" onchange="app.handleImageUpload(event, '${moduleId}')">
             </div>
+
+            <!-- Gallery Filter Toolbar -->
+            <div class="tools-toolbar" style="margin-bottom: 1rem;">
+                <div class="tools-filter-group">
+                    <button class="tool-filter-btn active" onclick="app.filterGalleryByTag('')">Tất cả</button>
+                    <button class="tool-filter-btn" onclick="app.filterGalleryByTag('thành phẩm')">Kho Thành phẩm</button>
+                    <button class="tool-filter-btn" onclick="app.filterGalleryByTag('nguyên liệu')">Kho Nguyên liệu</button>
+                    <button class="tool-filter-btn" onclick="app.filterGalleryByTag('ccdc')">Khu CCDC</button>
+                    <button class="tool-filter-btn" onclick="app.filterGalleryByTag('lối đi')">Lối đi</button>
+                </div>
+            </div>
+
+            <div class="workspace-search-wrap" style="margin-bottom: 1.25rem;">
+                <input type="text" id="gallerySearchInput" class="workspace-search-input" placeholder="🔍 Tìm nhanh ảnh theo tên, ghi chú, khu vực...">
+            </div>
         `;
 
         let html = uploadSectionHtml;
@@ -2051,6 +2066,37 @@ class DashboardManager {
         }
 
         this.modalBody.innerHTML = html;
+
+        // Gallery quick search
+        const sInput = document.getElementById('gallerySearchInput');
+        if (sInput) {
+            sInput.addEventListener('input', (e) => {
+                const term = e.target.value.toLowerCase().trim();
+                const items = this.modalBody.querySelectorAll('.gallery-item');
+                items.forEach(it => {
+                    const match = it.textContent.toLowerCase().includes(term);
+                    it.style.display = match ? '' : 'none';
+                });
+            });
+        }
+    }
+
+    filterGalleryByTag(tag) {
+        const btns = this.modalBody.querySelectorAll('.tools-filter-group .tool-filter-btn');
+        btns.forEach(b => {
+            if ((!tag && b.textContent === 'Tất cả') || (tag && b.textContent.toLowerCase().includes(tag))) {
+                b.classList.add('active');
+            } else {
+                b.classList.remove('active');
+            }
+        });
+
+        const items = this.modalBody.querySelectorAll('.gallery-item');
+        items.forEach(it => {
+            const text = it.textContent.toLowerCase();
+            const match = !tag || text.includes(tag.toLowerCase());
+            it.style.display = match ? '' : 'none';
+        });
     }
 
     async handleImageUpload(event, moduleId) {
