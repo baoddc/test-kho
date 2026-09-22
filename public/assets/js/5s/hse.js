@@ -567,6 +567,8 @@ class DashboardManager {
             this.renderToolsInventory(data);
         } else if (moduleId === 'disposal-standards') {
             this.renderDisposalStandards(data);
+        } else if (moduleId === 'scrap-categories') {
+            this.renderScrapCategories(data);
         } else if (moduleId === 'scrap-regs') {
             this.renderScrapRegs(data);
         } else if (moduleId === 'job-plan' || moduleId === 'clean-schedule') {
@@ -581,6 +583,160 @@ class DashboardManager {
             this.renderTable(data);
         }
     }
+
+    // ==========================================================================
+    // SCRAP CATEGORIES METHODS (DANH MỤC PHẾ LIỆU MÃ MÀU)
+    // ==========================================================================
+
+    renderScrapCategories(data) {
+        if (!data || data.length === 0) {
+            this.modalBody.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 3rem;">Không có dữ liệu danh mục phế liệu.</p>';
+            return;
+        }
+
+        const headers = data[0] || [];
+        const rows = data.slice(1);
+
+        const nameIdx = headers.findIndex(h => /tên|phế liệu|loại|chất thải/i.test(h || ''));
+        const codeIdx = headers.findIndex(h => /mã|code|id/i.test(h || ''));
+        const groupIdx = headers.findIndex(h => /nhóm|phân loại|màu/i.test(h || ''));
+        const guideIdx = headers.findIndex(h => /hướng dẫn|thu gom|vị trí|lưu trữ|quy cách/i.test(h || ''));
+
+        // Organize into 4 color buckets
+        const groups = {
+            yellow: {
+                title: 'Phế Liệu Kim Loại & Sản Xuất',
+                colorCode: 'Thùng Vàng 🟡',
+                colorHex: '#f59e0b',
+                cssClass: 'scrap-yellow',
+                items: []
+            },
+            blue: {
+                title: 'Chất Thải Tái Chế Thông Thường',
+                colorCode: 'Thùng Xanh Dương 🔵',
+                colorHex: '#3b82f6',
+                cssClass: 'scrap-blue',
+                items: []
+            },
+            red: {
+                title: 'Chất Thải Nguy Hại (Hazardous)',
+                colorCode: 'Thùng Đỏ Cảnh Báo 🔴',
+                colorHex: '#ef4444',
+                cssClass: 'scrap-red',
+                items: []
+            },
+            gray: {
+                title: 'Rác Thải Sinh Hoạt & Khác',
+                colorCode: 'Thùng Xám / Đen ⚫',
+                colorHex: '#94a3b8',
+                cssClass: 'scrap-gray',
+                items: []
+            }
+        };
+
+        if (nameIdx !== -1) {
+            rows.forEach((r, idx) => {
+                const name = r[nameIdx];
+                if (!name) return;
+                const code = codeIdx !== -1 ? (r[codeIdx] || `PL-${String(idx + 1).padStart(2, '0')}`) : `PL-${String(idx + 1).padStart(2, '0')}`;
+                const groupText = groupIdx !== -1 ? (r[groupIdx] || '') : '';
+                const guide = guideIdx !== -1 ? (r[guideIdx] || '') : '';
+
+                const combined = (name + ' ' + groupText).toLowerCase();
+                if (/nguy hại|dầu|sơn|pin|ắc quy|hóa chất|mỡ|giẻ dính|độc/i.test(combined)) {
+                    groups.red.items.push({ name, code, guide });
+                } else if (/kim loại|sắt|thép|nhôm|đồng|que hàn|bavia|phôi|hàn|tôn/i.test(combined)) {
+                    groups.yellow.items.push({ name, code, guide });
+                } else if (/carton|giấy|nhựa|bao bì|gỗ|pallet|chai|tái chế/i.test(combined)) {
+                    groups.blue.items.push({ name, code, guide });
+                } else {
+                    groups.gray.items.push({ name, code, guide });
+                }
+            });
+        }
+
+        // Baseline items if empty
+        if (groups.yellow.items.length === 0) {
+            groups.yellow.items = [
+                { code: 'PL-KL-01', name: 'Đầu mẩu que hàn & xỉ hàn', guide: 'Thu gom vào xô sắt chuyên dụng' },
+                { code: 'PL-KL-02', name: 'Thép hình vụn & phôi mạt cắt', guide: 'Gom về bãi tập kết phế liệu kim loại' },
+                { code: 'PL-KL-03', name: 'Bavia tôn & đầu cọc sắt thừa', guide: 'Đóng thùng phuy có dán nhãn kim loại' }
+            ];
+        }
+        if (groups.blue.items.length === 0) {
+            groups.blue.items = [
+                { code: 'PL-TC-01', name: 'Thùng giấy carton & bìa bọc hàng', guide: 'Gấp phẳng và buộc thành kiện' },
+                { code: 'PL-TC-02', name: 'Pallet gỗ hỏng / thanh nẹp gỗ', guide: 'Xếp ngay ngắn tại kho chứa bao bì' },
+                { code: 'PL-TC-03', name: 'Màng quấn pe & dây đai nhựa bọc hàng', guide: 'Thu gom vào túi bao tải dứa' }
+            ];
+        }
+        if (groups.red.items.length === 0) {
+            groups.red.items = [
+                { code: 'CTNH-01', name: 'Giẻ lau & găng tay dính dầu nhớt', guide: 'Thùng kín chống rò rỉ, nắp đậy chặt' },
+                { code: 'CTNH-02', name: 'Vỏ thùng sơn, dung môi, keo dán', guide: 'Để khu vực có mái che và gờ chống tràn' },
+                { code: 'CTNH-03', name: 'Pin, ắc quy hỏng & bóng đèn huỳnh quang', guide: 'Lưu trữ thùng nhựa riêng biệt có nhãn CTNH' }
+            ];
+        }
+        if (groups.gray.items.length === 0) {
+            groups.gray.items = [
+                { code: 'RTSH-01', name: 'Rác thải sinh hoạt văn phòng & hộp xốp', guide: 'Túi rác tự phân hủy, dọn cuối ngày' },
+                { code: 'RTSH-02', name: 'Bụi quét nền & rác vô cơ không tái chế', guide: 'Đưa vào xe gom rác thải công cộng' }
+            ];
+        }
+
+        let html = `
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+                <div>
+                    <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-main); margin: 0 0 0.25rem 0;">Bảng Màu Nhận Diện & Phân Loại Phế Liệu Tại Nguồn</h3>
+                    <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0;">Quy chuẩn màu thùng chứa rác thải áp dụng đồng bộ toàn nhà xưởng & văn phòng DDC.</p>
+                </div>
+                <button class="btn-more" onclick="app.openWorkspace('scrap-regs')" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.55rem 1.1rem; border-radius: 8px; font-weight: 600; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    <span>Xem Văn Bản Quy Định (PDF)</span>
+                </button>
+            </div>
+
+            <!-- Scrap 4-color Matrix -->
+            <div class="scrap-matrix-grid">
+        `;
+
+        Object.keys(groups).forEach(key => {
+            const g = groups[key];
+            html += `
+                <div class="scrap-group-card ${g.cssClass}">
+                    <div class="scrap-head">
+                        <div class="scrap-dot" style="background: ${g.colorHex}; color: ${g.colorHex};"></div>
+                        <div>
+                            <div style="font-size: 0.78rem; font-weight: 700; color: ${g.colorHex}; text-transform: uppercase;">${g.colorCode}</div>
+                            <h4 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--text-main);">${g.title}</h4>
+                        </div>
+                    </div>
+
+                    <div class="scrap-list-wrap">
+            `;
+
+            g.items.forEach(it => {
+                html += `
+                    <div class="scrap-item-row">
+                        <div>
+                            <div style="font-weight: 600; color: var(--text-main);">${it.name}</div>
+                            <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">${it.guide}</div>
+                        </div>
+                        <span class="tool-code-badge" style="background: rgba(255,255,255,0.06); color: var(--text-muted); border-color: rgba(255,255,255,0.1);">${it.code}</span>
+                    </div>
+                `;
+            });
+
+            html += `
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `</div>`;
+        this.modalBody.innerHTML = html;
+    }
+
 
     // ==========================================================================
     // TOOLS & INVENTORY METHODS (CCDC)
