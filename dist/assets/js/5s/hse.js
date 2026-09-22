@@ -944,19 +944,6 @@ class DashboardManager {
                 </div>
             </div>
 
-            <!-- Clean Schedule 6 Warehouses Filter Toolbar -->
-            <div class="tools-toolbar" style="margin-bottom: 1rem;">
-                <div class="tools-filter-group">
-                    <button class="tool-filter-btn clean-wh-btn active" data-wh="" onclick="app.filterCleanScheduleByWarehouse('')">Tất cả kho (6 kho)</button>
-                    <button class="tool-filter-btn clean-wh-btn" data-wh="sơn" onclick="app.filterCleanScheduleByWarehouse('sơn')">Kho sơn</button>
-                    <button class="tool-filter-btn clean-wh-btn" data-wh="thép tấm" onclick="app.filterCleanScheduleByWarehouse('thép tấm')">Thép tấm</button>
-                    <button class="tool-filter-btn clean-wh-btn" data-wh="thép hình" onclick="app.filterCleanScheduleByWarehouse('thép hình')">Thép hình</button>
-                    <button class="tool-filter-btn clean-wh-btn" data-wh="vật tư" onclick="app.filterCleanScheduleByWarehouse('vật tư')">Kho vật tư</button>
-                    <button class="tool-filter-btn clean-wh-btn" data-wh="hàn" onclick="app.filterCleanScheduleByWarehouse('hàn')">Kho vật liệu hàn</button>
-                    <button class="tool-filter-btn clean-wh-btn" data-wh="cuộn" onclick="app.filterCleanScheduleByWarehouse('cuộn')">Kho thép cuộn</button>
-                </div>
-            </div>
-
             <!-- Schedule Table with Search -->
             <div class="workspace-search-wrap">
                 <input type="text" id="cleanScheduleSearch" class="workspace-search-input" placeholder="🔍 Lọc tìm kiếm theo ngày, khu vực, người trực...">
@@ -2311,20 +2298,6 @@ class DashboardManager {
                 </label>
                 <input type="file" id="uploadPhoto_${moduleId}" accept="image/*" style="display: none;" onchange="app.handleImageUpload(event, '${moduleId}')">
             </div>
-
-            <!-- Gallery Filter Toolbar -->
-            <div class="tools-toolbar" style="margin-bottom: 1rem;">
-                <div class="tools-filter-group">
-                    <button class="tool-filter-btn active" onclick="app.filterGalleryByTag('')">Tất cả (6 kho)</button>
-                    <button class="tool-filter-btn" onclick="app.filterGalleryByTag('sơn')">Kho sơn</button>
-                    <button class="tool-filter-btn" onclick="app.filterGalleryByTag('thép tấm')">Thép tấm</button>
-                    <button class="tool-filter-btn" onclick="app.filterGalleryByTag('thép hình')">Thép hình</button>
-                    <button class="tool-filter-btn" onclick="app.filterGalleryByTag('vật tư')">Kho vật tư</button>
-                    <button class="tool-filter-btn" onclick="app.filterGalleryByTag('hàn')">Kho VL hàn</button>
-                    <button class="tool-filter-btn" onclick="app.filterGalleryByTag('cuộn')">Kho thép cuộn</button>
-                </div>
-            </div>
-
             <div class="workspace-search-wrap" style="margin-bottom: 1.25rem;">
                 <input type="text" id="gallerySearchInput" class="workspace-search-input" placeholder="🔍 Tìm nhanh ảnh theo tên, ghi chú, khu vực...">
             </div>
