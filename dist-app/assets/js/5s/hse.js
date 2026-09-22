@@ -2194,6 +2194,8 @@ class DashboardManager {
             const payload = {
                 action: 'saveEquipmentChecklist',
                 sheetName: 'Checklist kiểm tra thiết bị',
+                sheetId: '20754979',
+                gid: '20754979',
                 date: dateFormatted,
                 inspector: inspector,
                 deviceResults: deviceResults

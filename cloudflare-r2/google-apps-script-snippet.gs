@@ -53,15 +53,29 @@ function doPost(e) {
       return responseData({ status: 'success', fileUrl: fileUrl, message: 'Đã cập nhật ô ảnh R2' });
     }
 
-    // --- C. LƯU KẾT QUẢ CHECKLIST KIỂM TRA THIẾT BỊ HÀNG NGÀY ---
+    // --- C. LƯU KẾT QUẢ CHECKLIST KIỂM TRA THIẾT BỊ HÀNG NGÀY (gid = 20754979) ---
     if (action === 'saveEquipmentChecklist') {
+      const targetGid = payload.gid || payload.sheetId || 20754979;
       const sheetName = payload.sheetName || 'Checklist kiểm tra thiết bị';
       const targetDate = (payload.date || '').trim();
       const inspector = payload.inspector || '';
       const deviceResults = payload.deviceResults || {};
 
       const ss = SpreadsheetApp.getActiveSpreadsheet();
-      let sheet = ss.getSheetByName(sheetName) || ss.getSheets()[0];
+      
+      // Tìm chính xác sheet có gid = 20754979
+      let sheet = null;
+      const sheets = ss.getSheets();
+      for (let s = 0; s < sheets.length; s++) {
+        if (sheets[s].getSheetId() == targetGid) {
+          sheet = sheets[s];
+          break;
+        }
+      }
+      if (!sheet) {
+        sheet = ss.getSheetByName(sheetName) || ss.getSheets()[0];
+      }
+
       const values = sheet.getDataRange().getValues();
 
       if (values.length === 0) {
