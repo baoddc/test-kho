@@ -69,48 +69,94 @@
   }
 
   function groupArrivalData(rows) {
-    const projectMap = new Map();
+    const typeMap = {
+      XG: new Map(),
+      TOLE: new Map()
+    };
+
     (rows || []).forEach(row => {
+      const isTole = (row._sourceType === 'TOLE' || row.kho === 'TOLE' || row.kho === 'Tole');
+      const typeKey = isTole ? 'TOLE' : 'XG';
+
       let proj = String(row['Tên công trình'] || '').trim();
       if (!proj) proj = 'Tồn trơn';
 
       let mat = String(row['Tên vật tư'] || row['Mã vật tư'] || 'Vật tư khác').trim();
       let kg = parseNumeric(row['Số lượng (Kg)']);
 
+      const projectMap = typeMap[typeKey];
       if (!projectMap.has(proj)) {
         projectMap.set(proj, new Map());
       }
       const matMap = projectMap.get(proj);
       matMap.set(mat, (matMap.get(mat) || 0) + kg);
     });
-    return projectMap;
+
+    return typeMap;
   }
 
   function formatAnnouncementContent(groupedData) {
-    if (!groupedData || groupedData.size === 0) return '';
-    const sections = [];
+    if (!groupedData) return '';
 
-    // Sắp xếp: Các công trình có tên trước (A-Z), nhóm 'Tồn trơn' luôn để cuối cùng
-    const sortedProjects = Array.from(groupedData.keys()).sort((a, b) => {
-      if (a === 'Tồn trơn') return 1;
-      if (b === 'Tồn trơn') return -1;
-      return a.localeCompare(b, 'vi');
-    });
-
-    for (const proj of sortedProjects) {
-      const matMap = groupedData.get(proj);
-      const lines = [`[${proj}]`];
-      for (const [mat, totalKg] of matMap.entries()) {
-        const kgStr = totalKg.toLocaleString('vi-VN', {
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 3
-        });
-        lines.push(`${mat}: ${kgStr}kg`);
-      }
-      sections.push(lines.join('\n'));
+    let xgMap = null;
+    let toleMap = null;
+    if (groupedData instanceof Map) {
+      xgMap = groupedData;
+    } else {
+      xgMap = groupedData.XG;
+      toleMap = groupedData.TOLE;
     }
 
-    return sections.join('\n\n');
+    const formatProjectMap = (projectMap) => {
+      if (!projectMap || projectMap.size === 0) return [];
+      const sections = [];
+      const sortedProjects = Array.from(projectMap.keys()).sort((a, b) => {
+        if (a === 'Tồn trơn') return 1;
+        if (b === 'Tồn trơn') return -1;
+        return a.localeCompare(b, 'vi');
+      });
+
+      for (const proj of sortedProjects) {
+        const matMap = projectMap.get(proj);
+        const lines = [`[${proj}]`];
+        for (const [mat, totalKg] of matMap.entries()) {
+          const kgStr = totalKg.toLocaleString('vi-VN', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 3
+          });
+          lines.push(`${mat}: ${kgStr}kg`);
+        }
+        sections.push(lines.join('\n'));
+      }
+      return sections;
+    };
+
+    const blocks = [];
+    const hasXg = xgMap && xgMap.size > 0;
+    const hasTole = toleMap && toleMap.size > 0;
+
+    if (hasXg && hasTole) {
+      const xgSections = formatProjectMap(xgMap);
+      if (xgSections.length > 0) {
+        blocks.push(`XÀ GỒ:\n` + xgSections.join('\n\n'));
+      }
+      const toleSections = formatProjectMap(toleMap);
+      if (toleSections.length > 0) {
+        blocks.push(`TOLE:\n` + toleSections.join('\n\n'));
+      }
+    } else if (hasXg) {
+      const xgSections = formatProjectMap(xgMap);
+      if (xgSections.length > 0) {
+        blocks.push(`XÀ GỒ:\n` + xgSections.join('\n\n'));
+      }
+    } else if (hasTole) {
+      const toleSections = formatProjectMap(toleMap);
+      if (toleSections.length > 0) {
+        blocks.push(`TOLE:\n` + toleSections.join('\n\n'));
+      }
+    }
+
+    return blocks.join('\n\n');
   }
 
   // --- BROWSER UI & SUPABASE INTEGRATION ---
