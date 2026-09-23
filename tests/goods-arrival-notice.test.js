@@ -51,9 +51,9 @@ assert.strictEqual(grouped.TOLE.get('Dự án Sky Tower').get('0.45X1200'), 5210
 assert.strictEqual(grouped.TOLE.get('Tồn trơn').get('0.35X1200'), 3150);
 console.log('✅ Test 3 Passed: Grouping & summation logic for XG and TOLE');
 
-// Test 4: Định dạng nội dung thông báo chuẩn Cách A (XÀ GỒ và TOLE cách nhau bởi dòng trống)
+// Test 4: Định dạng nội dung thông báo chuẩn Cách A (🔷 XG và 🔶 TOLE cách nhau bởi dòng trống)
 const content = formatAnnouncementContent(grouped);
-const expected = `XÀ GỒ:
+const expected = `🔷 XG:
 [Dự án Sky Tower]
 0.75X45VN: 7.712kg
 1.5X348VN: 26.770kg
@@ -62,7 +62,7 @@ const expected = `XÀ GỒ:
 1.5X50VN: 9.050kg
 1.8X50VN: 2.250kg
 
-TOLE:
+🔶 TOLE:
 [Dự án Sky Tower]
 0.45X1200: 5.210kg
 
@@ -75,7 +75,7 @@ console.log('✅ Test 4 Passed: Content format with XG and TOLE separated by bla
 // Test 5: Nếu chỉ có Xà gồ (không có Tole)
 const xgOnly = groupArrivalData(mockRows.filter(r => r._sourceType === 'XG'));
 const contentXgOnly = formatAnnouncementContent(xgOnly);
-const expectedXgOnly = `XÀ GỒ:
+const expectedXgOnly = `🔷 XG:
 [Dự án Sky Tower]
 0.75X45VN: 7.712kg
 1.5X348VN: 26.770kg

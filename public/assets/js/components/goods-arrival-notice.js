@@ -138,21 +138,21 @@
     if (hasXg && hasTole) {
       const xgSections = formatProjectMap(xgMap);
       if (xgSections.length > 0) {
-        blocks.push(`XÀ GỒ:\n` + xgSections.join('\n\n'));
+        blocks.push(`🔷 XG:\n` + xgSections.join('\n\n'));
       }
       const toleSections = formatProjectMap(toleMap);
       if (toleSections.length > 0) {
-        blocks.push(`TOLE:\n` + toleSections.join('\n\n'));
+        blocks.push(`🔶 TOLE:\n` + toleSections.join('\n\n'));
       }
     } else if (hasXg) {
       const xgSections = formatProjectMap(xgMap);
       if (xgSections.length > 0) {
-        blocks.push(`XÀ GỒ:\n` + xgSections.join('\n\n'));
+        blocks.push(`🔷 XG:\n` + xgSections.join('\n\n'));
       }
     } else if (hasTole) {
       const toleSections = formatProjectMap(toleMap);
       if (toleSections.length > 0) {
-        blocks.push(`TOLE:\n` + toleSections.join('\n\n'));
+        blocks.push(`🔶 TOLE:\n` + toleSections.join('\n\n'));
       }
     }
 
@@ -456,8 +456,8 @@
         ? `<span class="badge bg-light text-dark border">${proj}</span>`
         : `<span class="badge bg-secondary opacity-75">Tồn trơn</span>`;
       const typeBadge = row._sourceType === 'XG'
-        ? `<span class="badge bg-primary">Xà gồ</span>`
-        : `<span class="badge bg-warning text-dark">Tole</span>`;
+        ? `<span class="badge" style="background: linear-gradient(135deg, #1d4ed8, #2563eb); color: white; font-weight: 800; padding: 4px 8px; border-radius: 6px;">🔷 XG</span>`
+        : `<span class="badge" style="background: linear-gradient(135deg, #d97706, #ea580c); color: white; font-weight: 800; padding: 4px 8px; border-radius: 6px;">🔶 TOLE</span>`;
 
       return `
         <tr data-index="${idx}">

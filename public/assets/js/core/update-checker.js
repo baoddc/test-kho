@@ -275,24 +275,115 @@
         color: #7dd3fc !important;
         text-decoration: underline !important;
       }
+
+      /* Highlighted XG & TOLE Badges in Announcement Content */
+      .announcement-section-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 800;
+        font-size: 0.88rem;
+        padding: 4px 12px;
+        border-radius: 6px;
+        letter-spacing: 0.8px;
+        margin-top: 6px;
+        margin-bottom: 2px;
+        text-transform: uppercase;
+        user-select: none;
+      }
+      .announcement-section-badge.badge-xg {
+        background: linear-gradient(135deg, #1d4ed8, #2563eb);
+        color: #ffffff !important;
+        border: 1px solid rgba(147, 197, 253, 0.5);
+        box-shadow: 0 2px 8px rgba(37, 99, 235, 0.45);
+      }
+      .announcement-section-badge.badge-tole {
+        background: linear-gradient(135deg, #d97706, #ea580c);
+        color: #ffffff !important;
+        border: 1px solid rgba(253, 230, 138, 0.5);
+        box-shadow: 0 2px 8px rgba(217, 119, 6, 0.45);
+      }
+      .announcement-proj-tag {
+        font-weight: 700;
+        font-size: 0.84rem;
+        color: #38bdf8;
+        margin-top: 4px;
+        margin-bottom: 2px;
+      }
+      .announcement-proj-tag.empty {
+        color: #94a3b8;
+        font-style: italic;
+        font-weight: 600;
+      }
+      .announcement-mat-row {
+        font-size: 0.82rem;
+        line-height: 1.5;
+      }
+      .announcement-mat-row .mat-name {
+        color: #f1f5f9;
+        font-family: monospace;
+        font-weight: 600;
+      }
+      .announcement-mat-row .mat-kg {
+        color: #34d399;
+        font-weight: 700;
+      }
     `;
     document.head.appendChild(style);
   }
 
-  function formatNotificationText(rawText) {
-    if (!rawText) return '';
-    const escaped = String(rawText)
+  function escapeHtml(str) {
+    return String(str)
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
+  }
 
-    const urlRegex = /(https?:\/\/[^\s<]+|www\.[^\s<]+)/gi;
-    return escaped.replace(urlRegex, (match) => {
-      const href = match.toLowerCase().startsWith('www.') ? `https://${match}` : match;
-      return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="announcement-link" onclick="event.stopPropagation();">${match}</a>`;
+  function formatNotificationText(rawText) {
+    if (!rawText) return '';
+    const lines = String(rawText).split('\n');
+    const formattedLines = lines.map(line => {
+      const trimmed = line.trim();
+      if (!trimmed) return '';
+
+      // 1. Highlight XG / XÀ GỒ
+      if (/^(?:🔷\s*)?(?:XG|XÀ GỒ)\s*:?$/i.test(trimmed)) {
+        return `<span class="announcement-section-badge badge-xg">🔷 XG:</span>`;
+      }
+
+      // 2. Highlight TOLE
+      if (/^(?:🔶\s*)?TOLE\s*:?$/i.test(trimmed)) {
+        return `<span class="announcement-section-badge badge-tole">🔶 TOLE:</span>`;
+      }
+
+      // 3. Highlight Thẻ công trình [Tên dự án] hoặc [Tồn trơn]
+      const projMatch = trimmed.match(/^\[(.*?)\]$/);
+      if (projMatch) {
+        const projName = projMatch[1];
+        if (projName === 'Tồn trơn') {
+          return `<span class="announcement-proj-tag empty">[Tồn trơn]</span>`;
+        }
+        return `<span class="announcement-proj-tag">[${escapeHtml(projName)}]</span>`;
+      }
+
+      // 4. Highlight Tên vật tư & số kg: "0.75X45VN: 7.712kg"
+      const matMatch = trimmed.match(/^([^:]+):\s*([\d.,]+\s*kg)$/i);
+      if (matMatch) {
+        return `<span class="announcement-mat-row"><span class="mat-name">${escapeHtml(matMatch[1])}:</span> <span class="mat-kg">${escapeHtml(matMatch[2])}</span></span>`;
+      }
+
+      // Fallback: URL linkification
+      const escaped = escapeHtml(line);
+      const urlRegex = /(https?:\/\/[^\s<]+|www\.[^\s<]+)/gi;
+      return escaped.replace(urlRegex, (match) => {
+        const href = match.toLowerCase().startsWith('www.') ? `https://${match}` : match;
+        return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="announcement-link" onclick="event.stopPropagation();">${match}</a>`;
+      });
     });
+
+    return formattedLines.join('\n');
   }
 
   function getAnnouncementMeta(type) {
@@ -1067,12 +1158,12 @@
     const toleSecs = formatProjectGroup(typeMap.TOLE);
 
     if (xgSecs.length > 0 && toleSecs.length > 0) {
-      blocks.push('XÀ GỒ:\n' + xgSecs.join('\n\n'));
-      blocks.push('TOLE:\n' + toleSecs.join('\n\n'));
+      blocks.push('🔷 XG:\n' + xgSecs.join('\n\n'));
+      blocks.push('🔶 TOLE:\n' + toleSecs.join('\n\n'));
     } else if (xgSecs.length > 0) {
-      blocks.push('XÀ GỒ:\n' + xgSecs.join('\n\n'));
+      blocks.push('🔷 XG:\n' + xgSecs.join('\n\n'));
     } else if (toleSecs.length > 0) {
-      blocks.push('TOLE:\n' + toleSecs.join('\n\n'));
+      blocks.push('🔶 TOLE:\n' + toleSecs.join('\n\n'));
     }
 
     return blocks.join('\n\n');
@@ -1085,7 +1176,7 @@
 
     return `
       <div style="font-size: 0.88rem; font-weight: 700; color: #38bdf8; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">
-        📦 Phát thông báo Hàng về kho (Xà gồ & Tole)
+        📦 Phát thông báo Hàng về kho (<span style="color: #60a5fa; font-weight: 800;">🔷 XG</span> &amp; <span style="color: #fbbf24; font-weight: 800;">🔶 TOLE</span>)
       </div>
 
       <!-- Bộ lọc ngày -->
@@ -1210,8 +1301,8 @@
         const proj = String(row['Tên công trình'] || '').trim();
         const projText = proj ? proj : '<span style="color: #94a3b8; font-style: italic;">Tồn trơn</span>';
         const typeBadge = row._sourceType === 'XG' 
-          ? '<span style="background: #2563eb; color: white; padding: 1px 6px; border-radius: 4px; font-size: 0.7rem;">XG</span>'
-          : '<span style="background: #d97706; color: white; padding: 1px 6px; border-radius: 4px; font-size: 0.7rem;">Tole</span>';
+          ? '<span style="background: linear-gradient(135deg, #1d4ed8, #2563eb); color: white; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 800; border: 1px solid rgba(255,255,255,0.25); box-shadow: 0 1px 4px rgba(37,99,235,0.4);">XG</span>'
+          : '<span style="background: linear-gradient(135deg, #d97706, #ea580c); color: white; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 800; border: 1px solid rgba(255,255,255,0.25); box-shadow: 0 1px 4px rgba(217,119,6,0.4);">TOLE</span>';
 
         return `
           <tr style="border-bottom: 1px solid #1e293b;">
@@ -1271,7 +1362,7 @@
     }
 
     const content = buildArrivalContent(selectedRows);
-    if (contentEl) contentEl.textContent = content || '(Nội dung trống)';
+    if (contentEl) contentEl.innerHTML = formatNotificationText(content) || '(Nội dung trống)';
   }
 
   function bindGoodsArrivalTabEvents(modalContainer) {
