@@ -320,6 +320,34 @@
     return null;
   }
 
+  function normalizeDateToISO(dateVal) {
+    if (!dateVal) return '';
+    const s = String(dateVal).trim();
+    const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+
+    const ddmmyyyy = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+    if (ddmmyyyy) {
+      return `${ddmmyyyy[3]}-${String(ddmmyyyy[2]).padStart(2, '0')}-${String(ddmmyyyy[1]).padStart(2, '0')}`;
+    }
+
+    const dt = new Date(s);
+    if (!isNaN(dt.getTime())) {
+      const y = dt.getFullYear();
+      const m = String(dt.getMonth() + 1).padStart(2, '0');
+      const d = String(dt.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+    return s;
+  }
+
+  function getLocalISODate(d = new Date()) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
   async function loadArrivalData(dateStr) {
     const supabase = getSupabaseClient();
     const tbody = document.getElementById('ganTableBody');
@@ -343,31 +371,23 @@
     }
 
     try {
-      // Chuẩn hóa chuỗi ngày tìm kiếm
-      // dateStr dạng YYYY-MM-DD từ input date
-      let ddmmyyyy = '';
-      if (dateStr) {
-        const m = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
-        if (m) {
-          ddmmyyyy = `${m[3]}/${m[2]}/${m[1]}`;
-        }
+      // Chuẩn hóa chuỗi ngày tìm kiếm sang dạng chuẩn ISO YYYY-MM-DD
+      const isoDate = normalizeDateToISO(dateStr);
+      if (!isoDate) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-3">Vui lòng chọn ngày hợp lệ.</td></tr>`;
+        return;
       }
 
-      // Query đồng thời xg-nhap và tole-nhap
-      // Hỗ trợ cả 2 định dạng ngày được lưu trong DB (YYYY-MM-DD hoặc DD/MM/YYYY)
-      const buildDateFilter = (query) => {
-        if (!dateStr) return query;
-        if (ddmmyyyy) {
-          return query.or(`Ngày nhập.eq.${dateStr},Ngày nhập.eq.${ddmmyyyy}`);
-        }
-        return query.eq('Ngày nhập', dateStr);
-      };
-
+      // Cột "Ngày nhập" trong DB là DATE type, PostgREST yêu cầu định dạng ISO YYYY-MM-DD
       const [xgRes, toleRes, annRes] = await Promise.all([
-        buildDateFilter(supabase.from('xg-nhap').select('*')).order('id', { ascending: false }).limit(500),
-        buildDateFilter(supabase.from('tole-nhap').select('*')).order('id', { ascending: false }).limit(500),
+        supabase.from('xg-nhap').select('*').eq('Ngày nhập', isoDate).order('id', { ascending: false }).limit(500),
+        supabase.from('tole-nhap').select('*').eq('Ngày nhập', isoDate).order('id', { ascending: false }).limit(500),
         supabase.from('system_announcements').select('*').order('created_at', { ascending: false }).limit(100)
       ]);
+
+      if (xgRes.error) console.error('[GoodsArrivalNotice] xg-nhap query error:', xgRes.error);
+      if (toleRes.error) console.error('[GoodsArrivalNotice] tole-nhap query error:', toleRes.error);
+      if (annRes.error) console.error('[GoodsArrivalNotice] system_announcements query error:', annRes.error);
 
       const xgRows = (xgRes.data || []).map(r => ({ ...r, _sourceType: 'XG', _sourceLabel: 'Xà gồ' }));
       const toleRows = (toleRes.data || []).map(r => ({ ...r, _sourceType: 'TOLE', _sourceLabel: 'Tole' }));
@@ -645,20 +665,33 @@
     ensureModalInDOM();
 
     const dateInput = document.getElementById('ganFilterDate');
-    const todayStr = new Date().toISOString().split('T')[0];
-    const targetDate = defaultDate || (dateInput && dateInput.value) || todayStr;
+    const todayStr = getLocalISODate();
+
+    let autoDate = defaultDate;
+    if (!autoDate) {
+      if (typeof selectedRowIndex !== 'undefined' && selectedRowIndex >= 0 && typeof tableData !== 'undefined' && tableData[selectedRowIndex]) {
+        const row = tableData[selectedRowIndex];
+        const dateIdx = typeof COLUMN_HEADERS !== 'undefined' ? COLUMN_HEADERS.indexOf('Ngày nhập') : 2;
+        if (dateIdx >= 0 && row[dateIdx]) {
+          autoDate = normalizeDateToISO(row[dateIdx]);
+        }
+      }
+    }
+
+    const targetDate = autoDate || (dateInput && dateInput.value) || todayStr;
+    const finalIso = normalizeDateToISO(targetDate) || todayStr;
 
     if (dateInput) {
-      dateInput.value = targetDate;
+      dateInput.value = finalIso;
     }
 
     const modalEl = document.getElementById('modalGoodsArrivalNotice');
     if (modalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
-      const modalInstance = new bootstrap.Modal(modalEl);
+      const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
       modalInstance.show();
     }
 
-    loadArrivalData(targetDate);
+    loadArrivalData(finalIso);
   }
 
   if (typeof document !== 'undefined') {
