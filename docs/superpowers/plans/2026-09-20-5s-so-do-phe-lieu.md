@@ -1169,8 +1169,8 @@ const https = require('https');
 const url = 'https://ahcethtonjwktjtmxzog.supabase.co/rest/v1/pl-can-thu?select=*&limit=100';
 const options = {
   headers: {
-    'apikey': 'sb_publishable_zxmsB9cyjDwi9ai9Vw-s1w_QlqKMG0S',
-    'Authorization': 'Bearer sb_publishable_zxmsB9cyjDwi9ai9Vw-s1w_QlqKMG0S'
+    'apikey': process.env.SUPABASE_ANON_KEY || '<SUPABASE_ANON_KEY>',
+    'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY || '<SUPABASE_ANON_KEY>'}`
   }
 };
 https.get(url, options, res => {

@@ -27,9 +27,31 @@ if sys.platform == 'win32':
 SPREADSHEET_ID = '1BPY6k2bQuDu-RNpkRc3BhS57CuM1Ol__FYXvY8ezRjs'
 SHEET_NAME = 'mb51'
 
-# Cấu hình Supabase (lấy từ assets/js/core/supabase-config.js)
-SUPABASE_URL = 'https://ahcethtonjwktjtmxzog.supabase.co'
-SUPABASE_ANON_KEY = 'sb_publishable_zxmsB9cyjDwi9ai9Vw-s1w_QlqKMG0S'
+# Cấu hình Supabase (nạp tự động từ biến môi trường hoặc assets/js/core/supabase-config.js)
+def get_supabase_credentials():
+    url = os.environ.get('SUPABASE_URL')
+    key = os.environ.get('SUPABASE_ANON_KEY')
+    if url and key:
+        return url, key
+
+    # Đọc trực tiếp từ file cấu hình JS của dự án
+    cfg_candidates = [
+        os.path.join(os.path.dirname(__file__), '..', 'assets', 'js', 'core', 'supabase-config.js'),
+        os.path.join(os.path.dirname(__file__), '..', 'assets', 'js', 'supabase-config.js')
+    ]
+    for p in cfg_candidates:
+        abs_p = os.path.abspath(p)
+        if os.path.exists(abs_p):
+            with open(abs_p, 'r', encoding='utf-8') as f:
+                content = f.read()
+                url_m = re.search(r"const\s+SUPABASE_URL\s*=\s*['\"]([^'\"]+)['\"]", content)
+                key_m = re.search(r"const\s+SUPABASE_ANON_KEY\s*=\s*['\"]([^'\"]+)['\"]", content)
+                if url_m and key_m:
+                    return url_m.group(1), key_m.group(1)
+
+    raise ValueError("Không tìm thấy cấu hình Supabase trong môi trường hoặc supabase-config.js")
+
+SUPABASE_URL, SUPABASE_ANON_KEY = get_supabase_credentials()
 TABLE_NAME = 'xg_sap_mb51'
 
 # Tìm đường dẫn service_account.json

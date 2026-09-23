@@ -4,9 +4,13 @@ const XLSX = require('xlsx');
 
 // 1. Đọc Supabase Config từ assets/js/supabase-config.js
 function getSupabaseConfig() {
-  const configPath = path.join(__dirname, '..', 'assets', 'js', 'supabase-config.js');
-  if (!fs.existsSync(configPath)) {
-    throw new Error('Không tìm thấy file supabase-config.js tại: ' + configPath);
+  const candidates = [
+    path.join(__dirname, '..', 'assets', 'js', 'core', 'supabase-config.js'),
+    path.join(__dirname, '..', 'assets', 'js', 'supabase-config.js')
+  ];
+  let configPath = candidates.find(p => fs.existsSync(p));
+  if (!configPath) {
+    throw new Error('Không tìm thấy file supabase-config.js tại các đường dẫn quy định.');
   }
   const content = fs.readFileSync(configPath, 'utf8');
 
