@@ -421,16 +421,12 @@
     const serverVer = latestVersionData ? latestVersionData.version : CURRENT_VERSION;
     const notes = latestVersionData ? (latestVersionData.releaseNotes || 'Hệ thống Quản lý Kho Phôi Cuộn - DDC.') : 'Đã kết nối máy chủ phiên bản.';
 
-    // Mark current active announcements as read when modal opens
-    activeAnnouncements.forEach(a => markAnnouncementAsRead(a.id));
-    updateBellUI(hasNewVersion);
-
     modalContainer.innerHTML = `
       <div style="
         background: #1e293b;
         border: 1px solid #334155;
         border-radius: 1.25rem;
-        max-width: 520px;
+        max-width: ${currentModalTab === 'goodsArrival' ? '780px' : '520px'};
         width: 100%;
         padding: 1.5rem;
         color: #f8fafc;
@@ -439,6 +435,7 @@
         max-height: 90vh;
         display: flex;
         flex-direction: column;
+        transition: max-width 0.25s ease;
       ">
         <button id="close-version-modal" style="
           position: absolute;
@@ -470,7 +467,7 @@
             <p style="margin: 0; font-size: 0.85rem; color: #94a3b8;">DDC Kho - Phôi Cuộn System</p>
           </div>
           <button id="btnHeaderGoodsArrivalNotice" style="
-            background: linear-gradient(135deg, #0284c7, #0369a1);
+            background: ${currentModalTab === 'goodsArrival' ? '#0369a1' : 'linear-gradient(135deg, #0284c7, #0369a1)'};
             color: #ffffff;
             border: 1px solid rgba(255, 255, 255, 0.2);
             padding: 6px 12px;
@@ -489,31 +486,43 @@
           </button>
         </div>
 
-        <!-- Navigation Tabs (If Admin) -->
-        ${isAdmin ? `
-          <div style="
-            display: flex;
-            gap: 0.5rem;
-            background: rgba(15, 23, 42, 0.6);
-            padding: 4px;
-            border-radius: 10px;
-            margin-bottom: 1rem;
-          ">
-            <button id="tabBtnAnnouncements" style="
-              flex: 1;
-              padding: 7px 12px;
-              border: none;
-              border-radius: 8px;
-              font-size: 0.85rem;
-              font-weight: 600;
-              cursor: pointer;
-              background: ${currentModalTab === 'announcements' ? '#3b82f6' : 'transparent'};
-              color: ${currentModalTab === 'announcements' ? '#ffffff' : '#94a3b8'};
-              transition: all 0.2s ease;
-            ">📢 Thông báo hệ thống</button>
+        <!-- Navigation Tabs -->
+        <div style="
+          display: flex;
+          gap: 0.5rem;
+          background: rgba(15, 23, 42, 0.6);
+          padding: 4px;
+          border-radius: 10px;
+          margin-bottom: 1rem;
+        ">
+          <button id="tabBtnAnnouncements" style="
+            flex: 1;
+            padding: 7px 10px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            background: ${currentModalTab === 'announcements' ? '#3b82f6' : 'transparent'};
+            color: ${currentModalTab === 'announcements' ? '#ffffff' : '#94a3b8'};
+            transition: all 0.2s ease;
+          ">📢 Thông báo</button>
+          <button id="tabBtnGoodsArrival" style="
+            flex: 1;
+            padding: 7px 10px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            background: ${currentModalTab === 'goodsArrival' ? '#0284c7' : 'transparent'};
+            color: ${currentModalTab === 'goodsArrival' ? '#ffffff' : '#94a3b8'};
+            transition: all 0.2s ease;
+          ">📦 Hàng về kho</button>
+          ${isAdmin ? `
             <button id="tabBtnAdmin" style="
               flex: 1;
-              padding: 7px 12px;
+              padding: 7px 10px;
               border: none;
               border-radius: 8px;
               font-size: 0.85rem;
@@ -522,13 +531,19 @@
               background: ${currentModalTab === 'admin' ? '#3b82f6' : 'transparent'};
               color: ${currentModalTab === 'admin' ? '#ffffff' : '#94a3b8'};
               transition: all 0.2s ease;
-            ">⚙️ Quản lý (Admin bao.lt)</button>
-          </div>
-        ` : ''}
+            ">⚙️ Quản lý</button>
+          ` : ''}
+        </div>
 
         <!-- Tab Body Container -->
         <div style="flex: 1; overflow-y: auto; padding-right: 4px;" id="modalTabContent">
-          ${currentModalTab === 'admin' && isAdmin ? renderAdminTabHTML() : renderUserTabHTML(hasNewVersion, serverVer, notes)}
+          ${
+            currentModalTab === 'admin' && isAdmin 
+              ? renderAdminTabHTML() 
+              : currentModalTab === 'goodsArrival' 
+                ? renderGoodsArrivalTabHTML() 
+                : renderUserTabHTML(hasNewVersion, serverVer, notes)
+          }
         </div>
 
         <!-- Modal Footer -->
@@ -555,39 +570,38 @@
     const btnHeaderGoods = modalContainer.querySelector('#btnHeaderGoodsArrivalNotice');
     if (btnHeaderGoods) {
       btnHeaderGoods.onclick = () => {
-        modalContainer.style.display = 'none';
-        if (typeof window.GoodsArrivalNotice !== 'undefined' && window.GoodsArrivalNotice.open) {
-          window.GoodsArrivalNotice.open();
-        } else {
-          const script = document.createElement('script');
-          script.src = '/assets/js/components/goods-arrival-notice.js?v=2.0.4';
-          script.onload = () => {
-            if (window.GoodsArrivalNotice && window.GoodsArrivalNotice.open) {
-              window.GoodsArrivalNotice.open();
-            }
-          };
-          document.body.appendChild(script);
-        }
+        currentModalTab = 'goodsArrival';
+        renderModalContent(modalContainer);
       };
     }
 
-    if (isAdmin) {
-      const tabAnnBtn = modalContainer.querySelector('#tabBtnAnnouncements');
-      const tabAdmBtn = modalContainer.querySelector('#tabBtnAdmin');
-      if (tabAnnBtn && tabAdmBtn) {
-        tabAnnBtn.onclick = () => {
-          currentModalTab = 'announcements';
-          renderModalContent(modalContainer);
-        };
-        tabAdmBtn.onclick = () => {
-          currentModalTab = 'admin';
-          renderModalContent(modalContainer);
-        };
-      }
+    const tabAnnBtn = modalContainer.querySelector('#tabBtnAnnouncements');
+    const tabGoodsBtn = modalContainer.querySelector('#tabBtnGoodsArrival');
+    const tabAdmBtn = modalContainer.querySelector('#tabBtnAdmin');
 
-      if (currentModalTab === 'admin') {
-        bindAdminTabEvents(modalContainer);
-      }
+    if (tabAnnBtn) {
+      tabAnnBtn.onclick = () => {
+        currentModalTab = 'announcements';
+        renderModalContent(modalContainer);
+      };
+    }
+    if (tabGoodsBtn) {
+      tabGoodsBtn.onclick = () => {
+        currentModalTab = 'goodsArrival';
+        renderModalContent(modalContainer);
+      };
+    }
+    if (tabAdmBtn) {
+      tabAdmBtn.onclick = () => {
+        currentModalTab = 'admin';
+        renderModalContent(modalContainer);
+      };
+    }
+
+    if (currentModalTab === 'admin') {
+      bindAdminTabEvents(modalContainer);
+    } else if (currentModalTab === 'goodsArrival') {
+      bindGoodsArrivalTabEvents(modalContainer);
     }
 
     const updateBtn = modalContainer.querySelector('#btnModalUpdateNow');
@@ -933,6 +947,441 @@
         }
       };
     });
+  }
+
+  // =========================================================================
+  // TAB HÀNG VỀ KHO (XG & TOLE) TÍCH HỢP TRỰC TIẾP TRONG CHUÔNG THÔNG BÁO
+  // =========================================================================
+
+  let tabGoodsArrivalRows = [];
+  let tabGoodsArrivalDate = '';
+  let tabGoodsExistingAnnId = null;
+
+  function normalizeToISODate(dateVal) {
+    if (!dateVal) return '';
+    const s = String(dateVal).trim();
+    const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+    const ddmmyyyy = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+    if (ddmmyyyy) {
+      return `${ddmmyyyy[3]}-${String(ddmmyyyy[2]).padStart(2, '0')}-${String(ddmmyyyy[1]).padStart(2, '0')}`;
+    }
+    const dt = new Date(s);
+    if (!isNaN(dt.getTime())) {
+      const y = dt.getFullYear();
+      const m = String(dt.getMonth() + 1).padStart(2, '0');
+      const d = String(dt.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+    return s;
+  }
+
+  function getTodayISODate() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  function parseWeightKg(val) {
+    if (val === null || val === undefined) return 0;
+    if (typeof val === 'number') return isNaN(val) ? 0 : val;
+    let s = String(val).trim().replace(/\s+/g, '');
+    if (!s) return 0;
+    const hasComma = s.includes(',');
+    const hasDot = s.includes('.');
+    if (hasComma && hasDot) {
+      if (s.lastIndexOf(',') > s.lastIndexOf('.')) s = s.replace(/\./g, '').replace(',', '.');
+      else s = s.replace(/,/g, '');
+    } else if (hasComma) {
+      const parts = s.split(',');
+      s = parts.length === 2 && parts[1].length === 3 ? s.replace(',', '.') : parts.join('.');
+    } else if (hasDot) {
+      const parts = s.split('.');
+      if (parts.length === 2 && parts[1].length === 3) s = s.replace(/\./g, '');
+    }
+    const num = parseFloat(s);
+    return isNaN(num) ? 0 : num;
+  }
+
+  function buildArrivalTitle(dateStr) {
+    if (!dateStr) return 'Hàng về kho';
+    let dd = '', mm = '';
+    const isoMatch = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) {
+      dd = isoMatch[3];
+      mm = isoMatch[2];
+    } else {
+      const ddmmyyyy = String(dateStr).match(/^(\d{1,2})[\/\-](\d{1,2})/);
+      if (ddmmyyyy) {
+        dd = String(ddmmyyyy[1]).padStart(2, '0');
+        mm = String(ddmmyyyy[2]).padStart(2, '0');
+      }
+    }
+    if (dd && mm) return `Hàng về kho ngày ${dd}/${mm}`;
+    return 'Hàng về kho';
+  }
+
+  function buildArrivalContent(rows) {
+    const typeMap = { XG: new Map(), TOLE: new Map() };
+    (rows || []).forEach(row => {
+      const isTole = (row._sourceType === 'TOLE' || row.kho === 'TOLE' || row.kho === 'Tole');
+      const typeKey = isTole ? 'TOLE' : 'XG';
+
+      let proj = String(row['Tên công trình'] || '').trim();
+      if (!proj) proj = 'Tồn trơn';
+
+      let mat = String(row['Tên vật tư'] || row['Mã vật tư'] || 'Vật tư khác').trim();
+      let kg = parseWeightKg(row['Số lượng (Kg)']);
+
+      const pMap = typeMap[typeKey];
+      if (!pMap.has(proj)) pMap.set(proj, new Map());
+      const mMap = pMap.get(proj);
+      mMap.set(mat, (mMap.get(mat) || 0) + kg);
+    });
+
+    const formatProjectGroup = (pMap) => {
+      if (!pMap || pMap.size === 0) return [];
+      const sections = [];
+      const sortedProjs = Array.from(pMap.keys()).sort((a, b) => {
+        if (a === 'Tồn trơn') return 1;
+        if (b === 'Tồn trơn') return -1;
+        return a.localeCompare(b, 'vi');
+      });
+
+      for (const proj of sortedProjs) {
+        const matMap = pMap.get(proj);
+        const lines = [`[${proj}]`];
+        for (const [mat, totalKg] of matMap.entries()) {
+          const kgStr = totalKg.toLocaleString('vi-VN', { minimumFractionDigits: 0, maximumFractionDigits: 3 });
+          lines.push(`${mat}: ${kgStr}kg`);
+        }
+        sections.push(lines.join('\n'));
+      }
+      return sections;
+    };
+
+    const blocks = [];
+    const xgSecs = formatProjectGroup(typeMap.XG);
+    const toleSecs = formatProjectGroup(typeMap.TOLE);
+
+    if (xgSecs.length > 0 && toleSecs.length > 0) {
+      blocks.push('XÀ GỒ:\n' + xgSecs.join('\n\n'));
+      blocks.push('TOLE:\n' + toleSecs.join('\n\n'));
+    } else if (xgSecs.length > 0) {
+      blocks.push('XÀ GỒ:\n' + xgSecs.join('\n\n'));
+    } else if (toleSecs.length > 0) {
+      blocks.push('TOLE:\n' + toleSecs.join('\n\n'));
+    }
+
+    return blocks.join('\n\n');
+  }
+
+  function renderGoodsArrivalTabHTML() {
+    if (!tabGoodsArrivalDate) {
+      tabGoodsArrivalDate = getTodayISODate();
+    }
+
+    return `
+      <div style="font-size: 0.88rem; font-weight: 700; color: #38bdf8; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">
+        📦 Phát thông báo Hàng về kho (Xà gồ & Tole)
+      </div>
+
+      <!-- Bộ lọc ngày -->
+      <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem; background: rgba(255,255,255,0.04); padding: 0.6rem 0.8rem; border-radius: 0.6rem; border: 1px solid rgba(255,255,255,0.08);">
+        <span style="font-size: 0.83rem; color: #94a3b8; font-weight: 600;">📅 Ngày hàng về:</span>
+        <input type="date" id="tabGoodsDate" value="${tabGoodsArrivalDate}" style="
+          background: #0f172a; border: 1px solid #334155; color: #ffffff; padding: 4px 8px; border-radius: 6px; font-size: 0.83rem; font-weight: 600;
+        " />
+        <button id="btnTabReloadGoods" style="
+          background: #0284c7; color: #fff; border: none; padding: 5px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+        ">🔄 Nạp dữ liệu</button>
+        <div id="tabGoodsStatusBadge" style="font-size: 0.78rem; margin-left: auto; color: #94a3b8;">Đang nạp...</div>
+      </div>
+
+      <!-- Bảng danh sách cuộn nhập -->
+      <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 0.6rem; margin-bottom: 0.75rem; overflow: hidden;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.75rem; background: rgba(255,255,255,0.03); border-bottom: 1px solid rgba(255,255,255,0.06);">
+          <div style="font-size: 0.82rem; font-weight: 700; color: #38bdf8;">
+            📋 Danh sách cuộn nhập (<span id="tabGoodsTotalCount">0</span>)
+            <span id="tabGoodsSelectedKg" style="color: #34d399; margin-left: 6px; font-weight: normal;">Đã chọn: 0 kg</span>
+          </div>
+          <div style="display: flex; gap: 0.4rem;">
+            <button id="btnTabSelectAll" style="background: rgba(59,130,246,0.2); border: 1px solid #3b82f6; color: #93c5fd; padding: 2px 8px; border-radius: 4px; font-size: 0.74rem; cursor: pointer;">Chọn tất cả</button>
+            <button id="btnTabDeselectAll" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: #cbd5e1; padding: 2px 8px; border-radius: 4px; font-size: 0.74rem; cursor: pointer;">Bỏ chọn</button>
+          </div>
+        </div>
+        <div style="max-height: 190px; overflow-y: auto;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; color: #e2e8f0;" id="tabGoodsTable">
+            <thead style="background: #0f172a; position: sticky; top: 0; z-index: 1;">
+              <tr style="border-bottom: 1px solid #334155; text-align: left;">
+                <th style="padding: 6px; width: 32px; text-align: center;"><input type="checkbox" id="tabCheckAllHead" checked /></th>
+                <th style="padding: 6px; width: 55px; text-align: center;">Kho</th>
+                <th style="padding: 6px;">Phiếu</th>
+                <th style="padding: 6px;">Vật tư</th>
+                <th style="padding: 6px;">Cuộn ID</th>
+                <th style="padding: 6px; text-align: right;">Số kg</th>
+                <th style="padding: 6px;">Công trình</th>
+              </tr>
+            </thead>
+            <tbody id="tabGoodsTbody">
+              <tr><td colspan="7" style="text-align: center; padding: 20px; color: #64748b;">Đang tải dữ liệu...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Live Preview -->
+      <div style="background: #0f172a; border: 1px solid rgba(255,255,255,0.1); border-radius: 0.75rem; padding: 0.85rem; margin-bottom: 0.75rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+          <span style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.74rem; font-weight: 600;">📢 Thông báo chung</span>
+          <span style="font-size: 0.74rem; color: #64748b;">Xem trước (Live Preview)</span>
+        </div>
+        <div id="tabPreviewTitle" style="font-weight: 700; font-size: 0.95rem; color: #f8fafc; margin-bottom: 0.35rem;">Hàng về kho ngày ...</div>
+        <div id="tabPreviewContent" style="font-size: 0.82rem; color: #cbd5e1; line-height: 1.5; white-space: pre-wrap; font-family: monospace; max-height: 140px; overflow-y: auto; background: rgba(255,255,255,0.03); padding: 8px; border-radius: 6px;">(Chưa chọn cuộn hàng nào)</div>
+      </div>
+
+      <!-- Actions -->
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div id="tabPublishStatusMsg" style="font-size: 0.8rem; font-weight: 600;"></div>
+        <button id="btnTabPublishNotice" style="
+          background: linear-gradient(135deg, #10b981, #059669);
+          color: white; border: none; padding: 7px 16px; border-radius: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        ">🚀 Đăng / Cập nhật thông báo</button>
+      </div>
+    `;
+  }
+
+  async function loadGoodsArrivalDataForTab(modalContainer, dateStr) {
+    const tbody = modalContainer.querySelector('#tabGoodsTbody');
+    const badgeStatus = modalContainer.querySelector('#tabGoodsStatusBadge');
+    const countEl = modalContainer.querySelector('#tabGoodsTotalCount');
+    if (!tbody) return;
+
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px; color: #64748b;">Đang nạp dữ liệu từ cả 2 bảng Xà gồ và Tole...</td></tr>';
+    tabGoodsArrivalRows = [];
+    tabGoodsExistingAnnId = null;
+
+    try {
+      const client = await ensureSupabaseClient();
+      if (!client) throw new Error('Không thể kết nối Supabase SDK.');
+
+      const isoDate = normalizeToISODate(dateStr);
+      if (!isoDate) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px; color: #f87171;">Ngày không hợp lệ!</td></tr>';
+        return;
+      }
+
+      const [xgRes, toleRes, annRes] = await Promise.all([
+        client.from('xg-nhap').select('*').eq('Ngày nhập', isoDate).order('id', { ascending: false }).limit(500),
+        client.from('tole-nhap').select('*').eq('Ngày nhập', isoDate).order('id', { ascending: false }).limit(500),
+        client.from('system_announcements').select('*').order('created_at', { ascending: false }).limit(100)
+      ]);
+
+      const xgList = (xgRes.data || []).map(r => ({ ...r, _sourceType: 'XG', _sourceLabel: 'Xà gồ' }));
+      const toleList = (toleRes.data || []).map(r => ({ ...r, _sourceType: 'TOLE', _sourceLabel: 'Tole' }));
+      tabGoodsArrivalRows = [...xgList, ...toleList];
+
+      const expectedTitle = buildArrivalTitle(isoDate);
+      const matchedAnn = (annRes.data || []).find(a => a.title && a.title.trim().toLowerCase() === expectedTitle.toLowerCase());
+
+      if (badgeStatus) {
+        if (matchedAnn) {
+          tabGoodsExistingAnnId = matchedAnn.id;
+          badgeStatus.innerHTML = '<span style="color: #fbbf24;">⚠️ Đã có thông báo (Lưu sẽ Cập nhật)</span>';
+        } else {
+          tabGoodsExistingAnnId = null;
+          badgeStatus.innerHTML = '<span style="color: #34d399;">✨ Chưa có thông báo (Lưu sẽ Tạo mới)</span>';
+        }
+      }
+
+      if (countEl) countEl.textContent = tabGoodsArrivalRows.length;
+
+      if (tabGoodsArrivalRows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px; color: #94a3b8;">Không tìm thấy cuộn hàng nào nhập ngày này.</td></tr>';
+        updateTabPreview(modalContainer, []);
+        return;
+      }
+
+      tbody.innerHTML = tabGoodsArrivalRows.map((row, idx) => {
+        const kg = parseWeightKg(row['Số lượng (Kg)']);
+        const kgStr = kg.toLocaleString('vi-VN', { maximumFractionDigits: 3 });
+        const proj = String(row['Tên công trình'] || '').trim();
+        const projText = proj ? proj : '<span style="color: #94a3b8; font-style: italic;">Tồn trơn</span>';
+        const typeBadge = row._sourceType === 'XG' 
+          ? '<span style="background: #2563eb; color: white; padding: 1px 6px; border-radius: 4px; font-size: 0.7rem;">XG</span>'
+          : '<span style="background: #d97706; color: white; padding: 1px 6px; border-radius: 4px; font-size: 0.7rem;">Tole</span>';
+
+        return `
+          <tr style="border-bottom: 1px solid #1e293b;">
+            <td style="padding: 6px; text-align: center;">
+              <input type="checkbox" class="tab-goods-check" data-idx="${idx}" checked />
+            </td>
+            <td style="padding: 6px; text-align: center;">${typeBadge}</td>
+            <td style="padding: 6px; color: #94a3b8;">${row['Phiếu nhập'] || '-'}</td>
+            <td style="padding: 6px; font-weight: 600; color: #f8fafc;">${row['Tên vật tư'] || row['Mã vật tư'] || '-'}</td>
+            <td style="padding: 6px; color: #38bdf8; font-family: monospace;">${row['Cuộn ID'] || '-'}</td>
+            <td style="padding: 6px; text-align: right; font-weight: 600;">${kgStr} kg</td>
+            <td style="padding: 6px;">${projText}</td>
+          </tr>
+        `;
+      }).join('');
+
+      updateTabPreview(modalContainer, tabGoodsArrivalRows);
+    } catch (err) {
+      console.error('[loadGoodsArrivalDataForTab]', err);
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 20px; color: #f87171;">Lỗi: ${err.message || err}</td></tr>`;
+    }
+  }
+
+  function getTabSelectedRows(modalContainer) {
+    const checks = modalContainer.querySelectorAll('.tab-goods-check:checked');
+    const selected = [];
+    checks.forEach(cb => {
+      const idx = parseInt(cb.getAttribute('data-idx'), 10);
+      if (tabGoodsArrivalRows[idx]) selected.push(tabGoodsArrivalRows[idx]);
+    });
+    return selected;
+  }
+
+  function updateTabPreview(modalContainer, selectedRows) {
+    const titleEl = modalContainer.querySelector('#tabPreviewTitle');
+    const contentEl = modalContainer.querySelector('#tabPreviewContent');
+    const dateInput = modalContainer.querySelector('#tabGoodsDate');
+    const selectedKgEl = modalContainer.querySelector('#tabGoodsSelectedKg');
+
+    const dateStr = dateInput ? dateInput.value : tabGoodsArrivalDate;
+    const title = buildArrivalTitle(dateStr);
+    if (titleEl) titleEl.textContent = title;
+
+    let totalKg = 0;
+    (selectedRows || []).forEach(r => {
+      totalKg += parseWeightKg(r['Số lượng (Kg)']);
+    });
+
+    if (selectedKgEl) {
+      const totalStr = totalKg.toLocaleString('vi-VN', { maximumFractionDigits: 3 });
+      selectedKgEl.textContent = `Đã chọn: ${selectedRows.length} cuộn (${totalStr} kg)`;
+    }
+
+    if (!selectedRows || selectedRows.length === 0) {
+      if (contentEl) contentEl.textContent = '(Chưa chọn cuộn hàng nào)';
+      return;
+    }
+
+    const content = buildArrivalContent(selectedRows);
+    if (contentEl) contentEl.textContent = content || '(Nội dung trống)';
+  }
+
+  function bindGoodsArrivalTabEvents(modalContainer) {
+    const dateInput = modalContainer.querySelector('#tabGoodsDate');
+    const btnReload = modalContainer.querySelector('#btnTabReloadGoods');
+    const btnSelectAll = modalContainer.querySelector('#btnTabSelectAll');
+    const btnDeselectAll = modalContainer.querySelector('#btnTabDeselectAll');
+    const headCheck = modalContainer.querySelector('#tabCheckAllHead');
+    const tbody = modalContainer.querySelector('#tabGoodsTbody');
+    const btnPublish = modalContainer.querySelector('#btnTabPublishNotice');
+    const statusMsg = modalContainer.querySelector('#tabPublishStatusMsg');
+
+    if (btnReload && dateInput) {
+      btnReload.onclick = () => {
+        tabGoodsArrivalDate = dateInput.value;
+        loadGoodsArrivalDataForTab(modalContainer, dateInput.value);
+      };
+      dateInput.onchange = () => {
+        tabGoodsArrivalDate = dateInput.value;
+        loadGoodsArrivalDataForTab(modalContainer, dateInput.value);
+      };
+    }
+
+    const setAllChecks = (checked) => {
+      modalContainer.querySelectorAll('.tab-goods-check').forEach(cb => { cb.checked = checked; });
+      if (headCheck) headCheck.checked = checked;
+      updateTabPreview(modalContainer, getTabSelectedRows(modalContainer));
+    };
+
+    if (btnSelectAll) btnSelectAll.onclick = () => setAllChecks(true);
+    if (btnDeselectAll) btnDeselectAll.onclick = () => setAllChecks(false);
+    if (headCheck) headCheck.onchange = (e) => setAllChecks(e.target.checked);
+
+    if (tbody) {
+      tbody.onchange = (e) => {
+        if (e.target && e.target.classList.contains('tab-goods-check')) {
+          updateTabPreview(modalContainer, getTabSelectedRows(modalContainer));
+        }
+      };
+    }
+
+    if (btnPublish) {
+      btnPublish.onclick = async () => {
+        const selected = getTabSelectedRows(modalContainer);
+        if (selected.length === 0) {
+          alert('⚠️ Vui lòng tick chọn ít nhất 1 cuộn hàng.');
+          return;
+        }
+
+        const dateVal = dateInput ? dateInput.value : tabGoodsArrivalDate;
+        const title = buildArrivalTitle(dateVal);
+        const content = buildArrivalContent(selected);
+
+        if (!content) {
+          alert('⚠️ Nội dung thông báo trống.');
+          return;
+        }
+
+        btnPublish.disabled = true;
+        btnPublish.textContent = '⏳ Đang đăng...';
+
+        try {
+          const client = await ensureSupabaseClient();
+          if (!client) throw new Error('Không thể kết nối Supabase SDK.');
+
+          const currentUser = localStorage.getItem('currentUser') || 'Kho';
+
+          if (tabGoodsExistingAnnId) {
+            const { error } = await client.from('system_announcements').update({
+              content: content,
+              is_active: true,
+              created_at: new Date().toISOString()
+            }).eq('id', tabGoodsExistingAnnId);
+            if (error) throw error;
+          } else {
+            const { error } = await client.from('system_announcements').insert([{
+              title: title,
+              content: content,
+              type: 'info',
+              is_active: true,
+              created_by: currentUser
+            }]);
+            if (error) throw error;
+          }
+
+          if (statusMsg) {
+            statusMsg.style.color = '#34d399';
+            statusMsg.textContent = '✅ Đăng thông báo thành công!';
+          }
+
+          await fetchAnnouncements();
+
+          setTimeout(() => {
+            currentModalTab = 'announcements';
+            renderModalContent(modalContainer);
+          }, 800);
+        } catch (err) {
+          console.error('[Publish Notice Tab]', err);
+          if (statusMsg) {
+            statusMsg.style.color = '#f87171';
+            statusMsg.textContent = '❌ Lỗi: ' + (err.message || err);
+          }
+          btnPublish.disabled = false;
+          btnPublish.textContent = '🚀 Đăng / Cập nhật thông báo';
+        }
+      };
+    }
+
+    // Nạp dữ liệu ban đầu cho tab
+    loadGoodsArrivalDataForTab(modalContainer, tabGoodsArrivalDate);
   }
 
   function showVersionModal() {
