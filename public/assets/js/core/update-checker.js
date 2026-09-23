@@ -465,10 +465,28 @@
             font-size: 22px;
             flex-shrink: 0;
           ">🔔</div>
-          <div>
+          <div style="flex: 1;">
             <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700;">Trung tâm Thông báo</h3>
             <p style="margin: 0; font-size: 0.85rem; color: #94a3b8;">DDC Kho - Phôi Cuộn System</p>
           </div>
+          <button id="btnHeaderGoodsArrivalNotice" style="
+            background: linear-gradient(135deg, #0284c7, #0369a1);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+            margin-right: 2rem;
+            transition: all 0.2s ease;
+          " title="Tạo hoặc cập nhật thông báo hàng về kho">
+            <span>📦</span> Thông báo hàng về
+          </button>
         </div>
 
         <!-- Navigation Tabs (If Admin) -->
@@ -533,6 +551,25 @@
     modalContainer.querySelector('#close-version-modal').onclick = () => modalContainer.style.display = 'none';
     modalContainer.querySelector('#btnModalClose').onclick = () => modalContainer.style.display = 'none';
     modalContainer.onclick = (e) => { if (e.target === modalContainer) modalContainer.style.display = 'none'; };
+
+    const btnHeaderGoods = modalContainer.querySelector('#btnHeaderGoodsArrivalNotice');
+    if (btnHeaderGoods) {
+      btnHeaderGoods.onclick = () => {
+        modalContainer.style.display = 'none';
+        if (typeof window.GoodsArrivalNotice !== 'undefined' && window.GoodsArrivalNotice.open) {
+          window.GoodsArrivalNotice.open();
+        } else {
+          const script = document.createElement('script');
+          script.src = '/assets/js/components/goods-arrival-notice.js?v=2.0.4';
+          script.onload = () => {
+            if (window.GoodsArrivalNotice && window.GoodsArrivalNotice.open) {
+              window.GoodsArrivalNotice.open();
+            }
+          };
+          document.body.appendChild(script);
+        }
+      };
+    }
 
     if (isAdmin) {
       const tabAnnBtn = modalContainer.querySelector('#tabBtnAnnouncements');
