@@ -2582,6 +2582,31 @@ document.addEventListener('submit', async (e) => {
         hideLoadingOverlay(); return;
       }
 
+      // Kiểm tra nếu phiếu xuất đã có trong kho và chưa được xác nhận
+      const phieuXuatInputVal = (form.querySelector('input[name="col_3"]')?.value || '').trim();
+      if (phieuXuatInputVal && window.XgSapLookup && typeof window.XgSapLookup.checkReceiptProcessed === 'function') {
+        const isConfirmed = window._confirmedProcessedReceipts && window._confirmedProcessedReceipts.has(phieuXuatInputVal.toLowerCase());
+        if (!isConfirmed) {
+          const procCheck = await window.XgSapLookup.checkReceiptProcessed(phieuXuatInputVal, 'xg-xuat');
+          if (procCheck && procCheck.isProcessed) {
+            window._isSubmittingAddData = false;
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = originalText; }
+            hideLoadingOverlay();
+            window.XgSapLookup.showReceiptProcessedWarningModal({
+              docNo: phieuXuatInputVal,
+              pageContext: 'xg-xuat',
+              processedInfo: procCheck,
+              sapRecord: window._currentSelectedSapRecord,
+              onConfirm: () => {
+                if (submitBtn) submitBtn.click();
+              },
+              onCancel: () => {}
+            });
+            return;
+          }
+        }
+      }
+
       // Gọi RPC giao dịch nguyên tử xuat_xg_atomic
       const currentUser = (typeof localStorage !== 'undefined' && localStorage.getItem('currentUser')) || 'anonymous';
       let insertedData = null;
