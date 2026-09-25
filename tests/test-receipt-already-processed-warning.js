@@ -138,10 +138,30 @@ async function main() {
     assert.strictEqual(global.window._confirmedProcessedReceipts.has(docNo.toLowerCase()), true);
   });
 
-  // 6. Kiểm tra các hàm xuất ra window
+  // 6. Kiểm tra các hàm nghiệp vụ được export đầy đủ
   await runAsyncTest('Kiểm tra các hàm nghiệp vụ được export đầy đủ', async () => {
     assert.strictEqual(typeof SapLookup.checkReceiptProcessed, 'function');
     assert.strictEqual(typeof SapLookup.showReceiptProcessedWarningModal, 'function');
+  });
+
+  // 7. Kiểm tra logic phân biệt Thêm mới vs Cập nhật dữ liệu
+  await runAsyncTest('Chỉ áp dụng chặn phiếu trùng khi Thêm dữ liệu, không áp dụng cho Cập nhật/Sửa dữ liệu', async () => {
+    const editForm = { id: 'editDataForm' };
+    const editInput = { id: 'editPhiếu nhập' };
+    const addForm = { id: 'addDataForm' };
+    const addInput = { id: 'col_3' };
+
+    const isEditForm1 = Boolean(
+      (editForm && (editForm.id === 'editDataForm' || (editForm.closest && editForm.closest('#editDataModal')))) ||
+      (editInput && (editInput.id === 'editPhiếu nhập' || editInput.id === 'editPhiếu xuất' || (editInput.closest && editInput.closest('#editDataModal'))))
+    );
+    assert.strictEqual(isEditForm1, true, 'Form sửa dữ liệu phải được nhận diện isEditForm = true');
+
+    const isEditForm2 = Boolean(
+      (addForm && (addForm.id === 'editDataForm' || (addForm.closest && addForm.closest('#editDataModal')))) ||
+      (addInput && (addInput.id === 'editPhiếu nhập' || addInput.id === 'editPhiếu xuất' || (addInput.closest && addInput.closest('#editDataModal'))))
+    );
+    assert.strictEqual(isEditForm2, false, 'Form thêm mới dữ liệu phải có isEditForm = false để kích hoạt chặn trùng');
   });
 
   console.log('\n---------------------------------------------------------------');

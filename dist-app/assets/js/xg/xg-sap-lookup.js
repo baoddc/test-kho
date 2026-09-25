@@ -540,6 +540,12 @@
   function initSapDocumentAutocomplete(inputEl, formEl, pageContext) {
     if (!inputEl) return;
 
+    // Phân biệt rõ: Chỉ áp dụng kiểm tra chặn trùng phiếu khi THÊM dữ liệu, KHÔNG áp dụng khi CẬP NHẬT/SỬA
+    const isEditForm = Boolean(
+      (formEl && (formEl.id === 'editDataForm' || (formEl.closest && formEl.closest('#editDataModal')))) ||
+      (inputEl && (inputEl.id === 'editPhiếu nhập' || inputEl.id === 'editPhiếu xuất' || (inputEl.closest && inputEl.closest('#editDataModal'))))
+    );
+
     const currentContext = detectCurrentPageContext(pageContext);
     const rules = SAP_PAGE_RULES[currentContext] || SAP_PAGE_RULES['xg-nhap'];
 
@@ -608,15 +614,17 @@
 
       // TRƯỜNG HỢP 1: Có các dòng hợp lệ cho trang hiện tại
       if (validGroups.length > 0) {
-        // Kiểm tra trạng thái đã nhập/xuất trong kho của các số phiếu
+        // Kiểm tra trạng thái đã nhập/xuất trong kho của các số phiếu (CHỈ kiểm tra khi THÊM dữ liệu)
         const processedMap = new Map();
-        await Promise.all(validGroups.map(async g => {
-          const doc = String(g.material_document || '').trim();
-          if (doc && !processedMap.has(doc.toLowerCase())) {
-            const info = await checkReceiptProcessed(doc, currentContext);
-            processedMap.set(doc.toLowerCase(), info);
-          }
-        }));
+        if (!isEditForm) {
+          await Promise.all(validGroups.map(async g => {
+            const doc = String(g.material_document || '').trim();
+            if (doc && !processedMap.has(doc.toLowerCase())) {
+              const info = await checkReceiptProcessed(doc, currentContext);
+              processedMap.set(doc.toLowerCase(), info);
+            }
+          }));
+        }
 
         const headerDiv = document.createElement('div');
         headerDiv.className = 'sap-dropdown-header d-flex justify-content-between align-items-center px-2 py-1 bg-light border-bottom text-muted small';
@@ -648,11 +656,11 @@
               : '');
 
           const docKey = String(g.material_document || '').trim().toLowerCase();
-          const proc = processedMap.get(docKey);
+          const proc = !isEditForm ? processedMap.get(docKey) : null;
           const isProc = Boolean(proc && proc.isProcessed);
 
           const procBadge = isProc
-            ? `<span class="badge bg-warning text-dark border border-warning-subtle me-1" title="Phiếu này đã có trong hệ thống: ${proc.count} cuộn (${proc.totalKg.toLocaleString('vi-VN')} kg)"><i class="bi bi-exclamation-triangle-fill me-1"></i>Đã ${rules.direction === 'nhap' ? 'nhập' : 'xuất'} (${proc.totalKg.toLocaleString('vi-VN')} kg)</span>`
+            ? `<span class="badge bg-danger text-white border border-danger-subtle me-1" title="Phiếu này đã có trong hệ thống (${proc.totalKg.toLocaleString('vi-VN')} kg) - ĐÃ KHÓA"><i class="bi bi-slash-circle me-1"></i>Đã ${rules.direction === 'nhap' ? 'nhập' : 'xuất'} (${proc.totalKg.toLocaleString('vi-VN')} kg) - KHÓA</span>`
             : '';
 
           itemEl.innerHTML = `
@@ -683,21 +691,23 @@
             e.stopPropagation();
             hideDropdown();
 
-            const doc = String(g.material_document || '').trim();
-            const procInfo = processedMap.get(doc.toLowerCase()) || await checkReceiptProcessed(doc, currentContext);
+            if (!isEditForm) {
+              const doc = String(g.material_document || '').trim();
+              const procInfo = (!isEditForm && processedMap.get(doc.toLowerCase())) || await checkReceiptProcessed(doc, currentContext);
 
-            if (procInfo && procInfo.isProcessed) {
-              showReceiptProcessedWarningModal({
-                docNo: doc,
-                pageContext: currentContext,
-                processedInfo: procInfo,
-                sapRecord: g,
-                onCancel: () => {
-                  inputEl.value = '';
-                  resetSapSelection();
-                }
-              });
-              return;
+              if (procInfo && procInfo.isProcessed) {
+                showReceiptProcessedWarningModal({
+                  docNo: doc,
+                  pageContext: currentContext,
+                  processedInfo: procInfo,
+                  sapRecord: g,
+                  onCancel: () => {
+                    inputEl.value = '';
+                    resetSapSelection();
+                  }
+                });
+                return;
+              }
             }
 
             applySapRecordToForm(g, formEl, currentContext);
@@ -853,30 +863,32 @@
       const val = inputEl.value.trim();
       if (!val) return;
 
-      // 1. Kiểm tra xem phiếu này đã có trong hệ thống hay chưa -> CHẶN HOÀN TOÀN
-      const procInfo = await checkReceiptProcessed(val, currentContext);
-      if (procInfo && procInfo.isProcessed) {
-        let matchedSap = null;
-        try {
-          const rawRows = await querySapMb51(val);
-          const groups = groupSapMb51Rows(rawRows);
-          const exact = groups.filter(g => String(g.material_document || '').toLowerCase() === val.toLowerCase());
-          if (exact.length > 0) matchedSap = exact[0];
-        } catch (e) {
-          // ignore
-        }
-
-        showReceiptProcessedWarningModal({
-          docNo: val,
-          pageContext: currentContext,
-          processedInfo: procInfo,
-          sapRecord: matchedSap,
-          onCancel: () => {
-            inputEl.value = '';
-            resetSapSelection();
+      // 1. Kiểm tra xem phiếu này đã có trong hệ thống hay chưa -> CHỈ ÁP DỤNG KHI THÊM DỮ LIỆU (KHÔNG ÁP DỤNG KHI SỬA/CẬP NHẬT)
+      if (!isEditForm) {
+        const procInfo = await checkReceiptProcessed(val, currentContext);
+        if (procInfo && procInfo.isProcessed) {
+          let matchedSap = null;
+          try {
+            const rawRows = await querySapMb51(val);
+            const groups = groupSapMb51Rows(rawRows);
+            const exact = groups.filter(g => String(g.material_document || '').toLowerCase() === val.toLowerCase());
+            if (exact.length > 0) matchedSap = exact[0];
+          } catch (e) {
+            // ignore
           }
-        });
-        return;
+
+          showReceiptProcessedWarningModal({
+            docNo: val,
+            pageContext: currentContext,
+            processedInfo: procInfo,
+            sapRecord: matchedSap,
+            onCancel: () => {
+              inputEl.value = '';
+              resetSapSelection();
+            }
+          });
+          return;
+        }
       }
 
       // 2. Nếu chưa được chọn SAP và chưa có cảnh báo, thử auto match SAP chính xác
@@ -917,21 +929,23 @@
           const g = currentResults[activeIndex];
           hideDropdown();
 
-          const doc = String(g.material_document || '').trim();
-          const procInfo = await checkReceiptProcessed(doc, currentContext);
+          if (!isEditForm) {
+            const doc = String(g.material_document || '').trim();
+            const procInfo = await checkReceiptProcessed(doc, currentContext);
 
-          if (procInfo && procInfo.isProcessed) {
-            showReceiptProcessedWarningModal({
-              docNo: doc,
-              pageContext: currentContext,
-              processedInfo: procInfo,
-              sapRecord: g,
-              onCancel: () => {
-                inputEl.value = '';
-                resetSapSelection();
-              }
-            });
-            return;
+            if (procInfo && procInfo.isProcessed) {
+              showReceiptProcessedWarningModal({
+                docNo: doc,
+                pageContext: currentContext,
+                processedInfo: procInfo,
+                sapRecord: g,
+                onCancel: () => {
+                  inputEl.value = '';
+                  resetSapSelection();
+                }
+              });
+              return;
+            }
           }
 
           applySapRecordToForm(g, formEl, currentContext);
