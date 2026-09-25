@@ -589,7 +589,7 @@
       currentResults = [];
     }
 
-    function renderDropdown(groups, searchVal) {
+    async function renderDropdown(groups, searchVal) {
       dropdown.innerHTML = '';
       activeIndex = -1;
 
@@ -622,6 +622,16 @@
 
       // TRƯỜNG HỢP 1: Có các dòng hợp lệ cho trang hiện tại
       if (validGroups.length > 0) {
+        // Kiểm tra trạng thái đã nhập/xuất trong kho của các số phiếu
+        const processedMap = new Map();
+        await Promise.all(validGroups.map(async g => {
+          const doc = String(g.material_document || '').trim();
+          if (doc && !processedMap.has(doc.toLowerCase())) {
+            const info = await checkReceiptProcessed(doc, currentContext);
+            processedMap.set(doc.toLowerCase(), info);
+          }
+        }));
+
         const headerDiv = document.createElement('div');
         headerDiv.className = 'sap-dropdown-header d-flex justify-content-between align-items-center px-2 py-1 bg-light border-bottom text-muted small';
         headerDiv.innerHTML = `
@@ -651,10 +661,19 @@
               ? '<span class="badge bg-danger-subtle text-danger border border-danger-subtle me-1" title="Credit (Xuất kho)">H</span>'
               : '');
 
+          const docKey = String(g.material_document || '').trim().toLowerCase();
+          const proc = processedMap.get(docKey);
+          const isProc = Boolean(proc && proc.isProcessed);
+
+          const procBadge = isProc
+            ? `<span class="badge bg-warning text-dark border border-warning-subtle me-1" title="Phiếu này đã có trong hệ thống: ${proc.count} cuộn (${proc.totalKg.toLocaleString('vi-VN')} kg)"><i class="bi bi-exclamation-triangle-fill me-1"></i>Đã ${rules.direction === 'nhap' ? 'nhập' : 'xuất'} (${proc.totalKg.toLocaleString('vi-VN')} kg)</span>`
+            : '';
+
           itemEl.innerHTML = `
-            <div class="d-flex justify-content-between align-items-center mb-1">
+            <div class="d-flex justify-content-between align-items-center mb-1 flex-wrap gap-1">
               <div>
                 ${dcBadge}
+                ${procBadge}
                 <span class="fw-bold text-primary"><i class="bi bi-receipt me-1"></i>${escapeHtml(g.material_document)}</span>
               </div>
               <span class="badge bg-primary-subtle text-primary border border-primary-subtle">${qtyFormatted} kg</span>
@@ -674,10 +693,30 @@
             highlightItem(idx);
           });
 
-          itemEl.addEventListener('click', (e) => {
+          itemEl.addEventListener('click', async (e) => {
             e.stopPropagation();
-            applySapRecordToForm(g, formEl, currentContext);
             hideDropdown();
+
+            const doc = String(g.material_document || '').trim();
+            const procInfo = processedMap.get(doc.toLowerCase()) || await checkReceiptProcessed(doc, currentContext);
+
+            if (procInfo && procInfo.isProcessed && (!window._confirmedProcessedReceipts || !window._confirmedProcessedReceipts.has(doc.toLowerCase()))) {
+              showReceiptProcessedWarningModal({
+                docNo: doc,
+                pageContext: currentContext,
+                processedInfo: procInfo,
+                sapRecord: g,
+                onConfirm: () => {
+                  applySapRecordToForm(g, formEl, currentContext);
+                },
+                onCancel: () => {
+                  inputEl.value = '';
+                  resetSapSelection();
+                }
+              });
+            } else {
+              applySapRecordToForm(g, formEl, currentContext);
+            }
           });
 
           listDiv.appendChild(itemEl);
@@ -821,33 +860,71 @@
 
         const rawRows = await querySapMb51(val);
         const groups = groupSapMb51Rows(rawRows);
-        renderDropdown(groups, val);
+        await renderDropdown(groups, val);
       }, 250);
     });
 
-    // Khi rời khỏi ô nhập hoặc dán nội dung: nếu trùng khớp đúng 1 phiếu SAP thì tự động áp dụng
+    // Khi rời khỏi ô nhập hoặc dán nội dung: kiểm tra trùng lặp và tự động áp dụng SAP
     inputEl.addEventListener('change', async () => {
       const val = inputEl.value.trim();
-      if (!val || window._currentSelectedSapRecord) return;
-      try {
-        const rawRows = await querySapMb51(val);
-        const groups = groupSapMb51Rows(rawRows);
-        const exact = groups.filter(g => String(g.material_document || '').toLowerCase() === val.toLowerCase());
-        if (exact.length === 1) {
-          const check = validateSapRecordAgainstContext(exact[0], currentContext);
-          if (check.isValid) {
-            applySapRecordToForm(exact[0], formEl, currentContext);
-          } else {
-            showAutofillToast(`⚠️ Phiếu ${val} không được phép nhập vào ${rules.label} (sai loại hoặc phân nhóm)!`);
-          }
+      if (!val) return;
+
+      // 1. Kiểm tra xem phiếu này đã có trong hệ thống hay chưa
+      const procInfo = await checkReceiptProcessed(val, currentContext);
+      if (procInfo && procInfo.isProcessed && (!window._confirmedProcessedReceipts || !window._confirmedProcessedReceipts.has(val.toLowerCase()))) {
+        let matchedSap = null;
+        try {
+          const rawRows = await querySapMb51(val);
+          const groups = groupSapMb51Rows(rawRows);
+          const exact = groups.filter(g => String(g.material_document || '').toLowerCase() === val.toLowerCase());
+          if (exact.length > 0) matchedSap = exact[0];
+        } catch (e) {
+          // ignore
         }
-      } catch (err) {
-        console.warn('[XgSapLookup] Lỗi auto match khi change:', err);
+
+        showReceiptProcessedWarningModal({
+          docNo: val,
+          pageContext: currentContext,
+          processedInfo: procInfo,
+          sapRecord: matchedSap,
+          onConfirm: () => {
+            if (matchedSap && !window._currentSelectedSapRecord) {
+              const check = validateSapRecordAgainstContext(matchedSap, currentContext);
+              if (check.isValid) {
+                applySapRecordToForm(matchedSap, formEl, currentContext);
+              }
+            }
+          },
+          onCancel: () => {
+            inputEl.value = '';
+            resetSapSelection();
+          }
+        });
+        return;
+      }
+
+      // 2. Nếu chưa được chọn SAP và chưa có cảnh báo, thử auto match SAP chính xác
+      if (!window._currentSelectedSapRecord) {
+        try {
+          const rawRows = await querySapMb51(val);
+          const groups = groupSapMb51Rows(rawRows);
+          const exact = groups.filter(g => String(g.material_document || '').toLowerCase() === val.toLowerCase());
+          if (exact.length === 1) {
+            const check = validateSapRecordAgainstContext(exact[0], currentContext);
+            if (check.isValid) {
+              applySapRecordToForm(exact[0], formEl, currentContext);
+            } else {
+              showAutofillToast(`⚠️ Phiếu ${val} không được phép nhập vào ${rules.label} (sai loại hoặc phân nhóm)!`);
+            }
+          }
+        } catch (err) {
+          console.warn('[XgSapLookup] Lỗi auto match khi change:', err);
+        }
       }
     });
 
     // Lắng nghe phím điều hướng
-    inputEl.addEventListener('keydown', (e) => {
+    inputEl.addEventListener('keydown', async (e) => {
       if (dropdown.style.display !== 'block' || currentResults.length === 0) return;
 
       if (e.key === 'ArrowDown') {
@@ -861,8 +938,29 @@
       } else if (e.key === 'Enter') {
         if (activeIndex >= 0 && activeIndex < currentResults.length) {
           e.preventDefault();
-          applySapRecordToForm(currentResults[activeIndex], formEl, currentContext);
+          const g = currentResults[activeIndex];
           hideDropdown();
+
+          const doc = String(g.material_document || '').trim();
+          const procInfo = await checkReceiptProcessed(doc, currentContext);
+
+          if (procInfo && procInfo.isProcessed && (!window._confirmedProcessedReceipts || !window._confirmedProcessedReceipts.has(doc.toLowerCase()))) {
+            showReceiptProcessedWarningModal({
+              docNo: doc,
+              pageContext: currentContext,
+              processedInfo: procInfo,
+              sapRecord: g,
+              onConfirm: () => {
+                applySapRecordToForm(g, formEl, currentContext);
+              },
+              onCancel: () => {
+                inputEl.value = '';
+                resetSapSelection();
+              }
+            });
+          } else {
+            applySapRecordToForm(g, formEl, currentContext);
+          }
         }
       } else if (e.key === 'Escape') {
         hideDropdown();
