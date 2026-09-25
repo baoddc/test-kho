@@ -1215,6 +1215,9 @@ function openEditDataModal() {
   const editRollsTableBody = document.getElementById('editRollsTableBody');
   if (editRollsTableBody) editRollsTableBody.innerHTML = '';
   editRollCount = 0;
+  if (window.XgSapLookup && window.XgSapLookup.resetSapSelection) {
+    window.XgSapLookup.resetSapSelection();
+  }
   updateEditRollTotals();
 
   const rowData = tableData[selectedRowIndex];
@@ -1548,6 +1551,46 @@ document.addEventListener('submit', async (e) => {
         alert('Vui lòng nhập ít nhất một cuộn với số kg > 0');
         if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = originalText; }
         hideLoadingOverlay(); return;
+      }
+
+      // Kiểm tra khớp hoàn toàn số kg với SAP: chỉ khớp 100% mới được thêm
+      const totalRollKg = rollDataList.reduce((sum, r) => sum + (r.kg || 0), 0);
+      if (window.XgSapLookup) {
+        const phieuNhapVal = (form.querySelector('input[name="col_3"]')?.value || '').trim();
+        if (!window._currentSelectedSapRecord && phieuNhapVal) {
+          try {
+            const rawSap = await window.XgSapLookup.querySapMb51(phieuNhapVal);
+            const sapGroups = window.XgSapLookup.groupSapMb51Rows(rawSap);
+            const exact = sapGroups.filter(g => String(g.material_document || '').toLowerCase() === phieuNhapVal.toLowerCase());
+            if (exact.length > 0) {
+              const maVatTuVal = (form.querySelector('input[name="col_5"]')?.value || '').trim().toLowerCase();
+              const matchedGroup = exact.find(g => !maVatTuVal || String(g.material || '').toLowerCase() === maVatTuVal) || exact[0];
+              if (matchedGroup) {
+                window._currentSelectedSapRecord = matchedGroup;
+                if (typeof updateRollTotals === 'function') updateRollTotals();
+              }
+            }
+          } catch (err) {
+            console.warn('[xg-nhap] Không thể tra cứu SAP trước khi lưu:', err);
+          }
+        }
+
+        if (typeof window.XgSapLookup.validateSapMatch === 'function') {
+          const sapCheck = window.XgSapLookup.validateSapMatch(totalRollKg, false);
+          if (!sapCheck.valid) {
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.textContent = originalText;
+            }
+            hideLoadingOverlay();
+            if (typeof window.showWarningModal === 'function') {
+              window.showWarningModal(sapCheck.modalHtml || sapCheck.message, 'Cảnh báo không cho phép thêm');
+            } else {
+              alert(sapCheck.message);
+            }
+            return;
+          }
+        }
       }
 
       // Lấy dữ liệu chung từ form

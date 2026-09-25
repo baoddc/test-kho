@@ -149,8 +149,11 @@
 
               <!-- Common fields section -->
               <div class="card mb-3">
-                <div class="card-header bg-primary text-white py-2">
+                <div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center">
                   <h6 class="mb-0"><i class="bi bi-info-circle me-1"></i> Thông tin chung phiếu xuất</h6>
+                  <button type="button" id="btnSyncGgSheet" class="btn btn-sm btn-light text-primary fw-bold" title="Đồng bộ dữ liệu mới nhất từ Google Sheets">
+                    <i class="bi bi-arrow-repeat me-1"></i> Đồng bộ Google Sheets
+                  </button>
                 </div>
                 <div class="card-body">
                   <div id="addDataCommonFields" class="row g-2">
@@ -379,6 +382,7 @@
   <script src="/assets/js/core/inventory-lock-service.js?v=2.0.5"></script>
   <script src="/assets/js/core/qr-scanner-service.js?v=2.0.5"></script>
   <script src="/assets/js/core/receipt-ocr-service.js?v=2.0.6"></script>
+  <script src="/assets/js/xg/xg-sap-lookup.js?v=2.0.5"></script>
 
   <!-- Supabase version of xg-xuat -->
   <script src="/assets/js/xg/xg-xuat.js?v=2.0.6"></script>

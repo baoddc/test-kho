@@ -262,19 +262,19 @@ function showWarningModal(message, title = 'Cảnh báo hệ thống') {
     modalEl.setAttribute('aria-hidden', 'true');
     modalEl.style.zIndex = '10070';
     modalEl.innerHTML = `
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content shadow-lg border-0" style="border-radius: 16px; overflow: hidden; background: #2b3553; color: #ffffff;">
-          <div class="modal-header border-0 py-3" style="background: rgba(255, 193, 7, 0.15); border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;">
-            <h5 class="modal-title fw-bold d-flex align-items-center gap-2 mb-0 text-white" style="color: #ffffff !important;">
-              <span style="font-size: 1.3rem;">⚠️</span> ${title}
+      <div class="modal-dialog modal-lg modal-dialog-centered" style="max-width: 720px;">
+        <div class="modal-content shadow-lg border-0" style="border-radius: 16px; overflow: hidden; background: #1e2438; color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.15) !important;">
+          <div class="modal-header border-0 py-3 px-4" style="background: rgba(220, 53, 69, 0.2); border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;">
+            <h5 class="modal-title fw-bold fs-5 d-flex align-items-center gap-2 mb-0 text-white" style="color: #ffffff !important;">
+              <span style="font-size: 1.5rem;">⚠️</span> ${title}
             </h5>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
-          <div class="modal-body py-4 px-4 fs-6 text-white" id="globalWarningModalBody" style="line-height: 1.6; color: #ffffff !important; font-weight: 500; white-space: pre-wrap; text-align: left; max-height: 350px; overflow-y: auto;">
+          <div class="modal-body py-4 px-4 fs-6 text-white" id="globalWarningModalBody" style="line-height: 1.6; color: #ffffff !important; font-weight: 500; text-align: left; max-height: 560px; overflow-y: auto;">
           </div>
-          <div class="modal-footer border-0 justify-content-center pt-0 pb-3">
-            <button type="button" class="btn btn-warning px-4 py-2 fw-bold rounded-3 text-dark shadow-sm" data-bs-dismiss="modal">
-              Đã hiểu
+          <div class="modal-footer border-0 justify-content-center pt-2 pb-4">
+            <button type="button" class="btn btn-warning btn-lg px-5 py-2 fw-bold rounded-3 text-dark shadow fs-6" data-bs-dismiss="modal">
+              <i class="bi bi-check2-circle me-1"></i> Đã hiểu
             </button>
           </div>
         </div>
@@ -283,8 +283,25 @@ function showWarningModal(message, title = 'Cảnh báo hệ thống') {
     document.body.appendChild(modalEl);
   }
 
+  const dialogEl = modalEl.querySelector('.modal-dialog');
+  if (dialogEl) {
+    dialogEl.classList.add('modal-lg');
+    dialogEl.style.maxWidth = '720px';
+  }
+
+  const titleEl = modalEl.querySelector('.modal-title');
+  if (titleEl) {
+    titleEl.innerHTML = `<span style="font-size: 1.3rem;">⚠️</span> ${title}`;
+  }
+
   const bodyEl = modalEl.querySelector('#globalWarningModalBody');
-  if (bodyEl) bodyEl.textContent = message;
+  if (bodyEl) {
+    if (typeof message === 'string' && (message.includes('<div') || message.includes('<p') || message.includes('<table') || message.includes('<span') || message.includes('<b'))) {
+      bodyEl.innerHTML = message;
+    } else {
+      bodyEl.textContent = message;
+    }
+  }
 
   if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
     const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
