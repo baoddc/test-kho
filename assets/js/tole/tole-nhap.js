@@ -1490,27 +1490,27 @@ document.addEventListener('submit', async (e) => {
         }
       }
 
-      // Kiểm tra nếu phiếu nhập đã có trong kho và chưa được xác nhận
+      // Kiểm tra nếu phiếu nhập đã có trong kho -> CHẶN HOÀN TOÀN
       const phieuNhapInputVal = (form.querySelector('input[name="col_3"]')?.value || '').trim();
       if (phieuNhapInputVal && window.XgSapLookup && typeof window.XgSapLookup.checkReceiptProcessed === 'function') {
-        const isConfirmed = window._confirmedProcessedReceipts && window._confirmedProcessedReceipts.has(phieuNhapInputVal.toLowerCase());
-        if (!isConfirmed) {
-          const procCheck = await window.XgSapLookup.checkReceiptProcessed(phieuNhapInputVal, 'tole-nhap');
-          if (procCheck && procCheck.isProcessed) {
-            if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = originalText; }
-            hideLoadingOverlay();
-            window.XgSapLookup.showReceiptProcessedWarningModal({
-              docNo: phieuNhapInputVal,
-              pageContext: 'tole-nhap',
-              processedInfo: procCheck,
-              sapRecord: window._currentSelectedSapRecord,
-              onConfirm: () => {
-                if (submitBtn) submitBtn.click();
-              },
-              onCancel: () => {}
-            });
-            return;
-          }
+        const procCheck = await window.XgSapLookup.checkReceiptProcessed(phieuNhapInputVal, 'tole-nhap');
+        if (procCheck && procCheck.isProcessed) {
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = originalText; }
+          hideLoadingOverlay();
+          window.XgSapLookup.showReceiptProcessedWarningModal({
+            docNo: phieuNhapInputVal,
+            pageContext: 'tole-nhap',
+            processedInfo: procCheck,
+            sapRecord: window._currentSelectedSapRecord,
+            onCancel: () => {
+              const inp = form.querySelector('input[name="col_3"]');
+              if (inp) inp.value = '';
+              if (typeof window.XgSapLookup.resetSapSelection === 'function') {
+                window.XgSapLookup.resetSapSelection();
+              }
+            }
+          });
+          return;
         }
       }
 

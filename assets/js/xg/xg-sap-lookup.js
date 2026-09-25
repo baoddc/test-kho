@@ -242,18 +242,17 @@
   }
 
   /**
-   * Hiển thị Modal cảnh báo khi số phiếu đã được nhập hoặc xuất trong kho
+   * Hiển thị Modal CHẶN khi số phiếu đã được nhập hoặc xuất trong kho
    * @param {Object} options
    * @param {string} options.docNo - Số phiếu
    * @param {string} [options.pageContext] - Ngữ cảnh trang
    * @param {Object} options.processedInfo - Dữ liệu trả về từ checkReceiptProcessed
    * @param {Object} [options.sapRecord] - Dòng dữ liệu SAP đối chiếu (nếu có)
-   * @param {Function} [options.onConfirm] - Callback khi người dùng bấm "Tiếp tục điền phiếu"
-   * @param {Function} [options.onCancel] - Callback khi người dùng bấm "Hủy / Đổi phiếu"
+   * @param {Function} [options.onCancel] - Callback khi người dùng bấm đóng / hủy
    */
   function showReceiptProcessedWarningModal(options) {
     if (!options) return;
-    const { docNo, pageContext, processedInfo, sapRecord, onConfirm, onCancel } = options;
+    const { docNo, pageContext, processedInfo, sapRecord, onCancel } = options;
     const currentContext = detectCurrentPageContext(pageContext);
     const rule = SAP_PAGE_RULES[currentContext] || SAP_PAGE_RULES['xg-nhap'];
     const isNhap = rule.direction === 'nhap';
@@ -299,17 +298,17 @@
       }
 
       sapComparisonHtml = `
-        <div class="p-3 rounded-3 mb-3" style="background: rgba(245, 158, 11, 0.08); border: 1px dashed #f59e0b;">
+        <div class="p-3 rounded-3 mb-3" style="background: rgba(239, 68, 68, 0.12); border: 1px dashed #ef4444; color: #f8fafc;">
           <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-            <span class="fw-bold text-dark"><i class="bi bi-arrow-left-right me-1 text-warning"></i>Đối chiếu với dữ liệu SAP:</span>
+            <span class="fw-bold text-white"><i class="bi bi-arrow-left-right me-1 text-warning"></i>Đối chiếu với dữ liệu SAP:</span>
             ${statusBadge}
           </div>
-          <div class="row g-2 text-dark small">
+          <div class="row g-2 small" style="color: #cbd5e1;">
             <div class="col-sm-6">
-              <strong>Khối lượng SAP:</strong> <span class="badge bg-secondary-subtle text-secondary border">${sapKgFormatted} kg</span>
+              <strong style="color: #ffffff;">Khối lượng SAP:</strong> <span class="badge bg-secondary text-white border ms-1">${sapKgFormatted} kg</span>
             </div>
             <div class="col-sm-6">
-              <strong>Đã ${actionText} trong kho:</strong> <span class="badge bg-warning text-dark border">${totalKgFormatted} kg</span>
+              <strong style="color: #ffffff;">Đã ${actionText} trong kho:</strong> <span class="badge bg-warning text-dark border ms-1 fw-bold">${totalKgFormatted} kg</span>
             </div>
           </div>
         </div>
@@ -317,89 +316,87 @@
     }
 
     const coilListHtml = coilIds.length > 0
-      ? `<div class="d-flex flex-wrap gap-1 mt-1" style="max-height: 80px; overflow-y: auto;">
-          ${coilIds.map(c => `<span class="badge bg-light text-dark border font-monospace">${escapeHtml(c)}</span>`).join('')}
+      ? `<div class="d-flex flex-wrap gap-1 mt-1" style="max-height: 85px; overflow-y: auto;">
+          ${coilIds.map(c => `<span class="badge font-monospace" style="background: #1e293b; color: #f8fafc; border: 1px solid #475569; font-size: 0.82rem;">${escapeHtml(c)}</span>`).join('')}
          </div>`
-      : '<span class="text-muted fst-italic">Không có Cuộn ID cụ thể</span>';
+      : '<span class="text-white-50 fst-italic">Không có Cuộn ID cụ thể</span>';
 
     modalEl.innerHTML = `
-      <div class="modal-dialog modal-dialog-centered modal-lg" style="max-width: 700px;">
-        <div class="modal-content shadow-lg border-0" style="border-radius: 16px; overflow: hidden; background: #ffffff;">
-          <div class="modal-header py-3 px-4" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff;">
+      <div class="modal-dialog modal-dialog-centered modal-lg" style="max-width: 720px;">
+        <div class="modal-content shadow-lg border-0" style="border-radius: 16px; overflow: hidden; background: #1e2438; color: #f8fafc; border: 1px solid rgba(255, 255, 255, 0.15) !important;">
+          <div class="modal-header py-3 px-4" style="background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); color: #ffffff; border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;">
             <div class="d-flex align-items-center gap-2">
-              <span class="d-inline-flex align-items-center justify-content-center bg-white text-warning rounded-circle shadow-sm" style="width: 38px; height: 38px; font-size: 1.3rem;">
-                <i class="bi bi-exclamation-triangle-fill"></i>
+              <span class="d-inline-flex align-items-center justify-content-center bg-white text-danger rounded-circle shadow-sm" style="width: 38px; height: 38px; font-size: 1.3rem;">
+                <i class="bi bi-slash-circle-fill"></i>
               </span>
               <div>
                 <h5 class="modal-title fw-bold mb-0 text-white" style="letter-spacing: 0.3px;">
-                  CẢNH BÁO: PHIẾU ĐÃ ${ActionText.toUpperCase()} TRƯỚC ĐÓ
+                  KHÔNG THỂ ${ActionText.toUpperCase()}: PHIẾU ĐÃ ${ActionText.toUpperCase()} TRƯỚC ĐÓ
                 </h5>
-                <small class="text-white-50">${escapeHtml(rule.label)} - Số phiếu: <strong>${escapeHtml(docNo)}</strong></small>
+                <small class="text-white-50">${escapeHtml(rule.label)} - Số phiếu: <strong class="text-warning">${escapeHtml(docNo)}</strong></small>
               </div>
             </div>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" id="btnReceiptWarnCloseX"></button>
           </div>
 
-          <div class="modal-body p-4 text-dark" style="font-size: 0.95rem; line-height: 1.6;">
-            <div class="alert alert-warning border-warning-subtle d-flex align-items-center gap-2 py-2 px-3 mb-3">
-              <i class="bi bi-info-circle-fill text-warning fs-5"></i>
+          <div class="modal-body p-4" style="font-size: 0.95rem; line-height: 1.6; background-color: #1e2438 !important; color: #f8fafc !important;">
+            <div class="alert alert-danger d-flex align-items-center gap-2 py-2 px-3 mb-3" style="background: rgba(239, 68, 68, 0.15) !important; border: 1px solid rgba(239, 68, 68, 0.4) !important; color: #fecaca !important;">
+              <i class="bi bi-x-octagon-fill text-danger fs-4 flex-shrink-0"></i>
               <div>
-                Số phiếu <strong>${escapeHtml(docNo)}</strong> đã có <strong>${count}</strong> dòng dữ liệu được ${actionText} trong hệ thống <strong>${escapeHtml(rule.label)}</strong>.
+                Số phiếu <strong>${escapeHtml(docNo)}</strong> đã được ghi nhận <strong>${count}</strong> dòng dữ liệu trong hệ thống <strong>${escapeHtml(rule.label)}</strong>.<br>
+                <strong class="text-warning"><i class="bi bi-shield-lock-fill me-1"></i>Hệ thống chặn hoàn toàn, không cho phép ${actionText} lại số phiếu này để tránh trùng lặp!</strong>
               </div>
             </div>
 
             ${sapComparisonHtml}
 
-            <div class="card border border-light-subtle shadow-sm mb-3">
-              <div class="card-header bg-light py-2 px-3 fw-bold small text-muted text-uppercase">
+            <div class="card mb-3" style="background: #272f49 !important; border: 1px solid rgba(255, 255, 255, 0.15) !important; border-radius: 10px; overflow: hidden;">
+              <div class="card-header py-2 px-3 fw-bold small text-uppercase" style="background: #333d5d !important; color: #93c5fd !important; border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;">
                 <i class="bi bi-list-check me-1"></i>Chi tiết dữ liệu đã ghi nhận trong kho
               </div>
-              <div class="card-body p-3">
-                <table class="table table-sm table-bordered align-middle mb-0">
+              <div class="card-body p-0">
+                <table class="table table-sm align-middle mb-0" style="width: 100%; border-collapse: collapse;">
                   <tbody>
-                    <tr>
-                      <td class="bg-light text-muted fw-semibold" style="width: 35%;">Phân hệ & Nghiệp vụ</td>
-                      <td class="fw-bold text-primary">${escapeHtml(rule.label)} (${ActionText} kho)</td>
+                    <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+                      <td style="width: 38%; padding: 9px 14px; background: rgba(0, 0, 0, 0.25); color: #cbd5e1 !important; font-weight: 600;">Phân hệ & Nghiệp vụ</td>
+                      <td style="padding: 9px 14px; background: rgba(0, 0, 0, 0.1); color: #38bdf8 !important; font-weight: bold;">${escapeHtml(rule.label)} (${ActionText} kho)</td>
                     </tr>
-                    <tr>
-                      <td class="bg-light text-muted fw-semibold">Thời gian ghi nhận</td>
-                      <td><i class="bi bi-calendar-event me-1 text-secondary"></i>${escapeHtml(dateRange)}</td>
+                    <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+                      <td style="padding: 9px 14px; background: rgba(0, 0, 0, 0.25); color: #cbd5e1 !important; font-weight: 600;">Thời gian ghi nhận</td>
+                      <td style="padding: 9px 14px; background: rgba(0, 0, 0, 0.1); color: #ffffff !important;"><i class="bi bi-calendar-event me-1 text-info"></i>${escapeHtml(dateRange)}</td>
                     </tr>
-                    <tr>
-                      <td class="bg-light text-muted fw-semibold">Công trình</td>
-                      <td>${escapeHtml(pNames.join(', ') || 'Tồn trơn / Chưa có tên')}</td>
+                    <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+                      <td style="padding: 9px 14px; background: rgba(0, 0, 0, 0.25); color: #cbd5e1 !important; font-weight: 600;">Công trình</td>
+                      <td style="padding: 9px 14px; background: rgba(0, 0, 0, 0.1); color: #fde047 !important; font-weight: 500;">${escapeHtml(pNames.join(', ') || 'Tồn trơn / Chưa có tên')}</td>
                     </tr>
-                    <tr>
-                      <td class="bg-light text-muted fw-semibold">Số lượng bản ghi / Cuộn</td>
-                      <td><span class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6">${count} cuộn</span></td>
+                    <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+                      <td style="padding: 9px 14px; background: rgba(0, 0, 0, 0.25); color: #cbd5e1 !important; font-weight: 600;">Số lượng bản ghi / Cuộn</td>
+                      <td style="padding: 9px 14px; background: rgba(0, 0, 0, 0.1); color: #ffffff !important;"><span class="badge bg-primary fs-6 px-2 py-1">${count} cuộn</span></td>
                     </tr>
-                    <tr>
-                      <td class="bg-light text-muted fw-semibold">Tổng khối lượng đã lưu</td>
-                      <td>
+                    <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+                      <td style="padding: 9px 14px; background: rgba(0, 0, 0, 0.25); color: #cbd5e1 !important; font-weight: 600;">Tổng khối lượng đã lưu</td>
+                      <td style="padding: 9px 14px; background: rgba(0, 0, 0, 0.1); color: #ffffff !important;">
                         <span class="badge bg-warning text-dark border fs-6 fw-bold">${totalKgFormatted} kg</span>
                         ${totalMFormatted ? `<span class="badge bg-info text-dark border ms-1 fs-6">${totalMFormatted} m</span>` : ''}
                       </td>
                     </tr>
                     <tr>
-                      <td class="bg-light text-muted fw-semibold align-top pt-2">Danh sách Cuộn ID</td>
-                      <td>${coilListHtml}</td>
+                      <td style="padding: 9px 14px; background: rgba(0, 0, 0, 0.25); color: #cbd5e1 !important; font-weight: 600; vertical-align: top;">Danh sách Cuộn ID</td>
+                      <td style="padding: 9px 14px; background: rgba(0, 0, 0, 0.1); color: #ffffff !important;">${coilListHtml}</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
             </div>
 
-            <div class="text-secondary small fst-italic text-center">
-              ⚠️ Nếu bạn vẫn muốn nhập/xuất bổ sung thêm cho phiếu này, hãy bấm <strong>"Tiếp tục điền phiếu"</strong>. Ngược lại, hãy bấm <strong>"Hủy / Đổi phiếu"</strong> để chọn phiếu khác.
+            <div class="text-white-50 small text-center p-2 rounded" style="background: rgba(239, 68, 68, 0.1); border: 1px dashed rgba(239, 68, 68, 0.3);">
+              <i class="bi bi-info-circle me-1 text-danger"></i>Vui lòng kiểm tra lại số chứng từ hoặc chọn một số phiếu khác chưa từng được ${actionText} kho!
             </div>
           </div>
 
-          <div class="modal-footer bg-light py-3 px-4 d-flex justify-content-between">
-            <button type="button" class="btn btn-outline-secondary px-3 py-2 fw-semibold" id="btnReceiptWarnCancel">
-              <i class="bi bi-x-circle me-1"></i> Hủy / Đổi phiếu khác
-            </button>
-            <button type="button" class="btn btn-warning px-4 py-2 fw-bold text-dark shadow-sm" id="btnReceiptWarnConfirm">
-              <i class="bi bi-check2-circle me-1"></i> Tiếp tục điền phiếu
+          <div class="modal-footer justify-content-center py-3 px-4" style="background: #1e2438 !important; border-top: 1px solid rgba(255, 255, 255, 0.15) !important;">
+            <button type="button" class="btn btn-danger btn-lg px-5 py-2 fw-bold text-white shadow" id="btnReceiptWarnCancel">
+              <i class="bi bi-arrow-left-circle me-1"></i> Đã hiểu / Chọn phiếu khác
             </button>
           </div>
         </div>
@@ -417,15 +414,6 @@
       else modalEl.style.display = 'none';
     };
 
-    const handleConfirm = () => {
-      if (isHandled) return;
-      isHandled = true;
-      if (!window._confirmedProcessedReceipts) window._confirmedProcessedReceipts = new Set();
-      window._confirmedProcessedReceipts.add(String(docNo).trim().toLowerCase());
-      cleanup();
-      if (typeof onConfirm === 'function') onConfirm();
-    };
-
     const handleCancel = () => {
       if (isHandled) return;
       isHandled = true;
@@ -433,11 +421,9 @@
       if (typeof onCancel === 'function') onCancel();
     };
 
-    const btnConfirm = modalEl.querySelector('#btnReceiptWarnConfirm');
     const btnCancel = modalEl.querySelector('#btnReceiptWarnCancel');
     const btnCloseX = modalEl.querySelector('#btnReceiptWarnCloseX');
 
-    if (btnConfirm) btnConfirm.onclick = handleConfirm;
     if (btnCancel) btnCancel.onclick = handleCancel;
     if (btnCloseX) btnCloseX.onclick = handleCancel;
 
@@ -700,23 +686,21 @@
             const doc = String(g.material_document || '').trim();
             const procInfo = processedMap.get(doc.toLowerCase()) || await checkReceiptProcessed(doc, currentContext);
 
-            if (procInfo && procInfo.isProcessed && (!window._confirmedProcessedReceipts || !window._confirmedProcessedReceipts.has(doc.toLowerCase()))) {
+            if (procInfo && procInfo.isProcessed) {
               showReceiptProcessedWarningModal({
                 docNo: doc,
                 pageContext: currentContext,
                 processedInfo: procInfo,
                 sapRecord: g,
-                onConfirm: () => {
-                  applySapRecordToForm(g, formEl, currentContext);
-                },
                 onCancel: () => {
                   inputEl.value = '';
                   resetSapSelection();
                 }
               });
-            } else {
-              applySapRecordToForm(g, formEl, currentContext);
+              return;
             }
+
+            applySapRecordToForm(g, formEl, currentContext);
           });
 
           listDiv.appendChild(itemEl);
@@ -869,9 +853,9 @@
       const val = inputEl.value.trim();
       if (!val) return;
 
-      // 1. Kiểm tra xem phiếu này đã có trong hệ thống hay chưa
+      // 1. Kiểm tra xem phiếu này đã có trong hệ thống hay chưa -> CHẶN HOÀN TOÀN
       const procInfo = await checkReceiptProcessed(val, currentContext);
-      if (procInfo && procInfo.isProcessed && (!window._confirmedProcessedReceipts || !window._confirmedProcessedReceipts.has(val.toLowerCase()))) {
+      if (procInfo && procInfo.isProcessed) {
         let matchedSap = null;
         try {
           const rawRows = await querySapMb51(val);
@@ -887,14 +871,6 @@
           pageContext: currentContext,
           processedInfo: procInfo,
           sapRecord: matchedSap,
-          onConfirm: () => {
-            if (matchedSap && !window._currentSelectedSapRecord) {
-              const check = validateSapRecordAgainstContext(matchedSap, currentContext);
-              if (check.isValid) {
-                applySapRecordToForm(matchedSap, formEl, currentContext);
-              }
-            }
-          },
           onCancel: () => {
             inputEl.value = '';
             resetSapSelection();
@@ -944,23 +920,21 @@
           const doc = String(g.material_document || '').trim();
           const procInfo = await checkReceiptProcessed(doc, currentContext);
 
-          if (procInfo && procInfo.isProcessed && (!window._confirmedProcessedReceipts || !window._confirmedProcessedReceipts.has(doc.toLowerCase()))) {
+          if (procInfo && procInfo.isProcessed) {
             showReceiptProcessedWarningModal({
               docNo: doc,
               pageContext: currentContext,
               processedInfo: procInfo,
               sapRecord: g,
-              onConfirm: () => {
-                applySapRecordToForm(g, formEl, currentContext);
-              },
               onCancel: () => {
                 inputEl.value = '';
                 resetSapSelection();
               }
             });
-          } else {
-            applySapRecordToForm(g, formEl, currentContext);
+            return;
           }
+
+          applySapRecordToForm(g, formEl, currentContext);
         }
       } else if (e.key === 'Escape') {
         hideDropdown();
