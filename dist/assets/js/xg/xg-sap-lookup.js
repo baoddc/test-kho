@@ -554,7 +554,7 @@
    * @param {HTMLFormElement} formEl 
    * @param {string} [pageContext]
    */
-  function applySapRecordToForm(sapRecord, formEl, pageContext) {
+  async function applySapRecordToForm(sapRecord, formEl, pageContext) {
     if (!sapRecord || !formEl) return;
 
     const currentContext = detectCurrentPageContext(pageContext);
@@ -657,38 +657,118 @@
       if (tenCongTrinhInput) {
         tenCongTrinhInput.value = sapRecord.project_name || '';
       }
+
+      showAutofillToast(`Đã tự động điền thông tin phiếu SAP: ${sapRecord.material_document} (${sapRecord.material || ''})`);
     } else {
       // Hướng Xuất kho (xg-xuat, tole-xuat)
       const maCtInput = findInputByLabel('Mã công trình') ||
                         findInputByLabel('Mã CT') ||
-                        formEl.querySelector('input[name="col_10"]') ||
-                        formEl.querySelector('input[name="col_11"]');
+                        formEl.querySelector('input[name="col_11"]') ||
+                        formEl.querySelector('input[name="col_10"]');
       if (maCtInput && sapRecord.project_id) {
         maCtInput.value = sapRecord.project_id;
       }
 
       const tenCtInput = findInputByLabel('Tên công trình') ||
                          findInputByLabel('Tên CT') ||
-                         formEl.querySelector('input[name="col_11"]') ||
-                         formEl.querySelector('input[name="col_12"]');
+                         formEl.querySelector('input[name="col_12"]') ||
+                         formEl.querySelector('input[name="col_11"]');
       if (tenCtInput && sapRecord.project_name) {
         tenCtInput.value = sapRecord.project_name;
       }
 
-      // Điền thông tin vào thẻ mặt hàng đầu tiên nếu có
-      if (Array.isArray(window.multiItemsData) && window.multiItemsData.length > 0) {
-        const firstItem = window.multiItemsData[0];
-        if (sapRecord.material) firstItem.maVatTu = sapRecord.material;
-        if (sapRecord.material_description) firstItem.tenVatTu = sapRecord.material_description;
-        if (sapRecord.batch) firstItem.batch = sapRecord.batch;
-        if (typeof window.renderItemCards === 'function') {
-          window.renderItemCards();
+      // Điền Loại xuất nếu có
+      if (sapRecord.movement_type_text) {
+        const loaiXuatSelect = formEl.querySelector('select[name="col_4"]');
+        if (loaiXuatSelect) {
+          const targetLower = sapRecord.movement_type_text.toLowerCase();
+          let matched = false;
+          for (const opt of loaiXuatSelect.options) {
+            if (opt.value && (targetLower.includes(opt.value.toLowerCase()) || opt.value.toLowerCase().includes(targetLower))) {
+              loaiXuatSelect.value = opt.value;
+              matched = true;
+              break;
+            }
+          }
+          if (!matched && sapRecord.movement_type_text) {
+            const customOpt = document.createElement('option');
+            customOpt.value = sapRecord.movement_type_text;
+            customOpt.textContent = sapRecord.movement_type_text;
+            loaiXuatSelect.appendChild(customOpt);
+            loaiXuatSelect.value = sapRecord.movement_type_text;
+          }
         }
       }
-    }
 
-    // Gợi ý thông báo nhẹ
-    showAutofillToast(`Đã tự động điền thông tin phiếu SAP: ${sapRecord.material_document} (${sapRecord.material || ''})`);
+      // Truy vấn tất cả các dòng của phiếu từ SAP MB51 để hỗ trợ xuất đa mặt hàng
+      let allDocRows = [sapRecord];
+      if (window.supabase && sapRecord.material_document) {
+        try {
+          const { data: docRows, error: docErr } = await window.supabase
+            .from('xg_sap_mb51')
+            .select('*')
+            .eq('material_document', sapRecord.material_document);
+          if (!docErr && Array.isArray(docRows) && docRows.length > 0) {
+            allDocRows = docRows;
+          }
+        } catch (e) {
+          console.warn('[XgSapLookup] Không thể truy vấn tất cả dòng của phiếu:', e);
+        }
+      }
+
+      // Lọc các dòng hợp lệ với trang hiện tại
+      const validRows = allDocRows.filter(r => {
+        const chk = validateSapRecordAgainstContext(r, currentContext);
+        return chk.isValid;
+      });
+
+      // Gom nhóm theo material + batch
+      const itemsMap = new Map();
+      validRows.forEach(r => {
+        const mat = String(r.material || '').trim();
+        const batch = String(r.batch || '').trim();
+        const key = `${mat}__${batch}`;
+        const rawQty = Math.abs(parseFloat(r.quantity) || 0);
+
+        if (!itemsMap.has(key)) {
+          itemsMap.set(key, {
+            maVatTu: mat,
+            tenVatTu: r.material_description || '',
+            batch: batch,
+            totalSapKg: rawQty
+          });
+        } else {
+          itemsMap.get(key).totalSapKg += rawQty;
+        }
+      });
+      const itemsGrouped = Array.from(itemsMap.values());
+
+      const headerInfo = {
+        maChungTu: 'PX',
+        ngayXuat: sapRecord.posting_date || '',
+        phieuXuat: sapRecord.material_document || '',
+        loaiXuat: sapRecord.movement_type_text || '',
+        maCongTrinh: sapRecord.project_id || '',
+        tenCongTrinh: sapRecord.project_name || ''
+      };
+
+      if (typeof window.populateExportReceiptData === 'function') {
+        await window.populateExportReceiptData(headerInfo, itemsGrouped);
+      } else {
+        // Fallback điền vào thẻ mặt hàng đầu tiên nếu có
+        const multiItems = window.multiItemsData;
+        if (Array.isArray(multiItems) && multiItems.length > 0) {
+          const firstItem = multiItems[0];
+          if (sapRecord.material) firstItem.maVatTu = sapRecord.material;
+          if (sapRecord.material_description) firstItem.tenVatTu = sapRecord.material_description;
+          if (sapRecord.batch) firstItem.batch = sapRecord.batch;
+          if (typeof window.renderItemCards === 'function') {
+            window.renderItemCards();
+          }
+        }
+        showAutofillToast(`Đã tự động điền thông tin phiếu SAP: ${sapRecord.material_document} (${sapRecord.material || ''})`);
+      }
+    }
 
     // Cập nhật lại đối chiếu khối lượng cuộn vs SAP nếu có
     if (typeof window.updateRollTotals === 'function') {
@@ -1462,7 +1542,8 @@
     resetSapSelection,
     isSapActive,
     validateSapMatch,
-    syncFromGoogleSheets
+    syncFromGoogleSheets,
+    showAutofillToast
   };
 
   // Hỗ trợ module.exports trong môi trường Node.js (cho unit test)

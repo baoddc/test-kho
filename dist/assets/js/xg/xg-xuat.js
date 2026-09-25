@@ -1495,6 +1495,164 @@ function populateFieldsFromOcr(data) {
   document.querySelectorAll('.item-card').forEach(card => triggerAutofillHighlight(card));
 }
 
+/**
+ * Tự động điền dữ liệu phiếu xuất từ SAP MB51 và tra cứu cuộn tồn kho cho từng mặt hàng (Xà Gồ)
+ * @param {Object} headerInfo - { maChungTu, ngayXuat, phieuXuat, loaiXuat, maCongTrinh, tenCongTrinh }
+ * @param {Array} itemsGrouped - Array of { maVatTu, tenVatTu, batch, totalSapKg }
+ */
+async function populateExportReceiptFromSap(headerInfo, itemsGrouped) {
+  if (!itemsGrouped || itemsGrouped.length === 0) return;
+  const form = document.getElementById('addDataForm');
+  if (!form) return;
+
+  // 1. Điền Thông tin chung
+  const maChungTuSelect = form.querySelector('[name="col_1"]');
+  if (maChungTuSelect) {
+    maChungTuSelect.value = 'PX';
+    triggerAutofillHighlight(maChungTuSelect);
+  }
+
+  if (headerInfo.ngayXuat) {
+    const ngayInp = form.querySelector('[name="col_2"]');
+    if (ngayInp) {
+      ngayInp.value = headerInfo.ngayXuat;
+      triggerAutofillHighlight(ngayInp);
+    }
+  }
+
+  if (headerInfo.phieuXuat) {
+    const phieuInp = form.querySelector('[name="col_3"]');
+    if (phieuInp) {
+      phieuInp.value = headerInfo.phieuXuat;
+      triggerAutofillHighlight(phieuInp);
+    }
+  }
+
+  if (headerInfo.loaiXuat) {
+    const loaiSelect = form.querySelector('[name="col_4"]');
+    if (loaiSelect) {
+      let matched = false;
+      const targetLower = headerInfo.loaiXuat.toLowerCase();
+      for (const opt of loaiSelect.options) {
+        if (opt.value && (targetLower.includes(opt.value.toLowerCase()) || opt.value.toLowerCase().includes(targetLower))) {
+          loaiSelect.value = opt.value;
+          matched = true;
+          break;
+        }
+      }
+      if (!matched && headerInfo.loaiXuat) {
+        const customOpt = document.createElement('option');
+        customOpt.value = headerInfo.loaiXuat;
+        customOpt.textContent = headerInfo.loaiXuat;
+        loaiSelect.appendChild(customOpt);
+        loaiSelect.value = headerInfo.loaiXuat;
+      }
+      triggerAutofillHighlight(loaiSelect);
+    }
+  }
+
+  if (headerInfo.maCongTrinh) {
+    const maCtInp = form.querySelector('[name="col_10"]') || form.querySelector('[name="add_ext_10"]');
+    if (maCtInp) {
+      maCtInp.value = headerInfo.maCongTrinh;
+      triggerAutofillHighlight(maCtInp);
+    }
+  }
+
+  if (headerInfo.tenCongTrinh) {
+    const tenCtInp = form.querySelector('[name="col_11"]') || form.querySelector('[name="add_ext_11"]');
+    if (tenCtInp) {
+      tenCtInp.value = headerInfo.tenCongTrinh;
+      triggerAutofillHighlight(tenCtInp);
+    }
+  }
+
+  // 2. Khởi tạo danh sách mặt hàng
+  multiItemsData = itemsGrouped.map(item => {
+    const rawBatch = (item.batch || '').trim();
+    const rawTen = (item.tenVatTu || '').trim();
+    return {
+      id: Math.random().toString(36).slice(2),
+      maVatTu: item.maVatTu || '',
+      tenVatTu: mergeBatchIntoTenVatTu(rawTen, rawBatch),
+      batch: rawBatch,
+      sapKg: item.totalSapKg || 0,
+      rolls: []
+    };
+  });
+  window.multiItemsData = multiItemsData;
+
+  renderItemCards();
+
+  // 3. Tự động tra cứu cuộn tồn kho cho từng mặt hàng
+  const sbClient = window.supabase || (typeof supabase !== 'undefined' ? supabase : null);
+  if (!sbClient) return;
+
+  try {
+    // Lấy danh sách Cuộn ID đã xuất để loại trừ
+    let exportedCuonIds = new Set();
+    const { data: xuatData, error: xuatErr } = await sbClient
+      .from('xg-xuat')
+      .select('"Cuộn ID"')
+      .not('"Cuộn ID"', 'is', null);
+    if (!xuatErr && Array.isArray(xuatData)) {
+      xuatData.forEach(row => {
+        const cid = String(row['Cuộn ID'] || '').trim().toLowerCase();
+        if (cid) exportedCuonIds.add(cid);
+      });
+    }
+
+    let totalRollsFilled = 0;
+
+    for (const item of multiItemsData) {
+      if (!item.maVatTu) continue;
+      let query = sbClient
+        .from('xg-nhap')
+        .select('*')
+        .ilike('Mã vật tư', `%${item.maVatTu}%`);
+      if (item.batch) {
+        query = query.ilike('Batch', `%${item.batch}%`);
+      }
+      const { data: nhapData, error: nhapErr } = await query;
+      if (!nhapErr && Array.isArray(nhapData)) {
+        const existingInItem = new Set(item.rolls.map(r => String(r.cuonId || '').toLowerCase()));
+        nhapData.forEach(r => {
+          const cid = String(r['Cuộn ID'] || '').trim();
+          if (cid && !exportedCuonIds.has(cid.toLowerCase()) && !existingInItem.has(cid.toLowerCase())) {
+            const kgVal = parseNumericInput(r['Số lượng (Kg)']) || 0;
+            item.rolls.push({
+              id: Math.random().toString(36).slice(2),
+              cuonId: cid,
+              kg: String(kgVal)
+            });
+            existingInItem.add(cid.toLowerCase());
+            totalRollsFilled++;
+            if (window.inventoryLockService) {
+              window.inventoryLockService.acquireLock(cid);
+            }
+          }
+        });
+      }
+    }
+
+    renderItemCards();
+    document.querySelectorAll('.item-card').forEach(card => triggerAutofillHighlight(card));
+
+    if (window.XgSapLookup && window.XgSapLookup.showAutofillToast) {
+      window.XgSapLookup.showAutofillToast(`✓ Đã điền phiếu xuất: ${multiItemsData.length} mặt hàng, ${totalRollsFilled} cuộn tồn kho`);
+    }
+  } catch (err) {
+    console.error('[xg-xuat] Lỗi tự động tải cuộn tồn kho:', err);
+  }
+}
+
+// Expose bridge lên window
+window.populateExportReceiptData = populateExportReceiptFromSap;
+window.multiItemsData = multiItemsData;
+window.renderItemCards = renderItemCards;
+window.updateMultiItemTotals = updateMultiItemTotals;
+
+
 async function handleReceiptImageProcess(file, label = '') {
   if (!file) return;
   if (!file.type.startsWith('image/')) {
@@ -1720,6 +1878,20 @@ function openAddDataModal() {
         window.XgSapLookup.syncFromGoogleSheets(btnSyncGgSheet);
       }
     };
+  }
+
+  if (!modalEl._hasLockCleanupListener) {
+    modalEl._hasLockCleanupListener = true;
+    modalEl.addEventListener('hidden.bs.modal', () => {
+      if (!window._isSubmittingAddData && window.inventoryLockService && Array.isArray(multiItemsData)) {
+        multiItemsData.forEach(item => {
+          (item.rolls || []).forEach(r => {
+            if (r.cuonId) window.inventoryLockService.releaseLock(r.cuonId);
+          });
+        });
+      }
+      window._isSubmittingAddData = false;
+    });
   }
 
   new bootstrap.Modal(modalEl).show();
@@ -2394,6 +2566,7 @@ document.addEventListener('submit', async (e) => {
     // ===== ADD DATA =====
     if (e.target && e.target.id === 'addDataForm') {
       e.preventDefault();
+      window._isSubmittingAddData = true;
       const form = e.target;
       const submitBtn = form.querySelector('button[type="submit"]');
       const originalText = submitBtn ? submitBtn.textContent : 'Thêm dữ liệu';
