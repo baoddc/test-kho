@@ -19,6 +19,7 @@
       warehouse: 'xg',
       direction: 'nhap',
       label: 'Xà Gồ - Nhập kho',
+      pageUrl: '/pages/xg/xg-nhap.html',
       defaultDocType: 'MN',
       docFieldPlaceholder: 'Gõ số phiếu nhập để tìm SAP...'
     },
@@ -29,6 +30,7 @@
       warehouse: 'xg',
       direction: 'xuat',
       label: 'Xà Gồ - Xuất kho',
+      pageUrl: '/pages/xg/xg-xuat.html',
       defaultDocType: 'PX',
       docFieldPlaceholder: 'Gõ số phiếu xuất để tìm SAP...'
     },
@@ -39,6 +41,7 @@
       warehouse: 'tole',
       direction: 'nhap',
       label: 'Tole - Nhập kho',
+      pageUrl: '/pages/tole/tole-nhap.html',
       defaultDocType: 'MN',
       docFieldPlaceholder: 'Gõ số phiếu nhập để tìm SAP...'
     },
@@ -49,6 +52,7 @@
       warehouse: 'tole',
       direction: 'xuat',
       label: 'Tole - Xuất kho',
+      pageUrl: '/pages/tole/tole-xuat.html',
       defaultDocType: 'PX',
       docFieldPlaceholder: 'Gõ số phiếu xuất để tìm SAP...'
     }
@@ -241,7 +245,7 @@
       const rect = inputEl.getBoundingClientRect();
       dropdown.style.top = `${rect.bottom + window.scrollY + 2}px`;
       dropdown.style.left = `${rect.left + window.scrollX}px`;
-      dropdown.style.width = `${Math.max(rect.width, 420)}px`;
+      dropdown.style.width = `${Math.max(rect.width, 460)}px`;
     }
 
     function hideDropdown() {
@@ -366,29 +370,74 @@
       // TRƯỜNG HỢP 2: Tìm thấy phiếu SAP nhưng KHÔNG HỢP LỆ với trang hiện tại
       if (invalidGroups.length > 0) {
         const warnDiv = document.createElement('div');
-        warnDiv.className = 'p-3 text-start';
+        warnDiv.className = 'sap-doc-warning';
 
         const sample = invalidGroups[0].group;
-        const sampleDc = sample.debit_credit_ind === 'S' ? 'Nhập kho (Debit: S)' : (sample.debit_credit_ind === 'H' ? 'Xuất kho (Credit: H)' : sample.debit_credit_ind);
+        const sampleDc = sample.debit_credit_ind === 'S'
+          ? 'Nhập kho (Debit: S)'
+          : (sample.debit_credit_ind === 'H' ? 'Xuất kho (Credit: H)' : (sample.debit_credit_ind || 'Chưa xác định'));
         const expectedDcStr = rules.direction === 'nhap' ? 'Nhập kho (Debit: S)' : 'Xuất kho (Credit: H)';
 
+        // Xác định trang phù hợp để gợi ý điều hướng thông minh
+        const matGroup = String(sample.material_group || sample.material || '').trim();
+        const dc = String(sample.debit_credit_ind || '').toUpperCase().trim();
+        const isXgGroup = matGroup.startsWith('10040') || matGroup.startsWith('10041');
+        const isToleGroup = ['10030', '10031', '10022', '10091'].some(p => matGroup.startsWith(p));
+
+        let targetWarehouse = isXgGroup ? 'xg' : (isToleGroup ? 'tole' : null);
+        let targetDir = dc === 'S' ? 'nhap' : (dc === 'H' ? 'xuat' : null);
+        let suggestedPage = null;
+        if (targetWarehouse && targetDir) {
+          const targetKey = `${targetWarehouse}-${targetDir}`;
+          if (SAP_PAGE_RULES[targetKey] && targetKey !== currentContext) {
+            suggestedPage = SAP_PAGE_RULES[targetKey];
+          }
+        }
+
         warnDiv.innerHTML = `
-          <div class="alert alert-warning mb-0 border-warning shadow-sm">
-            <div class="fw-bold text-dark mb-1 d-flex align-items-center gap-1">
-              <i class="bi bi-exclamation-triangle-fill text-warning"></i>
-              <span>Phiếu không hợp lệ cho ${escapeHtml(rules.label)}</span>
+          <div class="sap-warning-header">
+            <i class="bi bi-info-circle-fill" style="color: #f59e0b; font-size: 1.15rem;"></i>
+            <span>Thông tin phiếu chưa phù hợp với trang ${escapeHtml(rules.label)}</span>
+          </div>
+
+          <div class="sap-warning-summary">
+            Tìm thấy <strong>${invalidGroups.length}</strong> dòng cho số phiếu <strong>${escapeHtml(searchVal)}</strong> trong SAP:
+          </div>
+
+          <div class="sap-warning-card">
+            <div class="sap-warning-row">
+              <span class="sap-warning-label">• Loại phiếu SAP:</span>
+              <span class="sap-tag sap-tag-warning">${escapeHtml(sampleDc)}</span>
+              <span class="sap-warning-subtext">(Trang yêu cầu: <strong>${escapeHtml(expectedDcStr)}</strong>)</span>
             </div>
-            <div class="small text-muted mb-2">
-              Tìm thấy <strong>${invalidGroups.length}</strong> dòng phiếu <strong>${escapeHtml(searchVal)}</strong> trong SAP nhưng bị chặn:
+            <div class="sap-warning-row">
+              <span class="sap-warning-label">• Phân nhóm VT:</span>
+              <span class="sap-tag sap-tag-info">${escapeHtml(sample.material_group || 'Chưa phân nhóm')}</span>
             </div>
-            <div class="small bg-white p-2 rounded border mb-2">
-              <div>• <strong>Loại phiếu SAP:</strong> <span class="text-danger fw-bold">${escapeHtml(sampleDc || 'Không xác định')}</span> (Trang yêu cầu: <strong>${expectedDcStr}</strong>)</div>
-              <div>• <strong>Phân nhóm VT:</strong> <span class="text-danger fw-bold">${escapeHtml(sample.material_group || 'Chưa phân nhóm')}</span></div>
-              <div>• <strong>Vật tư:</strong> ${escapeHtml(sample.material || '')} - ${escapeHtml(sample.material_description || '')}</div>
+            <div class="sap-warning-row">
+              <span class="sap-warning-label">• Tên vật tư:</span>
+              <span class="sap-warning-desc text-truncate" title="${escapeHtml(sample.material || '')} - ${escapeHtml(sample.material_description || '')}">
+                ${escapeHtml(sample.material || '')} - ${escapeHtml(sample.material_description || '')}
+              </span>
             </div>
-            <div class="small text-danger fw-semibold">
-              ⛔ Quy định: Trang này chỉ được phép nhập liệu phiếu <u>${expectedDcStr}</u> và phân nhóm <u>${escapeHtml(rules.allowedGroups.join(', '))}</u>.
+          </div>
+
+          ${suggestedPage ? `
+            <div class="sap-warning-suggestion">
+              <div class="d-flex align-items-center gap-1">
+                <i class="bi bi-lightbulb-fill" style="color: #eab308;"></i>
+                <span><strong>Gợi ý:</strong> Phiếu này thuộc phân hệ <strong>${escapeHtml(suggestedPage.label)}</strong>.</span>
+              </div>
+              <div class="mt-1 ps-3">
+                <a href="${escapeHtml(suggestedPage.pageUrl || '#')}" class="sap-warning-link">
+                  <i class="bi bi-box-arrow-up-right me-1"></i>Chuyển sang trang <strong>${escapeHtml(suggestedPage.label)}</strong> để nhập liệu
+                </a>
+              </div>
             </div>
+          ` : ''}
+
+          <div class="sap-warning-rule">
+            <i class="bi bi-shield-check me-1"></i><strong>Quy định trang:</strong> Chỉ nhận phiếu <strong>${expectedDcStr}</strong> và nhóm VT: <em>${escapeHtml(rules.allowedGroups.join(', '))}</em>.
           </div>
         `;
         dropdown.appendChild(warnDiv);
@@ -988,10 +1037,17 @@
         position: absolute;
         z-index: 1060;
         background: #ffffff;
-        border: 1px solid #ced4da;
-        border-radius: 8px;
+        border: 1px solid #d1d5db;
+        border-radius: 10px;
         overflow: hidden;
         display: none;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        max-width: 520px;
+      }
+      [data-bs-theme="dark"] .sap-autocomplete-dropdown {
+        background: #18181b;
+        border-color: #3f3f46;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
       }
       .sap-dropdown-item {
         cursor: pointer;
@@ -999,6 +1055,158 @@
       }
       .sap-dropdown-item:hover, .sap-dropdown-item.active {
         background-color: #e9f3ff;
+      }
+      [data-bs-theme="dark"] .sap-dropdown-item:hover, [data-bs-theme="dark"] .sap-dropdown-item.active {
+        background-color: #27272a;
+      }
+
+      /* Styles cho cảnh báo phiếu không phù hợp - Thân thiện & Dễ đọc */
+      .sap-doc-warning {
+        padding: 14px 16px;
+        background: #fffbeb;
+        color: #1e293b;
+        font-family: inherit;
+        text-align: left;
+      }
+      [data-bs-theme="dark"] .sap-doc-warning {
+        background: #1c1917;
+        color: #f1f5f9;
+      }
+      .sap-warning-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 700;
+        font-size: 13.5px;
+        color: #b45309;
+        margin-bottom: 6px;
+      }
+      [data-bs-theme="dark"] .sap-warning-header {
+        color: #fbbf24;
+      }
+      .sap-warning-summary {
+        font-size: 12.5px;
+        color: #475569;
+        margin-bottom: 10px;
+        line-height: 1.4;
+      }
+      [data-bs-theme="dark"] .sap-warning-summary {
+        color: #cbd5e1;
+      }
+      .sap-warning-card {
+        background: #ffffff;
+        border: 1px solid #fde68a;
+        border-radius: 8px;
+        padding: 9px 12px;
+        margin-bottom: 9px;
+        font-size: 12.5px;
+        line-height: 1.6;
+        color: #334155;
+      }
+      [data-bs-theme="dark"] .sap-warning-card {
+        background: #262117;
+        border-color: #5c4314;
+        color: #e2e8f0;
+      }
+      .sap-warning-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 4px;
+      }
+      .sap-warning-row:last-child {
+        margin-bottom: 0;
+      }
+      .sap-warning-label {
+        font-weight: 600;
+        color: #475569;
+        min-width: 105px;
+      }
+      [data-bs-theme="dark"] .sap-warning-label {
+        color: #94a3b8;
+      }
+      .sap-warning-subtext {
+        font-size: 11.5px;
+        color: #64748b;
+      }
+      [data-bs-theme="dark"] .sap-warning-subtext {
+        color: #94a3b8;
+      }
+      .sap-warning-desc {
+        max-width: 320px;
+      }
+      .sap-tag {
+        display: inline-block;
+        padding: 1px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 1.4;
+      }
+      .sap-tag-warning {
+        background: #fef3c7;
+        color: #92400e;
+        border: 1px solid #fde68a;
+      }
+      [data-bs-theme="dark"] .sap-tag-warning {
+        background: #451a03;
+        color: #fde68a;
+        border-color: #78350f;
+      }
+      .sap-tag-info {
+        background: #e0f2fe;
+        color: #0369a1;
+        border: 1px solid #bae6fd;
+      }
+      [data-bs-theme="dark"] .sap-tag-info {
+        background: #082f49;
+        color: #7dd3fc;
+        border-color: #0369a1;
+      }
+      .sap-warning-suggestion {
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        border-radius: 6px;
+        padding: 8px 12px;
+        font-size: 12px;
+        color: #166534;
+        line-height: 1.45;
+        margin-bottom: 8px;
+      }
+      [data-bs-theme="dark"] .sap-warning-suggestion {
+        background: #052e16;
+        border-color: #14532d;
+        color: #86efac;
+      }
+      .sap-warning-link {
+        color: #15803d;
+        text-decoration: none;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        transition: color 0.15s ease;
+      }
+      .sap-warning-link:hover {
+        color: #166534;
+        text-decoration: underline;
+      }
+      [data-bs-theme="dark"] .sap-warning-link {
+        color: #4ade80;
+      }
+      [data-bs-theme="dark"] .sap-warning-link:hover {
+        color: #86efac;
+      }
+      .sap-warning-rule {
+        font-size: 11.5px;
+        color: #64748b;
+        line-height: 1.45;
+        padding-top: 4px;
+        border-top: 1px dashed #e2e8f0;
+      }
+      [data-bs-theme="dark"] .sap-warning-rule {
+        color: #94a3b8;
+        border-top-color: #3f3f46;
       }
       .sap-autofill-toast {
         position: fixed;
