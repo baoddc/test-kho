@@ -10,6 +10,113 @@
   // Biến lưu trữ dòng SAP đang được chọn hiện tại
   window._currentSelectedSapRecord = null;
 
+  // Cấu hình quy tắc phân loại theo trang
+  const SAP_PAGE_RULES = {
+    'xg-nhap': {
+      debitCredit: ['S'],
+      allowedPrefixes: ['10040', '10041'],
+      allowedGroups: ['10040-Phôi xà gồ mạ', '10041-Xà gồ'],
+      warehouse: 'xg',
+      direction: 'nhap',
+      label: 'Xà Gồ - Nhập kho',
+      defaultDocType: 'MN',
+      docFieldPlaceholder: 'Gõ số phiếu nhập để tìm SAP...'
+    },
+    'xg-xuat': {
+      debitCredit: ['H'],
+      allowedPrefixes: ['10040', '10041'],
+      allowedGroups: ['10040-Phôi xà gồ mạ', '10041-Xà gồ'],
+      warehouse: 'xg',
+      direction: 'xuat',
+      label: 'Xà Gồ - Xuất kho',
+      defaultDocType: 'PX',
+      docFieldPlaceholder: 'Gõ số phiếu xuất để tìm SAP...'
+    },
+    'tole-nhap': {
+      debitCredit: ['S'],
+      allowedPrefixes: ['10030', '10031', '10022', '10091'],
+      allowedGroups: ['10030-Phôi tôn mạ', '10031-Tôn', '10022-Thép cuộn Inox', '10091-Nhôm cuộn'],
+      warehouse: 'tole',
+      direction: 'nhap',
+      label: 'Tole - Nhập kho',
+      defaultDocType: 'MN',
+      docFieldPlaceholder: 'Gõ số phiếu nhập để tìm SAP...'
+    },
+    'tole-xuat': {
+      debitCredit: ['H'],
+      allowedPrefixes: ['10030', '10031', '10022', '10091'],
+      allowedGroups: ['10030-Phôi tôn mạ', '10031-Tôn', '10022-Thép cuộn Inox', '10091-Nhôm cuộn'],
+      warehouse: 'tole',
+      direction: 'xuat',
+      label: 'Tole - Xuất kho',
+      defaultDocType: 'PX',
+      docFieldPlaceholder: 'Gõ số phiếu xuất để tìm SAP...'
+    }
+  };
+
+  /**
+   * Tự động nhận diện ngữ cảnh trang hiện tại
+   * @param {string} [explicitContext]
+   * @returns {string}
+   */
+  function detectCurrentPageContext(explicitContext) {
+    if (explicitContext && SAP_PAGE_RULES[explicitContext]) {
+      return explicitContext;
+    }
+    const path = (typeof window !== 'undefined' && window.location && window.location.pathname)
+      ? window.location.pathname.toLowerCase()
+      : '';
+    if (path.includes('xg-xuat')) return 'xg-xuat';
+    if (path.includes('xg-nhap')) return 'xg-nhap';
+    if (path.includes('tole-xuat')) return 'tole-xuat';
+    if (path.includes('tole-nhap')) return 'tole-nhap';
+    return 'xg-nhap';
+  }
+
+  /**
+   * Trích xuất thông tin Debit/Credit và Phân nhóm vật tư từ dòng SAP
+   * @param {Object} row 
+   * @returns {{dc: string, group: string}}
+   */
+  function extractSapRowAttributes(row) {
+    let dc = '';
+    let group = '';
+    if (row) {
+      if (row.debit_credit_ind) dc = String(row.debit_credit_ind).trim().toUpperCase();
+      if (row.material_group) group = String(row.material_group).trim();
+      if ((!dc || !group) && row.raw_data && typeof row.raw_data === 'object') {
+        if (!dc && row.raw_data.debit_credit_ind) dc = String(row.raw_data.debit_credit_ind).trim().toUpperCase();
+        if (!group && row.raw_data.material_group) group = String(row.raw_data.material_group).trim();
+      }
+    }
+    return { dc, group };
+  }
+
+  /**
+   * Kiểm tra tính hợp lệ của dòng/nhóm SAP với ngữ cảnh trang
+   * @param {Object} rowOrGroup 
+   * @param {string} contextKey 
+   * @returns {{isValid: boolean, isDcMatch: boolean, isGroupMatch: boolean, dc: string, group: string, rules: Object}}
+   */
+  function validateSapRecordAgainstContext(rowOrGroup, contextKey) {
+    const rules = SAP_PAGE_RULES[contextKey] || SAP_PAGE_RULES['xg-nhap'];
+    const { dc, group } = extractSapRowAttributes(rowOrGroup);
+    
+    // Nếu có dc thì phải khớp S hoặc H
+    const isDcMatch = !dc || rules.debitCredit.includes(dc);
+    // Nếu có group thì phải bắt đầu bằng prefix cho phép
+    const isGroupMatch = !group || rules.allowedPrefixes.some(prefix => group.startsWith(prefix));
+
+    return {
+      isValid: Boolean(isDcMatch && isGroupMatch),
+      isDcMatch: Boolean(isDcMatch),
+      isGroupMatch: Boolean(isGroupMatch),
+      dc,
+      group,
+      rules
+    };
+  }
+
   /**
    * Tra cứu dữ liệu từ bảng xg_sap_mb51
    * @param {string} query - Chuỗi tìm kiếm (số phiếu)
@@ -61,12 +168,16 @@
       // Trọng lượng tuyệt đối để đối chiếu thực nhập
       const absQty = Math.abs(rawQty);
 
+      const { dc, group } = extractSapRowAttributes(r);
+
       if (!groupMap.has(key)) {
         groupMap.set(key, {
           material_document: doc,
           posting_date: r.posting_date,
           material: mat,
           material_description: r.material_description || '',
+          material_group: group,
+          debit_credit_ind: dc,
           batch: batch,
           project_id: r.project_id || '',
           project_name: r.project_name || '',
@@ -82,6 +193,8 @@
         item.total_quantity += absQty;
         item.count += 1;
         item.raw_items.push(r);
+        if (!item.material_group && group) item.material_group = group;
+        if (!item.debit_credit_ind && dc) item.debit_credit_ind = dc;
         // Ưu tiên ngày gần nhất nếu có
         if (r.posting_date && (!item.posting_date || r.posting_date > item.posting_date)) {
           item.posting_date = r.posting_date;
@@ -95,12 +208,20 @@
   }
 
   /**
-   * Khởi tạo Autocomplete trên ô Phiếu nhập
+   * Khởi tạo Autocomplete trên ô Phiếu nhập / Phiếu xuất
    * @param {HTMLInputElement} inputEl 
    * @param {HTMLFormElement} formEl 
+   * @param {string} [pageContext] - 'xg-nhap' | 'xg-xuat' | 'tole-nhap' | 'tole-xuat'
    */
-  function initSapDocumentAutocomplete(inputEl, formEl) {
+  function initSapDocumentAutocomplete(inputEl, formEl, pageContext) {
     if (!inputEl) return;
+
+    const currentContext = detectCurrentPageContext(pageContext);
+    const rules = SAP_PAGE_RULES[currentContext] || SAP_PAGE_RULES['xg-nhap'];
+
+    if (rules && rules.docFieldPlaceholder) {
+      inputEl.placeholder = rules.docFieldPlaceholder;
+    }
 
     // Đảm bảo container gợi ý
     let dropdown = document.getElementById('sapDocAutocompleteMenu');
@@ -120,7 +241,7 @@
       const rect = inputEl.getBoundingClientRect();
       dropdown.style.top = `${rect.bottom + window.scrollY + 2}px`;
       dropdown.style.left = `${rect.left + window.scrollX}px`;
-      dropdown.style.width = `${Math.max(rect.width, 380)}px`;
+      dropdown.style.width = `${Math.max(rect.width, 420)}px`;
     }
 
     function hideDropdown() {
@@ -131,11 +252,11 @@
     }
 
     function renderDropdown(groups, searchVal) {
-      currentResults = groups;
       dropdown.innerHTML = '';
       activeIndex = -1;
 
-      if (groups.length === 0) {
+      if (!groups || groups.length === 0) {
+        currentResults = [];
         dropdown.innerHTML = `
           <div class="p-2 text-muted small text-center">
             <i class="bi bi-info-circle me-1"></i>Không tìm thấy phiếu <strong>${escapeHtml(searchVal)}</strong> trong SAP
@@ -146,60 +267,135 @@
         return;
       }
 
-      const headerDiv = document.createElement('div');
-      headerDiv.className = 'sap-dropdown-header d-flex justify-content-between align-items-center px-2 py-1 bg-light border-bottom text-muted small';
-      headerDiv.innerHTML = `
-        <span>Tìm thấy <strong>${groups.length}</strong> mục SAP</span>
-        <span class="badge bg-primary">Nhấn để điền</span>
-      `;
-      dropdown.appendChild(headerDiv);
+      // Phân loại nhóm hợp lệ vs không hợp lệ theo quy tắc của trang
+      const validGroups = [];
+      const invalidGroups = [];
 
-      const listDiv = document.createElement('div');
-      listDiv.className = 'sap-dropdown-list';
-      listDiv.style.maxHeight = '280px';
-      listDiv.style.overflowY = 'auto';
-
-      groups.forEach((g, idx) => {
-        const itemEl = document.createElement('div');
-        itemEl.className = 'sap-dropdown-item p-2 border-bottom';
-        itemEl.dataset.index = String(idx);
-
-        const qtyFormatted = Number(g.total_quantity).toLocaleString('vi-VN', {
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 3
-        });
-
-        itemEl.innerHTML = `
-          <div class="d-flex justify-content-between align-items-center mb-1">
-            <span class="fw-bold text-primary"><i class="bi bi-receipt me-1"></i>${escapeHtml(g.material_document)}</span>
-            <span class="badge bg-success-subtle text-success border border-success-subtle">${qtyFormatted} kg</span>
-          </div>
-          <div class="text-dark small fw-semibold text-truncate" title="${escapeHtml(g.material_description)}">
-            <span class="text-secondary">${escapeHtml(g.material)}</span> - ${escapeHtml(g.material_description)}
-          </div>
-          <div class="d-flex gap-2 text-muted small mt-1 flex-wrap">
-            <span><strong>Batch:</strong> <span class="badge bg-secondary">${escapeHtml(g.batch || 'N/A')}</span></span>
-            ${g.posting_date ? `<span><strong>Ngày:</strong> ${escapeHtml(g.posting_date)}</span>` : ''}
-            ${g.project_id ? `<span class="text-truncate" style="max-width: 180px;" title="${escapeHtml(g.project_id)} - ${escapeHtml(g.project_name)}"><strong>CT:</strong> ${escapeHtml(g.project_id)}</span>` : ''}
-          </div>
-        `;
-
-        itemEl.addEventListener('mouseenter', () => {
-          highlightItem(idx);
-        });
-
-        itemEl.addEventListener('click', (e) => {
-          e.stopPropagation();
-          applySapRecordToForm(g, formEl);
-          hideDropdown();
-        });
-
-        listDiv.appendChild(itemEl);
+      groups.forEach(g => {
+        const check = validateSapRecordAgainstContext(g, currentContext);
+        if (check.isValid) {
+          validGroups.push(g);
+        } else {
+          invalidGroups.push({ group: g, check });
+        }
       });
 
-      dropdown.appendChild(listDiv);
-      positionDropdown();
-      dropdown.style.display = 'block';
+      currentResults = validGroups;
+
+      // TRƯỜNG HỢP 1: Có các dòng hợp lệ cho trang hiện tại
+      if (validGroups.length > 0) {
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'sap-dropdown-header d-flex justify-content-between align-items-center px-2 py-1 bg-light border-bottom text-muted small';
+        headerDiv.innerHTML = `
+          <span>Khớp <strong>${validGroups.length}</strong> mục [${escapeHtml(rules.label)}]</span>
+          <span class="badge bg-primary">Nhấn để điền</span>
+        `;
+        dropdown.appendChild(headerDiv);
+
+        const listDiv = document.createElement('div');
+        listDiv.className = 'sap-dropdown-list';
+        listDiv.style.maxHeight = '280px';
+        listDiv.style.overflowY = 'auto';
+
+        validGroups.forEach((g, idx) => {
+          const itemEl = document.createElement('div');
+          itemEl.className = 'sap-dropdown-item p-2 border-bottom';
+          itemEl.dataset.index = String(idx);
+
+          const qtyFormatted = Number(g.total_quantity).toLocaleString('vi-VN', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 3
+          });
+
+          const dcBadge = g.debit_credit_ind === 'S'
+            ? '<span class="badge bg-success-subtle text-success border border-success-subtle me-1" title="Debit (Nhập kho)">S</span>'
+            : (g.debit_credit_ind === 'H'
+              ? '<span class="badge bg-danger-subtle text-danger border border-danger-subtle me-1" title="Credit (Xuất kho)">H</span>'
+              : '');
+
+          itemEl.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <div>
+                ${dcBadge}
+                <span class="fw-bold text-primary"><i class="bi bi-receipt me-1"></i>${escapeHtml(g.material_document)}</span>
+              </div>
+              <span class="badge bg-primary-subtle text-primary border border-primary-subtle">${qtyFormatted} kg</span>
+            </div>
+            <div class="text-dark small fw-semibold text-truncate" title="${escapeHtml(g.material_description)}">
+              <span class="text-secondary">${escapeHtml(g.material)}</span> - ${escapeHtml(g.material_description)}
+            </div>
+            <div class="d-flex gap-2 text-muted small mt-1 flex-wrap align-items-center">
+              ${g.material_group ? `<span class="badge bg-secondary-subtle text-secondary border">${escapeHtml(g.material_group)}</span>` : ''}
+              <span><strong>Batch:</strong> <span class="badge bg-secondary">${escapeHtml(g.batch || 'N/A')}</span></span>
+              ${g.posting_date ? `<span><strong>Ngày:</strong> ${escapeHtml(g.posting_date)}</span>` : ''}
+              ${g.project_id ? `<span class="text-truncate" style="max-width: 160px;" title="${escapeHtml(g.project_id)} - ${escapeHtml(g.project_name)}"><strong>CT:</strong> ${escapeHtml(g.project_id)}</span>` : ''}
+            </div>
+          `;
+
+          itemEl.addEventListener('mouseenter', () => {
+            highlightItem(idx);
+          });
+
+          itemEl.addEventListener('click', (e) => {
+            e.stopPropagation();
+            applySapRecordToForm(g, formEl, currentContext);
+            hideDropdown();
+          });
+
+          listDiv.appendChild(itemEl);
+        });
+
+        dropdown.appendChild(listDiv);
+
+        // Nếu có dòng bị ẩn do khác kho/loại, hiển thị thêm footer chú thích
+        if (invalidGroups.length > 0) {
+          const footerDiv = document.createElement('div');
+          footerDiv.className = 'px-2 py-1 bg-light border-top text-muted small d-flex align-items-center justify-content-between';
+          footerDiv.innerHTML = `
+            <span><i class="bi bi-funnel me-1"></i>Đã lọc ẩn <strong>${invalidGroups.length}</strong> mục khác loại/kho</span>
+            <span class="text-secondary" style="font-size: 0.75rem;">(Chỉ nhận ${rules.direction === 'nhap' ? 'S' : 'H'} & ${rules.warehouse.toUpperCase()})</span>
+          `;
+          dropdown.appendChild(footerDiv);
+        }
+
+        positionDropdown();
+        dropdown.style.display = 'block';
+        return;
+      }
+
+      // TRƯỜNG HỢP 2: Tìm thấy phiếu SAP nhưng KHÔNG HỢP LỆ với trang hiện tại
+      if (invalidGroups.length > 0) {
+        const warnDiv = document.createElement('div');
+        warnDiv.className = 'p-3 text-start';
+
+        const sample = invalidGroups[0].group;
+        const sampleDc = sample.debit_credit_ind === 'S' ? 'Nhập kho (Debit: S)' : (sample.debit_credit_ind === 'H' ? 'Xuất kho (Credit: H)' : sample.debit_credit_ind);
+        const expectedDcStr = rules.direction === 'nhap' ? 'Nhập kho (Debit: S)' : 'Xuất kho (Credit: H)';
+
+        warnDiv.innerHTML = `
+          <div class="alert alert-warning mb-0 border-warning shadow-sm">
+            <div class="fw-bold text-dark mb-1 d-flex align-items-center gap-1">
+              <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+              <span>Phiếu không hợp lệ cho ${escapeHtml(rules.label)}</span>
+            </div>
+            <div class="small text-muted mb-2">
+              Tìm thấy <strong>${invalidGroups.length}</strong> dòng phiếu <strong>${escapeHtml(searchVal)}</strong> trong SAP nhưng bị chặn:
+            </div>
+            <div class="small bg-white p-2 rounded border mb-2">
+              <div>• <strong>Loại phiếu SAP:</strong> <span class="text-danger fw-bold">${escapeHtml(sampleDc || 'Không xác định')}</span> (Trang yêu cầu: <strong>${expectedDcStr}</strong>)</div>
+              <div>• <strong>Phân nhóm VT:</strong> <span class="text-danger fw-bold">${escapeHtml(sample.material_group || 'Chưa phân nhóm')}</span></div>
+              <div>• <strong>Vật tư:</strong> ${escapeHtml(sample.material || '')} - ${escapeHtml(sample.material_description || '')}</div>
+            </div>
+            <div class="small text-danger fw-semibold">
+              ⛔ Quy định: Trang này chỉ được phép nhập liệu phiếu <u>${expectedDcStr}</u> và phân nhóm <u>${escapeHtml(rules.allowedGroups.join(', '))}</u>.
+            </div>
+          </div>
+        `;
+        dropdown.appendChild(warnDiv);
+        positionDropdown();
+        dropdown.style.display = 'block';
+        return;
+      }
     }
 
     function highlightItem(index) {
@@ -220,6 +416,16 @@
       const val = inputEl.value.trim();
       clearTimeout(debounceTimer);
 
+      // Nếu người dùng thay đổi số phiếu khác với phiếu SAP đang chọn, hủy chọn SAP hiện tại
+      if (window._currentSelectedSapRecord && val.toLowerCase() !== String(window._currentSelectedSapRecord.material_document || '').toLowerCase()) {
+        resetSapSelection();
+        if (typeof window.updateRollTotals === 'function') {
+          window.updateRollTotals();
+        } else if (typeof window.updateEditRollTotals === 'function' && formEl.id === 'editDataForm') {
+          window.updateEditRollTotals();
+        }
+      }
+
       if (val.length < 2) {
         hideDropdown();
         return;
@@ -234,6 +440,27 @@
         const groups = groupSapMb51Rows(rawRows);
         renderDropdown(groups, val);
       }, 250);
+    });
+
+    // Khi rời khỏi ô nhập hoặc dán nội dung: nếu trùng khớp đúng 1 phiếu SAP thì tự động áp dụng
+    inputEl.addEventListener('change', async () => {
+      const val = inputEl.value.trim();
+      if (!val || window._currentSelectedSapRecord) return;
+      try {
+        const rawRows = await querySapMb51(val);
+        const groups = groupSapMb51Rows(rawRows);
+        const exact = groups.filter(g => String(g.material_document || '').toLowerCase() === val.toLowerCase());
+        if (exact.length === 1) {
+          const check = validateSapRecordAgainstContext(exact[0], currentContext);
+          if (check.isValid) {
+            applySapRecordToForm(exact[0], formEl, currentContext);
+          } else {
+            showAutofillToast(`⚠️ Phiếu ${val} không được phép nhập vào ${rules.label} (sai loại hoặc phân nhóm)!`);
+          }
+        }
+      } catch (err) {
+        console.warn('[XgSapLookup] Lỗi auto match khi change:', err);
+      }
     });
 
     // Lắng nghe phím điều hướng
@@ -251,7 +478,7 @@
       } else if (e.key === 'Enter') {
         if (activeIndex >= 0 && activeIndex < currentResults.length) {
           e.preventDefault();
-          applySapRecordToForm(currentResults[activeIndex], formEl);
+          applySapRecordToForm(currentResults[activeIndex], formEl, currentContext);
           hideDropdown();
         }
       } else if (e.key === 'Escape') {
@@ -276,68 +503,15 @@
    * Tự động điền dữ liệu SAP vào các trường trong form
    * @param {Object} sapRecord - Dòng dữ liệu SAP đã chọn
    * @param {HTMLFormElement} formEl 
+   * @param {string} [pageContext]
    */
-  function applySapRecordToForm(sapRecord, formEl) {
+  function applySapRecordToForm(sapRecord, formEl, pageContext) {
     if (!sapRecord || !formEl) return;
 
+    const currentContext = detectCurrentPageContext(pageContext);
+    const rules = SAP_PAGE_RULES[currentContext] || SAP_PAGE_RULES['xg-nhap'];
+
     window._currentSelectedSapRecord = sapRecord;
-
-    // 1. Mã chứng từ mặc định là MN
-    const maChungTuSelect = formEl.querySelector('select[name="col_1"]');
-    if (maChungTuSelect) {
-      let optionExists = false;
-      for (let i = 0; i < maChungTuSelect.options.length; i++) {
-        if (maChungTuSelect.options[i].value === 'MN') {
-          optionExists = true;
-          break;
-        }
-      }
-      if (!optionExists) {
-        const opt = document.createElement('option');
-        opt.value = 'MN';
-        opt.textContent = 'MN';
-        maChungTuSelect.appendChild(opt);
-      }
-      maChungTuSelect.value = 'MN';
-    }
-
-    // 2. Ngày nhập: Posting Date (YYYY-MM-DD)
-    const ngayNhapInput = formEl.querySelector('input[name="col_2"]');
-    if (ngayNhapInput && sapRecord.posting_date) {
-      ngayNhapInput.value = sapRecord.posting_date;
-    }
-
-    // 3. Phiếu nhập: Material Document
-    const phieuNhapInput = formEl.querySelector('input[name="col_3"]');
-    if (phieuNhapInput) {
-      phieuNhapInput.value = sapRecord.material_document;
-    }
-
-    // 4. Loại nhập: Mặc định là Nhà cung cấp
-    const loaiNhapSelect = formEl.querySelector('select[name="col_4"]');
-    if (loaiNhapSelect) {
-      loaiNhapSelect.value = 'Nhà cung cấp';
-    }
-
-    // 5. Mã vật tư: Material
-    const maVatTuInput = formEl.querySelector('input[name="col_5"]');
-    if (maVatTuInput) {
-      maVatTuInput.value = sapRecord.material || '';
-      // Kích hoạt sinh Cuộn ID
-      maVatTuInput.dispatchEvent(new Event('input', { bubbles: true }));
-    }
-
-    // 6. Tên vật tư: Material Description
-    const tenVatTuInput = formEl.querySelector('input[name="col_6"]');
-    if (tenVatTuInput) {
-      tenVatTuInput.value = sapRecord.material_description || '';
-    }
-
-    // 7. Batch: Batch
-    const batchInput = formEl.querySelector('input[name="col_7"]');
-    if (batchInput) {
-      batchInput.value = sapRecord.batch || '';
-    }
 
     // Helper tìm input theo text label
     const findInputByLabel = (labelPattern) => {
@@ -354,32 +528,120 @@
       return null;
     };
 
-    // 8. Mã công trình: Project ID
-    const maCongTrinhInput = findInputByLabel('Mã công trình') ||
-                             findInputByLabel('Mã dự án') ||
-                             formEl.querySelector('input[name="add_ext_11"]') ||
-                             formEl.querySelector('input[name="edit_ext_11"]') ||
-                             formEl.querySelector('input[name="add_ext_12"]') ||
-                             formEl.querySelector('input[name="edit_ext_12"]');
-    if (maCongTrinhInput) {
-      maCongTrinhInput.value = sapRecord.project_id || '';
+    // 1. Mã chứng từ mặc định theo hướng (MN cho Nhập, PX cho Xuất)
+    const targetDocType = rules.defaultDocType || 'MN';
+    const maChungTuSelect = formEl.querySelector('select[name="col_1"]');
+    if (maChungTuSelect) {
+      let optionExists = false;
+      for (let i = 0; i < maChungTuSelect.options.length; i++) {
+        if (maChungTuSelect.options[i].value === targetDocType) {
+          optionExists = true;
+          break;
+        }
+      }
+      if (!optionExists) {
+        const opt = document.createElement('option');
+        opt.value = targetDocType;
+        opt.textContent = targetDocType;
+        maChungTuSelect.appendChild(opt);
+      }
+      maChungTuSelect.value = targetDocType;
     }
 
-    // 9. Tên công trình: Project name
-    const tenCongTrinhInput = findInputByLabel('Tên công trình') ||
-                              findInputByLabel('Tên dự án') ||
-                              formEl.querySelector('input[name="add_ext_12"]') ||
-                              formEl.querySelector('input[name="edit_ext_12"]') ||
-                              formEl.querySelector('input[name="add_ext_13"]') ||
-                              formEl.querySelector('input[name="edit_ext_13"]');
-    if (tenCongTrinhInput) {
-      tenCongTrinhInput.value = sapRecord.project_name || '';
+    // 2. Ngày chứng từ: Posting Date (YYYY-MM-DD)
+    const ngayInput = formEl.querySelector('input[name="col_2"]');
+    if (ngayInput && sapRecord.posting_date) {
+      ngayInput.value = sapRecord.posting_date;
+    }
+
+    // 3. Số phiếu: Material Document
+    const phieuInput = formEl.querySelector('input[name="col_3"]');
+    if (phieuInput) {
+      phieuInput.value = sapRecord.material_document;
+    }
+
+    if (rules.direction === 'nhap') {
+      // 4. Loại nhập: Mặc định là Nhà cung cấp
+      const loaiNhapSelect = formEl.querySelector('select[name="col_4"]');
+      if (loaiNhapSelect) {
+        loaiNhapSelect.value = 'Nhà cung cấp';
+      }
+
+      // 5. Mã vật tư: Material
+      const maVatTuInput = formEl.querySelector('input[name="col_5"]');
+      if (maVatTuInput) {
+        maVatTuInput.value = sapRecord.material || '';
+        // Kích hoạt sinh Cuộn ID
+        maVatTuInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+
+      // 6. Tên vật tư: Material Description
+      const tenVatTuInput = formEl.querySelector('input[name="col_6"]');
+      if (tenVatTuInput) {
+        tenVatTuInput.value = sapRecord.material_description || '';
+      }
+
+      // 7. Batch: Batch
+      const batchInput = formEl.querySelector('input[name="col_7"]');
+      if (batchInput) {
+        batchInput.value = sapRecord.batch || '';
+      }
+
+      // 8. Mã công trình: Project ID
+      const maCongTrinhInput = findInputByLabel('Mã công trình') ||
+                               findInputByLabel('Mã dự án') ||
+                               formEl.querySelector('input[name="add_ext_11"]') ||
+                               formEl.querySelector('input[name="edit_ext_11"]') ||
+                               formEl.querySelector('input[name="add_ext_12"]') ||
+                               formEl.querySelector('input[name="edit_ext_12"]');
+      if (maCongTrinhInput) {
+        maCongTrinhInput.value = sapRecord.project_id || '';
+      }
+
+      // 9. Tên công trình: Project name
+      const tenCongTrinhInput = findInputByLabel('Tên công trình') ||
+                                findInputByLabel('Tên dự án') ||
+                                formEl.querySelector('input[name="add_ext_12"]') ||
+                                formEl.querySelector('input[name="edit_ext_12"]') ||
+                                formEl.querySelector('input[name="add_ext_13"]') ||
+                                formEl.querySelector('input[name="edit_ext_13"]');
+      if (tenCongTrinhInput) {
+        tenCongTrinhInput.value = sapRecord.project_name || '';
+      }
+    } else {
+      // Hướng Xuất kho (xg-xuat, tole-xuat)
+      const maCtInput = findInputByLabel('Mã công trình') ||
+                        findInputByLabel('Mã CT') ||
+                        formEl.querySelector('input[name="col_10"]') ||
+                        formEl.querySelector('input[name="col_11"]');
+      if (maCtInput && sapRecord.project_id) {
+        maCtInput.value = sapRecord.project_id;
+      }
+
+      const tenCtInput = findInputByLabel('Tên công trình') ||
+                         findInputByLabel('Tên CT') ||
+                         formEl.querySelector('input[name="col_11"]') ||
+                         formEl.querySelector('input[name="col_12"]');
+      if (tenCtInput && sapRecord.project_name) {
+        tenCtInput.value = sapRecord.project_name;
+      }
+
+      // Điền thông tin vào thẻ mặt hàng đầu tiên nếu có
+      if (Array.isArray(window.multiItemsData) && window.multiItemsData.length > 0) {
+        const firstItem = window.multiItemsData[0];
+        if (sapRecord.material) firstItem.maVatTu = sapRecord.material;
+        if (sapRecord.material_description) firstItem.tenVatTu = sapRecord.material_description;
+        if (sapRecord.batch) firstItem.batch = sapRecord.batch;
+        if (typeof window.renderItemCards === 'function') {
+          window.renderItemCards();
+        }
+      }
     }
 
     // Gợi ý thông báo nhẹ
-    showAutofillToast(`Đã tự động điền thông tin phiếu SAP: ${sapRecord.material_document} (${sapRecord.material})`);
+    showAutofillToast(`Đã tự động điền thông tin phiếu SAP: ${sapRecord.material_document} (${sapRecord.material || ''})`);
 
-    // Cập nhật lại đối chiếu khối lượng cuộn vs SAP
+    // Cập nhật lại đối chiếu khối lượng cuộn vs SAP nếu có
     if (typeof window.updateRollTotals === 'function') {
       window.updateRollTotals();
     } else if (typeof window.updateEditRollTotals === 'function' && formEl.id === 'editDataForm') {
@@ -388,7 +650,7 @@
   }
 
   /**
-   * Cập nhật dòng hiển thị đối chiếu khối lượng trong bảng cuộn
+   * Cập nhật dòng hiển thị đối chiếu khối lượng trong bảng cuộn và kiểm soát nút Thêm/Cập nhật
    * @param {number} totalRollKg - Tổng kg cuộn người dùng đã nhập
    * @param {boolean} [isEdit=false] - Cờ xác định modal sửa hay thêm
    */
@@ -396,6 +658,9 @@
     const rowId = isEdit ? 'editSapReconciliationRow' : 'sapReconciliationRow';
     const kgDisplayId = isEdit ? 'editTotalSapKgDisplay' : 'totalSapKgDisplay';
     const badgeId = isEdit ? 'editSapReconciliationBadge' : 'sapReconciliationBadge';
+    const submitBtn = isEdit
+      ? (document.getElementById('btnEditDataSubmit') || document.querySelector('#editDataForm button[type="submit"]'))
+      : (document.getElementById('btnAddDataSubmit') || document.querySelector('#addDataForm button[type="submit"]'));
 
     const sapRow = document.getElementById(rowId);
     if (!sapRow) return;
@@ -403,13 +668,17 @@
     const sapRecord = window._currentSelectedSapRecord;
     if (!sapRecord || typeof sapRecord.total_quantity !== 'number') {
       sapRow.style.display = 'none';
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.title = '';
+      }
       return;
     }
 
     sapRow.style.display = '';
 
     const sapKg = sapRecord.total_quantity;
-    const diff = totalRollKg - sapKg;
+    const diff = Math.round((totalRollKg - sapKg) * 100) / 100;
     const absDiff = Math.abs(diff);
 
     const sapKgEl = document.getElementById(kgDisplayId);
@@ -422,18 +691,26 @@
       }) + ' kg';
     }
 
+    const actionText = isEdit ? 'cập nhật' : 'thêm';
+
+    // Nút Thêm/Cập nhật vẫn bấm được, nếu chưa khớp sẽ mở modal cảnh báo khi bấm
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.title = '';
+    }
+
     if (badgeEl) {
       if (totalRollKg === 0) {
-        badgeEl.className = 'badge bg-secondary';
-        badgeEl.innerHTML = '<i class="bi bi-clock me-1"></i>Chờ nhập kg cuộn';
+        badgeEl.className = 'badge bg-secondary py-1 px-2';
+        badgeEl.innerHTML = `<i class="bi bi-clock me-1"></i>Chờ nhập kg cuộn`;
       } else if (absDiff < 0.05) {
-        badgeEl.className = 'badge bg-success';
-        badgeEl.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i>Khớp 100% (0 kg)';
+        badgeEl.className = 'badge bg-success py-1 px-2';
+        badgeEl.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i>Khớp 100% (0 kg)`;
       } else if (diff > 0) {
-        badgeEl.className = 'badge bg-warning text-dark';
+        badgeEl.className = 'badge bg-warning text-dark py-1 px-2';
         badgeEl.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-1"></i>Lệch: +${diff.toLocaleString('vi-VN', { maximumFractionDigits: 2 })} kg (Cuộn > SAP)`;
       } else {
-        badgeEl.className = 'badge bg-danger';
+        badgeEl.className = 'badge bg-danger py-1 px-2';
         badgeEl.innerHTML = `<i class="bi bi-exclamation-octagon-fill me-1"></i>Lệch: ${diff.toLocaleString('vi-VN', { maximumFractionDigits: 2 })} kg (Cuộn < SAP)`;
       }
     }
@@ -446,6 +723,234 @@
     window._currentSelectedSapRecord = null;
     const sapRow = document.getElementById('sapReconciliationRow');
     if (sapRow) sapRow.style.display = 'none';
+    const editSapRow = document.getElementById('editSapReconciliationRow');
+    if (editSapRow) editSapRow.style.display = 'none';
+
+    const addBtn = document.getElementById('btnAddDataSubmit') || document.querySelector('#addDataForm button[type="submit"]');
+    if (addBtn) {
+      addBtn.disabled = false;
+      addBtn.title = '';
+    }
+    const editBtn = document.getElementById('btnEditDataSubmit') || document.querySelector('#editDataForm button[type="submit"]');
+    if (editBtn) {
+      editBtn.disabled = false;
+      editBtn.title = '';
+    }
+  }
+
+  /**
+   * Kiểm tra xem đang có phiếu SAP được chọn hay không
+   * @returns {boolean}
+   */
+  function isSapActive() {
+    return !!(window._currentSelectedSapRecord && typeof window._currentSelectedSapRecord.total_quantity === 'number');
+  }
+
+  /**
+   * Kiểm tra tính hợp lệ về khối lượng so với SAP
+   * @param {number} totalRollKg
+   * @param {boolean} [isEdit=false]
+   * @returns {{ valid: boolean, message?: string, modalHtml?: string, diff?: number, sapKg?: number }}
+   */
+  function validateSapMatch(totalRollKg, isEdit = false) {
+    // Cảnh báo chỉ áp dụng với thêm mới dữ liệu, không áp dụng khi sửa/cập nhật dữ liệu
+    if (isEdit) {
+      return { valid: true };
+    }
+
+    const sapRecord = window._currentSelectedSapRecord;
+    if (!sapRecord || typeof sapRecord.total_quantity !== 'number') {
+      return { valid: true };
+    }
+
+    const sapKg = sapRecord.total_quantity;
+    const diff = Math.round((totalRollKg - sapKg) * 100) / 100;
+    const absDiff = Math.abs(diff);
+    const actionText = isEdit ? 'cập nhật' : 'thêm';
+    const ActionText = isEdit ? 'CẬP NHẬT' : 'THÊM';
+
+    if (totalRollKg === 0) {
+      const msg = `⚠️ Chưa nhập số kg cho danh sách cuộn!\n\nSố kg SAP yêu cầu: ${sapKg.toLocaleString('vi-VN', { maximumFractionDigits: 3 })} kg.\nVui lòng nhập đúng và đủ số kg để khớp 100% trước khi ${actionText}.`;
+      const modalHtml = `
+        <div class="text-start">
+          <div class="alert alert-danger border-0 mb-3 d-flex align-items-center gap-3 py-3 px-3 rounded-3" style="background: rgba(220, 53, 69, 0.25);">
+            <i class="bi bi-x-octagon-fill fs-2 text-danger flex-shrink-0"></i>
+            <div>
+              <div class="fw-bold fs-5 text-white">KHÔNG CHO PHÉP ${ActionText} DỮ LIỆU!</div>
+              <div class="text-white-50 small">Bạn chưa nhập số kg cho các cuộn. Hệ thống yêu cầu phải nhập đầy đủ và khớp 100% với SAP.</div>
+            </div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-sm-6">
+              <div class="card h-100 border-0" style="background: rgba(13, 110, 253, 0.15); border: 1px solid rgba(13, 110, 253, 0.3) !important; border-radius: 12px;">
+                <div class="card-body p-3 text-center">
+                  <div class="text-white-50 small text-uppercase fw-semibold mb-1">
+                    <i class="bi bi-receipt me-1"></i>Tổng kg SAP yêu cầu
+                  </div>
+                  <div class="fs-2 fw-bold text-info">
+                    ${sapKg.toLocaleString('vi-VN', { maximumFractionDigits: 3 })} <span class="fs-6 text-white-50">kg</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-sm-6">
+              <div class="card h-100 border-0" style="background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.15) !important; border-radius: 12px;">
+                <div class="card-body p-3 text-center">
+                  <div class="text-white-50 small text-uppercase fw-semibold mb-1">
+                    <i class="bi bi-boxes me-1"></i>Tổng kg cuộn đã nhập
+                  </div>
+                  <div class="fs-2 fw-bold text-white">
+                    0 <span class="fs-6 text-white-50">kg</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-3 rounded-3 mb-3 text-center" style="background: rgba(220, 53, 69, 0.18); border: 1px solid rgba(220, 53, 69, 0.4);">
+            <div class="small fw-semibold text-danger text-uppercase">
+              <i class="bi bi-exclamation-diamond-fill me-1"></i> Trạng thái kiểm tra:
+            </div>
+            <div class="fs-4 fw-bold text-danger mt-1">
+              CHƯA NHẬP SỐ KG CUỘN
+            </div>
+            <div class="small text-white mt-1">
+              Cần nhập đủ <strong>${sapKg.toLocaleString('vi-VN', { maximumFractionDigits: 3 })} kg</strong> để khớp hoàn toàn với phiếu SAP.
+            </div>
+          </div>
+
+          <div class="card border-0 mb-3" style="background: rgba(255, 255, 255, 0.05); border-radius: 10px;">
+            <div class="card-body p-3 small">
+              <div class="row g-2">
+                <div class="col-sm-6 d-flex justify-content-between">
+                  <span class="text-white-50">Phiếu nhập:</span>
+                  <span class="fw-bold text-white">${escapeHtml(sapRecord.material_document)}</span>
+                </div>
+                <div class="col-sm-6 d-flex justify-content-between">
+                  <span class="text-white-50">Batch:</span>
+                  <span class="fw-bold text-white">${escapeHtml(sapRecord.batch || 'N/A')}</span>
+                </div>
+                <div class="col-12 d-flex justify-content-between border-top border-secondary pt-2 mt-2">
+                  <span class="text-white-50">Vật tư:</span>
+                  <span class="fw-bold text-white text-truncate ms-2" title="${escapeHtml(sapRecord.material_description)}">${escapeHtml(sapRecord.material)} - ${escapeHtml(sapRecord.material_description)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-3 rounded-3 text-warning small d-flex align-items-center gap-2" style="background: rgba(255, 193, 7, 0.12); border: 1px solid rgba(255, 193, 7, 0.25);">
+            <i class="bi bi-shield-exclamation fs-4 flex-shrink-0 text-warning"></i>
+            <div>
+              <strong>Quy tắc hệ thống:</strong> Chỉ khi khớp hoàn toàn số kg mới được phép ${actionText}!
+            </div>
+          </div>
+        </div>
+      `;
+      return {
+        valid: false,
+        message: msg,
+        modalHtml,
+        diff: -sapKg,
+        sapKg
+      };
+    }
+
+    if (absDiff >= 0.05) {
+      const isSurplus = diff > 0;
+      const loaiLechText = isSurplus
+        ? `Lệch dư (+${diff.toLocaleString('vi-VN', { maximumFractionDigits: 2 })} kg - Cuộn > SAP)`
+        : `Lệch thiếu (${diff.toLocaleString('vi-VN', { maximumFractionDigits: 2 })} kg - Cuộn < SAP)`;
+
+      const msg = `⚠️ KHÔNG THỂ ${ActionText} DỮ LIỆU!\n\n- Tổng kg cuộn đã nhập: ${totalRollKg.toLocaleString('vi-VN', { maximumFractionDigits: 2 })} kg\n- Tổng kg SAP: ${sapKg.toLocaleString('vi-VN', { maximumFractionDigits: 2 })} kg\n- Trạng thái: ${loaiLechText}\n\nTheo quy định, lệnh dư hoặc thiếu đều không được phép ${actionText}!`;
+
+      const modalHtml = `
+        <div class="text-start">
+          <div class="alert alert-danger border-0 mb-3 d-flex align-items-center gap-3 py-3 px-3 rounded-3" style="background: rgba(220, 53, 69, 0.25);">
+            <i class="bi bi-x-octagon-fill fs-2 text-danger flex-shrink-0"></i>
+            <div>
+              <div class="fw-bold fs-5 text-white">KHÔNG CHO PHÉP ${ActionText} DỮ LIỆU!</div>
+              <div class="text-white-50 small">Số kg các cuộn thực nhập <strong>chưa khớp hoàn toàn</strong> với số lượng trên phiếu SAP MB51.</div>
+            </div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-sm-6">
+              <div class="card h-100 border-0" style="background: rgba(13, 110, 253, 0.15); border: 1px solid rgba(13, 110, 253, 0.3) !important; border-radius: 12px;">
+                <div class="card-body p-3 text-center">
+                  <div class="text-white-50 small text-uppercase fw-semibold mb-1">
+                    <i class="bi bi-receipt me-1"></i>Tổng kg SAP yêu cầu
+                  </div>
+                  <div class="fs-2 fw-bold text-info">
+                    ${sapKg.toLocaleString('vi-VN', { maximumFractionDigits: 3 })} <span class="fs-6 text-white-50">kg</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-sm-6">
+              <div class="card h-100 border-0" style="background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.15) !important; border-radius: 12px;">
+                <div class="card-body p-3 text-center">
+                  <div class="text-white-50 small text-uppercase fw-semibold mb-1">
+                    <i class="bi bi-boxes me-1"></i>Tổng kg cuộn đã nhập
+                  </div>
+                  <div class="fs-2 fw-bold text-white">
+                    ${totalRollKg.toLocaleString('vi-VN', { maximumFractionDigits: 2 })} <span class="fs-6 text-white-50">kg</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-3 rounded-3 mb-3 text-center" style="background: ${isSurplus ? 'rgba(255, 193, 7, 0.18)' : 'rgba(220, 53, 69, 0.18)'}; border: 1px solid ${isSurplus ? 'rgba(255, 193, 7, 0.4)' : 'rgba(220, 53, 69, 0.4)'};">
+            <div class="small fw-semibold ${isSurplus ? 'text-warning' : 'text-danger'} text-uppercase">
+              <i class="bi bi-exclamation-diamond-fill me-1"></i> Mức độ chênh lệch:
+            </div>
+            <div class="fs-3 fw-bold ${isSurplus ? 'text-warning' : 'text-danger'} mt-1">
+              ${isSurplus ? '+' : ''}${diff.toLocaleString('vi-VN', { maximumFractionDigits: 2 })} kg
+            </div>
+            <div class="small text-white mt-1 fw-medium">
+              Trạng thái: <strong>${isSurplus ? 'LỆCH DƯ (Cuộn > SAP)' : 'LỆCH THIẾU (Cuộn < SAP)'}</strong>
+            </div>
+          </div>
+
+          <div class="card border-0 mb-3" style="background: rgba(255, 255, 255, 0.05); border-radius: 10px;">
+            <div class="card-body p-3 small">
+              <div class="row g-2">
+                <div class="col-sm-6 d-flex justify-content-between">
+                  <span class="text-white-50">Phiếu nhập:</span>
+                  <span class="fw-bold text-white">${escapeHtml(sapRecord.material_document)}</span>
+                </div>
+                <div class="col-sm-6 d-flex justify-content-between">
+                  <span class="text-white-50">Batch:</span>
+                  <span class="fw-bold text-white">${escapeHtml(sapRecord.batch || 'N/A')}</span>
+                </div>
+                <div class="col-12 d-flex justify-content-between border-top border-secondary pt-2 mt-2">
+                  <span class="text-white-50">Vật tư:</span>
+                  <span class="fw-bold text-white text-truncate ms-2" title="${escapeHtml(sapRecord.material_description)}">${escapeHtml(sapRecord.material)} - ${escapeHtml(sapRecord.material_description)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-3 rounded-3 text-warning small d-flex align-items-center gap-2" style="background: rgba(255, 193, 7, 0.12); border: 1px solid rgba(255, 193, 7, 0.25);">
+            <i class="bi bi-shield-exclamation fs-4 flex-shrink-0 text-warning"></i>
+            <div>
+              <strong>Quy tắc hệ thống:</strong> Lệnh dư hoặc thiếu đều không được phép thêm. Vui lòng kiểm tra và điều chỉnh lại số kg các cuộn sao cho <strong>khớp hoàn toàn 100% (lệch = 0 kg)</strong> để được thêm!
+            </div>
+          </div>
+        </div>
+      `;
+
+      return {
+        valid: false,
+        message: msg,
+        modalHtml,
+        diff,
+        sapKg
+      };
+    }
+
+    return { valid: true, diff, sapKg };
   }
 
   function escapeHtml(str) {
@@ -523,10 +1028,12 @@
   }
 
   // Khởi chạy khi DOM sẵn sàng
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', injectSapLookupStyles);
-  } else {
-    injectSapLookupStyles();
+  if (typeof document !== 'undefined') {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', injectSapLookupStyles);
+    } else {
+      injectSapLookupStyles();
+    }
   }
 
   /**
@@ -625,9 +1132,11 @@
 
         const doc = getVal(row[2]);
         const date = parseGvizDate(row[3]);
+        const matGroup = getVal(row[4]);
         const mat = getVal(row[5]);
         const matDesc = getVal(row[6]);
         const batch = getVal(row[7]);
+        const dcInd = getVal(row[15]) ? getVal(row[15]).toUpperCase() : null;
 
         // Bỏ qua dòng tiêu đề
         if (doc && (doc.toLowerCase().includes('material') || (date && date.includes('Posting')))) {
@@ -651,6 +1160,10 @@
             movement_type_text: getVal(row[14]),
             plant: getVal(row[16]),
             vendor_name: getVal(row[24]),
+            raw_data: {
+              material_group: matGroup,
+              debit_credit_ind: dcInd
+            },
             synced_at: nowIso
           });
         } else {
@@ -668,6 +1181,10 @@
               project_id: getVal(row[10]),
               project_name: getVal(row[33]) || getVal(row[11]),
               vendor_name: getVal(row[24]),
+              raw_data: {
+                material_group: matGroup,
+                debit_credit_ind: dcInd
+              },
               synced_at: nowIso
             });
           }
@@ -723,15 +1240,26 @@
     }
   }
 
-  // Export các hàm ra window
+  // Export các hàm và quy tắc ra window
   window.XgSapLookup = {
+    SAP_PAGE_RULES,
+    detectCurrentPageContext,
+    extractSapRowAttributes,
+    validateSapRecordAgainstContext,
     querySapMb51,
     groupSapMb51Rows,
     initSapDocumentAutocomplete,
     applySapRecordToForm,
     updateSapReconciliationDisplay,
     resetSapSelection,
+    isSapActive,
+    validateSapMatch,
     syncFromGoogleSheets
   };
+
+  // Hỗ trợ module.exports trong môi trường Node.js (cho unit test)
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = window.XgSapLookup;
+  }
 
 })();
