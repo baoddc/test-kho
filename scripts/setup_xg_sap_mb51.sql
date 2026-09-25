@@ -20,16 +20,24 @@ CREATE TABLE IF NOT EXISTS public.xg_sap_mb51 (
     plant TEXT,
     vendor_name TEXT,
     customer_name TEXT,
+    material_group TEXT,
+    debit_credit_ind TEXT,
     raw_data JSONB,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     synced_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Mở rộng bảng nếu đã tồn tại trước đó
+ALTER TABLE public.xg_sap_mb51 ADD COLUMN IF NOT EXISTS material_group TEXT;
+ALTER TABLE public.xg_sap_mb51 ADD COLUMN IF NOT EXISTS debit_credit_ind TEXT;
 
 -- Index tối ưu tra cứu nhanh theo Phiếu nhập (material_document)
 CREATE INDEX IF NOT EXISTS idx_xg_sap_mb51_doc ON public.xg_sap_mb51 (material_document);
 CREATE INDEX IF NOT EXISTS idx_xg_sap_mb51_mat ON public.xg_sap_mb51 (material);
 CREATE INDEX IF NOT EXISTS idx_xg_sap_mb51_batch ON public.xg_sap_mb51 (batch);
 CREATE INDEX IF NOT EXISTS idx_xg_sap_mb51_composite ON public.xg_sap_mb51 (material_document, material, batch);
+CREATE INDEX IF NOT EXISTS idx_xg_sap_mb51_dc ON public.xg_sap_mb51 (debit_credit_ind);
+CREATE INDEX IF NOT EXISTS idx_xg_sap_mb51_group ON public.xg_sap_mb51 (material_group);
 
 -- Bật Row Level Security (RLS)
 ALTER TABLE public.xg_sap_mb51 ENABLE ROW LEVEL SECURITY;

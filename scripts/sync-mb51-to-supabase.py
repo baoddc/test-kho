@@ -165,6 +165,9 @@ def main():
     
     idx_doc = col_idx('Material Document')
     idx_date = col_idx('Posting Date')
+    idx_mat_grp = col_idx('Phân nhóm (Material group)')
+    if idx_mat_grp == -1:
+        idx_mat_grp = col_idx('Material group')
     idx_mat = col_idx('Material')
     idx_mat_desc = col_idx('Material Description')
     idx_batch = col_idx('Batch')
@@ -175,11 +178,14 @@ def main():
     idx_sloc = col_idx('Storage Location')
     idx_mvt = col_idx('Movement Type')
     idx_mvt_text = col_idx('Movement Type Text')
+    idx_dc = col_idx('Debit/Credit Ind.')
+    if idx_dc == -1:
+        idx_dc = col_idx('Debit/Credit')
     idx_plant = col_idx('Plant')
     idx_vendor = col_idx('Vendor name')
     idx_customer = col_idx('Customer name')
     
-    print(f"[*] Map cột: Doc={idx_doc} ('{headers[idx_doc]}'), Material={idx_mat} ('{headers[idx_mat]}'), Desc={idx_mat_desc} ('{headers[idx_mat_desc]}')")
+    print(f"[*] Map cột: Doc={idx_doc}, Mat={idx_mat}, Group={idx_mat_grp}, D/C={idx_dc}")
     
     def safe_get(row, idx):
         if idx >= 0 and idx < len(row):
@@ -197,6 +203,11 @@ def main():
         if not doc:
             continue
         
+        group_val = safe_get(r, idx_mat_grp)
+        dc_val = safe_get(r, idx_dc)
+        if dc_val:
+            dc_val = dc_val.strip().upper()
+        
         record = {
             'material_document': doc,
             'posting_date': parse_date(safe_get(r, idx_date)),
@@ -213,6 +224,10 @@ def main():
             'plant': safe_get(r, idx_plant),
             'vendor_name': safe_get(r, idx_vendor),
             'customer_name': safe_get(r, idx_customer),
+            'raw_data': {
+                'material_group': group_val,
+                'debit_credit_ind': dc_val
+            },
             'synced_at': now_iso
         }
         records.append(record)
