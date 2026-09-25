@@ -1700,6 +1700,25 @@ function openAddDataModal() {
     };
   }
 
+  // Tích hợp Autocomplete SAP cho ô Phiếu xuất (col_3)
+  const formEl = document.getElementById('addDataForm');
+  const phieuXuatInput = commonFieldsContainer.querySelector('input[name="col_3"]');
+  if (phieuXuatInput && window.XgSapLookup && window.XgSapLookup.initSapDocumentAutocomplete) {
+    phieuXuatInput.placeholder = 'Gõ số phiếu xuất để tìm SAP...';
+    phieuXuatInput.autocomplete = 'off';
+    window.XgSapLookup.initSapDocumentAutocomplete(phieuXuatInput, formEl, 'tole-xuat');
+  }
+
+  // Tích hợp nút Đồng bộ Google Sheets
+  const btnSyncGgSheet = document.getElementById('btnSyncGgSheet');
+  if (btnSyncGgSheet) {
+    btnSyncGgSheet.onclick = () => {
+      if (window.XgSapLookup && window.XgSapLookup.syncFromGoogleSheets) {
+        window.XgSapLookup.syncFromGoogleSheets(btnSyncGgSheet);
+      }
+    };
+  }
+
   new bootstrap.Modal(modalEl).show();
 }
 
@@ -1788,6 +1807,15 @@ function openEditDataModal() {
       const currentBatch = modalEl.querySelector('[name="col_7"]')?.value.trim() || rowData[7] || '';
       openInventoryModal('edit', currentMaVatTu, currentBatch);
     };
+  }
+
+  // Tích hợp Autocomplete SAP cho ô Phiếu xuất trong modal Sửa (col_3)
+  const editFormEl = document.getElementById('editDataForm');
+  const phieuXuatEditInput = commonFieldsContainer.querySelector('input[name="col_3"]');
+  if (phieuXuatEditInput && window.XgSapLookup && window.XgSapLookup.initSapDocumentAutocomplete) {
+    phieuXuatEditInput.placeholder = 'Gõ số phiếu xuất để tìm SAP...';
+    phieuXuatEditInput.autocomplete = 'off';
+    window.XgSapLookup.initSapDocumentAutocomplete(phieuXuatEditInput, editFormEl, 'tole-xuat');
   }
 
   new bootstrap.Modal(modalEl).show();
