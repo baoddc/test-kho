@@ -39,5 +39,7 @@ dist-app/node_modules/
 out-app/
 out-app-*/
 downloads/
+__pycache__/
+*.pyc
 
 
