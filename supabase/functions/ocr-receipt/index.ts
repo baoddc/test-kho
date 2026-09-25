@@ -31,7 +31,7 @@ Quy tắc bóc tách:
 7. items: Quét toàn bộ các dòng hàng trong bảng chi tiết (cột Stt, Mã hàng, Tên hàng, Lô, Số lượng). Với MỖI DÒNG trong bảng, trích xuất 1 phần tử gồm:
    - stt: Số thứ tự dòng (1, 2, 3...)
    - maVatTu: Cột 'Mã hàng / Material' (ví dụ '10001189', '10001141')
-   - tenVatTu: Cột 'Tên hàng / Material Description'. CỰC KỲ QUAN TRỌNG: Ghi nhận ĐẦY ĐỦ TOÀN BỘ dữ liệu và tất cả các dòng chữ, số trong ô 'Tên hàng / Material Description' (bao gồm cả tên hàng, quy cách kích thước như 0.5x1200, độ mạ và mác thép như AZ150 G550, tuyệt đối không được bỏ sót bất kỳ dòng nào hay thông số kích thước độ dày x khổ rộng nào). Tự động ghép Lô/Batch vào đúng vị trí tên vật tư (ví dụ: 'Phôi tôn mạ 0.5x1200 AZ150 G550' + Lô 'DOA-VN' -> 'Phôi tôn mạ 0.5x1200 DOA-VN AZ150 G550'; 'Thép phôi kẽm Z275 G450' + Lô '1.5x348VN' -> 'Thép phôi kẽm 1.5x348VN Z275 G450').
+   - tenVatTu: Cột 'Tên hàng / Material Description'. CỰC KỲ QUAN TRỌNG: Ghi nhận ĐẦY ĐỦ NGUYÊN BẢN TOÀN BỘ dữ liệu và tất cả các dòng chữ, số trong ô 'Tên hàng / Material Description' như in trên phiếu (bao gồm cả tên hàng, quy cách kích thước như 0.5x1200, độ mạ và mác thép như AZ150 G550, tuyệt đối không được bỏ sót bất kỳ dòng nào hay thông số kích thước độ dày x khổ rộng nào). TUYỆT ĐỐI KHÔNG tự ý ghép Lô/Batch vào tên vật tư, giữ nguyên bản đúng như in trên phiếu.
    - batch: Cột 'Lô / Batch'. QUAN TRỌNG: Lấy chính xác nguyên văn từng ký tự như in trên phiếu xuất kho, giữ nguyên toàn bộ chữ hoa/chữ thường và ký tự số (ví dụ trên phiếu in '2X349VN' thì phải trả về đúng '2X349VN', in 'DOA-VN' thì trả về đúng 'DOA-VN', in '2.5X350VN' thì trả về đúng '2.5X350VN', tuyệt đối không tự ý đổi 'X' thành 'x', không tự ý thêm '.0').
 8. ghiChu: Luôn trả về chuỗi rỗng "".
 
@@ -253,7 +253,7 @@ serve(async (req: Request) => {
             return {
               stt: it.stt || (idx + 1),
               maVatTu: String(it.maVatTu || "").trim(),
-              tenVatTu: mergeBatchIntoTenVatTu(rawT, b),
+              tenVatTu: rawT,
               batch: b
             };
           }).filter((it: any) => it.maVatTu || it.tenVatTu || it.batch);
@@ -265,7 +265,7 @@ serve(async (req: Request) => {
           itemsList = [{
             stt: 1,
             maVatTu: String(parsed.maVatTu || "").trim(),
-            tenVatTu: mergeBatchIntoTenVatTu(rawT, b),
+            tenVatTu: rawT,
             batch: b
           }];
         }

@@ -1261,17 +1261,6 @@ function renderItemCards() {
         item.tenVatTu = e.target.value.trim();
         updateTitle();
       });
-      tenVtInp.addEventListener('blur', (e) => {
-        const val = e.target.value.trim();
-        if (val && item.batch) {
-          const merged = mergeBatchIntoTenVatTu(val, item.batch);
-          if (merged !== val) {
-            item.tenVatTu = merged;
-            tenVtInp.value = merged;
-            updateTitle();
-          }
-        }
-      });
     }
 
     if (batchInp) {
@@ -1281,16 +1270,8 @@ function renderItemCards() {
       });
       batchInp.addEventListener('change', (e) => {
         const newBatch = e.target.value.trim();
-        const oldBatch = item.batch;
         item.batch = newBatch;
         batchInp.value = newBatch;
-        if (newBatch && item.tenVatTu) {
-          const merged = mergeBatchIntoTenVatTu(item.tenVatTu, newBatch, oldBatch);
-          if (merged !== item.tenVatTu) {
-            item.tenVatTu = merged;
-            if (tenVtInp) tenVtInp.value = merged;
-          }
-        }
         updateTitle();
       });
     }
@@ -1471,7 +1452,7 @@ function populateFieldsFromOcr(data) {
       return {
         id: Math.random().toString(36).slice(2),
         maVatTu: it.maVatTu || '',
-        tenVatTu: mergeBatchIntoTenVatTu(rawTen, rawBatch),
+        tenVatTu: rawTen,
         batch: rawBatch,
         rolls: []
       };
@@ -1482,7 +1463,7 @@ function populateFieldsFromOcr(data) {
     multiItemsData = [{
       id: Math.random().toString(36).slice(2),
       maVatTu: data.maVatTu || '',
-      tenVatTu: mergeBatchIntoTenVatTu(rawTen, rawBatch),
+      tenVatTu: rawTen,
       batch: rawBatch,
       rolls: []
     }];
@@ -1571,7 +1552,7 @@ async function populateExportReceiptFromSap(headerInfo, itemsGrouped) {
     return {
       id: Math.random().toString(36).slice(2),
       maVatTu: item.maVatTu || '',
-      tenVatTu: mergeBatchIntoTenVatTu(rawTen, rawBatch),
+      tenVatTu: rawTen,
       batch: rawBatch,
       sapKg: item.totalSapKg || 0,
       rolls: []
@@ -1956,20 +1937,7 @@ function openEditDataModal() {
 
   currentModalTarget = 'edit';
 
-  const editBatchInp = commonFieldsContainer.querySelector('[name="col_7"]');
-  const editTenVtInp = commonFieldsContainer.querySelector('[name="col_6"]');
-  if (editBatchInp && editTenVtInp) {
-    editBatchInp.dataset.oldBatch = editBatchInp.value.trim();
-    editBatchInp.addEventListener('change', () => {
-      const b = editBatchInp.value.trim();
-      const oldB = editBatchInp.dataset.oldBatch || '';
-      editBatchInp.value = b;
-      if (b && editTenVtInp.value.trim()) {
-        editTenVtInp.value = mergeBatchIntoTenVatTu(editTenVtInp.value.trim(), b, oldB);
-        editBatchInp.dataset.oldBatch = b;
-      }
-    });
-  }
+
 
   const btnEditAddRoll = document.getElementById('btnEditAddRoll');
   if (btnEditAddRoll) {
@@ -2641,8 +2609,7 @@ document.addEventListener('submit', async (e) => {
       multiItemsData.forEach(item => {
         const maVatTu = (item.maVatTu || '').trim();
         const batch = (item.batch || '').trim();
-        const rawTenVt = (item.tenVatTu || '').trim();
-        const tenVatTu = mergeBatchIntoTenVatTu(rawTenVt, batch);
+        const tenVatTu = (item.tenVatTu || '').trim();
 
         (item.rolls || []).forEach(roll => {
           const parsedKg = parseNumericInput(roll.kg);
@@ -2788,9 +2755,6 @@ document.addEventListener('submit', async (e) => {
         updateData[COLUMN_HEADERS[colIdx]] = inp.value || null;
       });
 
-      if (updateData['Tên vật tư'] && updateData['Batch']) {
-        updateData['Tên vật tư'] = mergeBatchIntoTenVatTu(updateData['Tên vật tư'], updateData['Batch']);
-      }
 
       updateData['Số lượng (Kg)'] = rollKgValues.reduce((sum, kg) => sum + kg, 0);
       updateData['Số lượng (m)'] = rollMValues.reduce((sum, m) => sum + m, 0);
