@@ -31,18 +31,18 @@
   - `window.XgSapLookup.checkReceiptItemProcessed(docNo, material, batch, pageContext)`: Promise<{ isProcessed: boolean, count: number, totalKg: number, totalM: number, records: Array, coilIds: Array, dates: Array, projectNames: Array }>
   - Cập nhật `window.XgSapLookup.checkReceiptProcessed(docNo, pageContext)` để trả về thêm `itemsSummary: { totalItems: number, processedItems: number, remainingItems: number, isAllItemsProcessed: boolean }`.
 
-- [ ] **Step 1: Viết test kiểm tra `checkReceiptItemProcessed` trong `tests/test-receipt-already-processed-warning.js`**
+- [x] **Step 1: Viết test kiểm tra `checkReceiptItemProcessed` trong `tests/test-receipt-already-processed-warning.js`**
 
 Bổ sung test case kiểm tra:
 1. Trả về `isProcessed: true` khi phiếu, mã vật tư và batch đều khớp.
 2. Trả về `isProcessed: false` khi cùng số phiếu nhưng khác batch.
 
-- [ ] **Step 2: Chạy test để xác nhận test thất bại (Red)**
+- [x] **Step 2: Chạy test để xác nhận test thất bại (Red)**
 
 Run: `node tests/test-receipt-already-processed-warning.js`
 Expected: FAIL với lỗi `checkReceiptItemProcessed is not a function`.
 
-- [ ] **Step 3: Cài đặt hàm `checkReceiptItemProcessed` trong `assets/js/xg/xg-sap-lookup.js`**
+- [x] **Step 3: Cài đặt hàm `checkReceiptItemProcessed` trong `assets/js/xg/xg-sap-lookup.js`**
 
 ```javascript
 async function checkReceiptItemProcessed(docNo, material, batch, pageContext) {
@@ -167,12 +167,12 @@ async function checkReceiptItemProcessed(docNo, material, batch, pageContext) {
 
 Export `checkReceiptItemProcessed` vào `window.XgSapLookup` và `module.exports`.
 
-- [ ] **Step 4: Chạy lại test suite để kiểm tra tính đúng đắn (Green)**
+- [x] **Step 4: Chạy lại test suite để kiểm tra tính đúng đắn (Green)**
 
 Run: `node tests/test-receipt-already-processed-warning.js`
 Expected: PASS 100%.
 
-- [ ] **Step 5: Commit Task 1**
+- [x] **Step 5: Commit Task 1**
 
 ```bash
 git add assets/js/xg/xg-sap-lookup.js tests/test-receipt-already-processed-warning.js; git commit -m "feat(sap-lookup): add checkReceiptItemProcessed function for item-level locking"
@@ -188,7 +188,7 @@ git add assets/js/xg/xg-sap-lookup.js tests/test-receipt-already-processed-warni
 **Interfaces:**
 - Consumes: `checkReceiptItemProcessed` từ Task 1.
 
-- [ ] **Step 1: Cập nhật hàm `renderDropdown()` để kiểm tra cấp loại (Mã VT + Batch)**
+- [x] **Step 1: Cập nhật hàm `renderDropdown()` để kiểm tra cấp loại (Mã VT + Batch)**
 
 Trong `renderDropdown()`:
 - Đổi từ việc kiểm tra theo `docKey` sang kiểm tra theo `itemKey = `${doc}__${mat}__${batch}``.
@@ -199,7 +199,7 @@ Trong `renderDropdown()`:
 - Nếu loại này chưa nhập (`isProcessed === false`):
   - Hiển thị badge số lượng kg SAP màu xanh dương `<span class="badge bg-primary-subtle text-primary border">${qtyFormatted} kg</span>`.
 
-- [ ] **Step 2: Cập nhật sự kiện click vào dòng dropdown**
+- [x] **Step 2: Cập nhật sự kiện click vào dòng dropdown**
 
 Khi click vào dòng `g`:
 - Nếu `isEditForm`: Áp dụng bình thường.
@@ -212,7 +212,7 @@ Khi click vào dòng `g`:
   - Nếu `procInfo.isProcessed === false`:
     - Gọi `applySapRecordToForm(g, formEl, currentContext)` để điền form tự động và người dùng tiếp tục nhập.
 
-- [ ] **Step 3: Cập nhật sự kiện `change` trên input số phiếu**
+- [x] **Step 3: Cập nhật sự kiện `change` trên input số phiếu**
 
 Khi người dùng dán hoặc gõ xong số phiếu và trigger `change`:
 - Lấy danh sách các dòng của phiếu từ SAP MB51:
@@ -222,12 +222,12 @@ Khi người dùng dán hoặc gõ xong số phiếu và trigger `change`:
     - Nếu VẪN CÒN loại chưa nhập: **Không** chặn và không xóa input. Tự động hiển thị dropdown các loại để người dùng chọn dòng chưa nhập.
   - Nếu phiếu chỉ có 1 loại duy nhất và loại đó đã nhập: Hiện modal chặn.
 
-- [ ] **Step 4: Chạy test và kiểm tra console không lỗi**
+- [x] **Step 4: Chạy test và kiểm tra console không lỗi**
 
 Run: `node tests/test-receipt-already-processed-warning.js`
 Expected: PASS.
 
-- [ ] **Step 5: Commit Task 2**
+- [x] **Step 5: Commit Task 2**
 
 ```bash
 git add assets/js/xg/xg-sap-lookup.js; git commit -m "feat(sap-lookup): update autocomplete dropdown and input events to lock only processed item types"
@@ -244,7 +244,7 @@ git add assets/js/xg/xg-sap-lookup.js; git commit -m "feat(sap-lookup): update a
 **Interfaces:**
 - Consumes: `window.XgSapLookup.checkReceiptItemProcessed`
 
-- [ ] **Step 1: Cập nhật submit handler trong `assets/js/xg/xg-nhap.js`**
+- [x] **Step 1: Cập nhật submit handler trong `assets/js/xg/xg-nhap.js`**
 
 Tìm đoạn kiểm tra trước khi insert dữ liệu (khoảng dòng 1596 - 1618):
 Thay vì chỉ kiểm tra `phieuNhapInputVal`:
@@ -275,16 +275,16 @@ if (phieuNhapInputVal && window.XgSapLookup && typeof window.XgSapLookup.checkRe
 }
 ```
 
-- [ ] **Step 2: Cập nhật submit handler trong `assets/js/tole/tole-nhap.js`**
+- [x] **Step 2: Cập nhật submit handler trong `assets/js/tole/tole-nhap.js`**
 
 Áp dụng tương tự cho `tole-nhap.js` (với context `'tole-nhap'`).
 
-- [ ] **Step 3: Chạy test suite để xác minh không hồi quy**
+- [x] **Step 3: Chạy test suite để xác minh không hồi quy**
 
 Run: `node tests/test-receipt-already-processed-warning.js`
 Expected: PASS 100%.
 
-- [ ] **Step 4: Commit Task 3**
+- [x] **Step 4: Commit Task 3**
 
 ```bash
 git add assets/js/xg/xg-nhap.js assets/js/tole/tole-nhap.js; git commit -m "feat: enforce item-level duplicate check on submit for xg-nhap and tole-nhap"
@@ -301,24 +301,24 @@ git add assets/js/xg/xg-nhap.js assets/js/tole/tole-nhap.js; git commit -m "feat
 **Interfaces:**
 - Produces: Test suite bao phủ đầy đủ kịch bản 1 loại vs nhiều loại.
 
-- [ ] **Step 1: Bổ sung các test cases chi tiết vào `tests/test-receipt-already-processed-warning.js`**
+- [x] **Step 1: Bổ sung các test cases chi tiết vào `tests/test-receipt-already-processed-warning.js`**
   - Test kịch bản: Phiếu 5000042978 có 3 loại (Batch A, Batch B, Batch C).
   - Kho đã nhập Batch A.
   - Kiểm tra `checkReceiptItemProcessed(..., Batch A)` $\rightarrow$ `isProcessed = true`.
   - Kiểm tra `checkReceiptItemProcessed(..., Batch B)` $\rightarrow$ `isProcessed = false`.
   - Kiểm tra `checkReceiptItemProcessed(..., Batch C)` $\rightarrow$ `isProcessed = false`.
 
-- [ ] **Step 2: Chạy kiểm thử tự động**
+- [x] **Step 2: Chạy kiểm thử tự động**
 
 Run: `node tests/test-receipt-already-processed-warning.js`
 Expected: Tất cả các test cases ĐẠT (PASS 100%).
 
-- [ ] **Step 3: Chạy build đồng bộ dự án**
+- [x] **Step 3: Chạy build đồng bộ dự án**
 
 Run: `npm run build`
 Expected: `Full synchronization completed successfully!`
 
-- [ ] **Step 4: Commit Task 4**
+- [x] **Step 4: Commit Task 4**
 
 ```bash
 git add tests/test-receipt-already-processed-warning.js public/ dist/ dist-app/; git commit -m "test: add item-level locking tests and sync build artifacts"
