@@ -196,6 +196,34 @@ async function main() {
     assert.strictEqual(resultItem3.isProcessed, false, 'Loại khác mã vật tư phải có isProcessed = false');
   });
 
+  // 9. Kiểm tra checkReceiptItemProcessed trên tole-nhap có cả kg và mét
+  await runAsyncTest('checkReceiptItemProcessed hoạt động chính xác trên tole-nhap (có số lượng kg và mét)', async () => {
+    global.window._rawSupabaseData = [
+      {
+        'id': 201,
+        'Phiếu nhập': '5000099999',
+        'Mã vật tư': '1003001',
+        'Batch': 'B-TOLE-01',
+        'Số lượng (Kg)': 4200,
+        'Số lượng (m)': 550,
+        'Cuộn ID': 'CT-01',
+        'Ngày nhập': '2026-10-02'
+      }
+    ];
+
+    // Loại đã nhập trong tole-nhap
+    const res1 = await SapLookup.checkReceiptItemProcessed('5000099999', '1003001', 'B-TOLE-01', 'tole-nhap');
+    assert.strictEqual(res1.isProcessed, true);
+    assert.strictEqual(res1.totalKg, 4200);
+    assert.strictEqual(res1.totalM, 550);
+
+    // Loại khác batch trong tole-nhap -> false
+    const res2 = await SapLookup.checkReceiptItemProcessed('5000099999', '1003001', 'B-TOLE-02', 'tole-nhap');
+    assert.strictEqual(res2.isProcessed, false);
+    assert.strictEqual(res2.totalKg, 0);
+    assert.strictEqual(res2.totalM, 0);
+  });
+
   console.log('\n---------------------------------------------------------------');
   console.log(` KẾT QUẢ KIỂM THỬ: ${passCount} / ${totalTests} test cases ĐẠT (PASS)`);
   console.log('---------------------------------------------------------------\n');

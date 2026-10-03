@@ -242,6 +242,133 @@
   }
 
   /**
+   * Kiểm tra xem một LOẠI cụ thể (Số phiếu + Mã vật tư + Batch) đã từng được nhập vào kho hay chưa
+   * @param {string} docNo - Số phiếu cần kiểm tra
+   * @param {string} [material] - Mã vật tư (nếu có)
+   * @param {string} [batch] - Batch / Lô (nếu có)
+   * @param {string} [pageContext] - 'xg-nhap' | 'xg-xuat' | 'tole-nhap' | 'tole-xuat'
+   * @returns {Promise<{ isProcessed: boolean, count: number, totalKg: number, totalM: number, records: Array, firstDate: string, lastDate: string, projectNames: Array, projectIds: Array, coilIds: Array }>}
+   */
+  async function checkReceiptItemProcessed(docNo, material, batch, pageContext) {
+    const cleanDoc = String(docNo || '').trim();
+    const cleanMat = String(material || '').trim();
+    const cleanBatch = String(batch || '').trim();
+
+    const emptyResult = {
+      isProcessed: false,
+      count: 0,
+      totalKg: 0,
+      totalM: 0,
+      records: [],
+      firstDate: '',
+      lastDate: '',
+      projectNames: [],
+      projectIds: [],
+      coilIds: []
+    };
+
+    if (!cleanDoc) return emptyResult;
+
+    const currentContext = detectCurrentPageContext(pageContext);
+    const rule = SAP_PAGE_RULES[currentContext] || SAP_PAGE_RULES['xg-nhap'];
+    const docCol = rule.docColumnName;
+    const matCol = 'Mã vật tư';
+    const batchCol = 'Batch';
+    const tableName = rule.tableName;
+
+    let matchedRows = [];
+
+    // Tầng 1: Tra cứu từ Local Cache window._rawSupabaseData
+    if (typeof window !== 'undefined' && Array.isArray(window._rawSupabaseData) && window._rawSupabaseData.length > 0) {
+      matchedRows = window._rawSupabaseData.filter(r => {
+        if (!r) return false;
+        const rDoc = String(r[docCol] || '').trim().toLowerCase();
+        if (rDoc !== cleanDoc.toLowerCase()) return false;
+
+        if (cleanMat) {
+          const rMat = String(r[matCol] || '').trim().toLowerCase();
+          if (rMat !== cleanMat.toLowerCase()) return false;
+        }
+        if (cleanBatch) {
+          const rBatch = String(r[batchCol] || '').trim().toLowerCase();
+          if (rBatch !== cleanBatch.toLowerCase()) return false;
+        }
+        return true;
+      });
+    }
+
+    // Tầng 2: Nếu không thấy trong local cache hoặc rỗng, query Supabase
+    if (matchedRows.length === 0 && typeof window !== 'undefined' && window.supabase) {
+      try {
+        let query = window.supabase.from(tableName).select('*').ilike(docCol, cleanDoc);
+        if (cleanMat) query = query.ilike(matCol, cleanMat);
+        if (cleanBatch) query = query.ilike(batchCol, cleanBatch);
+        const { data, error } = await query;
+        if (!error && Array.isArray(data) && data.length > 0) {
+          matchedRows = data.filter(r => {
+            const rDoc = String(r[docCol] || '').trim().toLowerCase();
+            const rMat = String(r[matCol] || '').trim().toLowerCase();
+            const rBatch = String(r[batchCol] || '').trim().toLowerCase();
+            const matchDoc = rDoc === cleanDoc.toLowerCase();
+            const matchMat = !cleanMat || rMat === cleanMat.toLowerCase();
+            const matchBatch = !cleanBatch || rBatch === cleanBatch.toLowerCase();
+            return matchDoc && matchMat && matchBatch;
+          });
+        }
+      } catch (err) {
+        console.warn(`[XgSapLookup] Không thể truy vấn Supabase cho bảng ${tableName}:`, err);
+      }
+    }
+
+    if (matchedRows.length === 0) return emptyResult;
+
+    let totalKg = 0;
+    let totalM = 0;
+    const coilIds = [];
+    const projectNamesSet = new Set();
+    const projectIdsSet = new Set();
+    const dates = [];
+
+    matchedRows.forEach(r => {
+      const rawKg = r['Số lượng (Kg)'];
+      const kg = typeof rawKg === 'number' ? rawKg : (parseFloat(String(rawKg || 0).replace(/,/g, '')) || 0);
+      totalKg += kg;
+
+      if (r['Số lượng (m)']) {
+        const rawM = r['Số lượng (m)'];
+        const m = typeof rawM === 'number' ? rawM : (parseFloat(String(rawM || 0).replace(/,/g, '')) || 0);
+        totalM += m;
+      }
+
+      const cid = String(r['Cuộn ID'] || '').trim();
+      if (cid && !coilIds.includes(cid)) coilIds.push(cid);
+
+      const pName = String(r['Tên công trình'] || '').trim();
+      if (pName) projectNamesSet.add(pName);
+      const pId = String(r['Mã công trình'] || '').trim();
+      if (pId) projectIdsSet.add(pId);
+
+      const dateVal = String(r['Ngày nhập'] || r['Ngày xuất'] || '').trim();
+      if (dateVal) dates.push(dateVal);
+    });
+
+    dates.sort();
+
+    return {
+      isProcessed: true,
+      count: matchedRows.length,
+      totalKg,
+      totalM,
+      records: matchedRows,
+      firstDate: dates[0] || '',
+      lastDate: dates[dates.length - 1] || '',
+      projectNames: Array.from(projectNamesSet),
+      projectIds: Array.from(projectIdsSet),
+      coilIds
+    };
+  }
+
+  /**
    * Hiển thị Modal CHẶN khi số phiếu đã được nhập hoặc xuất trong kho
    * @param {Object} options
    * @param {string} options.docNo - Số phiếu
@@ -315,6 +442,12 @@
       `;
     }
 
+    const itemMat = String(sapRecord?.material || options.itemInfo?.material || '').trim();
+    const itemBatch = String(sapRecord?.batch || options.itemInfo?.batch || '').trim();
+    const itemDesc = String(sapRecord?.material_description || options.itemInfo?.material_description || '').trim();
+    const isItemLevel = Boolean(itemMat || itemBatch);
+    const itemLabel = isItemLevel ? `${itemMat}${itemBatch ? ` (Batch: ${itemBatch})` : ''}` : '';
+
     const coilListHtml = coilIds.length > 0
       ? `<div class="d-flex flex-wrap gap-1 mt-1" style="max-height: 85px; overflow-y: auto;">
           ${coilIds.map(c => `<span class="badge font-monospace" style="background: #1e293b; color: #f8fafc; border: 1px solid #475569; font-size: 0.82rem;">${escapeHtml(c)}</span>`).join('')}
@@ -331,9 +464,9 @@
               </span>
               <div>
                 <h5 class="modal-title fw-bold mb-0 text-white" style="letter-spacing: 0.3px;">
-                  KHÔNG THỂ ${ActionText.toUpperCase()}: PHIẾU ĐÃ ${ActionText.toUpperCase()} TRƯỚC ĐÓ
+                  KHÔNG THỂ ${ActionText.toUpperCase()}: ${isItemLevel ? 'LOẠI VẬT TƯ' : 'PHIẾU'} ĐÃ ${ActionText.toUpperCase()} TRƯỚC ĐÓ
                 </h5>
-                <small class="text-white-50">${escapeHtml(rule.label)} - Số phiếu: <strong class="text-warning">${escapeHtml(docNo)}</strong></small>
+                <small class="text-white-50">${escapeHtml(rule.label)} - Số phiếu: <strong class="text-warning">${escapeHtml(docNo)}</strong>${isItemLevel ? ` | Loại: <strong class="text-info">${escapeHtml(itemLabel)}</strong>` : ''}</small>
               </div>
             </div>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" id="btnReceiptWarnCloseX"></button>
@@ -343,8 +476,13 @@
             <div class="alert alert-danger d-flex align-items-center gap-2 py-2 px-3 mb-3" style="background: rgba(239, 68, 68, 0.15) !important; border: 1px solid rgba(239, 68, 68, 0.4) !important; color: #fecaca !important;">
               <i class="bi bi-x-octagon-fill text-danger fs-4 flex-shrink-0"></i>
               <div>
-                Số phiếu <strong>${escapeHtml(docNo)}</strong> đã được ghi nhận <strong>${count}</strong> dòng dữ liệu trong hệ thống <strong>${escapeHtml(rule.label)}</strong>.<br>
-                <strong class="text-warning"><i class="bi bi-shield-lock-fill me-1"></i>Hệ thống chặn hoàn toàn, không cho phép ${actionText} lại số phiếu này để tránh trùng lặp!</strong>
+                ${isItemLevel ? `
+                  Loại <strong>${escapeHtml(itemLabel)}</strong> trong phiếu <strong>${escapeHtml(docNo)}</strong> đã được ghi nhận <strong>${count}</strong> cuộn trong hệ thống <strong>${escapeHtml(rule.label)}</strong>.<br>
+                  <strong class="text-warning"><i class="bi bi-shield-lock-fill me-1"></i>Hệ thống chỉ khóa loại này để tránh trùng lặp. Các loại khác chưa nhập trong phiếu vẫn được phép nhập tiếp!</strong>
+                ` : `
+                  Số phiếu <strong>${escapeHtml(docNo)}</strong> đã được ghi nhận <strong>${count}</strong> dòng dữ liệu trong hệ thống <strong>${escapeHtml(rule.label)}</strong>.<br>
+                  <strong class="text-warning"><i class="bi bi-shield-lock-fill me-1"></i>Hệ thống chặn hoàn toàn, không cho phép ${actionText} lại số phiếu này để tránh trùng lặp!</strong>
+                `}
               </div>
             </div>
 
@@ -396,7 +534,7 @@
 
           <div class="modal-footer justify-content-center py-3 px-4" style="background: #1e2438 !important; border-top: 1px solid rgba(255, 255, 255, 0.15) !important;">
             <button type="button" class="btn btn-danger btn-lg px-5 py-2 fw-bold text-white shadow" id="btnReceiptWarnCancel">
-              <i class="bi bi-arrow-left-circle me-1"></i> Đã hiểu / Chọn phiếu khác
+              <i class="bi bi-arrow-left-circle me-1"></i> ${isItemLevel ? 'Đã hiểu / Chọn loại khác' : 'Đã hiểu / Chọn phiếu khác'}
             </button>
           </div>
         </div>
@@ -617,11 +755,17 @@
         // Kiểm tra trạng thái đã nhập/xuất trong kho của các số phiếu (CHỈ kiểm tra khi THÊM dữ liệu)
         const processedMap = new Map();
         if (!isEditForm) {
+          const isNhap = rules.direction === 'nhap';
           await Promise.all(validGroups.map(async g => {
             const doc = String(g.material_document || '').trim();
-            if (doc && !processedMap.has(doc.toLowerCase())) {
-              const info = await checkReceiptProcessed(doc, currentContext);
-              processedMap.set(doc.toLowerCase(), info);
+            const mat = String(g.material || '').trim();
+            const batch = String(g.batch || '').trim();
+            const itemKey = `${doc}__${mat}__${batch}`.toLowerCase();
+            if (!processedMap.has(itemKey)) {
+              const info = isNhap
+                ? await checkReceiptItemProcessed(doc, mat, batch, currentContext)
+                : await checkReceiptProcessed(doc, currentContext);
+              processedMap.set(itemKey, info);
             }
           }));
         }
@@ -655,12 +799,20 @@
               ? '<span class="badge bg-danger-subtle text-danger border border-danger-subtle me-1" title="Credit (Xuất kho)">H</span>'
               : '');
 
-          const docKey = String(g.material_document || '').trim().toLowerCase();
-          const proc = !isEditForm ? processedMap.get(docKey) : null;
+          const docStr = String(g.material_document || '').trim();
+          const matStr = String(g.material || '').trim();
+          const batchStr = String(g.batch || '').trim();
+          const itemKey = `${docStr}__${matStr}__${batchStr}`.toLowerCase();
+          const proc = !isEditForm ? processedMap.get(itemKey) : null;
           const isProc = Boolean(proc && proc.isProcessed);
 
+          if (isProc) {
+            itemEl.style.opacity = '0.78';
+            itemEl.style.backgroundColor = '#fff5f5';
+          }
+
           const procBadge = isProc
-            ? `<span class="badge bg-danger text-white border border-danger-subtle me-1" title="Phiếu này đã có trong hệ thống (${proc.totalKg.toLocaleString('vi-VN')} kg) - ĐÃ KHÓA"><i class="bi bi-slash-circle me-1"></i>Đã ${rules.direction === 'nhap' ? 'nhập' : 'xuất'} (${proc.totalKg.toLocaleString('vi-VN')} kg) - KHÓA</span>`
+            ? `<span class="badge bg-danger text-white border border-danger-subtle me-1" title="Mục ${escapeHtml(matStr)} (Batch: ${escapeHtml(batchStr)}) đã có trong kho (${proc.totalKg.toLocaleString('vi-VN')} kg) - ĐÃ KHÓA"><i class="bi bi-shield-lock-fill me-1"></i>Đã ${rules.direction === 'nhap' ? 'nhập' : 'xuất'} (${proc.totalKg.toLocaleString('vi-VN')} kg) - KHÓA</span>`
             : '';
 
           itemEl.innerHTML = `
@@ -692,17 +844,17 @@
             hideDropdown();
 
             if (!isEditForm) {
-              const doc = String(g.material_document || '').trim();
-              const procInfo = (!isEditForm && processedMap.get(doc.toLowerCase())) || await checkReceiptProcessed(doc, currentContext);
+              const isNhap = rules.direction === 'nhap';
+              const procInfo = (!isEditForm && processedMap.get(itemKey)) || (isNhap ? await checkReceiptItemProcessed(docStr, matStr, batchStr, currentContext) : await checkReceiptProcessed(docStr, currentContext));
 
               if (procInfo && procInfo.isProcessed) {
                 showReceiptProcessedWarningModal({
-                  docNo: doc,
+                  docNo: docStr,
                   pageContext: currentContext,
                   processedInfo: procInfo,
                   sapRecord: g,
                   onCancel: () => {
-                    inputEl.value = '';
+                    // Giữ lại số phiếu trên ô nhập để người dùng có thể chọn loại khác trong phiếu
                     resetSapSelection();
                   }
                 });
@@ -865,6 +1017,54 @@
 
       // 1. Kiểm tra xem phiếu này đã có trong hệ thống hay chưa -> CHỈ ÁP DỤNG KHI THÊM DỮ LIỆU (KHÔNG ÁP DỤNG KHI SỬA/CẬP NHẬT)
       if (!isEditForm) {
+        const isNhap = rules.direction === 'nhap';
+        if (isNhap) {
+          try {
+            const rawRows = await querySapMb51(val);
+            const groups = groupSapMb51Rows(rawRows);
+            const validGroups = groups.filter(g => validateSapRecordAgainstContext(g, currentContext).isValid);
+
+            if (validGroups.length > 0) {
+              const checkResults = await Promise.all(validGroups.map(async g => {
+                const info = await checkReceiptItemProcessed(g.material_document, g.material, g.batch, currentContext);
+                return { group: g, info };
+              }));
+
+              const allProcessed = checkResults.every(r => r.info && r.info.isProcessed);
+
+              if (allProcessed) {
+                // TẤT CẢ các loại đều đã nhập -> Khóa toàn bộ phiếu
+                const procInfo = await checkReceiptProcessed(val, currentContext);
+                showReceiptProcessedWarningModal({
+                  docNo: val,
+                  pageContext: currentContext,
+                  processedInfo: procInfo,
+                  sapRecord: validGroups[0],
+                  onCancel: () => {
+                    inputEl.value = '';
+                    resetSapSelection();
+                  }
+                });
+                return;
+              }
+
+              // Nếu chỉ có đúng 1 loại duy nhất và loại đó chưa nhập -> Auto match luôn!
+              const unprocItems = checkResults.filter(r => !r.info || !r.info.isProcessed);
+              if (validGroups.length === 1 && unprocItems.length === 1) {
+                applySapRecordToForm(unprocItems[0].group, formEl, currentContext);
+                return;
+              }
+
+              // Phiếu có nhiều loại hoặc có loại chưa nhập: Mở dropdown để người dùng chọn loại chưa nhập
+              await renderDropdown(groups, val);
+              return;
+            }
+          } catch (e) {
+            console.warn('[XgSapLookup] Lỗi tra cứu SAP khi change:', e);
+          }
+        }
+
+        // Hướng xuất kho hoặc phiếu nhập ngoài SAP: kiểm tra cấp phiếu
         const procInfo = await checkReceiptProcessed(val, currentContext);
         if (procInfo && procInfo.isProcessed) {
           let matchedSap = null;
@@ -930,8 +1130,13 @@
           hideDropdown();
 
           if (!isEditForm) {
+            const isNhap = rules.direction === 'nhap';
             const doc = String(g.material_document || '').trim();
-            const procInfo = await checkReceiptProcessed(doc, currentContext);
+            const mat = String(g.material || '').trim();
+            const batch = String(g.batch || '').trim();
+            const procInfo = isNhap
+              ? await checkReceiptItemProcessed(doc, mat, batch, currentContext)
+              : await checkReceiptProcessed(doc, currentContext);
 
             if (procInfo && procInfo.isProcessed) {
               showReceiptProcessedWarningModal({
@@ -940,7 +1145,6 @@
                 processedInfo: procInfo,
                 sapRecord: g,
                 onCancel: () => {
-                  inputEl.value = '';
                   resetSapSelection();
                 }
               });
@@ -1955,6 +2159,7 @@
     extractSapRowAttributes,
     validateSapRecordAgainstContext,
     checkReceiptProcessed,
+    checkReceiptItemProcessed,
     showReceiptProcessedWarningModal,
     querySapMb51,
     groupSapMb51Rows,
