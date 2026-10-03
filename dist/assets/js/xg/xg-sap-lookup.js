@@ -1324,49 +1324,7 @@
         }
       }
 
-      // Truy vấn tất cả các dòng của phiếu từ SAP MB51 để hỗ trợ xuất đa mặt hàng
-      let allDocRows = [sapRecord];
-      if (window.supabase && sapRecord.material_document) {
-        try {
-          const { data: docRows, error: docErr } = await window.supabase
-            .from('xg_sap_mb51')
-            .select('*')
-            .eq('material_document', sapRecord.material_document);
-          if (!docErr && Array.isArray(docRows) && docRows.length > 0) {
-            allDocRows = docRows;
-          }
-        } catch (e) {
-          console.warn('[XgSapLookup] Không thể truy vấn tất cả dòng của phiếu:', e);
-        }
-      }
-
-      // Lọc các dòng hợp lệ với trang hiện tại
-      const validRows = allDocRows.filter(r => {
-        const chk = validateSapRecordAgainstContext(r, currentContext);
-        return chk.isValid;
-      });
-
-      // Gom nhóm theo material + batch
-      const itemsMap = new Map();
-      validRows.forEach(r => {
-        const mat = String(r.material || '').trim();
-        const batch = String(r.batch || '').trim();
-        const key = `${mat}__${batch}`;
-        const rawQty = Math.abs(parseFloat(r.quantity) || 0);
-
-        if (!itemsMap.has(key)) {
-          itemsMap.set(key, {
-            maVatTu: mat,
-            tenVatTu: r.material_description || '',
-            batch: batch,
-            totalSapKg: rawQty
-          });
-        } else {
-          itemsMap.get(key).totalSapKg += rawQty;
-        }
-      });
-      const itemsGrouped = Array.from(itemsMap.values());
-
+      // Chuẩn bị thông tin chung phiếu xuất (không tự động điền mặt hàng & cuộn xuất)
       const headerInfo = {
         maChungTu: 'PX',
         ngayXuat: sapRecord.posting_date || '',
@@ -1377,20 +1335,9 @@
       };
 
       if (typeof window.populateExportReceiptData === 'function') {
-        await window.populateExportReceiptData(headerInfo, itemsGrouped);
+        await window.populateExportReceiptData(headerInfo);
       } else {
-        // Fallback điền vào thẻ mặt hàng đầu tiên nếu có
-        const multiItems = window.multiItemsData;
-        if (Array.isArray(multiItems) && multiItems.length > 0) {
-          const firstItem = multiItems[0];
-          if (sapRecord.material) firstItem.maVatTu = sapRecord.material;
-          if (sapRecord.material_description) firstItem.tenVatTu = sapRecord.material_description;
-          if (sapRecord.batch) firstItem.batch = sapRecord.batch;
-          if (typeof window.renderItemCards === 'function') {
-            window.renderItemCards();
-          }
-        }
-        showAutofillToast(`Đã tự động điền thông tin phiếu SAP: ${sapRecord.material_document} (${sapRecord.material || ''})`);
+        showAutofillToast(`Đã tự động điền thông tin phiếu SAP: ${sapRecord.material_document}`);
       }
     }
 

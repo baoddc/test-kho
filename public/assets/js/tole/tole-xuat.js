@@ -1474,12 +1474,12 @@ function populateFieldsFromOcr(data) {
 }
 
 /**
- * Tự động điền dữ liệu phiếu xuất từ SAP MB51 và tra cứu cuộn tồn kho cho từng mặt hàng (Tole)
+ * Tự động điền dữ liệu Thông tin chung phiếu xuất từ SAP MB51 (Tole)
+ * Danh sách mặt hàng & cuộn xuất được chọn thủ công, không tự động điền.
  * @param {Object} headerInfo - { maChungTu, ngayXuat, phieuXuat, loaiXuat, maCongTrinh, tenCongTrinh }
- * @param {Array} itemsGrouped - Array of { maVatTu, tenVatTu, batch, totalSapKg }
  */
-async function populateExportReceiptFromSap(headerInfo, itemsGrouped) {
-  if (!itemsGrouped || itemsGrouped.length === 0) return;
+async function populateExportReceiptFromSap(headerInfo) {
+  if (!headerInfo) return;
   const form = document.getElementById('addDataForm');
   if (!form) return;
 
@@ -1545,83 +1545,21 @@ async function populateExportReceiptFromSap(headerInfo, itemsGrouped) {
     }
   }
 
-  // 2. Khởi tạo danh sách mặt hàng
-  multiItemsData = itemsGrouped.map(item => {
-    const rawBatch = (item.batch || '').trim();
-    const rawTen = (item.tenVatTu || '').trim();
-    return {
+  // 2. Danh sách mặt hàng & cuộn xuất: Giữ nguyên thẻ mặt hàng hiện tại hoặc khởi tạo thẻ trắng nếu rỗng
+  if (!multiItemsData || multiItemsData.length === 0) {
+    multiItemsData = [{
       id: Math.random().toString(36).slice(2),
-      maVatTu: item.maVatTu || '',
-      tenVatTu: rawTen,
-      batch: rawBatch,
-      sapKg: item.totalSapKg || 0,
+      maVatTu: '',
+      tenVatTu: '',
+      batch: '',
       rolls: []
-    };
-  });
-  window.multiItemsData = multiItemsData;
-
-  renderItemCards();
-
-  // 3. Tự động tra cứu cuộn tồn kho cho từng mặt hàng từ tole-nhap
-  const sbClient = window.supabase || (typeof supabase !== 'undefined' ? supabase : null);
-  if (!sbClient) return;
-
-  try {
-    let exportedCuonIds = new Set();
-    const { data: xuatData, error: xuatErr } = await sbClient
-      .from('tole-xuat')
-      .select('"Cuộn ID"')
-      .not('"Cuộn ID"', 'is', null);
-    if (!xuatErr && Array.isArray(xuatData)) {
-      xuatData.forEach(row => {
-        const cid = String(row['Cuộn ID'] || '').trim().toLowerCase();
-        if (cid) exportedCuonIds.add(cid);
-      });
-    }
-
-    let totalRollsFilled = 0;
-
-    for (const item of multiItemsData) {
-      if (!item.maVatTu) continue;
-      let query = sbClient
-        .from('tole-nhap')
-        .select('*')
-        .ilike('Mã vật tư', `%${item.maVatTu}%`);
-      if (item.batch) {
-        query = query.ilike('Batch', `%${item.batch}%`);
-      }
-      const { data: nhapData, error: nhapErr } = await query;
-      if (!nhapErr && Array.isArray(nhapData)) {
-        const existingInItem = new Set(item.rolls.map(r => String(r.cuonId || '').toLowerCase()));
-        nhapData.forEach(r => {
-          const cid = String(r['Cuộn ID'] || '').trim();
-          if (cid && !exportedCuonIds.has(cid.toLowerCase()) && !existingInItem.has(cid.toLowerCase())) {
-            const kgVal = parseNumericInput(r['Số lượng (Kg)']) || 0;
-            const metVal = parseNumericInput(r['Số lượng (Mét)']) || 0;
-            item.rolls.push({
-              id: Math.random().toString(36).slice(2),
-              cuonId: cid,
-              kg: String(kgVal),
-              m: String(metVal)
-            });
-            existingInItem.add(cid.toLowerCase());
-            totalRollsFilled++;
-            if (window.inventoryLockService) {
-              window.inventoryLockService.acquireLock(cid);
-            }
-          }
-        });
-      }
-    }
-
+    }];
+    window.multiItemsData = multiItemsData;
     renderItemCards();
-    document.querySelectorAll('.item-card').forEach(card => triggerAutofillHighlight(card));
+  }
 
-    if (window.XgSapLookup && window.XgSapLookup.showAutofillToast) {
-      window.XgSapLookup.showAutofillToast(`✓ Đã điền phiếu xuất: ${multiItemsData.length} mặt hàng, ${totalRollsFilled} cuộn tồn kho`);
-    }
-  } catch (err) {
-    console.error('[tole-xuat] Lỗi tự động tải cuộn tồn kho:', err);
+  if (window.XgSapLookup && window.XgSapLookup.showAutofillToast) {
+    window.XgSapLookup.showAutofillToast(`✓ Đã điền thông tin chung phiếu xuất: ${headerInfo.phieuXuat || ''}`);
   }
 }
 
@@ -2141,6 +2079,7 @@ async function openInventoryModal(target, maVatTu = '', batch = '') {
     }
 
     if (window.inventoryLockService) {
+      await window.inventoryLockService.refreshLocks(false);
       await window.inventoryLockService.cleanOrphanLocks(currentFormRolls);
       await window.inventoryLockService.refreshLocks(false);
     }
