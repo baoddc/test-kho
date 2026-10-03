@@ -1593,10 +1593,13 @@ document.addEventListener('submit', async (e) => {
         }
       }
 
-      // Kiểm tra nếu phiếu nhập đã có trong kho -> CHẶN HOÀN TOÀN
+      // Kiểm tra nếu loại hàng trong phiếu nhập đã có trong kho -> CHẶN LOẠI ĐÃ NHẬP
       const phieuNhapInputVal = (form.querySelector('input[name="col_3"]')?.value || '').trim();
-      if (phieuNhapInputVal && window.XgSapLookup && typeof window.XgSapLookup.checkReceiptProcessed === 'function') {
-        const procCheck = await window.XgSapLookup.checkReceiptProcessed(phieuNhapInputVal, 'xg-nhap');
+      const maVatTuInputVal = (form.querySelector('input[name="col_5"]')?.value || '').trim();
+      const batchInputVal = (form.querySelector('input[name="col_7"]')?.value || '').trim();
+
+      if (phieuNhapInputVal && window.XgSapLookup && typeof window.XgSapLookup.checkReceiptItemProcessed === 'function') {
+        const procCheck = await window.XgSapLookup.checkReceiptItemProcessed(phieuNhapInputVal, maVatTuInputVal, batchInputVal, 'xg-nhap');
         if (procCheck && procCheck.isProcessed) {
           if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = originalText; }
           hideLoadingOverlay();
@@ -1604,10 +1607,11 @@ document.addEventListener('submit', async (e) => {
             docNo: phieuNhapInputVal,
             pageContext: 'xg-nhap',
             processedInfo: procCheck,
-            sapRecord: window._currentSelectedSapRecord,
+            sapRecord: window._currentSelectedSapRecord || {
+              material: maVatTuInputVal,
+              batch: batchInputVal
+            },
             onCancel: () => {
-              const inp = form.querySelector('input[name="col_3"]');
-              if (inp) inp.value = '';
               if (typeof window.XgSapLookup.resetSapSelection === 'function') {
                 window.XgSapLookup.resetSapSelection();
               }
