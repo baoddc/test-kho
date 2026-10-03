@@ -164,6 +164,38 @@ async function main() {
     assert.strictEqual(isEditForm2, false, 'Form thêm mới dữ liệu phải có isEditForm = false để kích hoạt chặn trùng');
   });
 
+  // 8. Kiểm tra checkReceiptItemProcessed phân biệt chính xác loại đã nhập vs loại chưa nhập
+  await runAsyncTest('checkReceiptItemProcessed phân biệt đúng loại đã nhập (Mã VT + Batch) và loại chưa nhập trên cùng một phiếu', async () => {
+    global.window._rawSupabaseData = [
+      {
+        'id': 101,
+        'Phiếu nhập': '5000042978',
+        'Mã vật tư': '10001189',
+        'Batch': '1.5X157VN',
+        'Số lượng (Kg)': 5566,
+        'Cuộn ID': 'C-157',
+        'Ngày nhập': '2026-10-01'
+      }
+    ];
+
+    assert.strictEqual(typeof SapLookup.checkReceiptItemProcessed, 'function', 'checkReceiptItemProcessed phải được export');
+
+    // Loại 1: Đã nhập -> isProcessed: true
+    const resultItem1 = await SapLookup.checkReceiptItemProcessed('5000042978', '10001189', '1.5X157VN', 'xg-nhap');
+    assert.strictEqual(resultItem1.isProcessed, true, 'Loại Batch 1.5X157VN phải có isProcessed = true');
+    assert.strictEqual(resultItem1.totalKg, 5566);
+    assert.strictEqual(resultItem1.count, 1);
+
+    // Loại 2: Cùng phiếu, cùng mã VT nhưng khác Batch (1.5X165VN) -> isProcessed: false
+    const resultItem2 = await SapLookup.checkReceiptItemProcessed('5000042978', '10001189', '1.5X165VN', 'xg-nhap');
+    assert.strictEqual(resultItem2.isProcessed, false, 'Loại Batch 1.5X165VN chưa nhập phải có isProcessed = false');
+    assert.strictEqual(resultItem2.totalKg, 0);
+
+    // Loại 3: Cùng phiếu nhưng khác Mã VT (10001190) -> isProcessed: false
+    const resultItem3 = await SapLookup.checkReceiptItemProcessed('5000042978', '10001190', '1.5X157VN', 'xg-nhap');
+    assert.strictEqual(resultItem3.isProcessed, false, 'Loại khác mã vật tư phải có isProcessed = false');
+  });
+
   console.log('\n---------------------------------------------------------------');
   console.log(` KẾT QUẢ KIỂM THỬ: ${passCount} / ${totalTests} test cases ĐẠT (PASS)`);
   console.log('---------------------------------------------------------------\n');

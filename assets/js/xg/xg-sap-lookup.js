@@ -242,6 +242,133 @@
   }
 
   /**
+   * Kiểm tra xem một LOẠI cụ thể (Số phiếu + Mã vật tư + Batch) đã từng được nhập vào kho hay chưa
+   * @param {string} docNo - Số phiếu cần kiểm tra
+   * @param {string} [material] - Mã vật tư (nếu có)
+   * @param {string} [batch] - Batch / Lô (nếu có)
+   * @param {string} [pageContext] - 'xg-nhap' | 'xg-xuat' | 'tole-nhap' | 'tole-xuat'
+   * @returns {Promise<{ isProcessed: boolean, count: number, totalKg: number, totalM: number, records: Array, firstDate: string, lastDate: string, projectNames: Array, projectIds: Array, coilIds: Array }>}
+   */
+  async function checkReceiptItemProcessed(docNo, material, batch, pageContext) {
+    const cleanDoc = String(docNo || '').trim();
+    const cleanMat = String(material || '').trim();
+    const cleanBatch = String(batch || '').trim();
+
+    const emptyResult = {
+      isProcessed: false,
+      count: 0,
+      totalKg: 0,
+      totalM: 0,
+      records: [],
+      firstDate: '',
+      lastDate: '',
+      projectNames: [],
+      projectIds: [],
+      coilIds: []
+    };
+
+    if (!cleanDoc) return emptyResult;
+
+    const currentContext = detectCurrentPageContext(pageContext);
+    const rule = SAP_PAGE_RULES[currentContext] || SAP_PAGE_RULES['xg-nhap'];
+    const docCol = rule.docColumnName;
+    const matCol = 'Mã vật tư';
+    const batchCol = 'Batch';
+    const tableName = rule.tableName;
+
+    let matchedRows = [];
+
+    // Tầng 1: Tra cứu từ Local Cache window._rawSupabaseData
+    if (typeof window !== 'undefined' && Array.isArray(window._rawSupabaseData) && window._rawSupabaseData.length > 0) {
+      matchedRows = window._rawSupabaseData.filter(r => {
+        if (!r) return false;
+        const rDoc = String(r[docCol] || '').trim().toLowerCase();
+        if (rDoc !== cleanDoc.toLowerCase()) return false;
+
+        if (cleanMat) {
+          const rMat = String(r[matCol] || '').trim().toLowerCase();
+          if (rMat !== cleanMat.toLowerCase()) return false;
+        }
+        if (cleanBatch) {
+          const rBatch = String(r[batchCol] || '').trim().toLowerCase();
+          if (rBatch !== cleanBatch.toLowerCase()) return false;
+        }
+        return true;
+      });
+    }
+
+    // Tầng 2: Nếu không thấy trong local cache hoặc rỗng, query Supabase
+    if (matchedRows.length === 0 && typeof window !== 'undefined' && window.supabase) {
+      try {
+        let query = window.supabase.from(tableName).select('*').ilike(docCol, cleanDoc);
+        if (cleanMat) query = query.ilike(matCol, cleanMat);
+        if (cleanBatch) query = query.ilike(batchCol, cleanBatch);
+        const { data, error } = await query;
+        if (!error && Array.isArray(data) && data.length > 0) {
+          matchedRows = data.filter(r => {
+            const rDoc = String(r[docCol] || '').trim().toLowerCase();
+            const rMat = String(r[matCol] || '').trim().toLowerCase();
+            const rBatch = String(r[batchCol] || '').trim().toLowerCase();
+            const matchDoc = rDoc === cleanDoc.toLowerCase();
+            const matchMat = !cleanMat || rMat === cleanMat.toLowerCase();
+            const matchBatch = !cleanBatch || rBatch === cleanBatch.toLowerCase();
+            return matchDoc && matchMat && matchBatch;
+          });
+        }
+      } catch (err) {
+        console.warn(`[XgSapLookup] Không thể truy vấn Supabase cho bảng ${tableName}:`, err);
+      }
+    }
+
+    if (matchedRows.length === 0) return emptyResult;
+
+    let totalKg = 0;
+    let totalM = 0;
+    const coilIds = [];
+    const projectNamesSet = new Set();
+    const projectIdsSet = new Set();
+    const dates = [];
+
+    matchedRows.forEach(r => {
+      const rawKg = r['Số lượng (Kg)'];
+      const kg = typeof rawKg === 'number' ? rawKg : (parseFloat(String(rawKg || 0).replace(/,/g, '')) || 0);
+      totalKg += kg;
+
+      if (r['Số lượng (m)']) {
+        const rawM = r['Số lượng (m)'];
+        const m = typeof rawM === 'number' ? rawM : (parseFloat(String(rawM || 0).replace(/,/g, '')) || 0);
+        totalM += m;
+      }
+
+      const cid = String(r['Cuộn ID'] || '').trim();
+      if (cid && !coilIds.includes(cid)) coilIds.push(cid);
+
+      const pName = String(r['Tên công trình'] || '').trim();
+      if (pName) projectNamesSet.add(pName);
+      const pId = String(r['Mã công trình'] || '').trim();
+      if (pId) projectIdsSet.add(pId);
+
+      const dateVal = String(r['Ngày nhập'] || r['Ngày xuất'] || '').trim();
+      if (dateVal) dates.push(dateVal);
+    });
+
+    dates.sort();
+
+    return {
+      isProcessed: true,
+      count: matchedRows.length,
+      totalKg,
+      totalM,
+      records: matchedRows,
+      firstDate: dates[0] || '',
+      lastDate: dates[dates.length - 1] || '',
+      projectNames: Array.from(projectNamesSet),
+      projectIds: Array.from(projectIdsSet),
+      coilIds
+    };
+  }
+
+  /**
    * Hiển thị Modal CHẶN khi số phiếu đã được nhập hoặc xuất trong kho
    * @param {Object} options
    * @param {string} options.docNo - Số phiếu
@@ -1955,6 +2082,7 @@
     extractSapRowAttributes,
     validateSapRecordAgainstContext,
     checkReceiptProcessed,
+    checkReceiptItemProcessed,
     showReceiptProcessedWarningModal,
     querySapMb51,
     groupSapMb51Rows,
