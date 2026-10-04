@@ -97,6 +97,8 @@ let currentPage = 1;
 let totalPages = 1;
 let tableData = [];
 let cachedInventoryData = null;
+let allInventoryData = [];
+let isInventoryFilterCleared = false;
 let currentModalTarget = null; // 'add' or 'edit'
 let filteredData = [];
 let displayedData = [];
@@ -105,6 +107,7 @@ let selectedRowIndexes = [];
 let rollCount = 0;
 let editRollCount = 0;
 let currentMaVatTuFilter = '';
+let currentBatchFilter = '';
 
 const toleChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('tole_sync_channel') : null;
 
@@ -1938,81 +1941,49 @@ function openDeleteDataModal() {
    INVENTORY MODAL - Chọn cuộn từ Tồn Kho (Supabase)
 ================================================================================ */
 
-let allInventoryData = [];
-let cachedInventoryData = [];
-let currentMaVatTuFilter = '';
-let currentBatchFilter = '';
-let isInventoryFilterCleared = false;
-let currentModalTarget = '';
-
 function renderInventoryFilterInfo() {
   const filterInfoEl = document.getElementById('inventoryFilterInfo');
   if (!filterInfoEl) return;
-  const searchVal = document.getElementById('inventorySearchInput')?.value.trim();
+
+  const searchInput = document.getElementById('inventorySearchInput');
+  const searchVal = searchInput ? searchInput.value.trim() : '';
 
   if (searchVal) {
-    filterInfoEl.innerHTML = `
-      <span class="badge bg-light text-dark px-2 py-1 shadow-sm">
-        <i class="bi bi-search me-1 text-primary"></i>Tìm kiếm toàn kho: "<strong>${searchVal}</strong>"
-      </span>
-      <button type="button" class="btn btn-xs btn-outline-light ms-1 py-0 px-2 rounded-pill shadow-sm" id="btnClearInventoryFilter" style="font-size: 0.75rem; border-color: rgba(255,255,255,0.7);" title="Quay lại bộ lọc ban đầu">
-        <i class="bi bi-arrow-counterclockwise me-1"></i>Bộ lọc gốc
-      </button>
-    `;
+    filterInfoEl.innerHTML = `Đang tìm kiếm toàn kho cho từ khóa: "<strong>${searchVal}</strong>"`;
     filterInfoEl.style.display = '';
-  } else if (!isInventoryFilterCleared && (currentMaVatTuFilter || currentBatchFilter)) {
-    const parts = [];
-    if (currentMaVatTuFilter) parts.push(`Mã VT: <strong>${currentMaVatTuFilter}</strong>`);
-    if (currentBatchFilter) parts.push(`Lô (Batch): <strong>${currentBatchFilter}</strong>`);
-    filterInfoEl.innerHTML = `
-      <span>Đang lọc: ${parts.join(' | ')}</span>
-      <button type="button" class="btn btn-xs btn-outline-light ms-2 py-0 px-2 rounded-pill shadow-sm" id="btnClearInventoryFilter" style="font-size: 0.75rem; border-color: rgba(255,255,255,0.7);" title="Hiển thị tất cả cuộn tồn trong kho">
-        <i class="bi bi-x-circle me-1"></i>Xem tất cả kho
-      </button>
-    `;
-    filterInfoEl.style.display = '';
-  } else {
-    filterInfoEl.innerHTML = `
-      <span class="badge bg-light text-dark px-2 py-1 shadow-sm">
-        <i class="bi bi-layers me-1 text-info"></i>Đang hiển thị toàn bộ tồn kho (${allInventoryData.length} cuộn)
-      </span>
-    `;
-    filterInfoEl.style.display = '';
+    return;
   }
 
-  const btnClear = filterInfoEl.querySelector('#btnClearInventoryFilter');
-  if (btnClear) {
-    btnClear.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      resetInventoryFilter();
-    });
+  if (isInventoryFilterCleared) {
+    filterInfoEl.innerHTML = `Đang hiển thị toàn bộ tồn kho (<strong class="text-warning">${(allInventoryData || []).length}</strong> cuộn)`;
+    filterInfoEl.style.display = '';
+    return;
   }
-}
 
-function resetInventoryFilter() {
-  const searchInput = document.getElementById('inventorySearchInput');
-  if (isInventoryFilterCleared || (searchInput && searchInput.value.trim())) {
-    isInventoryFilterCleared = false;
-    if (searchInput) searchInput.value = '';
-    let list = allInventoryData;
-    if (currentMaVatTuFilter) {
-      const maVatTuLower = currentMaVatTuFilter.toLowerCase();
-      list = list.filter(row => String(row['Mã vật tư'] || '').toLowerCase().includes(maVatTuLower));
+  if (currentMaVatTuFilter || currentBatchFilter) {
+    const filters = [];
+    if (currentMaVatTuFilter) filters.push(`Mã VT: <strong>${currentMaVatTuFilter}</strong>`);
+    if (currentBatchFilter) filters.push(`Lô (Batch): <strong>${currentBatchFilter}</strong>`);
+    filterInfoEl.innerHTML = `
+      <div class="d-flex align-items-center flex-wrap gap-2">
+        <span>Đang lọc: ${filters.join(' | ')}</span>
+        <button type="button" class="btn btn-sm btn-outline-light py-0 px-2 rounded-pill shadow-sm" id="btnClearInventoryFilter" style="font-size: 0.75rem;">
+          <i class="bi bi-x-circle me-1"></i>Xem tất cả kho
+        </button>
+      </div>
+    `;
+    filterInfoEl.style.display = '';
+    const btnClear = filterInfoEl.querySelector('#btnClearInventoryFilter');
+    if (btnClear) {
+      btnClear.addEventListener('click', () => {
+        isInventoryFilterCleared = true;
+        renderInventoryFilterInfo();
+        renderInventoryTable(allInventoryData || [], '');
+      });
     }
-    if (currentBatchFilter) {
-      const batchLower = currentBatchFilter.toLowerCase();
-      list = list.filter(row => String(row['Batch'] || '').toLowerCase().includes(batchLower));
-    }
-    cachedInventoryData = list;
-    renderInventoryFilterInfo();
-    renderInventoryTable(cachedInventoryData, '');
   } else {
-    isInventoryFilterCleared = true;
-    if (searchInput) searchInput.value = '';
-    cachedInventoryData = allInventoryData;
-    renderInventoryFilterInfo();
-    renderInventoryTable(cachedInventoryData, '');
+    filterInfoEl.innerHTML = '';
+    filterInfoEl.style.display = 'none';
   }
 }
 
@@ -2051,15 +2022,14 @@ async function openInventoryModal(target, maVatTu = '', batch = '') {
     const batchSize = 1000;
     let hasMore = true;
 
-    // Tải phân trang dữ liệu tole-nhap (không lọc cứng theo mã/lô để tìm kiếm toàn kho)
+    // Tải phân trang toàn bộ dữ liệu tole-nhap (không ilike lọc cứng)
     while (hasMore) {
-      let query = supabase
+      const { data, error } = await supabase
         .from(TON_TABLE_NAME)
         .select('*')
         .order('id', { ascending: true })
         .range(from, from + batchSize - 1);
 
-      const { data, error } = await query;
       if (error) throw error;
 
       if (data && data.length > 0) {
@@ -2117,18 +2087,18 @@ async function openInventoryModal(target, maVatTu = '', batch = '') {
 
     allInventoryData = processedTon;
 
-    // Lọc ban đầu: nếu có maVatTu hoặc batch thì ưu tiên lọc hiển thị
-    let initialList = processedTon;
+    // Lọc theo mã vật tư / batch ban đầu nếu có
+    let displayTon = processedTon;
     if (maVatTu) {
       const maVatTuLower = maVatTu.toLowerCase();
-      initialList = initialList.filter(row => String(row['Mã vật tư'] || '').toLowerCase().includes(maVatTuLower));
+      displayTon = displayTon.filter(row => String(row['Mã vật tư'] || '').toLowerCase().includes(maVatTuLower));
     }
     if (batch) {
       const batchLower = batch.toLowerCase();
-      initialList = initialList.filter(row => String(row['Batch'] || '').toLowerCase().includes(batchLower));
+      displayTon = displayTon.filter(row => String(row['Batch'] || '').toLowerCase().includes(batchLower));
     }
 
-    cachedInventoryData = initialList;
+    cachedInventoryData = displayTon;
 
     // Lấy các cuộn ID hợp lệ đang nằm trong phiếu xuất hiện tại
     const currentFormRolls = [];
@@ -2149,7 +2119,7 @@ async function openInventoryModal(target, maVatTu = '', batch = '') {
       await window.inventoryLockService.refreshLocks(false);
     }
     renderInventoryFilterInfo();
-    renderInventoryTable(cachedInventoryData, '');
+    renderInventoryTable(displayTon, '');
     if (loadingDiv) loadingDiv.style.display = 'none';
 
   } catch (err) {
@@ -2324,8 +2294,8 @@ function renderInventoryTable(data, searchVal = '') {
         <input type="checkbox" class="form-check-input inventory-checkbox" 
           data-cuon-id="${cuonId}" 
           data-ma-vattu="${maVatTu}" 
-          data-ten-vattu="${tenVatTu}"
-          data-batch="${batch}"
+          data-ten-vattu="${tenVatTu}" 
+          data-batch="${batch}" 
           data-ton-kg="${tonKg}"
           data-ton-m="${tonM}"
           ${(isAlreadyInForm || (lockStatus.isLocked && lockStatus.isMe)) ? 'checked' : ''}
@@ -2405,11 +2375,10 @@ document.addEventListener('change', (e) => {
 // Inventory search
 document.addEventListener('input', (e) => {
   if (e.target && e.target.id === 'inventorySearchInput') {
-    const s = e.target.value.trim().toLowerCase();
+    const searchVal = e.target.value.trim();
     renderInventoryFilterInfo();
-
-    if (s) {
-      // Khi gõ từ khóa: TÌM KIẾM TRÊN TOÀN BỘ TỒN KHO
+    if (searchVal) {
+      const s = searchVal.toLowerCase();
       const filtered = allInventoryData.filter(r => 
         String(r['Mã vật tư'] || '').toLowerCase().includes(s) ||
         String(r['Tên vật tư'] || '').toLowerCase().includes(s) ||
@@ -2418,22 +2387,20 @@ document.addEventListener('input', (e) => {
       );
       renderInventoryTable(filtered, '');
     } else {
-      // Khi ô tìm kiếm rỗng
       if (isInventoryFilterCleared) {
-        cachedInventoryData = allInventoryData;
+        renderInventoryTable(allInventoryData || [], '');
       } else {
-        let list = allInventoryData;
+        let displayTon = allInventoryData || [];
         if (currentMaVatTuFilter) {
           const maVatTuLower = currentMaVatTuFilter.toLowerCase();
-          list = list.filter(row => String(row['Mã vật tư'] || '').toLowerCase().includes(maVatTuLower));
+          displayTon = displayTon.filter(row => String(row['Mã vật tư'] || '').toLowerCase().includes(maVatTuLower));
         }
         if (currentBatchFilter) {
           const batchLower = currentBatchFilter.toLowerCase();
-          list = list.filter(row => String(row['Batch'] || '').toLowerCase().includes(batchLower));
+          displayTon = displayTon.filter(row => String(row['Batch'] || '').toLowerCase().includes(batchLower));
         }
-        cachedInventoryData = list;
+        renderInventoryTable(displayTon, '');
       }
-      renderInventoryTable(cachedInventoryData, '');
     }
   }
 });
@@ -2455,17 +2422,18 @@ document.addEventListener('click', (e) => {
         const existingCuonIds = new Set(
           item.rolls.map(r => String(r.cuonId || '').trim().toLowerCase()).filter(Boolean)
         );
-        let firstRollData = null;
-        selectedCheckboxes.forEach(cb => {
+        let firstRollMaVatTu = '';
+        let firstRollTenVatTu = '';
+        let firstRollBatch = '';
+
+        selectedCheckboxes.forEach((cb, idx) => {
           const cuonId = cb.dataset.cuonId || '';
           const tonKg = parseNumericInput(cb.dataset.tonKg) || 0;
           const tonM = parseNumericInput(cb.dataset.tonM) || 0;
-          if (!firstRollData) {
-            firstRollData = {
-              'Mã vật tư': cb.dataset.maVattu || '',
-              'Tên vật tư': cb.dataset.tenVattu || '',
-              'Batch': cb.dataset.batch || ''
-            };
+          if (idx === 0) {
+            firstRollMaVatTu = cb.dataset.maVattu || '';
+            firstRollTenVatTu = cb.dataset.tenVattu || '';
+            firstRollBatch = cb.dataset.batch || '';
           }
           if (!existingCuonIds.has(cuonId.toLowerCase())) {
             item.rolls.push({
@@ -2477,12 +2445,10 @@ document.addEventListener('click', (e) => {
           }
         });
 
-        // Tự động điền thông tin thẻ mặt hàng nếu đang trống
-        if (firstRollData) {
-          if (!item.maVatTu && firstRollData['Mã vật tư']) item.maVatTu = firstRollData['Mã vật tư'];
-          if (!item.tenVatTu && firstRollData['Tên vật tư']) item.tenVatTu = firstRollData['Tên vật tư'];
-          if (!item.batch && firstRollData['Batch']) item.batch = firstRollData['Batch'];
-        }
+        // Điền tự động nếu thẻ mặt hàng đang rỗng
+        if (!item.maVatTu && firstRollMaVatTu) item.maVatTu = firstRollMaVatTu;
+        if (!item.tenVatTu && firstRollTenVatTu) item.tenVatTu = firstRollTenVatTu;
+        if (!item.batch && firstRollBatch) item.batch = firstRollBatch;
 
         renderItemCards();
       }
@@ -2492,17 +2458,18 @@ document.addEventListener('click', (e) => {
           .map(inp => inp.value.trim().toLowerCase())
           .filter(Boolean)
       );
-      let firstRollData = null;
-      selectedCheckboxes.forEach(cb => {
+      let firstRollMaVatTu = '';
+      let firstRollTenVatTu = '';
+      let firstRollBatch = '';
+
+      selectedCheckboxes.forEach((cb, idx) => {
         const cuonId = cb.dataset.cuonId || '';
         const tonKg = parseNumericInput(cb.dataset.tonKg) || 0;
         const tonM = parseNumericInput(cb.dataset.tonM) || 0;
-        if (!firstRollData) {
-          firstRollData = {
-            'Mã vật tư': cb.dataset.maVattu || '',
-            'Tên vật tư': cb.dataset.tenVattu || '',
-            'Batch': cb.dataset.batch || ''
-          };
+        if (idx === 0) {
+          firstRollMaVatTu = cb.dataset.maVattu || '';
+          firstRollTenVatTu = cb.dataset.tenVattu || '';
+          firstRollBatch = cb.dataset.batch || '';
         }
         if (!existingCuonIds.has(cuonId.toLowerCase())) {
           addEditRollRow(cuonId, String(tonKg), String(tonM));
@@ -2510,13 +2477,13 @@ document.addEventListener('click', (e) => {
       });
 
       const editModalEl = document.getElementById('editDataModal');
-      if (editModalEl && firstRollData) {
-        const inpMaVt = editModalEl.querySelector('[name="col_5"]');
-        const inpTenVt = editModalEl.querySelector('[name="col_6"]');
-        const inpBatch = editModalEl.querySelector('[name="col_7"]');
-        if (inpMaVt && !inpMaVt.value.trim() && firstRollData['Mã vật tư']) inpMaVt.value = firstRollData['Mã vật tư'];
-        if (inpTenVt && !inpTenVt.value.trim() && firstRollData['Tên vật tư']) inpTenVt.value = firstRollData['Tên vật tư'];
-        if (inpBatch && !inpBatch.value.trim() && firstRollData['Batch']) inpBatch.value = firstRollData['Batch'];
+      if (editModalEl) {
+        const maVtInp = editModalEl.querySelector('[name="col_5"]');
+        const tenVtInp = editModalEl.querySelector('[name="col_6"]');
+        const batchInp = editModalEl.querySelector('[name="col_7"]');
+        if (maVtInp && !maVtInp.value.trim() && firstRollMaVatTu) maVtInp.value = firstRollMaVatTu;
+        if (tenVtInp && !tenVtInp.value.trim() && firstRollTenVatTu) tenVtInp.value = firstRollTenVatTu;
+        if (batchInp && !batchInp.value.trim() && firstRollBatch) batchInp.value = firstRollBatch;
       }
     }
 
