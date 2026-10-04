@@ -27,7 +27,7 @@
 - Consumes: `openInventoryModal`, `renderInventoryTable`, `inventorySearchInput` logic contract
 - Produces: Test runner verifying that `xg-xuat.js` and `tole-xuat.js` load full inventory, search across all rolls, support clear filter button, and auto-populate empty item card fields.
 
-- [ ] **Step 1: Viết test runner kiểm thử thất bại ban đầu**
+- [x] **Step 1: Viết test runner kiểm thử thất bại ban đầu**
 
 ```javascript
 // tests/test-search-all-warehouse-rolls.js
@@ -109,12 +109,12 @@ async function main() {
 main();
 ```
 
-- [ ] **Step 2: Chạy test để xác nhận FAIL**
+- [x] **Step 2: Chạy test để xác nhận FAIL**
 
 Run: `node tests/test-search-all-warehouse-rolls.js`
 Expected: FAIL 0/6 tests.
 
-- [ ] **Step 3: Commit file test**
+- [x] **Step 3: Commit file test**
 
 ```bash
 git add tests/test-search-all-warehouse-rolls.js
@@ -133,7 +133,7 @@ git commit -m "test: add test suite for searching all warehouse rolls in export 
 - Consumes: Supabase `xg-nhap`, `xg-xuat`
 - Produces: `allInventoryData`, `openInventoryModal`, dynamic search across all rolls, filter clear button, auto-filling empty card fields on confirmation.
 
-- [ ] **Step 1: Cập nhật `openInventoryModal`, `renderInventoryTable`, `inventorySearchInput` và `btnConfirmInventorySelection` trong `assets/js/xg/xg-xuat.js`**
+- [x] **Step 1: Cập nhật `openInventoryModal`, `renderInventoryTable`, `inventorySearchInput` và `btnConfirmInventorySelection` trong `assets/js/xg/xg-xuat.js`**
   - Khai báo biến module `let allInventoryData = [];` và `let isInventoryFilterCleared = false;`.
   - Trong `openInventoryModal`:
     - Bỏ các dòng `.ilike('Mã vật tư', ...)` và `.ilike('Batch', ...)`.
@@ -155,15 +155,15 @@ git commit -m "test: add test suite for searching all warehouse rolls in export 
       if (!item.batch && firstRollData['Batch']) item.batch = firstRollData['Batch'];
       ```
 
-- [ ] **Step 2: Cập nhật `pages/xg/xg-xuat.html`**
+- [x] **Step 2: Cập nhật `pages/xg/xg-xuat.html`**
   - Đảm bảo header modal `#inventoryRollsModal` có cấu trúc hiển thị thông tin lọc và nút bấm gọn gàng, rõ nét.
 
-- [ ] **Step 3: Chạy test runner kiểm tra tiến độ**
+- [x] **Step 3: Chạy test runner kiểm tra tiến độ**
 
 Run: `node tests/test-search-all-warehouse-rolls.js`
 Expected: 3/6 tests PASS (Test 1, 2, 3 PASS; Test 4, 5, 6 FAIL).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add assets/js/xg/xg-xuat.js pages/xg/xg-xuat.html
@@ -182,7 +182,7 @@ git commit -m "feat(xg-xuat): enable searching all warehouse rolls and clearing 
 - Consumes: Supabase `tole-nhap`, `tole-xuat`
 - Produces: `allInventoryData`, `openInventoryModal`, dynamic search across all rolls, filter clear button, auto-filling empty card fields on confirmation.
 
-- [ ] **Step 1: Cập nhật `openInventoryModal`, `renderInventoryTable`, `inventorySearchInput` và `btnConfirmInventorySelection` trong `assets/js/tole/tole-xuat.js`**
+- [x] **Step 1: Cập nhật `openInventoryModal`, `renderInventoryTable`, `inventorySearchInput` và `btnConfirmInventorySelection` trong `assets/js/tole/tole-xuat.js`**
   - Khai báo biến module `let allInventoryData = [];` và `let isInventoryFilterCleared = false;`.
   - Trong `openInventoryModal`:
     - Bỏ các dòng `.ilike('Mã vật tư', ...)` và `.ilike('Batch', ...)`.
@@ -199,15 +199,15 @@ git commit -m "feat(xg-xuat): enable searching all warehouse rolls and clearing 
   - Trong `btnConfirmInventorySelection`:
     - Nếu thẻ mặt hàng đang rỗng `maVatTu`, `tenVatTu` hoặc `batch`, tự động điền từ cuộn được chọn đầu tiên.
 
-- [ ] **Step 2: Cập nhật `pages/tole/tole-xuat.html`**
+- [x] **Step 2: Cập nhật `pages/tole/tole-xuat.html`**
   - Đảm bảo header modal `#inventoryRollsModal` có cấu trúc hiển thị thông tin lọc và nút bấm gọn gàng, rõ nét.
 
-- [ ] **Step 3: Chạy test runner kiểm tra toàn bộ**
+- [x] **Step 3: Chạy test runner kiểm tra toàn bộ**
 
 Run: `node tests/test-search-all-warehouse-rolls.js`
 Expected: Tất cả 6/6 tests PASS.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add assets/js/tole/tole-xuat.js pages/tole/tole-xuat.html
@@ -224,19 +224,19 @@ git commit -m "feat(tole-xuat): enable searching all warehouse rolls and clearin
 - Test: `tests/test-manual-roll-selection-export.js`
 - Test: `tests/test-manual-export-autofill.js`
 
-- [ ] **Step 1: Đồng bộ hóa toàn bộ sang `dist/`, `dist-app/`, `public/`**
+- [x] **Step 1: Đồng bộ hóa toàn bộ sang `dist/`, `dist-app/`, `public/`**
 
 Run: `node scripts/sync-dist.js`
 Expected: `✅ [Sync Script] Full synchronization completed successfully!`
 
-- [ ] **Step 2: Chạy lại toàn bộ test suite để đảm bảo không bị lỗi hồi quy**
+- [x] **Step 2: Chạy lại toàn bộ test suite để đảm bảo không bị lỗi hồi quy**
 
 Run: `node tests/test-search-all-warehouse-rolls.js`
 Run: `node tests/test-manual-roll-selection-export.js`
 Run: `node tests/test-manual-export-autofill.js`
 Expected: Toàn bộ bài test đều PASS 100%.
 
-- [ ] **Step 3: Commit hoàn tất**
+- [x] **Step 3: Commit hoàn tất**
 
 ```bash
 git add dist/ dist-app/ public/
