@@ -2090,7 +2090,7 @@ async function openInventoryModal(target, maVatTu = '', batch = '') {
       await window.inventoryLockService.refreshLocks(false);
     }
     renderInventoryFilterInfo();
-    renderInventoryTable(displayTon, '');
+    renderInventoryTable(cachedInventoryData, '');
     if (loadingDiv) loadingDiv.style.display = 'none';
 
   } catch (err) {
