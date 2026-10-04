@@ -2228,12 +2228,25 @@ function renderInventoryTable(data, searchVal = '') {
   let filtered = data;
   if (searchVal) {
     const s = searchVal.toLowerCase();
-    filtered = data.filter(r => 
-      String(r['Mã vật tư'] || '').toLowerCase().includes(s) ||
-      String(r['Tên vật tư'] || '').toLowerCase().includes(s) ||
-      String(r['Batch'] || '').toLowerCase().includes(s) ||
-      String(r['Cuộn ID'] || '').toLowerCase().includes(s)
-    );
+    const sClean = s.replace(/[,.\s]/g, '');
+    filtered = data.filter(r => {
+      const maVt = String(r['Mã vật tư'] || '').toLowerCase();
+      const tenVt = String(r['Tên vật tư'] || '').toLowerCase();
+      const batch = String(r['Batch'] || '').toLowerCase();
+      const cuonId = String(r['Cuộn ID'] || '').toLowerCase();
+      const tonKgVal = r['Tồn cuối (Kg)'] !== undefined ? r['Tồn cuối (Kg)'] : (r['Số lượng (Kg)'] ?? '');
+      const tonKg = String(tonKgVal).toLowerCase();
+      const tonKgFormatted = (typeof formatNumber === 'function' ? formatNumber(tonKgVal) : '').toLowerCase();
+      const tonKgClean = tonKg.replace(/[,.\s]/g, '');
+
+      return maVt.includes(s) ||
+        tenVt.includes(s) ||
+        batch.includes(s) ||
+        cuonId.includes(s) ||
+        tonKg.includes(s) ||
+        tonKgFormatted.includes(s) ||
+        (sClean && tonKgClean.includes(sClean));
+    });
   }
 
   if (filtered.length === 0) {
@@ -2370,12 +2383,25 @@ document.addEventListener('input', (e) => {
     renderInventoryFilterInfo();
     if (searchVal) {
       const s = searchVal.toLowerCase();
-      const filtered = allInventoryData.filter(r => 
-        String(r['Mã vật tư'] || '').toLowerCase().includes(s) ||
-        String(r['Tên vật tư'] || '').toLowerCase().includes(s) ||
-        String(r['Batch'] || '').toLowerCase().includes(s) ||
-        String(r['Cuộn ID'] || '').toLowerCase().includes(s)
-      );
+      const sClean = s.replace(/[,.\s]/g, '');
+      const filtered = allInventoryData.filter(r => {
+        const maVt = String(r['Mã vật tư'] || '').toLowerCase();
+        const tenVt = String(r['Tên vật tư'] || '').toLowerCase();
+        const batch = String(r['Batch'] || '').toLowerCase();
+        const cuonId = String(r['Cuộn ID'] || '').toLowerCase();
+        const tonKgVal = r['Tồn cuối (Kg)'] !== undefined ? r['Tồn cuối (Kg)'] : (r['Số lượng (Kg)'] ?? '');
+        const tonKg = String(tonKgVal).toLowerCase();
+        const tonKgFormatted = (typeof formatNumber === 'function' ? formatNumber(tonKgVal) : '').toLowerCase();
+        const tonKgClean = tonKg.replace(/[,.\s]/g, '');
+
+        return maVt.includes(s) ||
+          tenVt.includes(s) ||
+          batch.includes(s) ||
+          cuonId.includes(s) ||
+          tonKg.includes(s) ||
+          tonKgFormatted.includes(s) ||
+          (sClean && tonKgClean.includes(sClean));
+      });
       renderInventoryTable(filtered, '');
     } else {
       if (isInventoryFilterCleared) {

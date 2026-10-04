@@ -65,6 +65,18 @@ async function main() {
     assert.ok(content.includes('!item.maVatTu') && content.includes('item.maVatTu ='), 'Chưa có logic điền tự động maVatTu vào item trong tole-xuat.js');
   });
 
+  // Test 7: Kiểm tra xg-xuat.js hỗ trợ tìm kiếm Tồn cuối (Kg)
+  runTest('xg-xuat.js hỗ trợ tìm kiếm theo Tồn cuối (Kg)', () => {
+    const content = fs.readFileSync(path.join(__dirname, '../assets/js/xg/xg-xuat.js'), 'utf8');
+    assert.ok(content.includes('tonKg') && (content.includes("Tồn cuối (Kg)") || content.includes("tonKgVal")), 'Chưa có logic tìm kiếm theo Tồn cuối (Kg) trong xg-xuat.js');
+  });
+
+  // Test 8: Kiểm tra tole-xuat.js hỗ trợ tìm kiếm theo Tồn cuối (Kg)
+  runTest('tole-xuat.js hỗ trợ tìm kiếm theo Tồn cuối (Kg)', () => {
+    const content = fs.readFileSync(path.join(__dirname, '../assets/js/tole/tole-xuat.js'), 'utf8');
+    assert.ok(content.includes('tonKg') && (content.includes("Tồn cuối (Kg)") || content.includes("tonKgVal")), 'Chưa có logic tìm kiếm theo Tồn cuối (Kg) trong tole-xuat.js');
+  });
+
   console.log('\n-------------------------------------------------------------------');
   console.log(` KẾT QUẢ: ${passedTests}/${totalTests} BÀI TEST THÀNH CÔNG`);
   console.log('-------------------------------------------------------------------');
