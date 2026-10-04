@@ -1945,42 +1945,12 @@ function renderInventoryFilterInfo() {
   const filterInfoEl = document.getElementById('inventoryFilterInfo');
   if (!filterInfoEl) return;
 
-  const searchInput = document.getElementById('inventorySearchInput');
-  const searchVal = searchInput ? searchInput.value.trim() : '';
-
-  if (searchVal) {
-    filterInfoEl.innerHTML = `Đang tìm kiếm toàn kho cho từ khóa: "<strong>${searchVal}</strong>"`;
-    filterInfoEl.style.display = '';
-    return;
-  }
-
-  if (isInventoryFilterCleared) {
-    filterInfoEl.innerHTML = `Đang hiển thị toàn bộ tồn kho (<strong class="text-warning">${(allInventoryData || []).length}</strong> cuộn)`;
-    filterInfoEl.style.display = '';
-    return;
-  }
-
   if (currentMaVatTuFilter || currentBatchFilter) {
     const filters = [];
     if (currentMaVatTuFilter) filters.push(`Mã VT: <strong>${currentMaVatTuFilter}</strong>`);
     if (currentBatchFilter) filters.push(`Lô (Batch): <strong>${currentBatchFilter}</strong>`);
-    filterInfoEl.innerHTML = `
-      <div class="d-flex align-items-center flex-wrap gap-2">
-        <span>Đang lọc: ${filters.join(' | ')}</span>
-        <button type="button" class="btn btn-sm btn-outline-light py-0 px-2 rounded-pill shadow-sm" id="btnClearInventoryFilter" style="font-size: 0.75rem;">
-          <i class="bi bi-x-circle me-1"></i>Xem tất cả kho
-        </button>
-      </div>
-    `;
+    filterInfoEl.innerHTML = `Đang lọc: ${filters.join(' | ')}`;
     filterInfoEl.style.display = '';
-    const btnClear = filterInfoEl.querySelector('#btnClearInventoryFilter');
-    if (btnClear) {
-      btnClear.addEventListener('click', () => {
-        isInventoryFilterCleared = true;
-        renderInventoryFilterInfo();
-        renderInventoryTable(allInventoryData || [], '');
-      });
-    }
   } else {
     filterInfoEl.innerHTML = '';
     filterInfoEl.style.display = 'none';
@@ -1991,7 +1961,6 @@ async function openInventoryModal(target, maVatTu = '', batch = '') {
   currentModalTarget = target;
   currentMaVatTuFilter = maVatTu;
   currentBatchFilter = batch;
-  isInventoryFilterCleared = false;
 
   const inventoryModal = document.getElementById('inventoryRollsModal');
   if (!inventoryModal) return;
@@ -2022,14 +1991,23 @@ async function openInventoryModal(target, maVatTu = '', batch = '') {
     const batchSize = 1000;
     let hasMore = true;
 
-    // Tải phân trang toàn bộ dữ liệu tole-nhap (không ilike lọc cứng)
+    // Tải phân trang dữ liệu tole-nhap và lọc ở Database nếu có maVatTu / batch
     while (hasMore) {
-      const { data, error } = await supabase
+      let query = supabase
         .from(TON_TABLE_NAME)
-        .select('*')
-        .order('id', { ascending: true })
+        .select('*');
+      
+      if (maVatTu) {
+        query = query.ilike('Mã vật tư', `%${maVatTu}%`);
+      }
+      if (batch) {
+        query = query.ilike('Batch', `%${batch}%`);
+      }
+      
+      query = query.order('id', { ascending: true })
         .range(from, from + batchSize - 1);
 
+      const { data, error } = await query;
       if (error) throw error;
 
       if (data && data.length > 0) {
@@ -2075,6 +2053,18 @@ async function openInventoryModal(target, maVatTu = '', batch = '') {
       return !exportedCuonIds.has(cuonId);
     });
 
+    // Lọc theo mã vật tư (nếu có)
+    if (maVatTu) {
+      const maVatTuLower = maVatTu.toLowerCase();
+      tonData = tonData.filter(row => String(row['Mã vật tư'] || '').toLowerCase().includes(maVatTuLower));
+    }
+
+    // Lọc theo Batch / Lô (nếu có)
+    if (batch) {
+      const batchLower = batch.toLowerCase();
+      tonData = tonData.filter(row => String(row['Batch'] || '').toLowerCase().includes(batchLower));
+    }
+
     // Sắp xếp theo mã vật tư
     tonData.sort((a, b) => String(a['Mã vật tư'] || '').localeCompare(String(b['Mã vật tư'] || ''), 'vi'));
 
@@ -2085,20 +2075,7 @@ async function openInventoryModal(target, maVatTu = '', batch = '') {
       'Tồn cuối (m)': row['Số lượng (m)'] || 0
     }));
 
-    allInventoryData = processedTon;
-
-    // Lọc theo mã vật tư / batch ban đầu nếu có
-    let displayTon = processedTon;
-    if (maVatTu) {
-      const maVatTuLower = maVatTu.toLowerCase();
-      displayTon = displayTon.filter(row => String(row['Mã vật tư'] || '').toLowerCase().includes(maVatTuLower));
-    }
-    if (batch) {
-      const batchLower = batch.toLowerCase();
-      displayTon = displayTon.filter(row => String(row['Batch'] || '').toLowerCase().includes(batchLower));
-    }
-
-    cachedInventoryData = displayTon;
+    cachedInventoryData = processedTon;
 
     // Lấy các cuộn ID hợp lệ đang nằm trong phiếu xuất hiện tại
     const currentFormRolls = [];
@@ -2396,54 +2373,7 @@ document.addEventListener('change', (e) => {
 // Inventory search
 document.addEventListener('input', (e) => {
   if (e.target && e.target.id === 'inventorySearchInput') {
-    const searchVal = e.target.value.trim();
-    renderInventoryFilterInfo();
-    if (searchVal) {
-      const s = searchVal.toLowerCase();
-      const sClean = s.replace(/[,.\s]/g, '');
-      const filtered = allInventoryData.filter(r => {
-        const maVt = String(r['Mã vật tư'] || '').toLowerCase();
-        const tenVt = String(r['Tên vật tư'] || '').toLowerCase();
-        const batch = String(r['Batch'] || '').toLowerCase();
-        const cuonId = String(r['Cuộn ID'] || '').toLowerCase();
-        const tonKgVal = r['Tồn cuối (Kg)'] !== undefined ? r['Tồn cuối (Kg)'] : (r['Số lượng (Kg)'] ?? '');
-        const tonKg = String(tonKgVal).toLowerCase();
-        const tonKgFormatted = (typeof formatNumber === 'function' ? formatNumber(tonKgVal) : '').toLowerCase();
-        const tonKgClean = tonKg.replace(/[,.\s]/g, '');
-
-        const tonMVal = r['Tồn cuối (m)'] !== undefined ? r['Tồn cuối (m)'] : (r['Số lượng (m)'] ?? '');
-        const tonM = String(tonMVal).toLowerCase();
-        const tonMFormatted = (typeof formatNumber === 'function' ? formatNumber(tonMVal) : '').toLowerCase();
-        const tonMClean = tonM.replace(/[,.\s]/g, '');
-
-        return maVt.includes(s) ||
-          tenVt.includes(s) ||
-          batch.includes(s) ||
-          cuonId.includes(s) ||
-          tonKg.includes(s) ||
-          tonKgFormatted.includes(s) ||
-          (sClean && tonKgClean.includes(sClean)) ||
-          tonM.includes(s) ||
-          tonMFormatted.includes(s) ||
-          (sClean && tonMClean.includes(sClean));
-      });
-      renderInventoryTable(filtered, '');
-    } else {
-      if (isInventoryFilterCleared) {
-        renderInventoryTable(allInventoryData || [], '');
-      } else {
-        let displayTon = allInventoryData || [];
-        if (currentMaVatTuFilter) {
-          const maVatTuLower = currentMaVatTuFilter.toLowerCase();
-          displayTon = displayTon.filter(row => String(row['Mã vật tư'] || '').toLowerCase().includes(maVatTuLower));
-        }
-        if (currentBatchFilter) {
-          const batchLower = currentBatchFilter.toLowerCase();
-          displayTon = displayTon.filter(row => String(row['Batch'] || '').toLowerCase().includes(batchLower));
-        }
-        renderInventoryTable(displayTon, '');
-      }
-    }
+    renderInventoryTable(cachedInventoryData || [], e.target.value);
   }
 });
 

@@ -20,22 +20,22 @@ function runTest(name, fn) {
 
 async function main() {
   console.log('===================================================================');
-  console.log(' KIỂM THỬ TÌM KIẾM TOÀN BỘ TỒN KHO TRONG MODAL CHỌN CUỘN (XG & TOLE)');
+  console.log(' KIỂM THỬ TÌM KIẾM THEO SỐ KG TRONG MÃ VT VÀ BATCH ĐÓ (XG & TOLE)');
   console.log('===================================================================\n');
 
-  // Test 1: Kiểm tra xg-xuat.js không còn ilike cứng theo maVatTu/batch khi truy vấn xg-nhap
-  runTest('xg-xuat.js không query ilike cứng mã vật tư / batch khi lấy danh sách tồn kho', () => {
+  // Test 1: Kiểm tra xg-xuat.js lọc theo maVatTu/batch của mục xuất khi truy vấn tồn kho
+  runTest('xg-xuat.js lọc đúng mã vật tư / batch khi lấy danh sách tồn kho', () => {
     const content = fs.readFileSync(path.join(__dirname, '../assets/js/xg/xg-xuat.js'), 'utf8');
-    assert.ok(!content.includes("query = query.ilike('Mã vật tư', `%${maVatTu}%`);"), 'Vẫn còn query.ilike Mã vật tư trong openInventoryModal của xg-xuat.js');
-    assert.ok(!content.includes("query = query.ilike('Batch', `%${batch}%`);"), 'Vẫn còn query.ilike Batch trong openInventoryModal của xg-xuat.js');
-    assert.ok(content.includes('allInventoryData'), 'Chưa khai báo hoặc lưu trữ allInventoryData trong xg-xuat.js');
+    assert.ok(content.includes("query.ilike('Mã vật tư', `%${maVatTu}%`)"), 'Thiếu query.ilike Mã vật tư trong openInventoryModal của xg-xuat.js');
+    assert.ok(content.includes("query.ilike('Batch', `%${batch}%`)"), 'Thiếu query.ilike Batch trong openInventoryModal của xg-xuat.js');
+    assert.ok(content.includes('cachedInventoryData'), 'Chưa khai báo hoặc lưu trữ cachedInventoryData trong xg-xuat.js');
   });
 
-  // Test 2: Kiểm tra xg-xuat.js hỗ trợ tìm kiếm trên toàn bộ kho và nút xóa lọc
-  runTest('xg-xuat.js hỗ trợ tìm kiếm toàn bộ kho và nút xóa lọc / xem tất cả', () => {
+  // Test 2: Kiểm tra xg-xuat.js tìm kiếm trên cachedInventoryData của mã VT và batch đó
+  runTest('xg-xuat.js tìm kiếm số kg và cuộn ID trong phạm vi mã vật tư và batch đó', () => {
     const content = fs.readFileSync(path.join(__dirname, '../assets/js/xg/xg-xuat.js'), 'utf8');
-    assert.ok(content.includes('btnClearInventoryFilter') || content.includes('resetInventoryFilter'), 'Thiếu xử lý nút xóa bộ lọc tồn kho trong xg-xuat.js');
-    assert.ok(content.includes('allInventoryData.filter'), 'Thiếu logic lọc trên allInventoryData khi tìm kiếm trong xg-xuat.js');
+    assert.ok(content.includes("renderInventoryTable(cachedInventoryData || [], e.target.value)"), 'Thiếu gọi renderInventoryTable trên cachedInventoryData khi tìm kiếm');
+    assert.ok(content.includes('tonKg') && content.includes('tonKgFormatted'), 'Thiếu logic so khớp số kg trong xg-xuat.js');
   });
 
   // Test 3: Kiểm tra xg-xuat.js tự động điền mã VT / tên VT / batch vào thẻ mặt hàng nếu đang trống
@@ -44,19 +44,19 @@ async function main() {
     assert.ok(content.includes('!item.maVatTu') && content.includes('item.maVatTu ='), 'Chưa có logic điền tự động maVatTu vào item trong xg-xuat.js');
   });
 
-  // Test 4: Kiểm tra tole-xuat.js không còn ilike cứng theo maVatTu/batch khi truy vấn tole-nhap
-  runTest('tole-xuat.js không query ilike cứng mã vật tư / batch khi lấy danh sách tồn kho', () => {
+  // Test 4: Kiểm tra tole-xuat.js lọc theo maVatTu/batch của mục xuất khi truy vấn tồn kho
+  runTest('tole-xuat.js lọc đúng mã vật tư / batch khi lấy danh sách tồn kho', () => {
     const content = fs.readFileSync(path.join(__dirname, '../assets/js/tole/tole-xuat.js'), 'utf8');
-    assert.ok(!content.includes("query = query.ilike('Mã vật tư', `%${maVatTu}%`);"), 'Vẫn còn query.ilike Mã vật tư trong openInventoryModal của tole-xuat.js');
-    assert.ok(!content.includes("query = query.ilike('Batch', `%${batch}%`);"), 'Vẫn còn query.ilike Batch trong openInventoryModal của tole-xuat.js');
-    assert.ok(content.includes('allInventoryData'), 'Chưa khai báo hoặc lưu trữ allInventoryData trong tole-xuat.js');
+    assert.ok(content.includes("query.ilike('Mã vật tư', `%${maVatTu}%`)"), 'Thiếu query.ilike Mã vật tư trong openInventoryModal của tole-xuat.js');
+    assert.ok(content.includes("query.ilike('Batch', `%${batch}%`)"), 'Thiếu query.ilike Batch trong openInventoryModal của tole-xuat.js');
+    assert.ok(content.includes('cachedInventoryData'), 'Chưa khai báo hoặc lưu trữ cachedInventoryData trong tole-xuat.js');
   });
 
-  // Test 5: Kiểm tra tole-xuat.js hỗ trợ tìm kiếm trên toàn bộ kho và nút xóa lọc
-  runTest('tole-xuat.js hỗ trợ tìm kiếm toàn bộ kho và nút xóa lọc / xem tất cả', () => {
+  // Test 5: Kiểm tra tole-xuat.js tìm kiếm trên cachedInventoryData của mã VT và batch đó
+  runTest('tole-xuat.js tìm kiếm số kg và cuộn ID trong phạm vi mã vật tư và batch đó', () => {
     const content = fs.readFileSync(path.join(__dirname, '../assets/js/tole/tole-xuat.js'), 'utf8');
-    assert.ok(content.includes('btnClearInventoryFilter') || content.includes('resetInventoryFilter'), 'Thiếu xử lý nút xóa bộ lọc tồn kho trong tole-xuat.js');
-    assert.ok(content.includes('allInventoryData.filter'), 'Thiếu logic lọc trên allInventoryData khi tìm kiếm trong tole-xuat.js');
+    assert.ok(content.includes("renderInventoryTable(cachedInventoryData || [], e.target.value)"), 'Thiếu gọi renderInventoryTable trên cachedInventoryData khi tìm kiếm');
+    assert.ok(content.includes('tonKg') && content.includes('tonKgFormatted'), 'Thiếu logic so khớp số kg trong tole-xuat.js');
   });
 
   // Test 6: Kiểm tra tole-xuat.js tự động điền mã VT / tên VT / batch vào thẻ mặt hàng nếu đang trống
