@@ -1477,12 +1477,12 @@ function populateFieldsFromOcr(data) {
 }
 
 /**
- * Tự động điền dữ liệu Thông tin chung phiếu xuất từ SAP MB51 (Xà Gồ)
- * Danh sách mặt hàng & cuộn xuất được chọn thủ công, không tự động điền.
+ * Tự động điền dữ liệu phiếu xuất từ SAP MB51 và tra cứu cuộn tồn kho cho từng mặt hàng (Xà Gồ)
  * @param {Object} headerInfo - { maChungTu, ngayXuat, phieuXuat, loaiXuat, maCongTrinh, tenCongTrinh }
+ * @param {Array} itemsGrouped - Array of { maVatTu, tenVatTu, batch, totalSapKg }
  */
-async function populateExportReceiptFromSap(headerInfo) {
-  if (!headerInfo) return;
+async function populateExportReceiptFromSap(headerInfo, itemsGrouped) {
+  if (!itemsGrouped || itemsGrouped.length === 0) return;
   const form = document.getElementById('addDataForm');
   if (!form) return;
 
@@ -1548,21 +1548,26 @@ async function populateExportReceiptFromSap(headerInfo) {
     }
   }
 
-  // 2. Danh sách mặt hàng & cuộn xuất: Giữ nguyên thẻ mặt hàng hiện tại hoặc khởi tạo thẻ trắng nếu rỗng
-  if (!multiItemsData || multiItemsData.length === 0) {
-    multiItemsData = [{
+  // 2. Khởi tạo danh sách mặt hàng
+  multiItemsData = itemsGrouped.map(item => {
+    const rawBatch = (item.batch || '').trim();
+    const rawTen = (item.tenVatTu || '').trim();
+    return {
       id: Math.random().toString(36).slice(2),
-      maVatTu: '',
-      tenVatTu: '',
-      batch: '',
+      maVatTu: item.maVatTu || '',
+      tenVatTu: rawTen,
+      batch: rawBatch,
+      sapKg: item.totalSapKg || 0,
       rolls: []
-    }];
-    window.multiItemsData = multiItemsData;
-    renderItemCards();
-  }
+    };
+  });
+  window.multiItemsData = multiItemsData;
+
+  renderItemCards();
+  document.querySelectorAll('.item-card').forEach(card => triggerAutofillHighlight(card));
 
   if (window.XgSapLookup && window.XgSapLookup.showAutofillToast) {
-    window.XgSapLookup.showAutofillToast(`✓ Đã điền thông tin chung phiếu xuất: ${headerInfo.phieuXuat || ''}`);
+    window.XgSapLookup.showAutofillToast(`✓ Đã điền thông tin phiếu xuất: ${multiItemsData.length} mặt hàng. Vui lòng bấm "+ Chọn cuộn từ kho" để chọn cuộn xuất.`);
   }
 }
 

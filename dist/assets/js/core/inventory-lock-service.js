@@ -182,15 +182,24 @@
         }
 
         this.activeLocks.clear();
+        this.myLockedRolls.clear();
+        const currentUser = (typeof localStorage !== 'undefined' && localStorage.getItem('currentUser')) || this.currentUser || 'anonymous';
+        const cleanCurrentUser = String(currentUser).trim().toLowerCase();
+
         if (locksData && Array.isArray(locksData)) {
           locksData.forEach(item => {
             const cid = String(item.cuon_id || '').trim();
             if (cid) {
-              this.activeLocks.set(cid.toLowerCase(), {
+              const key = cid.toLowerCase();
+              this.activeLocks.set(key, {
                 cuonId: cid,
                 lockedBy: item.locked_by,
                 expiresAt: new Date(item.expires_at).getTime()
               });
+              // Đồng bộ các khóa thuộc về chính user hiện tại vào myLockedRolls
+              if (cleanCurrentUser && String(item.locked_by || '').trim().toLowerCase() === cleanCurrentUser) {
+                this.myLockedRolls.add(key);
+              }
             }
           });
         }
@@ -424,9 +433,12 @@
         return { isLocked: false, lockedBy: '', isMe: false, remainingSeconds: 0 };
       }
 
-      // Cuộn này là isMe khi chính tab/phiên này đang giữ khóa
-      // Nếu là tab khác hoặc thiết bị khác (dù cùng hay khác tài khoản) đều coi là người khác đang giữ
-      const isMe = this.myLockedRolls.has(key);
+      const currentUser = (typeof localStorage !== 'undefined' && localStorage.getItem('currentUser')) || this.currentUser || 'anonymous';
+      const cleanCurrentUser = String(currentUser).trim().toLowerCase();
+      const cleanLockedBy = String(lock.lockedBy || '').trim().toLowerCase();
+
+      // Cuộn này là isMe khi do chính user này đang giữ khóa (trong tab hiện tại hoặc cùng tài khoản đăng nhập)
+      const isMe = this.myLockedRolls.has(key) || (cleanCurrentUser && cleanLockedBy && cleanCurrentUser === cleanLockedBy);
       const remainingSeconds = Math.max(0, Math.floor((lock.expiresAt - Date.now()) / 1000));
 
       return {

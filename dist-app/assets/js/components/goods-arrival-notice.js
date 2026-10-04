@@ -68,6 +68,29 @@
     return 'Hàng về kho';
   }
 
+  function formatArrivalItemLabel(row, typeKey) {
+    if (typeKey === 'TOLE') {
+      // Đối với Tole: Mã vật tư + Tên vật tư + Batch: Số lượng
+      const ma = String(row['Mã vật tư'] || '').trim();
+      const ten = String(row['Tên vật tư'] || '').trim();
+      const batch = String(row['Batch'] || '').trim();
+      const parts = [ma, ten, batch].filter(Boolean);
+      return parts.length > 0 ? parts.join(' - ') : 'Vật tư khác';
+    } else {
+      // Đối với xà gồ: Mã vật tư + Batch: Số lượng
+      const ma = String(row['Mã vật tư'] || '').trim();
+      const batch = String(row['Batch'] || '').trim();
+      if (ma && batch) {
+        return `${ma} - ${batch}`;
+      } else if (ma) {
+        return ma;
+      } else if (batch) {
+        return batch;
+      }
+      return String(row['Tên vật tư'] || 'Vật tư khác').trim();
+    }
+  }
+
   function groupArrivalData(rows) {
     const typeMap = {
       XG: new Map(),
@@ -81,7 +104,7 @@
       let proj = String(row['Tên công trình'] || '').trim();
       if (!proj) proj = 'Tồn trơn';
 
-      let mat = String(row['Tên vật tư'] || row['Mã vật tư'] || 'Vật tư khác').trim();
+      let mat = formatArrivalItemLabel(row, typeKey);
       let kg = parseNumeric(row['Số lượng (Kg)']);
 
       const projectMap = typeMap[typeKey];
@@ -713,6 +736,7 @@
     generateArrivalTitle,
     groupArrivalData,
     formatAnnouncementContent,
+    formatArrivalItemLabel,
     parseNumeric,
     open,
     loadArrivalData
