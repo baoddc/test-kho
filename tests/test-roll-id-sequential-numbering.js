@@ -7,10 +7,14 @@ function runTests() {
   console.log(' KIỂM THỬ THUẬT TOÁN ĐÁNH SỐ CUỘN ID KẾ TIẾP (MAX + 1)');
   console.log('===============================================================');
 
-  // Đọc mã nguồn xg-nhap.js để kiểm tra tính sẵn sàng của hàm
+  // Đọc mã nguồn xg-nhap.js và tole-nhap.js để kiểm tra tính sẵn sàng của hàm
   const xgNhapCode = fs.readFileSync(path.join(__dirname, '../assets/js/xg/xg-nhap.js'), 'utf8');
   assert.ok(xgNhapCode.includes('function extractRollIndex'), 'xg-nhap.js phải định nghĩa extractRollIndex');
   assert.ok(xgNhapCode.includes('function getNextRollNumber'), 'xg-nhap.js phải định nghĩa getNextRollNumber');
+
+  const toleNhapCode = fs.readFileSync(path.join(__dirname, '../assets/js/tole/tole-nhap.js'), 'utf8');
+  assert.ok(toleNhapCode.includes('function extractRollIndex'), 'tole-nhap.js phải định nghĩa extractRollIndex');
+  assert.ok(toleNhapCode.includes('function getNextRollNumber'), 'tole-nhap.js phải định nghĩa getNextRollNumber');
 
   // Kiểm thử logic thuật toán
   const extractMatch = xgNhapCode.match(/function extractRollIndex\([\s\S]*?\n\}/);
