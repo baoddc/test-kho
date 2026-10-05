@@ -26,7 +26,7 @@
 - Consumes: `extractRollIndex(cuonId)` và `getNextRollNumber(maVatTu, rawData, excludeRowId, extraCuonIds)`.
 - Produces: Test suite Node.js kiểm thử độc lập logic trích xuất và tính số cuộn.
 
-- [ ] **Step 1: Viết bài test kiểm thử thất bại (Failing Test)**
+- [x] **Step 1: Viết bài test kiểm thử thất bại (Failing Test)**
 
 Tạo file `tests/test-roll-id-sequential-numbering.js`:
 ```javascript
@@ -109,12 +109,12 @@ function runTests() {
 runTests();
 ```
 
-- [ ] **Step 2: Chạy bài test để xác nhận test thất bại (Failing)**
+- [x] **Step 2: Chạy bài test để xác nhận test thất bại (Failing)**
 
 Run: `node tests/test-roll-id-sequential-numbering.js`
 Expected: FAIL với thông báo `xg-nhap.js phải định nghĩa extractRollIndex`.
 
-- [ ] **Step 3: Commit file test**
+- [x] **Step 3: Commit file test**
 
 ```bash
 git add tests/test-roll-id-sequential-numbering.js
@@ -131,7 +131,7 @@ git commit -m "test: add unit test for roll ID sequential numbering logic"
 **Interfaces:**
 - Produces: `extractRollIndex(cuonId)`, `getNextRollNumber(maVatTu, rawData, excludeRowId, extraCuonIds)`, cập nhật `updateRollCuonIds()` và `updateEditRollCuonIds()`.
 
-- [ ] **Step 1: Cập nhật `assets/js/xg/xg-nhap.js`**
+- [x] **Step 1: Cập nhật `assets/js/xg/xg-nhap.js`**
 
 Thêm các hàm `extractRollIndex` và `getNextRollNumber`, đồng thời nâng cấp `updateRollCuonIds()` và `updateEditRollCuonIds()`:
 ```javascript
@@ -231,12 +231,12 @@ function updateEditRollCuonIds() {
 }
 ```
 
-- [ ] **Step 2: Chạy bài test xác nhận Task 1 vượt qua (PASS)**
+- [x] **Step 2: Chạy bài test xác nhận Task 1 vượt qua (PASS)**
 
 Run: `node tests/test-roll-id-sequential-numbering.js`
 Expected: PASS cả 6 trường hợp kiểm thử.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add assets/js/xg/xg-nhap.js
@@ -253,17 +253,17 @@ git commit -m "feat(xg-nhap): implement sequential roll ID numbering based on ma
 **Interfaces:**
 - Produces: Cập nhật hàm `extractRollIndex`, `getNextRollNumber`, `updateRollCuonIds` và `updateEditRollCuonIds` trong `tole-nhap.js`.
 
-- [ ] **Step 1: Cập nhật `assets/js/tole/tole-nhap.js`**
+- [x] **Step 1: Cập nhật `assets/js/tole/tole-nhap.js`**
 
 Tích hợp `extractRollIndex`, `getNextRollNumber`, `updateRollCuonIds` và `updateEditRollCuonIds` tương ứng với logic chuẩn đã hoàn thiện ở Task 2.
 
-- [ ] **Step 2: Bổ sung assertion kiểm tra `tole-nhap.js` vào file test**
+- [x] **Step 2: Bổ sung assertion kiểm tra `tole-nhap.js` vào file test**
 
 Cập nhật `tests/test-roll-id-sequential-numbering.js` để kiểm tra cả `tole-nhap.js` có chứa `extractRollIndex` và `getNextRollNumber`.
 Run: `node tests/test-roll-id-sequential-numbering.js`
 Expected: PASS 100%.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add assets/js/tole/tole-nhap.js tests/test-roll-id-sequential-numbering.js
@@ -278,16 +278,16 @@ git commit -m "feat(tole-nhap): implement sequential roll ID numbering based on 
 - Verify: `assets/js/xg/xg-xuat.js`, `assets/js/tole/tole-xuat.js`
 - Sync: `scripts/sync-dist.js` (đồng bộ sang `dist/`, `dist-app/`, `public/`)
 
-- [ ] **Step 1: Kiểm tra `xg-xuat.js` và `tole-xuat.js`**
+- [x] **Step 1: Kiểm tra `xg-xuat.js` và `tole-xuat.js`**
 
 Đảm bảo hai file không tự ý sinh mã Cuộn ID mà kế thừa chính xác Cuộn ID đã có từ `inventoryRollsModal`.
 
-- [ ] **Step 2: Chạy script đồng bộ phân phối**
+- [x] **Step 2: Chạy script đồng bộ phân phối**
 
 Run: `node scripts/sync-dist.js`
 Expected: Hoàn thành sync toàn bộ từ `assets/` và `pages/` sang `dist/`, `dist-app/`, `public/`.
 
-- [ ] **Step 3: Chạy toàn bộ các bài test liên quan**
+- [x] **Step 3: Chạy toàn bộ các bài test liên quan**
 
 Run:
 ```bash
@@ -297,7 +297,7 @@ node tests/in-tem-cuon.test.js
 ```
 Expected: Tất cả bài test đều PASS.
 
-- [ ] **Step 4: Commit và hoàn thành**
+- [x] **Step 4: Commit và hoàn thành**
 
 ```bash
 git add dist/ dist-app/ public/
