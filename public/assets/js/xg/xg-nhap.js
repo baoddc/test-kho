@@ -1324,6 +1324,42 @@ function openDeleteDataModal() {
    ROLL MANAGEMENT
 ================================================================================ */
 
+function extractRollIndex(cuonId) {
+  if (!cuonId || typeof cuonId !== 'string') return null;
+  const match = cuonId.match(/(?:Cuộn|cuon)\s*(\d+)/i);
+  return match ? parseInt(match[1], 10) : null;
+}
+
+function getNextRollNumber(maVatTu, rawData = [], excludeRowId = null, extraCuonIds = []) {
+  if (!maVatTu) return 0;
+  const cleanMa = String(maVatTu).trim().toLowerCase();
+  const existingNumbers = [];
+
+  if (Array.isArray(rawData)) {
+    rawData.forEach(row => {
+      if (excludeRowId && String(row['id']) === String(excludeRowId)) return;
+      if (String(row['Mã vật tư'] || '').trim().toLowerCase() === cleanMa) {
+        const num = extractRollIndex(row['Cuộn ID']);
+        if (num !== null && !isNaN(num)) {
+          existingNumbers.push(num);
+        }
+      }
+    });
+  }
+
+  if (Array.isArray(extraCuonIds)) {
+    extraCuonIds.forEach(cid => {
+      const num = extractRollIndex(cid);
+      if (num !== null && !isNaN(num)) {
+        existingNumbers.push(num);
+      }
+    });
+  }
+
+  if (existingNumbers.length === 0) return 0;
+  return Math.max(...existingNumbers) + 1;
+}
+
 function updateRollCuonIds() {
   const maVatTuInput = document.querySelector('#addDataCommonFields input[name="col_5"]');
   if (!maVatTuInput) return;
@@ -1333,14 +1369,12 @@ function updateRollCuonIds() {
     return;
   }
 
-  const existingCount = (window._rawSupabaseData || []).filter(row => 
-    String(row['Mã vật tư'] || '').trim().toLowerCase() === maVatTu.toLowerCase()
-  ).length;
+  const startNum = getNextRollNumber(maVatTu, window._rawSupabaseData || []);
 
   document.querySelectorAll('#rollsTableBody tr').forEach((row, index) => {
     const cuonIdInput = row.querySelector('.roll-cuon-id');
     if (cuonIdInput) {
-      cuonIdInput.value = `${maVatTu} - Cuộn ${existingCount + index}`;
+      cuonIdInput.value = `${maVatTu} - Cuộn ${startNum + index}`;
     }
   });
 }
@@ -1355,16 +1389,32 @@ function updateEditRollCuonIds() {
   }
 
   const rowId = document.querySelector('#editDataCommonFields input[name="row_id"]')?.value;
-  const existingCount = (window._rawSupabaseData || []).filter(row => 
-    String(row['Mã vật tư'] || '').trim().toLowerCase() === maVatTu.toLowerCase() &&
-    String(row['id']) !== String(rowId)
-  ).length;
+  const rows = Array.from(document.querySelectorAll('#editRollsTableBody tr'));
+  if (rows.length === 0) return;
 
-  document.querySelectorAll('#editRollsTableBody tr').forEach((row, index) => {
-    const cuonIdInput = row.querySelector('.edit-roll-cuon-id');
-    if (cuonIdInput) {
-      cuonIdInput.value = `${maVatTu} - Cuộn ${existingCount + index}`;
+  // Thu thập các Cuộn ID đã có sẵn trong modal (dòng đầu tiên là dòng gốc)
+  const existingModalCuonIds = [];
+  rows.forEach((row, idx) => {
+    const inp = row.querySelector('.edit-roll-cuon-id');
+    const val = inp ? inp.value.trim() : '';
+    if (idx === 0 && val) {
+      existingModalCuonIds.push(val);
     }
+  });
+
+  let nextNum = getNextRollNumber(maVatTu, window._rawSupabaseData || [], rowId, existingModalCuonIds);
+
+  rows.forEach((row, index) => {
+    const cuonIdInput = row.querySelector('.edit-roll-cuon-id');
+    if (!cuonIdInput) return;
+    
+    // Nếu là dòng đầu tiên và đã có giá trị gốc hợp lệ thì không ghi đè
+    if (index === 0 && cuonIdInput.value.trim()) {
+      return;
+    }
+
+    cuonIdInput.value = `${maVatTu} - Cuộn ${nextNum}`;
+    nextNum++;
   });
 }
 
