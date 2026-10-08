@@ -834,12 +834,14 @@ function processDataAndCreateCharts() {
   const loaiNhapColIndex = findLoaiNhapColIndex(importHeaders);
   const loaiXuatColIndex = findLoaiNhapColIndex(exportHeaders);
 
-  // Dynamic indexes for material code, material name and workshop
+  // Dynamic indexes for material code, material name, batch and workshop
   const importMaColIndex = findColIndex(importHeaders, ['mã vật tư', 'ma vat tu', 'mã hàng', 'ma hang']);
   const importTenColIndex = findColIndex(importHeaders, ['tên vật tư', 'ten vat tu', 'tên hàng', 'ten hang']);
+  const importBatchColIndex = findColIndex(importHeaders, ['batch', 'lô', 'lo']) !== -1 ? findColIndex(importHeaders, ['batch', 'lô', 'lo']) : 7;
   
   const exportMaColIndex = findColIndex(exportHeaders, ['mã vật tư', 'ma vat tu', 'mã hàng', 'ma hang']);
   const exportTenColIndex = findColIndex(exportHeaders, ['tên vật tư', 'ten vat tu', 'tên hàng', 'ten hang']);
+  const exportBatchColIndex = findColIndex(exportHeaders, ['batch', 'lô', 'lo']) !== -1 ? findColIndex(exportHeaders, ['batch', 'lô', 'lo']) : 7;
   const exportXuongColIndex = findColIndex(exportHeaders, ['tên công trình', 'ten cong trinh', 'đối tác', 'nơi nhận', 'ncc']);
 
   // Reset import by type
@@ -902,19 +904,31 @@ function processDataAndCreateCharts() {
       importByType.congTrinh += quantity;
     }
 
-    // Material volume (SUMIF by Mã vật tư - Tên vật tư)
+    // Material volume (SUMIF by Mã vật tư + Batch)
     const ma = importMaColIndex !== -1 ? String(row[importMaColIndex] || '').trim() : '';
     const ten = importTenColIndex !== -1 ? String(row[importTenColIndex] || '').trim() : '';
-    
+    const rawBatch = importBatchColIndex !== -1 ? String(row[importBatchColIndex] || '').trim() : '';
+    const hasBatch = rawBatch && rawBatch !== '-' && rawBatch.toLowerCase() !== 'không batch' && rawBatch.toLowerCase() !== 'khong batch';
+
     let key = '';
-    if (ma && ten && ma !== ten) {
-      key = `${ma} - ${ten}`;
+    if (ma && hasBatch) {
+      key = `${ma} (${rawBatch})`;
+    } else if (ma) {
+      key = ma;
+    } else if (hasBatch) {
+      key = `Batch: ${rawBatch}`;
     } else {
-      key = ma || ten;
+      key = ten || '(Không xác định)';
     }
 
     if (key) {
-      importMaterialVolumes[key] = (importMaterialVolumes[key] || 0) + quantity;
+      if (!importMaterialVolumes[key]) {
+        importMaterialVolumes[key] = { qty: 0, ma, batch: rawBatch, ten };
+      }
+      importMaterialVolumes[key].qty += quantity;
+      if (ten && !importMaterialVolumes[key].ten) {
+        importMaterialVolumes[key].ten = ten;
+      }
     }
   }
 
@@ -956,19 +970,31 @@ function processDataAndCreateCharts() {
       exportByType.congTrinh += quantity;
     }
 
-    // Material volume (SUMIF by Mã vật tư - Tên vật tư)
+    // Material volume (SUMIF by Mã vật tư + Batch)
     const ma = exportMaColIndex !== -1 ? String(row[exportMaColIndex] || '').trim() : '';
     const ten = exportTenColIndex !== -1 ? String(row[exportTenColIndex] || '').trim() : '';
+    const rawBatch = exportBatchColIndex !== -1 ? String(row[exportBatchColIndex] || '').trim() : '';
+    const hasBatch = rawBatch && rawBatch !== '-' && rawBatch.toLowerCase() !== 'không batch' && rawBatch.toLowerCase() !== 'khong batch';
 
     let key = '';
-    if (ma && ten && ma !== ten) {
-      key = `${ma} - ${ten}`;
+    if (ma && hasBatch) {
+      key = `${ma} (${rawBatch})`;
+    } else if (ma) {
+      key = ma;
+    } else if (hasBatch) {
+      key = `Batch: ${rawBatch}`;
     } else {
-      key = ma || ten;
+      key = ten || '(Không xác định)';
     }
 
     if (key) {
-      exportMaterialVolumes[key] = (exportMaterialVolumes[key] || 0) + quantity;
+      if (!exportMaterialVolumes[key]) {
+        exportMaterialVolumes[key] = { qty: 0, ma, batch: rawBatch, ten };
+      }
+      exportMaterialVolumes[key].qty += quantity;
+      if (ten && !exportMaterialVolumes[key].ten) {
+        exportMaterialVolumes[key].ten = ten;
+      }
     }
 
     // Workshop volume
@@ -1540,12 +1566,14 @@ function createImportMaterialChart(materialVolumes) {
     importMaterialChart.destroy();
   }
 
+  const getVolume = (val) => (typeof val === 'object' && val !== null ? (val.qty || 0) : Number(val || 0));
+
   const sortedMaterials = Object.keys(materialVolumes)
-    .sort((a, b) => materialVolumes[b] - materialVolumes[a])
+    .sort((a, b) => getVolume(materialVolumes[b]) - getVolume(materialVolumes[a]))
     .slice(0, 10);
 
   const labels = sortedMaterials;
-  const data = sortedMaterials.map(m => materialVolumes[m]);
+  const data = sortedMaterials.map(m => getVolume(materialVolumes[m]));
 
   importMaterialChart = new Chart(ctx, {
     type: 'bar',
@@ -1571,6 +1599,15 @@ function createImportMaterialChart(materialVolumes) {
         tooltip: {
           backgroundColor: getChartThemeColors().tooltipBg,
           callbacks: {
+            title: function (items) {
+              if (!items || items.length === 0) return '';
+              const key = items[0].label;
+              const itemInfo = typeof materialVolumes[key] === 'object' ? materialVolumes[key] : null;
+              if (itemInfo && itemInfo.ten) {
+                return `${key}\n${itemInfo.ten}`;
+              }
+              return key;
+            },
             label: function (context) {
               return context.dataset.label + ': ' + formatNumber(context.raw) + ' kg';
             }
@@ -1610,12 +1647,14 @@ function createExportMaterialChart(materialVolumes) {
     exportMaterialChart.destroy();
   }
 
+  const getVolume = (val) => (typeof val === 'object' && val !== null ? (val.qty || 0) : Number(val || 0));
+
   const sortedMaterials = Object.keys(materialVolumes)
-    .sort((a, b) => materialVolumes[b] - materialVolumes[a])
+    .sort((a, b) => getVolume(materialVolumes[b]) - getVolume(materialVolumes[a]))
     .slice(0, 10);
 
   const labels = sortedMaterials;
-  const data = sortedMaterials.map(m => materialVolumes[m]);
+  const data = sortedMaterials.map(m => getVolume(materialVolumes[m]));
 
   exportMaterialChart = new Chart(ctx, {
     type: 'bar',
@@ -1641,6 +1680,15 @@ function createExportMaterialChart(materialVolumes) {
         tooltip: {
           backgroundColor: getChartThemeColors().tooltipBg,
           callbacks: {
+            title: function (items) {
+              if (!items || items.length === 0) return '';
+              const key = items[0].label;
+              const itemInfo = typeof materialVolumes[key] === 'object' ? materialVolumes[key] : null;
+              if (itemInfo && itemInfo.ten) {
+                return `${key}\n${itemInfo.ten}`;
+              }
+              return key;
+            },
             label: function (context) {
               return context.dataset.label + ': ' + formatNumber(context.raw) + ' kg';
             }
