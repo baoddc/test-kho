@@ -8,9 +8,9 @@ function formatMaterialKey(ma, batch, ten) {
   const cleanTen = (ten || '').trim();
   const hasBatch = cleanBatch && cleanBatch !== '-' && cleanBatch.toLowerCase() !== 'không batch' && cleanBatch.toLowerCase() !== 'khong batch';
 
-  if (cleanMa && hasBatch) return `${cleanMa} (${cleanBatch})`;
+  if (cleanMa && hasBatch) return `${cleanMa} - ${cleanBatch}`;
   if (cleanMa) return cleanMa;
-  if (hasBatch) return `Batch: ${cleanBatch}`;
+  if (hasBatch) return cleanBatch;
   return cleanTen || '(Không xác định)';
 }
 
@@ -47,9 +47,9 @@ const sampleRows = [
 
 const aggregated = aggregateMaterialVolumes(sampleRows, 'ma', 'batch', 'ten', 'qty');
 
-assert.strictEqual(aggregated['10001189 (1.5X348VN)'].qty, 150, 'Batch 1.5X348VN must sum to 150');
-assert.strictEqual(aggregated['10001189 (1.5X145VN)'].qty, 80, 'Batch 1.5X145VN must sum to 80');
+assert.strictEqual(aggregated['10001189 - 1.5X348VN'].qty, 150, 'Batch 1.5X348VN must sum to 150');
+assert.strictEqual(aggregated['10001189 - 1.5X145VN'].qty, 80, 'Batch 1.5X145VN must sum to 80');
 assert.strictEqual(aggregated['B1.016216'].qty, 250, 'Empty batch and "Không batch" must merge under mã VT B1.016216');
-assert.strictEqual(aggregated['B1.142451 (VN)'].qty, 300, 'Batch VN must format as B1.142451 (VN)');
+assert.strictEqual(aggregated['B1.142451 - VN'].qty, 300, 'Batch VN must format as B1.142451 - VN');
 
 console.log('[PASS] All Top 10 batch aggregation unit tests passed!');

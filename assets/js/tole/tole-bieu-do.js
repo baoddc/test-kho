@@ -959,11 +959,11 @@ function processDataAndCreateCharts() {
 
     let key = '';
     if (ma && hasBatch) {
-      key = `${ma} (${rawBatch})`;
+      key = `${ma} - ${rawBatch}`;
     } else if (ma) {
       key = ma;
     } else if (hasBatch) {
-      key = `Batch: ${rawBatch}`;
+      key = rawBatch;
     } else {
       key = ten || '(Không xác định)';
     }
@@ -1025,11 +1025,11 @@ function processDataAndCreateCharts() {
 
     let key = '';
     if (ma && hasBatch) {
-      key = `${ma} (${rawBatch})`;
+      key = `${ma} - ${rawBatch}`;
     } else if (ma) {
       key = ma;
     } else if (hasBatch) {
-      key = `Batch: ${rawBatch}`;
+      key = rawBatch;
     } else {
       key = ten || '(Không xác định)';
     }
