@@ -870,14 +870,25 @@ function processDataAndCreateCharts() {
   const loaiNhapColIndex = findLoaiNhapColIndex(importHeaders);
   const loaiXuatColIndex = findLoaiXuatColIndex(exportHeaders);
 
+  // Helper riêng tìm cột Batch (tránh cleanText('lo') bị khớp nhầm vào 'Loại nhập' / 'Loại xuất')
+  const findBatchColIndex = (headers) => {
+    for (let i = 0; i < headers.length; i++) {
+      const h = cleanText(headers[i]);
+      if (h === 'batch' || h === 'lo' || h.includes('batch') || h.includes('so lo') || h.includes('lo sx') || h.split(/\s+/).includes('lo')) {
+        return i;
+      }
+    }
+    return 7;
+  };
+
   // Dynamic indexes for material code, material name, batch and workshop
   const importMaColIndex = findColIndex(importHeaders, ['mã vật tư', 'ma vat tu', 'mã hàng', 'ma hang']);
   const importTenColIndex = findColIndex(importHeaders, ['tên vật tư', 'ten vat tu', 'tên hàng', 'ten hang']);
-  const importBatchColIndex = findColIndex(importHeaders, ['batch', 'lô', 'lo']) !== -1 ? findColIndex(importHeaders, ['batch', 'lô', 'lo']) : 7;
+  const importBatchColIndex = findBatchColIndex(importHeaders);
   
   const exportMaColIndex = findColIndex(exportHeaders, ['mã vật tư', 'ma vat tu', 'mã hàng', 'ma hang']);
   const exportTenColIndex = findColIndex(exportHeaders, ['tên vật tư', 'ten vat tu', 'tên hàng', 'ten hang']);
-  const exportBatchColIndex = findColIndex(exportHeaders, ['batch', 'lô', 'lo']) !== -1 ? findColIndex(exportHeaders, ['batch', 'lô', 'lo']) : 7;
+  const exportBatchColIndex = findBatchColIndex(exportHeaders);
   const exportXuongColIndex = findColIndex(exportHeaders, ['tên công trình', 'ten cong trinh', 'đối tác', 'nơi nhận', 'ncc']);
 
   // Reset import by type
