@@ -327,7 +327,42 @@ window.addEventListener('load', () => {
 
   loadSupabaseData();
   initReceiptOcrHandlers();
+  checkPendingReceiptHandover();
 });
+
+function checkPendingReceiptHandover() {
+  const raw = sessionStorage.getItem('pending_receipt_handover');
+  if (!raw) return;
+  sessionStorage.removeItem('pending_receipt_handover');
+
+  try {
+    const handover = JSON.parse(raw);
+    if (!handover || !handover.data) return;
+    if (Date.now() - (handover.timestamp || 0) > 10 * 60 * 1000) return; // Quá hạn 10 phút
+
+    setTimeout(() => {
+      openAddDataModal();
+      populateFieldsFromOcr(handover.data);
+
+      const previewContainer = document.getElementById('ocrPreviewContainer');
+      const previewThumb = document.getElementById('ocrPreviewThumb');
+      const fileNameText = document.getElementById('ocrFileNameText');
+      const dropzoneContent = document.querySelector('.ocr-dropzone-content');
+
+      if (previewContainer && previewThumb && handover.previewDataUrl) {
+        previewThumb.src = handover.previewDataUrl;
+        if (fileNameText) fileNameText.textContent = handover.fileName || 'Ảnh phiếu chuyển từ kho Tole';
+        if (dropzoneContent) dropzoneContent.style.display = 'none';
+        previewContainer.style.display = 'flex';
+      }
+
+      const toastFn = (window.XgSapLookup && window.XgSapLookup.showAutofillToast) || ((msg) => console.log(msg));
+      toastFn(`✓ Đã nhận và điền dữ liệu phiếu ${handover.data.phieuXuat || ''} chuyển từ Kho Tole!`);
+    }, 350);
+  } catch (err) {
+    console.warn('[xg-xuat] Lỗi tiếp nhận phiếu xuất bàn giao:', err);
+  }
+}
 
 
 /* =============================================================================
@@ -1581,6 +1616,87 @@ window.renderItemCards = renderItemCards;
 window.updateMultiItemTotals = updateMultiItemTotals;
 
 
+function showReceiptMismatchWarehouseModal(classification, scannedData, file, label, previewUrl) {
+  let modalEl = document.getElementById('receiptWarehouseMismatchModal');
+  if (!modalEl) {
+    modalEl = document.createElement('div');
+    modalEl.id = 'receiptWarehouseMismatchModal';
+    modalEl.className = 'modal fade';
+    modalEl.tabIndex = -1;
+    modalEl.setAttribute('aria-hidden', 'true');
+    modalEl.setAttribute('data-bs-backdrop', 'static');
+    modalEl.style.zIndex = '10090';
+    document.body.appendChild(modalEl);
+  }
+
+  const safeEscape = (str) => String(str || '').replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
+  const docNo = scannedData?.phieuXuat || 'Chưa rõ số phiếu';
+  const targetLabel = classification.targetLabel || 'Kho Tole - Xuất';
+  const reasonText = classification.reason || 'Dữ liệu nhận diện thuộc phân hệ Tole';
+
+  modalEl.innerHTML = `
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 580px;">
+      <div class="modal-content shadow-lg border-0" style="border-radius: 16px; overflow: hidden; background: #1e2438; color: #f8fafc; border: 1px solid rgba(255, 255, 255, 0.15) !important;">
+        <div class="modal-header py-3 px-4" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;">
+          <div class="d-flex align-items-center gap-2">
+            <span class="d-inline-flex align-items-center justify-content-center bg-white text-warning rounded-circle shadow-sm" style="width: 36px; height: 36px; font-size: 1.25rem;">
+              <i class="bi bi-exclamation-triangle-fill"></i>
+            </span>
+            <div>
+              <h5 class="modal-title fw-bold mb-0 text-white">PHÁT HIỆN PHIẾU XUẤT THUỘC ${safeEscape(targetLabel.toUpperCase())}</h5>
+              <small class="text-white-50">Số phiếu: <strong class="text-white">${safeEscape(docNo)}</strong></small>
+            </div>
+          </div>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body p-4 text-center">
+          <div class="p-3 rounded-3 mb-3" style="background: rgba(245, 158, 11, 0.12); border: 1px dashed #f59e0b; color: #f8fafc; text-align: left;">
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <i class="bi bi-info-circle-fill text-warning fs-5"></i>
+              <strong class="text-white">Căn cứ phân loại:</strong>
+              <span class="badge bg-warning text-dark">${safeEscape(reasonText)}</span>
+            </div>
+            <div class="small text-white-50">
+              Bạn đang ở màn hình <strong>Kho Xà Gồ - Xuất</strong>. Hệ thống tự động ngăn chặn việc điền phiếu Tole vào Kho Xà Gồ để đảm bảo tính chính xác của dữ liệu tồn kho.
+            </div>
+          </div>
+          <p class="mb-0 text-white-50 small">Bạn có muốn chuyển sang màn hình <strong>${safeEscape(targetLabel)}</strong> và tự động điền toàn bộ dữ liệu phiếu này không?</p>
+        </div>
+
+        <div class="modal-footer justify-content-center gap-2 py-3 px-4" style="background: #1e2438 !important; border-top: 1px solid rgba(255, 255, 255, 0.15) !important;">
+          <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Ở lại trang này</button>
+          <button type="button" class="btn btn-primary px-4 fw-bold shadow" id="btnConfirmSwitchWarehouse">
+            <i class="bi bi-box-arrow-up-right me-1"></i> Chuyển sang ${safeEscape(targetLabel)} &amp; Điền ngay
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const bsModal = typeof bootstrap !== 'undefined' && bootstrap.Modal
+    ? bootstrap.Modal.getOrCreateInstance(modalEl)
+    : null;
+
+  const btnSwitch = modalEl.querySelector('#btnConfirmSwitchWarehouse');
+  if (btnSwitch) {
+    btnSwitch.onclick = () => {
+      if (bsModal) bsModal.hide();
+      const handoverPayload = {
+        data: scannedData,
+        previewDataUrl: previewUrl || '',
+        fileName: label || file?.name || 'Ảnh phiếu xuất kho',
+        fromWarehouse: 'xg',
+        timestamp: Date.now()
+      };
+      sessionStorage.setItem('pending_receipt_handover', JSON.stringify(handoverPayload));
+      window.location.href = classification.targetPageUrl;
+    };
+  }
+
+  if (bsModal) bsModal.show();
+}
+
 async function handleReceiptImageProcess(file, label = '') {
   if (!file) return;
   if (!file.type.startsWith('image/')) {
@@ -1613,12 +1729,23 @@ async function handleReceiptImageProcess(file, label = '') {
       throw new Error(result.error || 'Quét ảnh thất bại');
     }
 
-    // Điền dữ liệu vào form
+    const previewUrl = result.dataUrl || URL.createObjectURL(file);
+
+    // Phân loại phiếu xuất Xà Gồ hay Tole
+    if (window.ReceiptOcrService && typeof window.ReceiptOcrService.classifyReceipt === 'function') {
+      const classification = await window.ReceiptOcrService.classifyReceipt(result.data, 'xg');
+      if (!classification.isMatchCurrent && classification.targetWarehouse === 'tole') {
+        showReceiptMismatchWarehouseModal(classification, result.data, file, label, previewUrl);
+        return;
+      }
+    }
+
+    // Điền dữ liệu vào form nếu hợp lệ cho Kho Xà Gồ
     populateFieldsFromOcr(result.data);
 
     // Hiển thị preview
     if (previewContainer && previewThumb) {
-      previewThumb.src = result.dataUrl || URL.createObjectURL(file);
+      previewThumb.src = previewUrl;
       if (fileNameText) {
         fileNameText.textContent = label || file.name || 'Ảnh phiếu xuất kho';
       }

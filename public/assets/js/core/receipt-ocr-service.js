@@ -400,6 +400,95 @@ Format JSON mong đợi:
       const listRes = await fetch(listUrl);
       if (!listRes.ok) throw new Error(`API Key không hợp lệ (HTTP ${listRes.status})`);
       return { success: true };
+    },
+
+    /**
+     * Tự động nhận diện và phân loại phiếu xuất kho thuộc Xà Gồ hay Tole
+     * @param {Object} receiptData - Dữ liệu phiếu đã trích xuất ({ phieuXuat, items })
+     * @param {string} currentWarehouse - 'xg' hoặc 'tole'
+     * @returns {Promise<{ targetWarehouse: string, confidence: string, reason: string, isMatchCurrent: boolean, targetPageUrl: string, targetLabel: string }>}
+     */
+    classifyReceipt: async function (receiptData, currentWarehouse) {
+      const emptyResult = {
+        targetWarehouse: 'unknown',
+        confidence: 'none',
+        reason: 'Không xác định được loại vật tư',
+        isMatchCurrent: true,
+        targetPageUrl: '',
+        targetLabel: ''
+      };
+
+      if (!receiptData) return emptyResult;
+
+      const docNo = String(receiptData.phieuXuat || '').trim();
+      let matchedWarehouse = 'unknown';
+      let confidence = 'none';
+      let reason = '';
+
+      // Tầng 1: Ưu tiên tra cứu SAP MB51 (chính xác 100%)
+      if (docNo && typeof window !== 'undefined' && window.supabase) {
+        try {
+          const { data, error } = await window.supabase
+            .from('xg_sap_mb51')
+            .select('material_document, material_group, material, debit_credit_ind')
+            .ilike('material_document', `%${docNo}%`)
+            .limit(10);
+
+          if (!error && Array.isArray(data) && data.length > 0) {
+            for (const row of data) {
+              const grp = String(row.material_group || '').trim();
+              if (grp.startsWith('10040') || grp.startsWith('10041')) {
+                matchedWarehouse = 'xg';
+                confidence = 'sap';
+                reason = `Khớp nhóm SAP MB51: ${grp}`;
+                break;
+              }
+              if (['10030', '10031', '10022', '10091'].some(p => grp.startsWith(p))) {
+                matchedWarehouse = 'tole';
+                confidence = 'sap';
+                reason = `Khớp nhóm SAP MB51: ${grp}`;
+                break;
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('[ReceiptOcrService] Lỗi tra cứu SAP khi phân loại:', err);
+        }
+      }
+
+      // Tầng 2: Dự phòng phân tích từ khóa Tên hàng & Mã hàng trên phiếu
+      if (matchedWarehouse === 'unknown') {
+        const items = Array.isArray(receiptData.items) ? receiptData.items : [];
+        const fullText = items.map(it => `${it.maVatTu || ''} ${it.tenVatTu || ''}`).join(' ').toLowerCase();
+
+        const xgRegex = /(xà gồ|xa go|thép phôi kẽm|thep phoi kem|phôi kẽm|phoi kem|phôi xà gồ|phoi xa go)/i;
+        const toleRegex = /(phôi tôn|phoi ton|tôn cuộn|ton cuon|thép cuộn inox|thep cuon inox|nhôm cuộn|nhom cuon|phôi thép mạ kẽm|tole|\btôn\b|\bton\b)/i;
+
+        if (xgRegex.test(fullText)) {
+          matchedWarehouse = 'xg';
+          confidence = 'keywords';
+          reason = 'Tên hàng chứa quy cách Xà Gồ';
+        } else if (toleRegex.test(fullText)) {
+          matchedWarehouse = 'tole';
+          confidence = 'keywords';
+          reason = 'Tên hàng chứa quy cách Tole';
+        }
+      }
+
+      const isXg = matchedWarehouse === 'xg';
+      const isTole = matchedWarehouse === 'tole';
+      const targetPageUrl = isXg ? '/pages/xg/xg-xuat.html' : (isTole ? '/pages/tole/tole-xuat.html' : '');
+      const targetLabel = isXg ? 'Kho Xà Gồ - Xuất' : (isTole ? 'Kho Tole - Xuất' : '');
+      const isMatchCurrent = matchedWarehouse === 'unknown' || (currentWarehouse ? matchedWarehouse === currentWarehouse : true);
+
+      return {
+        targetWarehouse: matchedWarehouse,
+        confidence,
+        reason: reason || 'Chưa phân loại rõ',
+        isMatchCurrent,
+        targetPageUrl,
+        targetLabel
+      };
     }
   };
 
