@@ -12,9 +12,10 @@ const corsHeaders = {
 
 const CANDIDATE_MODELS = [
   "gemini-2.5-flash",
-  "gemini-1.5-flash",
-  "gemini-2.0-flash",
-  "gemini-1.5-pro"
+  "gemini-flash-latest",
+  "gemini-2.5-flash-lite",
+  "gemini-3-flash-preview",
+  "gemini-3.1-pro-preview"
 ];
 
 const OCR_PROMPT = `
@@ -182,6 +183,15 @@ serve(async (req: Request) => {
       );
     }
 
+    if (new URL(req.url).searchParams.get("list_models") === "1") {
+      const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey.trim())}`);
+      const listData = await listRes.json();
+      const modelNames = (listData.models || []).map((m: any) => m.name.replace('models/', ''));
+      return new Response(JSON.stringify({ success: true, models: modelNames }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
     const { base64Data, mimeType } = await req.json();
     if (!base64Data) {
       return new Response(
@@ -194,6 +204,7 @@ serve(async (req: Request) => {
     }
 
     let lastError = null;
+    const modelErrors: string[] = [];
 
     for (const modelName of CANDIDATE_MODELS) {
       try {
@@ -227,6 +238,7 @@ serve(async (req: Request) => {
 
         if (!response.ok) {
           const errText = await response.text();
+          modelErrors.push(`${modelName} (status ${response.status}): ${errText.substring(0, 150)}`);
           if (response.status === 429 || response.status === 404 || response.status === 503) {
             console.warn(`[OCR Edge Function] Model ${modelName} returned ${response.status}. Trying next model...`);
             lastError = new Error(`Model ${modelName}: ${errText}`);
@@ -291,6 +303,7 @@ serve(async (req: Request) => {
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       } catch (err: any) {
+        modelErrors.push(`${modelName} (exception): ${err.message}`);
         lastError = err;
         continue;
       }
@@ -299,7 +312,7 @@ serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: lastError?.message || "Tất cả các model AI đều không khả dụng hoặc đã vượt hạn mức quota."
+        error: `Tất cả các model AI đều không phản hồi: ${modelErrors.join(" | ")}`
       }),
       {
         status: 500,
