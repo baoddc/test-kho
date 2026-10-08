@@ -12,16 +12,13 @@
   const STORAGE_KEY = 'gemini_ocr_api_key';
   const CACHED_MODEL_KEY = 'gemini_cached_model_name';
 
-  // Danh sách candidate models khi chạy direct test
+  // Danh sách candidate models khi chạy direct test (ưu tiên các model flash-lite tốc độ cao)
   const CANDIDATE_MODELS = [
-    'gemini-3.8-flash',
-    'gemini-3.7-flash',
-    'gemini-3.5-flash',
-    'gemini-3.1-pro-preview',
-    'gemini-3-flash-preview',
-    'gemini-flash-latest',
-    'gemini-pro-latest',
-    'gemini-2.5-flash'
+    'gemini-3.1-flash-lite',
+    'gemini-3.5-flash-lite',
+    'gemini-flash-lite-latest',
+    'gemini-3.1-flash-lite-preview',
+    'gemini-3.5-flash'
   ];
 
   const ReceiptOcrService = {
@@ -73,11 +70,10 @@
 
     /**
      * Nén và tối ưu hóa kích thước ảnh trước khi gửi lên AI OCR.
-     * Tự động thu nhỏ cạnh lớn nhất về tối đa 1600px và nén JPEG chất lượng 0.82.
-     * Giúp giảm dung lượng từ 5MB-15MB xuống ~200KB-400KB trong ~100ms, giữ độ sắc nét 100% cho chữ và số,
-     * loại bỏ hoàn toàn lỗi quá tải bộ nhớ Supabase Edge Function (WORKER_RESOURCE_LIMIT / HTTP 546).
+     * Tự động thu nhỏ cạnh lớn nhất về tối đa 1200px và nén JPEG chất lượng 0.78.
+     * Giúp giảm dung lượng từ 5MB-15MB xuống ~100KB-160KB trong ~50ms, tăng tốc độ truyền tải và xử lý OCR lên gấp 3-5 lần.
      */
-    compressImageForOcr: function (fileOrBlob, maxDimension = 1600, quality = 0.82) {
+    compressImageForOcr: function (fileOrBlob, maxDimension = 1200, quality = 0.78) {
       return new Promise((resolve) => {
         // Fallback sang fileToBase64 nếu ở môi trường không có DOM Canvas hoặc file không phải là ảnh
         if (

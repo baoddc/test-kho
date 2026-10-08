@@ -11,14 +11,11 @@ const corsHeaders = {
 };
 
 const CANDIDATE_MODELS = [
-  "gemini-3.8-flash",
-  "gemini-3.7-flash",
-  "gemini-3.5-flash",
-  "gemini-3.1-pro-preview",
-  "gemini-3-flash-preview",
-  "gemini-flash-latest",
-  "gemini-pro-latest",
-  "gemini-2.5-flash"
+  "gemini-3.1-flash-lite",
+  "gemini-3.5-flash-lite",
+  "gemini-flash-lite-latest",
+  "gemini-3.1-flash-lite-preview",
+  "gemini-3.5-flash"
 ];
 
 const OCR_PROMPT = `
@@ -186,15 +183,6 @@ serve(async (req: Request) => {
       );
     }
 
-    if (new URL(req.url).searchParams.get("list_models") === "1") {
-      const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey.trim())}`);
-      const listData = await listRes.json();
-      const modelNames = (listData.models || []).map((m: any) => m.name.replace('models/', ''));
-      return new Response(JSON.stringify({ success: true, models: modelNames }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
-    }
-
     const { base64Data, mimeType } = await req.json();
     if (!base64Data) {
       return new Response(
@@ -229,15 +217,25 @@ serve(async (req: Request) => {
           generationConfig: {
             temperature: 0.1,
             topP: 0.95,
+            maxOutputTokens: 2048,
             responseMimeType: "application/json"
           }
         };
 
-        const response = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(requestBody)
-        });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 7000);
+
+        let response;
+        try {
+          response = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(requestBody),
+            signal: controller.signal
+          });
+        } finally {
+          clearTimeout(timeoutId);
+        }
 
         if (!response.ok) {
           const errText = await response.text();
