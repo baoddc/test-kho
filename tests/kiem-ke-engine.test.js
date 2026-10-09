@@ -5,7 +5,8 @@ const {
   aggregateSystemStock,
   aggregateScannedRolls,
   reconcile3Way,
-  normalizeNumber
+  normalizeNumber,
+  parseCsvScannedRolls
 } = require('../assets/js/tem-nhan-kiem-ke/kiem-ke-engine.js');
 
 console.log('--- TEST KIEM KE ENGINE ---');
@@ -60,3 +61,43 @@ assert.strictEqual(r1.excelKg, 2500);
 assert.strictEqual(r1.systemKg, 2500);
 assert.strictEqual(r1.scannedKg, 2500);
 console.log('✅ Test 5 Passed: reconcile3Way MATCH');
+
+// Test 6: parseCsvScannedRolls (Dạng 1 cột - Danh sách barcode)
+const singleColCsv = `
+10001189-2.5X75VN-1500
+10001189-2.5X75VN-1000
+10001200-BATCH-01-2000.5
+`;
+const parsed1 = parseCsvScannedRolls(singleColCsv, 'bao.lt');
+assert.strictEqual(parsed1.validRolls.length, 3);
+assert.strictEqual(parsed1.totalKg, 4500.5);
+assert.strictEqual(parsed1.validRolls[0].maVatTu, '10001189');
+assert.strictEqual(parsed1.validRolls[0].batch, '2.5X75VN');
+assert.strictEqual(parsed1.validRolls[0].kg, 1500);
+assert.strictEqual(parsed1.validRolls[0].scannedBy, 'bao.lt');
+console.log('✅ Test 6 Passed: parseCsvScannedRolls (Dạng 1 cột)');
+
+// Test 7: parseCsvScannedRolls (Dạng nhiều cột có Header, dấu phẩy, số phẩy thập phân, dòng rác)
+const multiColCsv = `Mã vật tư,Batch,Số lượng (Kg)
+10001189,2.5X75VN,1500
+10001200,BATCH-01,1200,5
+dòng rác không hợp lệ
+`;
+const parsed2 = parseCsvScannedRolls(multiColCsv, 'bao.lt');
+assert.strictEqual(parsed2.validRolls.length, 2);
+assert.strictEqual(parsed2.skippedCount, 1);
+assert.strictEqual(parsed2.validRolls[1].kg, 1200.5);
+console.log('✅ Test 7 Passed: parseCsvScannedRolls (Dạng nhiều cột có Header)');
+
+// Test 8: parseCsvScannedRolls (Dạng nhiều cột phân cách chấm phẩy ";" và có BOM UTF-8)
+const semicolonCsv = `\uFEFFBarcode;Tên;Kg
+10001189-2.5X75VN-1500;Thép cuộn;1500
+10003000-B99-800;Tole;800
+`;
+const parsed3 = parseCsvScannedRolls(semicolonCsv, 'test-user');
+assert.strictEqual(parsed3.validRolls.length, 2);
+assert.strictEqual(parsed3.validRolls[1].maVatTu, '10003000');
+assert.strictEqual(parsed3.validRolls[1].batch, 'B99');
+assert.strictEqual(parsed3.validRolls[1].kg, 800);
+console.log('✅ Test 8 Passed: parseCsvScannedRolls (Dấu chấm phẩy & BOM UTF-8)');
+
