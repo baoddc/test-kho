@@ -2250,6 +2250,10 @@
     let totalActualKg = 0;
 
     (multiItemsData || []).forEach((item, idx) => {
+      if (item && item.isLocked) {
+        // Bỏ qua mặt hàng đã xuất kho trước đó (đã khóa)
+        return;
+      }
       const mat = String(item.maVatTu || '').trim();
       const batch = String(item.batch || '').trim();
       const key = `${mat}__${batch}`.toLowerCase();

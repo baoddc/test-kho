@@ -1244,6 +1244,9 @@ function updateMultiItemTotals() {
 
 function generateItemCardHTML(item, index, totalItems) {
   const isOnlyItem = totalItems <= 1;
+  const isLocked = Boolean(item.isLocked);
+  const lockKg = item.lockInfo?.totalKg ? formatNumericValue(item.lockInfo.totalKg) : '0';
+  const lockCount = item.lockInfo?.count || 0;
   const rolls = item.rolls || [];
   const totalItemKg = rolls.reduce((sum, r) => sum + (parseNumericInput(r.kg) || 0), 0);
 
@@ -1253,7 +1256,9 @@ function generateItemCardHTML(item, index, totalItems) {
     const diff = Math.round((totalItemKg - item.sapKg) * 100) / 100;
     const absDiff = Math.abs(diff);
     if (rolls.length === 0 || totalItemKg === 0) {
-      reconciliationBadgeHTML = `<span class="badge bg-secondary"><i class="bi bi-clock me-1"></i>Chưa chọn cuộn</span>`;
+      reconciliationBadgeHTML = isLocked
+        ? `<span class="badge bg-danger"><i class="bi bi-shield-lock-fill me-1"></i>Đã xuất (${lockKg} kg) - KHÓA</span>`
+        : `<span class="badge bg-secondary"><i class="bi bi-clock me-1"></i>Chưa chọn cuộn</span>`;
     } else if (absDiff < 0.05) {
       reconciliationBadgeHTML = `<span class="badge bg-success"><i class="bi bi-check-circle-fill me-1"></i>Khớp 100% (0 kg)</span>`;
     } else if (diff > 0) {
@@ -1265,7 +1270,11 @@ function generateItemCardHTML(item, index, totalItems) {
 
   let rollsRowsHTML = '';
   if (rolls.length === 0) {
-    rollsRowsHTML = `<tr><td colspan="4" class="text-center text-muted py-2 fst-italic" style="font-size: 0.75rem;">Chưa có cuộn nào. Vui lòng bấm "+ Chọn cuộn từ kho"</td></tr>`;
+    if (isLocked) {
+      rollsRowsHTML = `<tr><td colspan="4" class="text-center text-danger py-2 small" style="background: rgba(239, 68, 68, 0.08);"><i class="bi bi-shield-lock-fill me-1"></i>Mặt hàng này đã xuất kho trước đó (${lockKg} kg, ${lockCount} cuộn). Đã khóa để chống xuất trùng.</td></tr>`;
+    } else {
+      rollsRowsHTML = `<tr><td colspan="4" class="text-center text-muted py-2 fst-italic" style="font-size: 0.75rem;">Chưa có cuộn nào. Vui lòng bấm "+ Chọn cuộn từ kho"</td></tr>`;
+    }
   } else {
     rolls.forEach((r, rIdx) => {
       rollsRowsHTML += `
@@ -1278,9 +1287,13 @@ function generateItemCardHTML(item, index, totalItems) {
             <input type="text" class="form-control form-control-sm item-roll-kg fw-bold text-end bg-light" value="${r.kg ? formatNumericValue(r.kg) : ''}" placeholder="Số kg" readonly data-item-idx="${index}" data-roll-idx="${rIdx}" style="cursor: not-allowed;" required>
           </td>
           <td class="text-center">
-            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 btn-remove-item-roll" data-item-idx="${index}" data-roll-idx="${rIdx}" title="Xóa cuộn">
-              <i class="bi bi-x-lg"></i>
-            </button>
+            ${isLocked ? `
+              <span class="text-muted small"><i class="bi bi-lock-fill"></i></span>
+            ` : `
+              <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 btn-remove-item-roll" data-item-idx="${index}" data-roll-idx="${rIdx}" title="Xóa cuộn">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            `}
           </td>
         </tr>
       `;
@@ -1292,42 +1305,55 @@ function generateItemCardHTML(item, index, totalItems) {
     : 'Mục mới';
 
   return `
-    <div class="item-card mb-3" data-item-idx="${index}" id="itemCard_${item.id}">
-      <div class="item-card-header">
-        <div class="d-flex align-items-center gap-2">
-          <span class="item-card-badge">Mục #${index + 1}</span>
+    <div class="item-card mb-3 ${isLocked ? 'item-card-locked border-danger-subtle' : ''}" data-item-idx="${index}" id="itemCard_${item.id}" ${isLocked ? 'style="border: 1px dashed rgba(239, 68, 68, 0.5) !important; background: #fafafa;"' : ''}>
+      <div class="item-card-header ${isLocked ? 'bg-danger-subtle text-danger-emphasis' : ''}">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+          <span class="item-card-badge ${isLocked ? 'bg-secondary' : ''}">Mục #${index + 1}</span>
+          ${isLocked ? `
+            <span class="badge bg-danger text-white border border-danger-subtle me-1" title="Mặt hàng này đã xuất trong kho (${lockKg} kg, ${lockCount} cuộn) - ĐÃ KHÓA">
+              <i class="bi bi-shield-lock-fill me-1"></i>ĐÃ XUẤT (${lockKg} kg) - KHÓA
+            </span>
+          ` : ''}
           <span class="fw-bold text-primary small item-card-header-title text-truncate" style="max-width: 450px;" title="${titleText}">${titleText}</span>
         </div>
         <div class="d-flex align-items-center gap-2">
-          ${!isOnlyItem ? `
+          ${isLocked ? `
+            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle small"><i class="bi bi-lock-fill me-1"></i>Đã khóa mục</span>
+          ` : (!isOnlyItem ? `
             <button type="button" class="btn btn-xs btn-outline-danger btn-remove-item-card" data-item-idx="${index}" title="Xóa mục hàng này">
               <i class="bi bi-trash"></i> Xóa mục
             </button>
-          ` : ''}
+          ` : '')}
         </div>
       </div>
       <div class="item-card-body">
         <div class="row g-2 mb-2">
           <div class="col-12 col-md-4">
             <label class="form-label small fw-bold">Mã vật tư <span class="text-danger">*</span></label>
-            <input type="text" class="form-control form-control-sm fw-bold item-ma-vt" value="${item.maVatTu || ''}" placeholder="VD: 10001189" data-item-idx="${index}" required>
+            <input type="text" class="form-control form-control-sm fw-bold item-ma-vt ${isLocked ? 'bg-light' : ''}" value="${item.maVatTu || ''}" placeholder="VD: 10001189" data-item-idx="${index}" ${isLocked ? 'readonly style="cursor: not-allowed; background-color: #f1f5f9;"' : 'required'}>
           </div>
           <div class="col-12 col-md-4">
             <label class="form-label small fw-bold">Tên vật tư <span class="text-danger">*</span></label>
-            <input type="text" class="form-control form-control-sm fw-bold item-ten-vt" value="${item.tenVatTu || ''}" placeholder="VD: Thép phôi kẽm Z275 G450" data-item-idx="${index}" required>
+            <input type="text" class="form-control form-control-sm fw-bold item-ten-vt ${isLocked ? 'bg-light' : ''}" value="${item.tenVatTu || ''}" placeholder="VD: Thép phôi kẽm Z275 G450" data-item-idx="${index}" ${isLocked ? 'readonly style="cursor: not-allowed; background-color: #f1f5f9;"' : 'required'}>
           </div>
           <div class="col-12 col-md-4">
             <label class="form-label small fw-bold">Lô / Batch <span class="text-danger">*</span></label>
-            <input type="text" class="form-control form-control-sm fw-bold item-batch" value="${item.batch || ''}" placeholder="VD: 1.8X351VN" data-item-idx="${index}" required>
+            <input type="text" class="form-control form-control-sm fw-bold item-batch ${isLocked ? 'bg-light' : ''}" value="${item.batch || ''}" placeholder="VD: 1.8X351VN" data-item-idx="${index}" ${isLocked ? 'readonly style="cursor: not-allowed; background-color: #f1f5f9;"' : 'required'}>
           </div>
         </div>
 
         <div class="d-flex justify-content-between align-items-center mb-1 flex-wrap gap-2">
           <span class="small fw-bold text-success"><i class="bi bi-layers-fill"></i> Danh sách cuộn xuất của Mục #${index + 1}:</span>
           <div class="d-flex gap-1">
-            <button type="button" class="btn btn-sm btn-primary py-1 px-2 btn-item-pick-inv" data-item-idx="${index}">
-              <i class="bi bi-box-seam"></i> + Chọn cuộn từ kho
-            </button>
+            ${isLocked ? `
+              <button type="button" class="btn btn-sm btn-secondary py-1 px-2 btn-item-pick-inv" disabled title="Mặt hàng này đã xuất kho trước đó, không thể chọn cuộn thêm">
+                <i class="bi bi-lock-fill me-1"></i> Đã khóa mục
+              </button>
+            ` : `
+              <button type="button" class="btn btn-sm btn-primary py-1 px-2 btn-item-pick-inv" data-item-idx="${index}">
+                <i class="bi bi-box-seam"></i> + Chọn cuộn từ kho
+              </button>
+            `}
           </div>
         </div>
 
@@ -1378,7 +1404,7 @@ function renderItemCards() {
     cardWrapper.innerHTML = generateItemCardHTML(item, idx, multiItemsData.length);
     const cardEl = cardWrapper.firstElementChild;
 
-    // Inputs: Mã VT, Tên VT, Batch
+    // Inputs: Mã VT, Tên VT, Batch (chỉ gán listener nếu chưa khóa)
     const maVtInp = cardEl.querySelector('.item-ma-vt');
     const tenVtInp = cardEl.querySelector('.item-ten-vt');
     const batchInp = cardEl.querySelector('.item-batch');
@@ -1394,7 +1420,7 @@ function renderItemCards() {
       }
     }
 
-    if (maVtInp) {
+    if (maVtInp && !item.isLocked) {
       maVtInp.addEventListener('input', (e) => {
         item.maVatTu = e.target.value.trim();
         updateTitle();
@@ -1404,14 +1430,14 @@ function renderItemCards() {
       });
     }
 
-    if (tenVtInp) {
+    if (tenVtInp && !item.isLocked) {
       tenVtInp.addEventListener('input', (e) => {
         item.tenVatTu = e.target.value.trim();
         updateTitle();
       });
     }
 
-    if (batchInp) {
+    if (batchInp && !item.isLocked) {
       batchInp.addEventListener('input', (e) => {
         item.batch = e.target.value.trim();
         updateTitle();
@@ -1425,9 +1451,9 @@ function renderItemCards() {
       });
     }
 
-    // Button: Xóa mục
+    // Button: Xóa mục (chỉ gán nếu chưa khóa)
     const btnRemoveCard = cardEl.querySelector('.btn-remove-item-card');
-    if (btnRemoveCard) {
+    if (btnRemoveCard && !item.isLocked) {
       btnRemoveCard.addEventListener('click', () => {
         if (multiItemsData.length > 1) {
           if (window.inventoryLockService && item.rolls) {
@@ -1441,9 +1467,9 @@ function renderItemCards() {
       });
     }
 
-    // Button: Chọn cuộn từ kho
+    // Button: Chọn cuộn từ kho (chỉ gán nếu chưa khóa)
     const btnPickInv = cardEl.querySelector('.btn-item-pick-inv');
-    if (btnPickInv) {
+    if (btnPickInv && !item.isLocked) {
       btnPickInv.addEventListener('click', () => {
         currentItemTargetIndex = idx;
         const maVatTu = (item.maVatTu || '').trim();
@@ -1452,30 +1478,32 @@ function renderItemCards() {
       });
     }
 
-    // Roll row event listeners
-    cardEl.querySelectorAll('.item-roll-kg').forEach(inp => {
-      inp.addEventListener('input', (e) => {
-        const rIdx = parseInt(e.target.dataset.rollIdx, 10);
-        if (item.rolls && item.rolls[rIdx]) {
-          item.rolls[rIdx].kg = e.target.value;
-          updateMultiItemTotals();
-        }
-      });
-    });
-
-    cardEl.querySelectorAll('.btn-remove-item-roll').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const rIdx = parseInt(btn.dataset.rollIdx, 10);
-        if (item.rolls && item.rolls[rIdx]) {
-          const cid = item.rolls[rIdx].cuonId;
-          if (cid && window.inventoryLockService) {
-            window.inventoryLockService.releaseLock(cid);
+    // Roll row event listeners (chỉ áp dụng cho mục chưa khóa)
+    if (!item.isLocked) {
+      cardEl.querySelectorAll('.item-roll-kg').forEach(inp => {
+        inp.addEventListener('input', (e) => {
+          const rIdx = parseInt(e.target.dataset.rollIdx, 10);
+          if (item.rolls && item.rolls[rIdx]) {
+            item.rolls[rIdx].kg = e.target.value;
+            updateMultiItemTotals();
           }
-          item.rolls.splice(rIdx, 1);
-          renderItemCards();
-        }
+        });
       });
-    });
+
+      cardEl.querySelectorAll('.btn-remove-item-roll').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const rIdx = parseInt(btn.dataset.rollIdx, 10);
+          if (item.rolls && item.rolls[rIdx]) {
+            const cid = item.rolls[rIdx].cuonId;
+            if (cid && window.inventoryLockService) {
+              window.inventoryLockService.releaseLock(cid);
+            }
+            item.rolls.splice(rIdx, 1);
+            renderItemCards();
+          }
+        });
+      });
+    }
 
     container.appendChild(cardEl);
   });
@@ -1597,7 +1625,9 @@ function populateFieldsFromOcr(data) {
         maVatTu: it.maVatTu || '',
         tenVatTu: rawTen,
         batch: rawBatch,
-        rolls: []
+        rolls: [],
+        isLocked: Boolean(it.isLocked),
+        lockInfo: it.lockInfo || null
       };
     });
   } else {
@@ -1608,7 +1638,9 @@ function populateFieldsFromOcr(data) {
       maVatTu: data.maVatTu || '',
       tenVatTu: rawTen,
       batch: rawBatch,
-      rolls: []
+      rolls: [],
+      isLocked: Boolean(data.isLocked),
+      lockInfo: data.lockInfo || null
     }];
   }
 
@@ -1750,17 +1782,30 @@ async function populateExportReceiptFromSap(headerInfo, itemsGrouped) {
     }
   }
 
-  // 2. Khởi tạo danh sách mặt hàng
-  multiItemsData = itemsGrouped.map(item => {
+  // 2. Khởi tạo danh sách mặt hàng và kiểm tra trạng thái khóa
+  const docNo = String(headerInfo.phieuXuat || '').trim();
+  const lockChecks = docNo && window.XgSapLookup && typeof window.XgSapLookup.checkReceiptItemProcessed === 'function'
+    ? await Promise.all(itemsGrouped.map(async item => {
+        return await window.XgSapLookup.checkReceiptItemProcessed(docNo, item.maVatTu, item.batch, 'xg-xuat');
+      }))
+    : [];
+
+  let lockedCount = 0;
+  multiItemsData = itemsGrouped.map((item, idx) => {
     const rawBatch = (item.batch || '').trim();
     const rawTen = (item.tenVatTu || '').trim();
+    const checkRes = lockChecks[idx];
+    const isLocked = Boolean(checkRes && checkRes.isProcessed);
+    if (isLocked) lockedCount++;
     return {
       id: Math.random().toString(36).slice(2),
       maVatTu: item.maVatTu || '',
       tenVatTu: rawTen,
       batch: rawBatch,
       sapKg: item.totalSapKg || 0,
-      rolls: []
+      rolls: [],
+      isLocked,
+      lockInfo: isLocked ? checkRes : null
     };
   });
   window.multiItemsData = multiItemsData;
@@ -1769,7 +1814,11 @@ async function populateExportReceiptFromSap(headerInfo, itemsGrouped) {
   document.querySelectorAll('.item-card').forEach(card => triggerAutofillHighlight(card));
 
   if (window.XgSapLookup && window.XgSapLookup.showAutofillToast) {
-    window.XgSapLookup.showAutofillToast(`✓ Đã điền thông tin phiếu xuất: ${multiItemsData.length} mặt hàng. Vui lòng bấm "+ Chọn cuộn từ kho" để chọn cuộn xuất.`);
+    if (lockedCount > 0) {
+      window.XgSapLookup.showAutofillToast(`⚠️ Đã điền phiếu xuất: ${multiItemsData.length} mặt hàng (${lockedCount} mục đã xuất - đã khóa). Vui lòng bấm "+ Chọn cuộn từ kho" cho ${multiItemsData.length - lockedCount} mặt hàng còn lại.`);
+    } else {
+      window.XgSapLookup.showAutofillToast(`✓ Đã điền thông tin phiếu xuất: ${multiItemsData.length} mặt hàng. Vui lòng bấm "+ Chọn cuộn từ kho" để chọn cuộn xuất.`);
+    }
   }
 }
 
@@ -1901,6 +1950,57 @@ async function handleReceiptImageProcess(file, label = '') {
       if (!classification.isMatchCurrent && classification.targetWarehouse === 'tole') {
         showReceiptMismatchWarehouseModal(classification, result.data, file, label, previewUrl);
         return;
+      }
+    }
+
+    // Kiểm tra trạng thái xuất kho của các mặt hàng trong phiếu xuất
+    const scannedDocNo = String(result.data.phieuXuat || '').trim();
+    let scannedItems = Array.isArray(result.data.items) && result.data.items.length > 0
+      ? result.data.items
+      : [{ maVatTu: result.data.maVatTu || '', tenVatTu: result.data.tenVatTu || '', batch: result.data.batch || '' }];
+
+    if (scannedDocNo && window.XgSapLookup && typeof window.XgSapLookup.checkReceiptItemProcessed === 'function') {
+      const lockChecks = await Promise.all(scannedItems.map(async it => {
+        const mat = String(it.maVatTu || '').trim();
+        const batch = String(it.batch || '').trim();
+        return await window.XgSapLookup.checkReceiptItemProcessed(scannedDocNo, mat, batch, 'xg-xuat');
+      }));
+
+      let lockedCount = 0;
+      scannedItems = scannedItems.map((it, idx) => {
+        const checkRes = lockChecks[idx];
+        const isLocked = Boolean(checkRes && checkRes.isProcessed);
+        if (isLocked) lockedCount++;
+        return {
+          ...it,
+          isLocked,
+          lockInfo: isLocked ? checkRes : null
+        };
+      });
+
+      result.data.items = scannedItems;
+
+      // Nếu TẤT CẢ các mặt hàng đều đã xuất -> Bật modal chặn hoàn toàn
+      if (scannedItems.length > 0 && lockedCount === scannedItems.length) {
+        if (loadingOverlay) loadingOverlay.style.display = 'none';
+        const wholeProc = await window.XgSapLookup.checkReceiptProcessed(scannedDocNo, 'xg-xuat');
+        window.XgSapLookup.showReceiptProcessedWarningModal({
+          docNo: scannedDocNo,
+          pageContext: 'xg-xuat',
+          processedInfo: wholeProc,
+          sapRecord: window._currentSelectedSapRecord,
+          onCancel: () => {
+            resetOcrDropzoneUI();
+          }
+        });
+        return;
+      }
+
+      // Nếu có một số mặt hàng đã xuất và một số chưa xuất -> Hiển thị toast cảnh báo
+      if (lockedCount > 0) {
+        if (window.XgSapLookup && window.XgSapLookup.showAutofillToast) {
+          window.XgSapLookup.showAutofillToast(`⚠️ Phát hiện ${lockedCount}/${scannedItems.length} mặt hàng đã xuất kho trước đó (đã khóa). Vui lòng chọn cuộn cho ${scannedItems.length - lockedCount} mặt hàng còn lại.`);
+        }
       }
     }
 
@@ -2885,9 +2985,10 @@ document.addEventListener('submit', async (e) => {
         extData[COLUMN_HEADERS[colIdx]] = inp.value || null;
       });
 
-      // Gom toàn bộ cuộn từ tất cả các thẻ mặt hàng
+      // Gom toàn bộ cuộn từ các thẻ mặt hàng CHƯA BỊ KHÓA
+      const activeItems = multiItemsData.filter(item => !item.isLocked);
       const recordsToInsert = [];
-      multiItemsData.forEach(item => {
+      activeItems.forEach(item => {
         const maVatTu = (item.maVatTu || '').trim();
         const batch = (item.batch || '').trim();
         const tenVatTu = (item.tenVatTu || '').trim();
@@ -2909,33 +3010,41 @@ document.addEventListener('submit', async (e) => {
       });
 
       if (recordsToInsert.length === 0) {
-        alert('Vui lòng chọn từ kho hoặc nhập ít nhất một cuộn với số kg > 0');
+        const hasLockedItems = multiItemsData.some(item => item.isLocked);
+        if (hasLockedItems && activeItems.length === 0) {
+          alert('Tất cả mặt hàng trong phiếu xuất này đều đã được xuất kho trước đó (đã khóa). Không có mặt hàng mới nào để xuất.');
+        } else {
+          alert('Vui lòng chọn từ kho hoặc nhập ít nhất một cuộn với số kg > 0');
+        }
         if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = originalText; }
         hideLoadingOverlay(); return;
       }
 
-      // Kiểm tra nếu phiếu xuất đã có trong kho -> CHẶN HOÀN TOÀN
+      // Kiểm tra nếu các mặt hàng đang xuất đã từng có trong kho -> CHẶN
       const phieuXuatInputVal = (form.querySelector('input[name="col_3"]')?.value || '').trim();
-      if (phieuXuatInputVal && window.XgSapLookup && typeof window.XgSapLookup.checkReceiptProcessed === 'function') {
-        const procCheck = await window.XgSapLookup.checkReceiptProcessed(phieuXuatInputVal, 'xg-xuat');
-        if (procCheck && procCheck.isProcessed) {
-          window._isSubmittingAddData = false;
-          if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = originalText; }
-          hideLoadingOverlay();
-          window.XgSapLookup.showReceiptProcessedWarningModal({
-            docNo: phieuXuatInputVal,
-            pageContext: 'xg-xuat',
-            processedInfo: procCheck,
-            sapRecord: window._currentSelectedSapRecord,
-            onCancel: () => {
-              const inp = form.querySelector('input[name="col_3"]');
-              if (inp) inp.value = '';
-              if (typeof window.XgSapLookup.resetSapSelection === 'function') {
-                window.XgSapLookup.resetSapSelection();
+      if (phieuXuatInputVal && window.XgSapLookup && typeof window.XgSapLookup.checkReceiptItemProcessed === 'function') {
+        for (const item of activeItems) {
+          const mat = (item.maVatTu || '').trim();
+          const batch = (item.batch || '').trim();
+          const procCheck = await window.XgSapLookup.checkReceiptItemProcessed(phieuXuatInputVal, mat, batch, 'xg-xuat');
+          if (procCheck && procCheck.isProcessed) {
+            window._isSubmittingAddData = false;
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = originalText; }
+            hideLoadingOverlay();
+            window.XgSapLookup.showReceiptProcessedWarningModal({
+              docNo: phieuXuatInputVal,
+              pageContext: 'xg-xuat',
+              processedInfo: procCheck,
+              sapRecord: window._currentSelectedSapRecord,
+              itemInfo: { material: mat, batch: batch, material_description: item.tenVatTu || '' },
+              onCancel: () => {
+                item.isLocked = true;
+                item.lockInfo = procCheck;
+                renderItemCards();
               }
-            }
-          });
-          return;
+            });
+            return;
+          }
         }
       }
 
