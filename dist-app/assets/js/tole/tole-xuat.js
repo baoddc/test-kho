@@ -1170,7 +1170,8 @@ function updateMultiItemTotals() {
 
       if (barEl) {
         if (hasSap) {
-          barEl.style.display = 'flex';
+          barEl.classList.remove('d-none');
+          barEl.classList.add('d-flex');
           if (sapKgEl) sapKgEl.textContent = `${formatNumericValue(item.sapKg)} kg`;
           if (actualKgEl) actualKgEl.textContent = `${formatNumericValue(itemKg)} kg`;
 
@@ -1188,7 +1189,8 @@ function updateMultiItemTotals() {
             }
           }
         } else {
-          barEl.style.display = 'none';
+          barEl.classList.remove('d-flex');
+          barEl.classList.add('d-none');
         }
       }
     }
@@ -1337,7 +1339,7 @@ function generateItemCardHTML(item, index, totalItems) {
         </div>
 
         <!-- Thanh đối chiếu SAP MB51 -->
-        <div class="p-2 rounded border bg-light mt-2 d-flex justify-content-between align-items-center flex-wrap gap-2 item-reconciliation-bar" style="${hasSap ? 'display: flex;' : 'display: none;'}">
+        <div class="p-2 rounded border bg-light mt-2 ${hasSap ? 'd-flex' : 'd-none'} justify-content-between align-items-center flex-wrap gap-2 item-reconciliation-bar">
           <div class="small">
             <span class="text-secondary me-2"><i class="bi bi-receipt me-1"></i>SAP MB51 yêu cầu: <strong class="text-info item-sap-kg">${hasSap ? formatNumericValue(item.sapKg) : '0'} kg</strong></span>
             <span class="text-secondary"><i class="bi bi-boxes me-1"></i>Thực xuất: <strong class="text-primary item-actual-kg">${formatNumericValue(totalItemKg)} kg</strong></span>
@@ -1388,6 +1390,9 @@ function renderItemCards() {
         item.maVatTu = e.target.value.trim();
         updateTitle();
       });
+      maVtInp.addEventListener('change', () => {
+        syncItemSapKgFromMb51();
+      });
     }
 
     if (tenVtInp) {
@@ -1407,6 +1412,7 @@ function renderItemCards() {
         item.batch = newBatch;
         batchInp.value = newBatch;
         updateTitle();
+        syncItemSapKgFromMb51();
       });
     }
 
@@ -1605,6 +1611,68 @@ function populateFieldsFromOcr(data) {
 
   renderItemCards();
   document.querySelectorAll('.item-card').forEach(card => triggerAutofillHighlight(card));
+  if (data.phieuXuat) {
+    syncItemSapKgFromMb51(data.phieuXuat);
+  }
+}
+
+/**
+ * Tự động đối chiếu và gán sapKg (số dương) từ SAP MB51 cho các thẻ mặt hàng (Tole)
+ * @param {string} [docNo] - Số phiếu xuất
+ */
+async function syncItemSapKgFromMb51(docNo) {
+  const form = document.getElementById('addDataForm');
+  const cleanDoc = String(docNo || form?.querySelector('[name="col_3"]')?.value || '').trim();
+  if (!cleanDoc || !window.supabase || !Array.isArray(multiItemsData) || multiItemsData.length === 0) return;
+
+  try {
+    const { data: docRows, error } = await window.supabase
+      .from('xg_sap_mb51')
+      .select('*')
+      .ilike('material_document', cleanDoc);
+
+    if (!error && Array.isArray(docRows) && docRows.length > 0) {
+      const sapMap = new Map();
+      docRows.forEach(r => {
+        const mat = String(r.material || '').trim().toLowerCase();
+        const batch = String(r.batch || '').trim().toLowerCase();
+        const key = `${mat}__${batch}`;
+        // Luôn chuyển thành số dương tuyệt đối
+        const qty = Math.abs(typeof r.quantity === 'number' ? r.quantity : parseFloat(r.quantity) || 0);
+        if (!sapMap.has(key)) {
+          sapMap.set(key, qty);
+        } else {
+          sapMap.set(key, sapMap.get(key) + qty);
+        }
+      });
+
+      let changed = false;
+      multiItemsData.forEach(item => {
+        const mat = String(item.maVatTu || '').trim().toLowerCase();
+        const batch = String(item.batch || '').trim().toLowerCase();
+        const key = `${mat}__${batch}`;
+
+        if (sapMap.has(key)) {
+          item.sapKg = sapMap.get(key);
+          changed = true;
+        } else {
+          for (const [k, qty] of sapMap.entries()) {
+            if (k.startsWith(`${mat}__`)) {
+              item.sapKg = qty;
+              changed = true;
+              break;
+            }
+          }
+        }
+      });
+
+      if (changed) {
+        updateMultiItemTotals();
+      }
+    }
+  } catch (err) {
+    console.warn('[TOLE-XUAT] Lỗi đối chiếu sapKg từ MB51:', err);
+  }
 }
 
 /**

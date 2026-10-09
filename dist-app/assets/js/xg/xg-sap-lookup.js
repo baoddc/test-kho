@@ -1097,13 +1097,11 @@
           const rawRows = await querySapMb51(val);
           const groups = groupSapMb51Rows(rawRows);
           const exact = groups.filter(g => String(g.material_document || '').toLowerCase() === val.toLowerCase());
-          if (exact.length === 1) {
-            const check = validateSapRecordAgainstContext(exact[0], currentContext);
-            if (check.isValid) {
-              applySapRecordToForm(exact[0], formEl, currentContext);
-            } else {
-              showAutofillToast(`⚠️ Phiếu ${val} không được phép nhập vào ${rules.label} (sai loại hoặc phân nhóm)!`);
-            }
+          const validExact = exact.filter(g => validateSapRecordAgainstContext(g, currentContext).isValid);
+          if (validExact.length > 0) {
+            applySapRecordToForm(validExact[0], formEl, currentContext);
+          } else if (exact.length > 0) {
+            showAutofillToast(`⚠️ Phiếu ${val} không được phép nhập vào ${rules.label} (sai loại hoặc phân nhóm)!`);
           }
         } catch (err) {
           console.warn('[XgSapLookup] Lỗi auto match khi change:', err);
@@ -2020,10 +2018,10 @@
         return null;
       };
 
-      // Helper parse số thực
+      // Helper parse số thực (luôn chuyển về số dương để đối chiếu chính xác)
       const parseNum = (c) => {
         if (!c || c.v === null || c.v === undefined) return 0;
-        if (typeof c.v === 'number') return c.v;
+        if (typeof c.v === 'number') return Math.abs(c.v);
         let s = String(c.v).trim().replace(/\s+/g, '');
         if (s.includes(',') && s.includes('.')) {
           s = s.lastIndexOf(',') > s.lastIndexOf('.') ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
@@ -2031,7 +2029,7 @@
           s = s.replace(',', '.');
         }
         const n = parseFloat(s);
-        return isNaN(n) ? 0 : n;
+        return isNaN(n) ? 0 : Math.abs(n);
       };
 
       const records = [];
@@ -2063,7 +2061,7 @@
             material: mat,
             material_description: matDesc,
             batch: batch,
-            quantity: parseNum(row[9]),
+            quantity: Math.abs(parseNum(row[9])),
             unit_of_entry: getVal(row[8]),
             project_id: getVal(row[10]),
             project_name: getVal(row[11]),
@@ -2088,7 +2086,7 @@
               material: mat,
               material_description: matDesc,
               batch: batch,
-              quantity: parseNum(row[28]) || parseNum(row[9]),
+              quantity: Math.abs(parseNum(row[28]) || parseNum(row[9])),
               unit_of_entry: getVal(row[32]) || getVal(row[8]),
               project_id: getVal(row[10]),
               project_name: getVal(row[33]) || getVal(row[11]),

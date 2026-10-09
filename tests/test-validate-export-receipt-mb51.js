@@ -129,4 +129,25 @@ const r4 = validateExportReceiptData('PX_TEST_01', [
 assert.strictEqual(r4.isValid, true);
 assert.strictEqual(r4.errors.length, 0);
 
-console.log('✓ All 4 validation unit tests passed!');
+// Case 5: MB51 có quantity âm (-8602) -> chuyển sang số dương và khớp 100% với cuộn 8602 kg
+const mockDocNegative = [
+  {
+    material_document: '4900160569',
+    material: '10001189',
+    material_description: 'Thép phôi kẽm Z275 G450',
+    batch: '1.5X268VN',
+    quantity: -8602,
+    debit_credit_ind: 'H',
+    material_group: '10040-Phôi xà gồ mạ'
+  }
+];
+const r5 = validateExportReceiptData('4900160569', [
+  { maVatTu: '10001189', batch: '1.5X268VN', rolls: [{ cuonId: 'ROLL_01', kg: '8602' }] }
+], mockDocNegative);
+assert.strictEqual(r5.isValid, true);
+assert.strictEqual(r5.sapSummary.totalSapKg, 8602);
+assert.strictEqual(r5.sapSummary.totalActualKg, 8602);
+assert.strictEqual(r5.sapSummary.totalDiff, 0);
+
+console.log('✓ All 5 validation unit tests passed!');
+
