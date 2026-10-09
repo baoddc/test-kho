@@ -167,6 +167,50 @@
   }
 
   /**
+   * Lưu danh sách cuộn quét hàng loạt lên Supabase kiem_ke_scans (chia chunks 100)
+   */
+  async function insertBatchScannedRollsToSupabase(rollItems) {
+    if (!Array.isArray(rollItems) || rollItems.length === 0) return rollItems || [];
+    const client = getSupabaseClient();
+    if (!client) return rollItems;
+
+    try {
+      const currentUser = (typeof localStorage !== 'undefined' && localStorage.getItem('currentUser')) || 'guest';
+      const CHUNK_SIZE = 100;
+      for (let i = 0; i < rollItems.length; i += CHUNK_SIZE) {
+        const chunk = rollItems.slice(i, i + CHUNK_SIZE);
+        const payloadChunk = chunk.map(roll => ({
+          barcode: String(roll.barcode || ''),
+          ma_vat_tu: String(roll.maVatTu || ''),
+          batch: String(roll.batch || ''),
+          kg: parseFloat(roll.kg) || 0,
+          scanned_by: roll.scannedBy || currentUser
+        }));
+
+        const { data, error } = await client
+          .from(TABLE_NAME)
+          .insert(payloadChunk)
+          .select();
+
+        if (error) {
+          console.error(`Lỗi khi chèn mẻ cuộn quét (${i} -> ${i + chunk.length}):`, error);
+        } else if (Array.isArray(data)) {
+          // Gán lại ID và created_at từ Supabase
+          data.forEach((saved, sIdx) => {
+            if (chunk[sIdx]) {
+              chunk[sIdx].id = String(saved.id);
+              chunk[sIdx].createdAt = saved.created_at;
+            }
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Lỗi ngoại lệ khi chèn batch cuộn quét:', err);
+    }
+    return rollItems;
+  }
+
+  /**
    * Xóa 1 cuộn trên Supabase kiem_ke_scans theo ID (chỉ bao.lt được RLS cho phép)
    */
   async function deleteScannedRollFromSupabase(id) {
@@ -345,6 +389,7 @@
     clearScannedOnly,
     fetchScannedRollsFromSupabase,
     insertScannedRollToSupabase,
+    insertBatchScannedRollsToSupabase,
     deleteScannedRollFromSupabase,
     clearAllScannedFromSupabase,
     subscribeRealtimeChanges,

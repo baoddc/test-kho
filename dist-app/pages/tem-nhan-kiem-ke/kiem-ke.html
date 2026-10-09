@@ -59,6 +59,10 @@
           <button id="btnOpenScannerCamera" data-perm="add" class="btn btn-sm btn-outline-success shadow-sm d-inline-flex align-items-center gap-1 text-nowrap px-2" title="Quét qua Camera">
             <i class="bi bi-camera-fill"></i>
           </button>
+          <label for="csvScanFileInput" data-perm="add" class="btn btn-sm btn-outline-warning shadow-sm d-inline-flex align-items-center gap-1 text-nowrap px-2" style="cursor: pointer;" title="Nạp danh sách cuộn quét từ file .CSV">
+            <i class="bi bi-filetype-csv"></i> <span class="d-none d-md-inline">Nạp CSV</span>
+          </label>
+          <input type="file" id="csvScanFileInput" accept=".csv, .txt" class="d-none">
         </div>
 
         <!-- Right: Action Buttons -->
@@ -193,11 +197,17 @@
 
           <!-- TAB 2: CHI TIẾT CUỘN ĐÃ QUÉT -->
           <div class="tab-pane fade p-2 p-md-3" id="scannedFeedContent" role="tabpanel">
-            <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
               <span class="small text-muted">Danh sách các cuộn vừa quét được sắp xếp mới nhất lên đầu:</span>
-              <button class="btn btn-sm btn-outline-secondary" id="btnClearFeedOnly" data-perm="delete" title="Chỉ xóa bảng hiển thị phụ">
-                <i class="bi bi-funnel"></i> Đặt lại danh sách
-              </button>
+              <div class="d-flex align-items-center gap-2">
+                <label for="csvScanFileInputTab" data-perm="add" class="btn btn-sm btn-outline-warning shadow-sm d-inline-flex align-items-center gap-1 text-nowrap" style="cursor: pointer;" title="Nạp nhanh từ file .CSV">
+                  <i class="bi bi-filetype-csv"></i> Nạp file .CSV
+                </label>
+                <input type="file" id="csvScanFileInputTab" accept=".csv, .txt" class="d-none">
+                <button class="btn btn-sm btn-outline-secondary" id="btnClearFeedOnly" data-perm="delete" title="Chỉ xóa bảng hiển thị phụ">
+                  <i class="bi bi-funnel"></i> Đặt lại danh sách
+                </button>
+              </div>
             </div>
             <div class="table-responsive kk-table-container" style="max-height: calc(100vh - 330px);">
               <table class="table table-dark table-hover table-bordered kk-table mb-0">

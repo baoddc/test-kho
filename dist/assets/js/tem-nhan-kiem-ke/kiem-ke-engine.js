@@ -217,12 +217,240 @@
     return result.sort((a, b) => a.virtualKey.localeCompare(b.virtualKey));
   }
 
+  function parseBarcodeString(text) {
+    if (!text) return null;
+    const clean = String(text).trim();
+    if (!clean) return null;
+
+    const globalObj = typeof globalThis !== 'undefined' ? globalThis : (typeof window !== 'undefined' ? window : (typeof global !== 'undefined' ? global : {}));
+    if (globalObj.qrScannerService && typeof globalObj.qrScannerService.parseCoilBarcode === 'function') {
+      const p = globalObj.qrScannerService.parseCoilBarcode(clean);
+      if (p) return p;
+    }
+
+    const parts = clean.split('-').map(s => s.trim()).filter(Boolean);
+    if (parts.length >= 3) {
+      const rawKg = parts[parts.length - 1];
+      const kg = normalizeNumber(rawKg);
+      return {
+        maVatTu: parts[0],
+        batch: parts.slice(1, -1).join('-'),
+        kg: kg,
+        rawText: clean
+      };
+    } else if (parts.length === 2) {
+      return {
+        maVatTu: parts[0],
+        batch: parts[1],
+        kg: 0,
+        rawText: clean
+      };
+    } else {
+      return {
+        maVatTu: clean,
+        batch: '',
+        kg: 0,
+        rawText: clean
+      };
+    }
+  }
+
+  function splitCsvLine(line, delimiter) {
+    const result = [];
+    let cur = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          cur += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === delimiter && !inQuotes) {
+        result.push(cur.trim());
+        cur = '';
+      } else {
+        cur += char;
+      }
+    }
+    result.push(cur.trim());
+    return result;
+  }
+
+  function parseCsvScannedRolls(csvText, currentUser) {
+    if (!csvText || typeof csvText !== 'string') {
+      return { validRolls: [], skippedCount: 0, totalKg: 0 };
+    }
+
+    let cleanText = csvText;
+    if (cleanText.charCodeAt(0) === 0xFEFF) {
+      cleanText = cleanText.slice(1);
+    }
+
+    const rawLines = cleanText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    if (rawLines.length === 0) {
+      return { validRolls: [], skippedCount: 0, totalKg: 0 };
+    }
+
+    // Tự động nhận diện delimiter
+    const firstLine = rawLines[0];
+    const commaCount = (firstLine.match(/,/g) || []).length;
+    const semiCount = (firstLine.match(/;/g) || []).length;
+    const tabCount = (firstLine.match(/\t/g) || []).length;
+
+    let delimiter = ',';
+    if (semiCount > commaCount && semiCount > tabCount) delimiter = ';';
+    else if (tabCount > commaCount && tabCount > semiCount) delimiter = '\t';
+
+    const validRolls = [];
+    let skippedCount = 0;
+    let totalKg = 0;
+
+    const user = currentUser || 'guest';
+    const now = new Date();
+    const defaultTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+
+    // Kiểm tra dòng đầu có phải Header hay không
+    const firstTokens = splitCsvLine(firstLine, delimiter).map(t => t.toLowerCase());
+    let hasHeader = false;
+    let colBarcodeIdx = -1;
+    let colMaVtIdx = -1;
+    let colBatchIdx = -1;
+    let colKgIdx = -1;
+
+    firstTokens.forEach((tok, idx) => {
+      const cleanTok = tok.replace(/["']/g, '').trim();
+      if (/^(barcode|mã vạch|ma vach|cuộn id|cuon id|mã tem|ma tem)$/i.test(cleanTok) || cleanTok.includes('barcode')) {
+        colBarcodeIdx = idx;
+        hasHeader = true;
+      } else if (/^(mã vật tư|ma vat tu|mã vt|ma vt|material|mã hàng|ma hang|item)$/i.test(cleanTok) || cleanTok.startsWith('mã') || cleanTok.startsWith('ma')) {
+        colMaVtIdx = idx;
+        hasHeader = true;
+      } else if (/^(batch|lô|lo|số lô|so lo)$/i.test(cleanTok) || cleanTok.includes('batch') || cleanTok.includes('lô')) {
+        colBatchIdx = idx;
+        hasHeader = true;
+      } else if (/^(khối lượng|khoi luong|kg|số lượng|so luong|weight|trọng lượng|trong luong)/i.test(cleanTok) || cleanTok.includes('kg')) {
+        colKgIdx = idx;
+        hasHeader = true;
+      }
+    });
+
+    const startIdx = hasHeader ? 1 : 0;
+    const headerColsCount = hasHeader ? firstTokens.length : 0;
+
+    for (let i = startIdx; i < rawLines.length; i++) {
+      const line = rawLines[i];
+      if (!line) continue;
+
+      let barcode = '';
+      let maVatTu = '';
+      let batch = '';
+      let kg = 0;
+
+      if (hasHeader) {
+        let tokens = splitCsvLine(line, delimiter);
+        // Trường hợp số lẻ thập phân không ngoặc kép trong CSV dấu phẩy (VD: 10001200,BATCH-01,1200,5)
+        if (delimiter === ',' && headerColsCount > 0 && tokens.length === headerColsCount + 1 && colKgIdx === headerColsCount - 1) {
+          const numPart = tokens[colKgIdx] + '.' + tokens[colKgIdx + 1];
+          tokens = [...tokens.slice(0, colKgIdx), numPart];
+        }
+
+        if (colBarcodeIdx >= 0 && tokens[colBarcodeIdx]) {
+          barcode = tokens[colBarcodeIdx];
+        }
+        if (colMaVtIdx >= 0 && tokens[colMaVtIdx]) {
+          maVatTu = tokens[colMaVtIdx];
+        }
+        if (colBatchIdx >= 0 && tokens[colBatchIdx]) {
+          batch = tokens[colBatchIdx];
+        }
+        if (colKgIdx >= 0 && tokens[colKgIdx] !== undefined) {
+          kg = normalizeNumber(tokens[colKgIdx]);
+        }
+
+        // Nếu có barcode nhưng chưa có maVatTu/batch/kg hoặc kg = 0: bóc tách từ barcode
+        if (barcode && (!maVatTu || !batch || kg === 0)) {
+          const parsed = parseBarcodeString(barcode);
+          if (parsed) {
+            if (!maVatTu) maVatTu = parsed.maVatTu;
+            if (!batch) batch = parsed.batch;
+            if (kg === 0 && parsed.kg) kg = parsed.kg;
+          }
+        }
+
+        // Nếu chưa có barcode mà có maVatTu + batch
+        if (!barcode && maVatTu) {
+          barcode = batch ? `${maVatTu}-${batch}${kg > 0 ? `-${kg}` : ''}` : maVatTu;
+        }
+
+        const parsedBarcodeInfo = barcode ? parseBarcodeString(barcode) : null;
+        const hasValidBarcode = parsedBarcodeInfo && (parsedBarcodeInfo.batch || parsedBarcodeInfo.kg > 0);
+        const hasValidFields = !!(maVatTu && (batch || kg > 0));
+
+        if (!hasValidBarcode && !hasValidFields) {
+          skippedCount++;
+          continue;
+        }
+      } else {
+        // Không có header (dạng 1 cột hoặc nhiều cột không tiêu đề)
+        const tokens = splitCsvLine(line, delimiter);
+        const firstToken = tokens[0] || '';
+
+        // Bỏ qua nếu dòng chứa chữ tiêu đề
+        if (firstToken.toLowerCase().includes('mã') || firstToken.toLowerCase().includes('material') || firstToken.toLowerCase().includes('barcode')) {
+          skippedCount++;
+          continue;
+        }
+
+        const parsed = parseBarcodeString(firstToken);
+        if (parsed && parsed.maVatTu) {
+          barcode = parsed.rawText || firstToken;
+          maVatTu = parsed.maVatTu;
+          batch = parsed.batch || '';
+          kg = parsed.kg || 0;
+
+          // Nếu có cột thứ 2 là kg riêng biệt
+          if (tokens.length >= 2 && kg === 0) {
+            const extraKg = normalizeNumber(tokens[1]);
+            if (extraKg > 0) kg = extraKg;
+          }
+        } else {
+          skippedCount++;
+          continue;
+        }
+      }
+
+      kg = Math.round(kg * 100) / 100;
+      totalKg = Math.round((totalKg + kg) * 100) / 100;
+
+      validRolls.push({
+        id: Date.now() + Math.random().toString(36).substr(2, 5),
+        barcode: barcode || `${maVatTu}-${batch}${kg > 0 ? `-${kg}` : ''}`,
+        maVatTu: maVatTu || barcode,
+        batch: batch || '',
+        kg: kg,
+        timestamp: defaultTimeStr,
+        scannedBy: user
+      });
+    }
+
+    return {
+      validRolls,
+      skippedCount,
+      totalKg
+    };
+  }
+
   return {
     normalizeNumber,
     buildVirtualKey,
     parseExcelRows,
     aggregateSystemStock,
     aggregateScannedRolls,
-    reconcile3Way
+    reconcile3Way,
+    parseBarcodeString,
+    parseCsvScannedRolls
   };
 }));

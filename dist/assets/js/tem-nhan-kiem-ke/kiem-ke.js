@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', () => {
 function initKiemKeApp() {
   // DOM Elements
   const excelFileInput = document.getElementById('excelFileInput');
+  const csvScanFileInput = document.getElementById('csvScanFileInput');
+  const csvScanFileInputTab = document.getElementById('csvScanFileInputTab');
   const lblExcelFileName = document.getElementById('lblExcelFileName');
   const excelFileBadge = document.getElementById('excelFileBadge');
   const barcodeInput = document.getElementById('barcodeInput');
@@ -339,6 +341,78 @@ function initKiemKeApp() {
         }
       };
       reader.readAsArrayBuffer(file);
+    });
+  }
+
+  // 2.1. Handle CSV Scanned Rolls Upload
+  function handleCsvScanUpload(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const text = evt.target.result;
+        const currentUser = (typeof localStorage !== 'undefined' && localStorage.getItem('currentUser')) || 'guest';
+        const parseResult = window.KiemKeEngine && typeof window.KiemKeEngine.parseCsvScannedRolls === 'function'
+          ? window.KiemKeEngine.parseCsvScannedRolls(text, currentUser)
+          : null;
+
+        if (!parseResult || !parseResult.validRolls || parseResult.validRolls.length === 0) {
+          showToast('File CSV không chứa dữ liệu cuộn quét hợp lệ.', 'warning');
+          return;
+        }
+
+        const newRolls = parseResult.validRolls;
+        // Đưa cuộn mới lên đầu mảng để hiển thị ngay
+        scannedRolls = [...newRolls, ...scannedRolls];
+
+        // Lưu vào LocalStorage
+        if (window.KiemKeStorage && typeof window.KiemKeStorage.saveSession === 'function') {
+          window.KiemKeStorage.saveSession(scannedRolls, excelMeta);
+        }
+
+        // Cập nhật giao diện thống kê và các bảng
+        recalculateAndRender();
+
+        // Âm thanh báo thành công
+        if (window.KiemKeStorage && typeof window.KiemKeStorage.playBeepSuccess === 'function') {
+          window.KiemKeStorage.playBeepSuccess();
+        }
+
+        let msg = `Đã nạp thành công ${newRolls.length} cuộn từ file CSV (Tổng ${formatKg(parseResult.totalKg)} kg).`;
+        if (parseResult.skippedCount > 0) {
+          msg += ` (Bỏ qua ${parseResult.skippedCount} dòng không hợp lệ)`;
+        }
+        showToast(msg, 'success');
+
+        // Ghi nền hàng loạt lên Supabase kiem_ke_scans
+        if (window.KiemKeStorage && typeof window.KiemKeStorage.insertBatchScannedRollsToSupabase === 'function') {
+          window.KiemKeStorage.insertBatchScannedRollsToSupabase(newRolls).then(synced => {
+            console.log(`Đã đồng bộ ${synced ? synced.length : 0} cuộn quét lên Supabase.`);
+          }).catch(err => {
+            console.warn('Lỗi đồng bộ batch lên Supabase:', err);
+          });
+        }
+      } catch (err) {
+        console.error('Lỗi đọc file CSV:', err);
+        showToast('Lỗi khi đọc file CSV: ' + (err.message || err), 'danger');
+      }
+    };
+    reader.readAsText(file, 'UTF-8');
+  }
+
+  if (csvScanFileInput) {
+    csvScanFileInput.addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (file) handleCsvScanUpload(file);
+      e.target.value = '';
+    });
+  }
+
+  if (csvScanFileInputTab) {
+    csvScanFileInputTab.addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (file) handleCsvScanUpload(file);
+      e.target.value = '';
     });
   }
 
