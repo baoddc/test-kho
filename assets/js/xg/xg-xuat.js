@@ -2871,6 +2871,24 @@ document.addEventListener('submit', async (e) => {
         }
       }
 
+      // Kiểm tra khớp 100% với phiếu xuất trong SAP MB51 -> NẾU KHÔNG KHỚP HOẶC KHÔNG TỒN TẠI SẼ CHẶN HOÀN TOÀN
+      if (window.XgSapLookup && typeof window.XgSapLookup.validateExportReceiptAgainstMb51 === 'function') {
+        const checkResult = await window.XgSapLookup.validateExportReceiptAgainstMb51(phieuXuatInputVal, multiItemsData, 'xg-xuat');
+        if (!checkResult.isValid) {
+          window._isSubmittingAddData = false;
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = originalText; }
+          hideLoadingOverlay();
+          window.XgSapLookup.showExportReceiptMismatchModal(checkResult, 'xg-xuat', () => {
+            if (typeof handleSyncSapData === 'function') {
+              handleSyncSapData();
+            } else if (typeof window.syncSapData === 'function') {
+              window.syncSapData();
+            }
+          });
+          return;
+        }
+      }
+
       // Gọi RPC giao dịch nguyên tử xuat_xg_atomic
       const currentUser = (typeof localStorage !== 'undefined' && localStorage.getItem('currentUser')) || 'anonymous';
       let insertedData = null;
@@ -2988,6 +3006,39 @@ document.addEventListener('submit', async (e) => {
 
       updateData['Số lượng (Kg)'] = rollKgValues.reduce((sum, kg) => sum + kg, 0);
       delete updateData['id'];
+
+      // Kiểm tra đối chiếu với SAP MB51 khi cập nhật
+      const editPhieuXuat = (form.querySelector('input[name="col_3"]')?.value || '').trim();
+      const editMaVatTu = (form.querySelector('input[name="col_5"]')?.value || '').trim();
+      const editTenVatTu = (form.querySelector('input[name="col_6"]')?.value || '').trim();
+      const editBatch = (form.querySelector('input[name="col_7"]')?.value || '').trim();
+
+      if (editPhieuXuat && window.XgSapLookup && typeof window.XgSapLookup.validateExportReceiptAgainstMb51 === 'function') {
+        const singleItemData = [{
+          maVatTu: editMaVatTu,
+          tenVatTu: editTenVatTu,
+          batch: editBatch,
+          rolls: rollKgValues.map((kg, rIdx) => ({
+            id: `edit_${rIdx}`,
+            kg: kg,
+            maVatTu: editMaVatTu,
+            batch: editBatch
+          }))
+        }];
+        const checkResult = await window.XgSapLookup.validateExportReceiptAgainstMb51(editPhieuXuat, singleItemData, 'xg-xuat');
+        if (!checkResult.isValid) {
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = originalText; }
+          hideLoadingOverlay();
+          window.XgSapLookup.showExportReceiptMismatchModal(checkResult, 'xg-xuat', () => {
+            if (typeof handleSyncSapData === 'function') {
+              handleSyncSapData();
+            } else if (typeof window.syncSapData === 'function') {
+              window.syncSapData();
+            }
+          });
+          return;
+        }
+      }
 
       const { data: updatedData, error } = await supabase
         .from(TABLE_NAME).update(updateData).eq('id', rowId).select();
