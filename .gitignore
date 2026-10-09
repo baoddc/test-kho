@@ -40,6 +40,5 @@ out-app/
 out-app-*/
 downloads/
 __pycache__/
-*.pyc
-
-
+*.pyc# Backups
+backups/
