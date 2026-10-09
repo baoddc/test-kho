@@ -108,6 +108,8 @@ let rollCount = 0;
 let editRollCount = 0;
 let currentMaVatTuFilter = '';
 let currentBatchFilter = '';
+let lockedMaVatTu = '';
+let lockedBatch = '';
 
 const toleChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('tole_sync_channel') : null;
 
@@ -2072,7 +2074,16 @@ function renderInventoryFilterInfo() {
   const filterInfoEl = document.getElementById('inventoryFilterInfo');
   if (!filterInfoEl) return;
 
-  if (currentMaVatTuFilter || currentBatchFilter) {
+  if (lockedMaVatTu || lockedBatch) {
+    const filters = [];
+    if (lockedMaVatTu) filters.push(`Mã VT: <strong>${lockedMaVatTu}</strong>`);
+    if (lockedBatch) filters.push(`Lô (Batch): <strong>${lockedBatch}</strong>`);
+    filterInfoEl.innerHTML = `
+      <span>Khóa theo mặt hàng MB51: ${filters.join(' | ')}</span>
+      <span class="badge bg-warning text-dark ms-2"><i class="bi bi-shield-lock-fill me-1"></i>Bắt buộc khớp</span>
+    `;
+    filterInfoEl.style.display = '';
+  } else if (currentMaVatTuFilter || currentBatchFilter) {
     const filters = [];
     if (currentMaVatTuFilter) filters.push(`Mã VT: <strong>${currentMaVatTuFilter}</strong>`);
     if (currentBatchFilter) filters.push(`Lô (Batch): <strong>${currentBatchFilter}</strong>`);
@@ -2086,8 +2097,10 @@ function renderInventoryFilterInfo() {
 
 async function openInventoryModal(target, maVatTu = '', batch = '') {
   currentModalTarget = target;
-  currentMaVatTuFilter = maVatTu;
-  currentBatchFilter = batch;
+  currentMaVatTuFilter = (maVatTu || '').trim();
+  currentBatchFilter = (batch || '').trim();
+  lockedMaVatTu = (maVatTu || '').trim();
+  lockedBatch = (batch || '').trim();
 
   const inventoryModal = document.getElementById('inventoryRollsModal');
   if (!inventoryModal) return;
@@ -2385,12 +2398,21 @@ function renderInventoryTable(data, searchVal = '') {
     const lockStatus = window.inventoryLockService ? window.inventoryLockService.getLockStatus(cuonId) : { isLocked: false };
     const isLockedByOther = lockStatus.isLocked && !lockStatus.isMe;
 
+    // Kiểm tra xem cuộn có khớp với mặt hàng đang chọn trên phiếu MB51 không
+    const isMismatched = Boolean(
+      (lockedMaVatTu && maVatTu.toLowerCase() !== lockedMaVatTu.toLowerCase()) ||
+      (lockedBatch && batch.toLowerCase() !== lockedBatch.toLowerCase())
+    );
+
     const tr = document.createElement('tr');
     if (isAlreadyInForm || (lockStatus.isLocked && lockStatus.isMe)) {
       tr.classList.add('table-primary');
     } else if (isLockedByOther) {
       tr.classList.add('table-warning');
       tr.style.opacity = '0.75';
+    } else if (isMismatched) {
+      tr.classList.add('table-light');
+      tr.style.opacity = '0.55';
     }
 
     let statusContent = '';
@@ -2410,6 +2432,8 @@ function renderInventoryTable(data, searchVal = '') {
       `;
     } else if (isAlreadyInForm || (lockStatus.isLocked && lockStatus.isMe)) {
       statusContent = `<span class="badge bg-primary px-2 py-1 shadow-sm" style="font-size: 0.78rem;"><i class="bi bi-check2-circle me-1"></i>Bạn đang giữ</span>`;
+    } else if (isMismatched) {
+      statusContent = `<span class="badge bg-secondary px-2 py-1 shadow-sm" style="font-size: 0.78rem;" title="Cuộn không khớp Mã VT hoặc Lô của mặt hàng trên phiếu MB51"><i class="bi bi-x-circle me-1"></i>Không khớp MB51</span>`;
     } else {
       statusContent = `<span class="badge ${tonKg > 0 ? 'bg-success' : 'bg-secondary'}">${tonKg > 0 ? 'Còn tồn' : 'Hết'}</span>`;
     }
@@ -2424,7 +2448,7 @@ function renderInventoryTable(data, searchVal = '') {
           data-ton-kg="${tonKg}"
           data-ton-m="${tonM}"
           ${(isAlreadyInForm || (lockStatus.isLocked && lockStatus.isMe)) ? 'checked' : ''}
-          ${isLockedByOther ? 'disabled' : ''}>
+          ${(isLockedByOther || isMismatched) ? 'disabled' : ''}>
       </td>
       <td class="fw-bold">${maVatTu}</td>
       <td>${tenVatTu}</td>
@@ -2510,6 +2534,20 @@ document.addEventListener('click', (e) => {
     const selectedCheckboxes = document.querySelectorAll('#inventoryTableBody .inventory-checkbox:checked');
     if (selectedCheckboxes.length === 0) {
       alert('Vui lòng chọn ít nhất một cuộn'); return;
+    }
+
+    // Kiểm tra ràng buộc bắt buộc khớp với mặt hàng đang chọn trên phiếu MB51
+    if (lockedMaVatTu || lockedBatch) {
+      const hasMismatch = Array.from(selectedCheckboxes).some(cb => {
+        const rMavt = cb.dataset.maVattu || '';
+        const rBatch = cb.dataset.batch || '';
+        return (lockedMaVatTu && rMavt.toLowerCase() !== lockedMaVatTu.toLowerCase()) ||
+               (lockedBatch && rBatch.toLowerCase() !== lockedBatch.toLowerCase());
+      });
+      if (hasMismatch) {
+        alert(`⚠️ Không thể chọn các cuộn này!\n\nMặt hàng trên phiếu yêu cầu:\n- Mã VT: ${lockedMaVatTu || 'Bất kỳ'}\n- Lô (Batch): ${lockedBatch || 'Bất kỳ'}\n\nVui lòng chỉ chọn các cuộn khớp chính xác thông tin trên phiếu xuất MB51.`);
+        return;
+      }
     }
 
     const target = currentModalTarget;
