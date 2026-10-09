@@ -1324,7 +1324,49 @@
         }
       }
 
-      // Chuẩn bị thông tin chung phiếu xuất (không tự động điền mặt hàng & cuộn xuất)
+      // Truy vấn tất cả các dòng của phiếu từ SAP MB51 để hỗ trợ xuất đa mặt hàng
+      let allDocRows = [sapRecord];
+      if (window.supabase && sapRecord.material_document) {
+        try {
+          const { data: docRows, error: docErr } = await window.supabase
+            .from('xg_sap_mb51')
+            .select('*')
+            .eq('material_document', sapRecord.material_document);
+          if (!docErr && Array.isArray(docRows) && docRows.length > 0) {
+            allDocRows = docRows;
+          }
+        } catch (e) {
+          console.warn('[XgSapLookup] Không thể truy vấn tất cả dòng của phiếu:', e);
+        }
+      }
+
+      // Lọc các dòng hợp lệ với trang hiện tại
+      const validRows = allDocRows.filter(r => {
+        const chk = validateSapRecordAgainstContext(r, currentContext);
+        return chk.isValid;
+      });
+
+      // Gom nhóm theo material + batch
+      const itemsMap = new Map();
+      validRows.forEach(r => {
+        const mat = String(r.material || '').trim();
+        const batch = String(r.batch || '').trim();
+        const key = `${mat}__${batch}`;
+        const rawQty = Math.abs(parseFloat(r.quantity) || 0);
+
+        if (!itemsMap.has(key)) {
+          itemsMap.set(key, {
+            maVatTu: mat,
+            tenVatTu: r.material_description || '',
+            batch: batch,
+            totalSapKg: rawQty
+          });
+        } else {
+          itemsMap.get(key).totalSapKg += rawQty;
+        }
+      });
+      const itemsGrouped = Array.from(itemsMap.values());
+
       const headerInfo = {
         maChungTu: 'PX',
         ngayXuat: sapRecord.posting_date || '',
@@ -1335,9 +1377,20 @@
       };
 
       if (typeof window.populateExportReceiptData === 'function') {
-        await window.populateExportReceiptData(headerInfo);
+        await window.populateExportReceiptData(headerInfo, itemsGrouped);
       } else {
-        showAutofillToast(`Đã tự động điền thông tin phiếu SAP: ${sapRecord.material_document}`);
+        // Fallback điền vào thẻ mặt hàng đầu tiên nếu có
+        const multiItems = window.multiItemsData;
+        if (Array.isArray(multiItems) && multiItems.length > 0) {
+          const firstItem = multiItems[0];
+          if (sapRecord.material) firstItem.maVatTu = sapRecord.material;
+          if (sapRecord.material_description) firstItem.tenVatTu = sapRecord.material_description;
+          if (sapRecord.batch) firstItem.batch = sapRecord.batch;
+          if (typeof window.renderItemCards === 'function') {
+            window.renderItemCards();
+          }
+        }
+        showAutofillToast(`Đã tự động điền thông tin phiếu SAP: ${sapRecord.material_document} (${sapRecord.material || ''})`);
       }
     }
 
@@ -2116,9 +2169,327 @@
     resetSapSelection,
     isSapActive,
     validateSapMatch,
+    validateExportReceiptAgainstMb51,
+    showExportReceiptMismatchModal,
     syncFromGoogleSheets,
     showAutofillToast
   };
+
+  /**
+   * Xác thực danh sách mặt hàng và cuộn của phiếu xuất đối chiếu với SAP MB51
+   * @param {string} docNo - Số phiếu xuất
+   * @param {Array} multiItemsData - Danh sách mặt hàng [{ maVatTu, batch, rolls: [{ cuonId, kg, maVatTu, batch }] }]
+   * @param {string} [pageContext] - 'xg-xuat' | 'tole-xuat'
+   * @returns {Promise<{ isValid: boolean, docNo: string, notFoundInSap?: boolean, errors: Array<Object>, sapSummary: Object }>}
+   */
+  async function validateExportReceiptAgainstMb51(docNo, multiItemsData, pageContext) {
+    if (!docNo || !String(docNo).trim()) {
+      return {
+        isValid: false,
+        message: 'Vui lòng nhập số phiếu xuất',
+        errors: [{ reason: 'Chưa nhập số phiếu xuất' }],
+        sapSummary: { totalSapKg: 0, totalActualKg: 0, totalDiff: 0 }
+      };
+    }
+
+    const currentContext = detectCurrentPageContext(pageContext);
+    const cleanDoc = String(docNo).trim();
+
+    // 1. Truy vấn các dòng của phiếu từ bảng xg_sap_mb51
+    let docRows = [];
+    if (window.supabase) {
+      try {
+        const { data, error } = await window.supabase
+          .from('xg_sap_mb51')
+          .select('*')
+          .ilike('material_document', cleanDoc);
+        if (!error && Array.isArray(data)) {
+          docRows = data;
+        }
+      } catch (err) {
+        console.warn('[XgSapLookup] Lỗi truy vấn xg_sap_mb51:', err);
+      }
+    }
+
+    // Lọc theo số phiếu chính xác (case-insensitive) và quy tắc trang (ví dụ H - xuất kho, đúng nhóm VT)
+    const exactRows = docRows.filter(r => String(r.material_document || '').trim().toLowerCase() === cleanDoc.toLowerCase());
+    const validRows = exactRows.filter(r => validateSapRecordAgainstContext(r, currentContext).isValid);
+
+    if (validRows.length === 0) {
+      return {
+        isValid: false,
+        docNo: cleanDoc,
+        notFoundInSap: true,
+        message: `Số phiếu xuất "${cleanDoc}" chưa tồn tại trong dữ liệu SAP MB51 hoặc không thuộc phân hệ xuất kho này.`,
+        errors: [{ reason: `Phiếu xuất "${cleanDoc}" không tìm thấy trong SAP MB51 (${SAP_PAGE_RULES[currentContext]?.label || ''}).` }],
+        sapSummary: { totalSapKg: 0, totalActualKg: 0, totalDiff: 0 }
+      };
+    }
+
+    // 2. Gom nhóm các dòng MB51 theo khóa material__batch
+    const sapMap = new Map();
+    let totalSapKg = 0;
+    validRows.forEach(r => {
+      const mat = String(r.material || '').trim();
+      const batch = String(r.batch || '').trim();
+      const key = `${mat}__${batch}`.toLowerCase();
+      const qty = Math.abs(parseFloat(r.quantity) || 0);
+
+      totalSapKg += qty;
+      if (!sapMap.has(key)) {
+        sapMap.set(key, {
+          material: mat,
+          description: r.material_description || '',
+          batch: batch,
+          totalSapKg: qty
+        });
+      } else {
+        sapMap.get(key).totalSapKg += qty;
+      }
+    });
+
+    const errors = [];
+    let totalActualKg = 0;
+
+    (multiItemsData || []).forEach((item, idx) => {
+      const mat = String(item.maVatTu || '').trim();
+      const batch = String(item.batch || '').trim();
+      const key = `${mat}__${batch}`.toLowerCase();
+      const sapItem = sapMap.get(key);
+
+      const rolls = item.rolls || [];
+      let itemKg = 0;
+
+      rolls.forEach(r => {
+        const parsed = (typeof parseNumericInput === 'function' ? parseNumericInput(r.kg) : parseFloat(r.kg)) || 0;
+        itemKg += parsed;
+        if (r.maVatTu && String(r.maVatTu).trim().toLowerCase() !== mat.toLowerCase()) {
+          errors.push({
+            itemIdx: idx + 1,
+            maVatTu: mat,
+            batch,
+            reason: `Cuộn [${r.cuonId}] có Mã VT "${r.maVatTu}" không khớp với mặt hàng "${mat}"`
+          });
+        }
+        if (r.batch && String(r.batch).trim().toLowerCase() !== batch.toLowerCase()) {
+          errors.push({
+            itemIdx: idx + 1,
+            maVatTu: mat,
+            batch,
+            reason: `Cuộn [${r.cuonId}] có Lô "${r.batch}" không khớp với mặt hàng Lô "${batch}"`
+          });
+        }
+      });
+
+      totalActualKg += itemKg;
+
+      if (!sapItem) {
+        errors.push({
+          itemIdx: idx + 1,
+          maVatTu: mat,
+          batch,
+          reason: `Mặt hàng "${mat}" (Lô: ${batch || 'Trống'}) không tồn tại trên phiếu xuất MB51`
+        });
+        return;
+      }
+
+      if (rolls.length === 0 || itemKg === 0) {
+        errors.push({
+          itemIdx: idx + 1,
+          maVatTu: mat,
+          tenVatTu: sapItem.description,
+          batch,
+          sapKg: sapItem.totalSapKg,
+          actualKg: 0,
+          diff: -sapItem.totalSapKg,
+          reason: `Mục #${idx + 1} (${mat}): Chưa chọn cuộn từ kho (Cần đủ ${sapItem.totalSapKg.toLocaleString('vi-VN')} kg)`
+        });
+        return;
+      }
+
+      const diff = Math.round((itemKg - sapItem.totalSapKg) * 100) / 100;
+      if (Math.abs(diff) >= 0.05) {
+        const isSurplus = diff > 0;
+        errors.push({
+          itemIdx: idx + 1,
+          maVatTu: mat,
+          tenVatTu: sapItem.description,
+          batch,
+          sapKg: sapItem.totalSapKg,
+          actualKg: itemKg,
+          diff: diff,
+          reason: isSurplus
+            ? `Mục #${idx + 1} (${mat}): Lệch dư +${diff.toLocaleString('vi-VN')} kg (Cuộn: ${itemKg.toLocaleString('vi-VN')} kg > SAP: ${sapItem.totalSapKg.toLocaleString('vi-VN')} kg)`
+            : `Mục #${idx + 1} (${mat}): Lệch thiếu ${diff.toLocaleString('vi-VN')} kg (Cuộn: ${itemKg.toLocaleString('vi-VN')} kg < SAP: ${sapItem.totalSapKg.toLocaleString('vi-VN')} kg)`
+        });
+      }
+    });
+
+    return {
+      isValid: errors.length === 0,
+      docNo: cleanDoc,
+      errors,
+      sapSummary: {
+        totalSapKg: Math.round(totalSapKg * 100) / 100,
+        totalActualKg: Math.round(totalActualKg * 100) / 100,
+        totalDiff: Math.round((totalActualKg - totalSapKg) * 100) / 100
+      }
+    };
+  }
+
+  /**
+   * Hiển thị modal cảnh báo chặn xuất kho khi dữ liệu không khớp MB51
+   */
+  function showExportReceiptMismatchModal(validationResult, pageContext, onSyncCallback) {
+    let modalEl = document.getElementById('exportReceiptMismatchModal');
+    if (!modalEl) {
+      modalEl = document.createElement('div');
+      modalEl.id = 'exportReceiptMismatchModal';
+      modalEl.className = 'modal fade';
+      modalEl.tabIndex = -1;
+      modalEl.setAttribute('aria-hidden', 'true');
+      modalEl.setAttribute('data-bs-backdrop', 'static');
+      modalEl.style.zIndex = '10095';
+      document.body.appendChild(modalEl);
+    }
+
+    const docNo = validationResult?.docNo || 'Chưa rõ';
+    const isNotFound = Boolean(validationResult?.notFoundInSap);
+    const errors = validationResult?.errors || [];
+
+    let bodyContent = '';
+
+    if (isNotFound) {
+      bodyContent = `
+        <div class="alert alert-danger border-0 d-flex align-items-center gap-3 py-3 px-3 rounded-3 mb-3" style="background: rgba(220, 53, 69, 0.2);">
+          <i class="bi bi-x-octagon-fill fs-2 text-danger flex-shrink-0"></i>
+          <div>
+            <div class="fw-bold fs-5 text-white">SỐ PHIẾU XUẤT CHƯA CÓ TRONG SAP MB51</div>
+            <div class="text-white-50 small">Số phiếu <strong>${escapeHtml(docNo)}</strong> không tìm thấy trong dữ liệu SAP MB51 đã đồng bộ.</div>
+          </div>
+        </div>
+        <div class="p-3 rounded-3 text-start mb-3" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
+          <p class="mb-2 text-white"><strong>Nguyên nhân có thể do:</strong></p>
+          <ul class="mb-0 text-white-50 small ps-3">
+            <li>Phiếu xuất vừa được tạo trên SAP / Google Sheets nhưng chưa đồng bộ về phần mềm.</li>
+            <li>Nhập sai số phiếu xuất hoặc phiếu này thuộc phân hệ / kho khác.</li>
+          </ul>
+        </div>
+        <div class="p-3 rounded-3 text-warning small d-flex align-items-center gap-2 mb-2" style="background: rgba(255, 193, 7, 0.12); border: 1px solid rgba(255, 193, 7, 0.25);">
+          <i class="bi bi-lightbulb-fill fs-4 flex-shrink-0 text-warning"></i>
+          <div>
+            <strong>Hướng xử lý:</strong> Vui lòng nhấn nút <strong>"Đồng bộ Google Sheets"</strong> bên dưới để cập nhật lại dữ liệu mới nhất từ SAP MB51, hoặc kiểm tra lại số phiếu.
+          </div>
+        </div>
+      `;
+    } else {
+      let rowsHtml = '';
+      errors.forEach(err => {
+        const diffText = err.diff !== undefined
+          ? (err.diff > 0 ? `+${err.diff.toLocaleString('vi-VN')} kg (Dư)` : `${err.diff.toLocaleString('vi-VN')} kg (Thiếu)`)
+          : (err.reason || 'Không khớp');
+        const diffColor = err.diff !== undefined ? (err.diff > 0 ? 'text-warning' : 'text-danger') : 'text-danger';
+        rowsHtml += `
+          <tr>
+            <td class="text-center fw-bold">#${err.itemIdx || '-'}</td>
+            <td>
+              <div class="fw-bold text-white">${escapeHtml(err.maVatTu || 'N/A')}</div>
+              <small class="text-white-50 text-truncate d-block" style="max-width: 160px;">${escapeHtml(err.tenVatTu || '')}</small>
+            </td>
+            <td><span class="badge bg-secondary font-monospace">${escapeHtml(err.batch || 'N/A')}</span></td>
+            <td class="text-end text-info fw-bold">${err.sapKg !== undefined ? err.sapKg.toLocaleString('vi-VN') : '-'} kg</td>
+            <td class="text-end fw-bold text-white">${err.actualKg !== undefined ? err.actualKg.toLocaleString('vi-VN') : '-'} kg</td>
+            <td class="text-end fw-bold ${diffColor}">${diffText}</td>
+          </tr>
+        `;
+      });
+
+      bodyContent = `
+        <div class="alert alert-danger border-0 d-flex align-items-center gap-3 py-3 px-3 rounded-3 mb-3" style="background: rgba(220, 53, 69, 0.25);">
+          <i class="bi bi-exclamation-triangle-fill fs-2 text-danger flex-shrink-0"></i>
+          <div>
+            <div class="fw-bold fs-5 text-white">DỮ LIỆU CUỘN CHỌN CHƯA KHỚP PHIẾU SAP MB51</div>
+            <div class="text-white-50 small">Có <strong>${errors.length}</strong> điểm chưa khớp hoàn toàn số lượng hoặc quy cách với phiếu <strong>${escapeHtml(docNo)}</strong>.</div>
+          </div>
+        </div>
+
+        <div class="table-responsive border border-secondary rounded mb-3" style="max-height: 250px;">
+          <table class="table table-dark table-sm table-bordered mb-0 small" style="background: #181c2e;">
+            <thead class="table-secondary text-dark sticky-top">
+              <tr>
+                <th style="width: 45px;" class="text-center">Mục</th>
+                <th>Mã VT</th>
+                <th>Batch</th>
+                <th class="text-end">SAP Yêu cầu</th>
+                <th class="text-end">Thực chọn</th>
+                <th class="text-end">Lệch</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="p-3 rounded-3 text-warning small d-flex align-items-center gap-2 mb-2" style="background: rgba(255, 193, 7, 0.12); border: 1px solid rgba(255, 193, 7, 0.25);">
+          <i class="bi bi-shield-x fs-3 flex-shrink-0 text-warning"></i>
+          <div>
+            <strong>Quy định hệ thống:</strong> Cả lệch dư và lệch thiếu đều bị chặn. Thủ kho phải chọn các cuộn sao cho <strong>khớp hoàn toàn 100% (lệch = 0 kg)</strong> mới được phép xuất kho!
+          </div>
+        </div>
+      `;
+    }
+
+    modalEl.innerHTML = `
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow-lg border-0" style="border-radius: 16px; overflow: hidden; background: #1e2438; color: #f8fafc; border: 1px solid rgba(255, 255, 255, 0.15) !important;">
+          <div class="modal-header py-3 px-4" style="background: linear-gradient(135deg, #dc3545 0%, #991b1b 100%); color: #ffffff; border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;">
+            <div class="d-flex align-items-center gap-2">
+              <span class="d-inline-flex align-items-center justify-content-center bg-white text-danger rounded-circle shadow-sm" style="width: 36px; height: 36px; font-size: 1.25rem;">
+                <i class="bi bi-shield-lock-fill"></i>
+              </span>
+              <div>
+                <h5 class="modal-title fw-bold mb-0 text-white">NGĂN CHẶN XUẤT KHO</h5>
+                <small class="text-white-50">Số phiếu xuất: <strong class="text-white">${escapeHtml(docNo)}</strong></small>
+              </div>
+            </div>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+
+          <div class="modal-body p-4 text-center">
+            ${bodyContent}
+          </div>
+
+          <div class="modal-footer justify-content-end gap-2 py-3 px-4" style="background: #181c2e !important; border-top: 1px solid rgba(255, 255, 255, 0.15) !important;">
+            <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Đóng &amp; Điều chỉnh</button>
+            ${isNotFound ? `
+              <button type="button" class="btn btn-primary px-4 fw-bold shadow" id="btnMismatchSyncGgSheet">
+                <i class="bi bi-arrow-repeat me-1"></i> Đồng bộ Google Sheets ngay
+              </button>
+            ` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+
+    const bsModal = typeof bootstrap !== 'undefined' && bootstrap.Modal
+      ? bootstrap.Modal.getOrCreateInstance(modalEl)
+      : null;
+
+    const btnSync = modalEl.querySelector('#btnMismatchSyncGgSheet');
+    if (btnSync) {
+      btnSync.onclick = async () => {
+        if (bsModal) bsModal.hide();
+        if (typeof onSyncCallback === 'function') {
+          await onSyncCallback();
+        } else if (typeof syncFromGoogleSheets === 'function') {
+          syncFromGoogleSheets(btnSync);
+        }
+      };
+    }
+
+    if (bsModal) bsModal.show();
+  }
 
   // Hỗ trợ module.exports trong môi trường Node.js (cho unit test)
   if (typeof module !== 'undefined' && module.exports) {
