@@ -177,11 +177,15 @@
 
                   <!-- Global Totals for all items in receipt -->
                   <div class="p-2 bg-light rounded border d-flex justify-content-between align-items-center flex-wrap gap-2 mt-2">
-                    <span class="fw-bold text-secondary small">TỔNG TOÀN BỘ PHIẾU XUẤT:</span>
-                    <div class="d-flex gap-4">
-                      <span class="small">Tổng số mặt hàng: <strong id="globalItemsCount" class="text-primary">1</strong></span>
-                      <span class="small">Tổng số cuộn: <strong id="globalRollsCount" class="text-primary">0</strong></span>
-                      <span class="small">Tổng khối lượng: <strong id="globalTotalKg" class="text-success fs-6">0</strong> kg</span>
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="fw-bold text-secondary small">TỔNG TOÀN BỘ PHIẾU XUẤT:</span>
+                      <span id="globalReconciliationBadge"></span>
+                    </div>
+                    <div class="d-flex gap-3 flex-wrap align-items-center">
+                      <span class="small">Số mặt hàng: <strong id="globalItemsCount" class="text-primary">1</strong></span>
+                      <span class="small">Số cuộn: <strong id="globalRollsCount" class="text-primary">0</strong></span>
+                      <span class="small" id="globalSapKgWrapper" style="display: none;">SAP MB51: <strong id="globalSapTotalKg" class="text-info">0</strong> kg</span>
+                      <span class="small">Thực xuất: <strong id="globalTotalKg" class="text-success fs-6">0</strong> kg</span>
                     </div>
                   </div>
                 </div>
@@ -382,10 +386,10 @@
   <script src="/assets/js/core/inventory-lock-service.js?v=2.0.5"></script>
   <script src="/assets/js/core/qr-scanner-service.js?v=2.0.5"></script>
   <script src="/assets/js/core/receipt-ocr-service.js?v=2.0.7"></script>
-  <script src="/assets/js/xg/xg-sap-lookup.js?v=2.0.5"></script>
+  <script src="/assets/js/xg/xg-sap-lookup.js?v=2.0.8"></script>
 
   <!-- Supabase version of xg-xuat -->
-  <script src="/assets/js/xg/xg-xuat.js?v=2.0.7"></script>
+  <script src="/assets/js/xg/xg-xuat.js?v=2.0.8"></script>
 
   <!-- Bootstrap JS (for dropdown) -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

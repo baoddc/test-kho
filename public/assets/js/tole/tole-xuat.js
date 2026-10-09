@@ -108,6 +108,8 @@ let rollCount = 0;
 let editRollCount = 0;
 let currentMaVatTuFilter = '';
 let currentBatchFilter = '';
+let lockedMaVatTu = '';
+let lockedBatch = '';
 
 const toleChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('tole_sync_channel') : null;
 
@@ -1124,6 +1126,9 @@ function mergeBatchIntoTenVatTu(tenVatTu, batch, oldBatch) {
 function updateMultiItemTotals() {
   let globalRolls = 0;
   let globalKg = 0;
+  let globalSapKg = 0;
+  let hasSapItems = false;
+  let allMatched = true;
 
   multiItemsData.forEach((item, idx) => {
     let itemKg = 0;
@@ -1139,6 +1144,16 @@ function updateMultiItemTotals() {
     globalRolls += itemRollCount;
     globalKg += itemKg;
 
+    const hasSap = typeof item.sapKg === 'number' && item.sapKg > 0;
+    if (hasSap) {
+      hasSapItems = true;
+      globalSapKg += item.sapKg;
+      const diff = Math.round((itemKg - item.sapKg) * 100) / 100;
+      if (Math.abs(diff) >= 0.05 || itemRollCount === 0) {
+        allMatched = false;
+      }
+    }
+
     // Update item card footer counters in DOM if present
     const cardEl = document.querySelector(`.item-card[data-item-idx="${idx}"]`);
     if (cardEl) {
@@ -1146,22 +1161,92 @@ function updateMultiItemTotals() {
       const itemKgEl = cardEl.querySelector('.item-total-kg');
       if (rollCountEl) rollCountEl.textContent = itemRollCount;
       if (itemKgEl) itemKgEl.textContent = formatNumericValue(itemKg);
+
+      // Cập nhật thanh đối chiếu MB51 nếu có sapKg
+      const barEl = cardEl.querySelector('.item-reconciliation-bar');
+      const badgeContainer = cardEl.querySelector('.item-reconciliation-badge-container');
+      const actualKgEl = cardEl.querySelector('.item-actual-kg');
+      const sapKgEl = cardEl.querySelector('.item-sap-kg');
+
+      if (barEl) {
+        if (hasSap) {
+          barEl.style.display = 'flex';
+          if (sapKgEl) sapKgEl.textContent = `${formatNumericValue(item.sapKg)} kg`;
+          if (actualKgEl) actualKgEl.textContent = `${formatNumericValue(itemKg)} kg`;
+
+          if (badgeContainer) {
+            const diff = Math.round((itemKg - item.sapKg) * 100) / 100;
+            const absDiff = Math.abs(diff);
+            if (itemRollCount === 0 || itemKg === 0) {
+              badgeContainer.innerHTML = `<span class="badge bg-secondary"><i class="bi bi-clock me-1"></i>Chưa chọn cuộn</span>`;
+            } else if (absDiff < 0.05) {
+              badgeContainer.innerHTML = `<span class="badge bg-success"><i class="bi bi-check-circle-fill me-1"></i>Khớp 100% (0 kg)</span>`;
+            } else if (diff > 0) {
+              badgeContainer.innerHTML = `<span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle-fill me-1"></i>Lệch dư: +${formatNumericValue(diff)} kg</span>`;
+            } else {
+              badgeContainer.innerHTML = `<span class="badge bg-danger"><i class="bi bi-exclamation-octagon-fill me-1"></i>Lệch thiếu: ${formatNumericValue(diff)} kg</span>`;
+            }
+          }
+        } else {
+          barEl.style.display = 'none';
+        }
+      }
     }
   });
 
   const globalItemsCountEl = document.getElementById('globalItemsCount');
   const globalRollsCountEl = document.getElementById('globalRollsCount');
   const globalTotalKgEl = document.getElementById('globalTotalKg');
+  const globalSapKgWrapper = document.getElementById('globalSapKgWrapper');
+  const globalSapTotalKg = document.getElementById('globalSapTotalKg');
+  const globalBadgeEl = document.getElementById('globalReconciliationBadge');
 
   if (globalItemsCountEl) globalItemsCountEl.textContent = multiItemsData.length;
   if (globalRollsCountEl) globalRollsCountEl.textContent = globalRolls;
   if (globalTotalKgEl) globalTotalKgEl.textContent = formatNumericValue(globalKg);
+
+  if (globalSapKgWrapper && globalSapTotalKg) {
+    if (hasSapItems) {
+      globalSapKgWrapper.style.display = '';
+      globalSapTotalKg.textContent = formatNumericValue(globalSapKg);
+    } else {
+      globalSapKgWrapper.style.display = 'none';
+    }
+  }
+
+  if (globalBadgeEl) {
+    if (hasSapItems) {
+      if (allMatched && globalRolls > 0) {
+        globalBadgeEl.innerHTML = `<span class="badge bg-success ms-1"><i class="bi bi-shield-check me-1"></i>Khớp 100% SAP MB51</span>`;
+      } else {
+        globalBadgeEl.innerHTML = `<span class="badge bg-danger ms-1"><i class="bi bi-shield-exclamation me-1"></i>Chưa khớp SAP MB51</span>`;
+      }
+    } else {
+      globalBadgeEl.innerHTML = '';
+    }
+  }
 }
 
 function generateItemCardHTML(item, index, totalItems) {
   const isOnlyItem = totalItems <= 1;
   const rolls = item.rolls || [];
   const totalItemKg = rolls.reduce((sum, r) => sum + (parseNumericInput(r.kg) || 0), 0);
+
+  const hasSap = typeof item.sapKg === 'number' && item.sapKg > 0;
+  let reconciliationBadgeHTML = '';
+  if (hasSap) {
+    const diff = Math.round((totalItemKg - item.sapKg) * 100) / 100;
+    const absDiff = Math.abs(diff);
+    if (rolls.length === 0 || totalItemKg === 0) {
+      reconciliationBadgeHTML = `<span class="badge bg-secondary"><i class="bi bi-clock me-1"></i>Chưa chọn cuộn</span>`;
+    } else if (absDiff < 0.05) {
+      reconciliationBadgeHTML = `<span class="badge bg-success"><i class="bi bi-check-circle-fill me-1"></i>Khớp 100% (0 kg)</span>`;
+    } else if (diff > 0) {
+      reconciliationBadgeHTML = `<span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle-fill me-1"></i>Lệch dư: +${formatNumericValue(diff)} kg</span>`;
+    } else {
+      reconciliationBadgeHTML = `<span class="badge bg-danger"><i class="bi bi-exclamation-octagon-fill me-1"></i>Lệch thiếu: ${formatNumericValue(diff)} kg</span>`;
+    }
+  }
 
   let rollsRowsHTML = '';
   if (rolls.length === 0) {
@@ -1249,6 +1334,17 @@ function generateItemCardHTML(item, index, totalItems) {
               ${rollsRowsHTML}
             </tbody>
           </table>
+        </div>
+
+        <!-- Thanh đối chiếu SAP MB51 -->
+        <div class="p-2 rounded border bg-light mt-2 d-flex justify-content-between align-items-center flex-wrap gap-2 item-reconciliation-bar" style="${hasSap ? 'display: flex;' : 'display: none;'}">
+          <div class="small">
+            <span class="text-secondary me-2"><i class="bi bi-receipt me-1"></i>SAP MB51 yêu cầu: <strong class="text-info item-sap-kg">${hasSap ? formatNumericValue(item.sapKg) : '0'} kg</strong></span>
+            <span class="text-secondary"><i class="bi bi-boxes me-1"></i>Thực xuất: <strong class="text-primary item-actual-kg">${formatNumericValue(totalItemKg)} kg</strong></span>
+          </div>
+          <div class="item-reconciliation-badge-container">
+            ${reconciliationBadgeHTML}
+          </div>
         </div>
 
         <div class="d-flex justify-content-end gap-3 mt-2 small text-muted">
@@ -2072,7 +2168,16 @@ function renderInventoryFilterInfo() {
   const filterInfoEl = document.getElementById('inventoryFilterInfo');
   if (!filterInfoEl) return;
 
-  if (currentMaVatTuFilter || currentBatchFilter) {
+  if (lockedMaVatTu || lockedBatch) {
+    const filters = [];
+    if (lockedMaVatTu) filters.push(`Mã VT: <strong>${lockedMaVatTu}</strong>`);
+    if (lockedBatch) filters.push(`Lô (Batch): <strong>${lockedBatch}</strong>`);
+    filterInfoEl.innerHTML = `
+      <span>Khóa theo mặt hàng MB51: ${filters.join(' | ')}</span>
+      <span class="badge bg-warning text-dark ms-2"><i class="bi bi-shield-lock-fill me-1"></i>Bắt buộc khớp</span>
+    `;
+    filterInfoEl.style.display = '';
+  } else if (currentMaVatTuFilter || currentBatchFilter) {
     const filters = [];
     if (currentMaVatTuFilter) filters.push(`Mã VT: <strong>${currentMaVatTuFilter}</strong>`);
     if (currentBatchFilter) filters.push(`Lô (Batch): <strong>${currentBatchFilter}</strong>`);
@@ -2086,8 +2191,10 @@ function renderInventoryFilterInfo() {
 
 async function openInventoryModal(target, maVatTu = '', batch = '') {
   currentModalTarget = target;
-  currentMaVatTuFilter = maVatTu;
-  currentBatchFilter = batch;
+  currentMaVatTuFilter = (maVatTu || '').trim();
+  currentBatchFilter = (batch || '').trim();
+  lockedMaVatTu = (maVatTu || '').trim();
+  lockedBatch = (batch || '').trim();
 
   const inventoryModal = document.getElementById('inventoryRollsModal');
   if (!inventoryModal) return;
@@ -2385,12 +2492,21 @@ function renderInventoryTable(data, searchVal = '') {
     const lockStatus = window.inventoryLockService ? window.inventoryLockService.getLockStatus(cuonId) : { isLocked: false };
     const isLockedByOther = lockStatus.isLocked && !lockStatus.isMe;
 
+    // Kiểm tra xem cuộn có khớp với mặt hàng đang chọn trên phiếu MB51 không
+    const isMismatched = Boolean(
+      (lockedMaVatTu && maVatTu.toLowerCase() !== lockedMaVatTu.toLowerCase()) ||
+      (lockedBatch && batch.toLowerCase() !== lockedBatch.toLowerCase())
+    );
+
     const tr = document.createElement('tr');
     if (isAlreadyInForm || (lockStatus.isLocked && lockStatus.isMe)) {
       tr.classList.add('table-primary');
     } else if (isLockedByOther) {
       tr.classList.add('table-warning');
       tr.style.opacity = '0.75';
+    } else if (isMismatched) {
+      tr.classList.add('table-light');
+      tr.style.opacity = '0.55';
     }
 
     let statusContent = '';
@@ -2410,6 +2526,8 @@ function renderInventoryTable(data, searchVal = '') {
       `;
     } else if (isAlreadyInForm || (lockStatus.isLocked && lockStatus.isMe)) {
       statusContent = `<span class="badge bg-primary px-2 py-1 shadow-sm" style="font-size: 0.78rem;"><i class="bi bi-check2-circle me-1"></i>Bạn đang giữ</span>`;
+    } else if (isMismatched) {
+      statusContent = `<span class="badge bg-secondary px-2 py-1 shadow-sm" style="font-size: 0.78rem;" title="Cuộn không khớp Mã VT hoặc Lô của mặt hàng trên phiếu MB51"><i class="bi bi-x-circle me-1"></i>Không khớp MB51</span>`;
     } else {
       statusContent = `<span class="badge ${tonKg > 0 ? 'bg-success' : 'bg-secondary'}">${tonKg > 0 ? 'Còn tồn' : 'Hết'}</span>`;
     }
@@ -2424,7 +2542,7 @@ function renderInventoryTable(data, searchVal = '') {
           data-ton-kg="${tonKg}"
           data-ton-m="${tonM}"
           ${(isAlreadyInForm || (lockStatus.isLocked && lockStatus.isMe)) ? 'checked' : ''}
-          ${isLockedByOther ? 'disabled' : ''}>
+          ${(isLockedByOther || isMismatched) ? 'disabled' : ''}>
       </td>
       <td class="fw-bold">${maVatTu}</td>
       <td>${tenVatTu}</td>
@@ -2510,6 +2628,20 @@ document.addEventListener('click', (e) => {
     const selectedCheckboxes = document.querySelectorAll('#inventoryTableBody .inventory-checkbox:checked');
     if (selectedCheckboxes.length === 0) {
       alert('Vui lòng chọn ít nhất một cuộn'); return;
+    }
+
+    // Kiểm tra ràng buộc bắt buộc khớp với mặt hàng đang chọn trên phiếu MB51
+    if (lockedMaVatTu || lockedBatch) {
+      const hasMismatch = Array.from(selectedCheckboxes).some(cb => {
+        const rMavt = cb.dataset.maVattu || '';
+        const rBatch = cb.dataset.batch || '';
+        return (lockedMaVatTu && rMavt.toLowerCase() !== lockedMaVatTu.toLowerCase()) ||
+               (lockedBatch && rBatch.toLowerCase() !== lockedBatch.toLowerCase());
+      });
+      if (hasMismatch) {
+        alert(`⚠️ Không thể chọn các cuộn này!\n\nMặt hàng trên phiếu yêu cầu:\n- Mã VT: ${lockedMaVatTu || 'Bất kỳ'}\n- Lô (Batch): ${lockedBatch || 'Bất kỳ'}\n\nVui lòng chỉ chọn các cuộn khớp chính xác thông tin trên phiếu xuất MB51.`);
+        return;
+      }
     }
 
     const target = currentModalTarget;
@@ -2796,6 +2928,24 @@ document.addEventListener('submit', async (e) => {
         }
       }
 
+      // Kiểm tra khớp 100% với phiếu xuất trong SAP MB51 -> NẾU KHÔNG KHỚP HOẶC KHÔNG TỒN TẠI SẼ CHẶN HOÀN TOÀN
+      if (window.XgSapLookup && typeof window.XgSapLookup.validateExportReceiptAgainstMb51 === 'function') {
+        const checkResult = await window.XgSapLookup.validateExportReceiptAgainstMb51(phieuXuatInputVal, multiItemsData, 'tole-xuat');
+        if (!checkResult.isValid) {
+          window._isSubmittingAddData = false;
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = originalText; }
+          hideLoadingOverlay();
+          window.XgSapLookup.showExportReceiptMismatchModal(checkResult, 'tole-xuat', () => {
+            if (typeof handleSyncSapData === 'function') {
+              handleSyncSapData();
+            } else if (typeof window.syncSapData === 'function') {
+              window.syncSapData();
+            }
+          });
+          return;
+        }
+      }
+
       // Gọi RPC giao dịch nguyên tử xuat_tole_atomic
       const currentUser = (typeof localStorage !== 'undefined' && localStorage.getItem('currentUser')) || 'anonymous';
       let insertedData = null;
@@ -2920,6 +3070,40 @@ document.addEventListener('submit', async (e) => {
       updateData['Số lượng (Kg)'] = rollKgValues.reduce((sum, kg) => sum + kg, 0);
       updateData['Số lượng (m)'] = rollMValues.reduce((sum, m) => sum + m, 0);
       delete updateData['id'];
+
+      // Kiểm tra đối chiếu với SAP MB51 khi cập nhật
+      const editPhieuXuat = (form.querySelector('input[name="col_3"]')?.value || '').trim();
+      const editMaVatTu = (form.querySelector('input[name="col_5"]')?.value || '').trim();
+      const editTenVatTu = (form.querySelector('input[name="col_6"]')?.value || '').trim();
+      const editBatch = (form.querySelector('input[name="col_7"]')?.value || '').trim();
+
+      if (editPhieuXuat && window.XgSapLookup && typeof window.XgSapLookup.validateExportReceiptAgainstMb51 === 'function') {
+        const singleItemData = [{
+          maVatTu: editMaVatTu,
+          tenVatTu: editTenVatTu,
+          batch: editBatch,
+          rolls: rollKgValues.map((kg, rIdx) => ({
+            id: `edit_${rIdx}`,
+            kg: kg,
+            m: rollMValues[rIdx] || 0,
+            maVatTu: editMaVatTu,
+            batch: editBatch
+          }))
+        }];
+        const checkResult = await window.XgSapLookup.validateExportReceiptAgainstMb51(editPhieuXuat, singleItemData, 'tole-xuat');
+        if (!checkResult.isValid) {
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = originalText; }
+          hideLoadingOverlay();
+          window.XgSapLookup.showExportReceiptMismatchModal(checkResult, 'tole-xuat', () => {
+            if (typeof handleSyncSapData === 'function') {
+              handleSyncSapData();
+            } else if (typeof window.syncSapData === 'function') {
+              window.syncSapData();
+            }
+          });
+          return;
+        }
+      }
 
       const { data: updatedData, error } = await supabase
         .from(TABLE_NAME).update(updateData).eq('id', rowId).select();
