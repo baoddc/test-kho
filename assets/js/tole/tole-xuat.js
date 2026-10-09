@@ -1126,6 +1126,9 @@ function mergeBatchIntoTenVatTu(tenVatTu, batch, oldBatch) {
 function updateMultiItemTotals() {
   let globalRolls = 0;
   let globalKg = 0;
+  let globalSapKg = 0;
+  let hasSapItems = false;
+  let allMatched = true;
 
   multiItemsData.forEach((item, idx) => {
     let itemKg = 0;
@@ -1141,6 +1144,16 @@ function updateMultiItemTotals() {
     globalRolls += itemRollCount;
     globalKg += itemKg;
 
+    const hasSap = typeof item.sapKg === 'number' && item.sapKg > 0;
+    if (hasSap) {
+      hasSapItems = true;
+      globalSapKg += item.sapKg;
+      const diff = Math.round((itemKg - item.sapKg) * 100) / 100;
+      if (Math.abs(diff) >= 0.05 || itemRollCount === 0) {
+        allMatched = false;
+      }
+    }
+
     // Update item card footer counters in DOM if present
     const cardEl = document.querySelector(`.item-card[data-item-idx="${idx}"]`);
     if (cardEl) {
@@ -1148,22 +1161,92 @@ function updateMultiItemTotals() {
       const itemKgEl = cardEl.querySelector('.item-total-kg');
       if (rollCountEl) rollCountEl.textContent = itemRollCount;
       if (itemKgEl) itemKgEl.textContent = formatNumericValue(itemKg);
+
+      // Cập nhật thanh đối chiếu MB51 nếu có sapKg
+      const barEl = cardEl.querySelector('.item-reconciliation-bar');
+      const badgeContainer = cardEl.querySelector('.item-reconciliation-badge-container');
+      const actualKgEl = cardEl.querySelector('.item-actual-kg');
+      const sapKgEl = cardEl.querySelector('.item-sap-kg');
+
+      if (barEl) {
+        if (hasSap) {
+          barEl.style.display = 'flex';
+          if (sapKgEl) sapKgEl.textContent = `${formatNumericValue(item.sapKg)} kg`;
+          if (actualKgEl) actualKgEl.textContent = `${formatNumericValue(itemKg)} kg`;
+
+          if (badgeContainer) {
+            const diff = Math.round((itemKg - item.sapKg) * 100) / 100;
+            const absDiff = Math.abs(diff);
+            if (itemRollCount === 0 || itemKg === 0) {
+              badgeContainer.innerHTML = `<span class="badge bg-secondary"><i class="bi bi-clock me-1"></i>Chưa chọn cuộn</span>`;
+            } else if (absDiff < 0.05) {
+              badgeContainer.innerHTML = `<span class="badge bg-success"><i class="bi bi-check-circle-fill me-1"></i>Khớp 100% (0 kg)</span>`;
+            } else if (diff > 0) {
+              badgeContainer.innerHTML = `<span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle-fill me-1"></i>Lệch dư: +${formatNumericValue(diff)} kg</span>`;
+            } else {
+              badgeContainer.innerHTML = `<span class="badge bg-danger"><i class="bi bi-exclamation-octagon-fill me-1"></i>Lệch thiếu: ${formatNumericValue(diff)} kg</span>`;
+            }
+          }
+        } else {
+          barEl.style.display = 'none';
+        }
+      }
     }
   });
 
   const globalItemsCountEl = document.getElementById('globalItemsCount');
   const globalRollsCountEl = document.getElementById('globalRollsCount');
   const globalTotalKgEl = document.getElementById('globalTotalKg');
+  const globalSapKgWrapper = document.getElementById('globalSapKgWrapper');
+  const globalSapTotalKg = document.getElementById('globalSapTotalKg');
+  const globalBadgeEl = document.getElementById('globalReconciliationBadge');
 
   if (globalItemsCountEl) globalItemsCountEl.textContent = multiItemsData.length;
   if (globalRollsCountEl) globalRollsCountEl.textContent = globalRolls;
   if (globalTotalKgEl) globalTotalKgEl.textContent = formatNumericValue(globalKg);
+
+  if (globalSapKgWrapper && globalSapTotalKg) {
+    if (hasSapItems) {
+      globalSapKgWrapper.style.display = '';
+      globalSapTotalKg.textContent = formatNumericValue(globalSapKg);
+    } else {
+      globalSapKgWrapper.style.display = 'none';
+    }
+  }
+
+  if (globalBadgeEl) {
+    if (hasSapItems) {
+      if (allMatched && globalRolls > 0) {
+        globalBadgeEl.innerHTML = `<span class="badge bg-success ms-1"><i class="bi bi-shield-check me-1"></i>Khớp 100% SAP MB51</span>`;
+      } else {
+        globalBadgeEl.innerHTML = `<span class="badge bg-danger ms-1"><i class="bi bi-shield-exclamation me-1"></i>Chưa khớp SAP MB51</span>`;
+      }
+    } else {
+      globalBadgeEl.innerHTML = '';
+    }
+  }
 }
 
 function generateItemCardHTML(item, index, totalItems) {
   const isOnlyItem = totalItems <= 1;
   const rolls = item.rolls || [];
   const totalItemKg = rolls.reduce((sum, r) => sum + (parseNumericInput(r.kg) || 0), 0);
+
+  const hasSap = typeof item.sapKg === 'number' && item.sapKg > 0;
+  let reconciliationBadgeHTML = '';
+  if (hasSap) {
+    const diff = Math.round((totalItemKg - item.sapKg) * 100) / 100;
+    const absDiff = Math.abs(diff);
+    if (rolls.length === 0 || totalItemKg === 0) {
+      reconciliationBadgeHTML = `<span class="badge bg-secondary"><i class="bi bi-clock me-1"></i>Chưa chọn cuộn</span>`;
+    } else if (absDiff < 0.05) {
+      reconciliationBadgeHTML = `<span class="badge bg-success"><i class="bi bi-check-circle-fill me-1"></i>Khớp 100% (0 kg)</span>`;
+    } else if (diff > 0) {
+      reconciliationBadgeHTML = `<span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle-fill me-1"></i>Lệch dư: +${formatNumericValue(diff)} kg</span>`;
+    } else {
+      reconciliationBadgeHTML = `<span class="badge bg-danger"><i class="bi bi-exclamation-octagon-fill me-1"></i>Lệch thiếu: ${formatNumericValue(diff)} kg</span>`;
+    }
+  }
 
   let rollsRowsHTML = '';
   if (rolls.length === 0) {
@@ -1251,6 +1334,17 @@ function generateItemCardHTML(item, index, totalItems) {
               ${rollsRowsHTML}
             </tbody>
           </table>
+        </div>
+
+        <!-- Thanh đối chiếu SAP MB51 -->
+        <div class="p-2 rounded border bg-light mt-2 d-flex justify-content-between align-items-center flex-wrap gap-2 item-reconciliation-bar" style="${hasSap ? 'display: flex;' : 'display: none;'}">
+          <div class="small">
+            <span class="text-secondary me-2"><i class="bi bi-receipt me-1"></i>SAP MB51 yêu cầu: <strong class="text-info item-sap-kg">${hasSap ? formatNumericValue(item.sapKg) : '0'} kg</strong></span>
+            <span class="text-secondary"><i class="bi bi-boxes me-1"></i>Thực xuất: <strong class="text-primary item-actual-kg">${formatNumericValue(totalItemKg)} kg</strong></span>
+          </div>
+          <div class="item-reconciliation-badge-container">
+            ${reconciliationBadgeHTML}
+          </div>
         </div>
 
         <div class="d-flex justify-content-end gap-3 mt-2 small text-muted">
