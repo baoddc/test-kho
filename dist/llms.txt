@@ -1,0 +1,24 @@
+# BaoDDC - Hệ Thống Quản Lý Kho Phôi Cuộn & Tole (baoddc.com)
+
+> Hệ thống WMS trực tuyến quản lý kho phôi cuộn, tole tấm, xà gồ và tiêu chuẩn 5S thuộc Tập đoàn Kết Cấu Thép Đại Dũng (DDC).
+
+## Tổng quan (Overview)
+- **Tên miền chính thức**: https://baoddc.com
+- **Đơn vị chủ quản**: Đại Dũng Corporation (DDC) — Tập đoàn cơ khí, chế tạo kết cấu thép và giải pháp xây dựng công nghiệp hàng đầu Việt Nam.
+- **Loại hình**: Ứng dụng web Progressive Web App (PWA) quản lý kho thông minh (Smart Warehouse Management System).
+- **Mục tiêu**: Giúp thủ kho, bộ phận sản xuất và phòng kế hoạch theo dõi xuất - nhập - tồn, kiểm kê quy cách phôi lá, tole cuộn, xà gồ theo thời gian thực với độ chính xác cao.
+
+## Các phân hệ & Tính năng chính (Core Features)
+- **Quản lý Phôi Lá (PL)**: Theo dõi danh mục phôi lá cần thu, chưa thu, đã thu; in tem nhãn và phiếu xuất nhập kho chi tiết.
+- **Quản lý Tole Cuộn**: Giám sát cuộn tole theo mã cuộn, độ dày, khổ rộng, mác thép và khối lượng thực tế.
+- **Quản lý Xà Gồ (XG)**: Kiểm soát quy cách thanh xà gồ (C, Z), chiều dài, số lượng bó và trạng thái gia công.
+- **Quản lý 5S & An toàn (HSE)**: Giám sát, chấm điểm và báo cáo hình ảnh hiện trường kho bãi định kỳ theo chuẩn 5S.
+- **Điều khiển bằng giọng nói (Voice Recognition)**: Hỗ trợ tìm kiếm và thao tác lệnh kho rảnh tay trong môi trường nhà xưởng.
+- **Đồng bộ đa nền tảng & Ngoại tuyến (PWA Offline)**: Lưu trữ cục bộ qua Service Worker và đồng bộ tức thời với cơ sở dữ liệu Supabase khi có mạng.
+- **Tích hợp Excel**: Hỗ trợ nhập và xuất báo cáo kiểm kê tự động qua tệp Excel (.xlsx).
+
+## Liên kết chính (Navigation)
+- [Trang chủ & Đăng nhập](https://baoddc.com/pages/index.html): Cổng truy cập tài khoản nội bộ DDC.
+- [Bảng công việc kho](https://baoddc.com/pages/cong-viec.html): Theo dõi tiến độ nhiệm vụ trong ca làm việc.
+- [Tra cứu vị trí tồn](https://baoddc.com/pages/vi-tri-ton.html): Sơ đồ và tọa độ lưu trữ hàng hóa tại kho.
+- [Chi tiết kỹ thuật LLMs (Full)](https://baoddc.com/llms-full.txt): Toàn văn mô tả kiến trúc và tài liệu tham khảo cho AI.

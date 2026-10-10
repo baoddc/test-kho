@@ -1,0 +1,55 @@
+# robots.txt cho baoddc.com
+# Cho phép tất cả các công cụ tìm kiếm và AI Agents / Chatbots thu thập dữ liệu
+
+User-agent: *
+Allow: /
+Disallow: /backups/
+Disallow: /service_account.json
+Disallow: /supabase/
+
+# Google & Gemini AI Crawlers
+User-agent: Googlebot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+# OpenAI / ChatGPT Crawlers
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+# Anthropic / Claude Crawlers
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+# Perplexity AI Crawler
+User-agent: PerplexityBot
+Allow: /
+
+# Microsoft Bing / Copilot Crawler
+User-agent: Bingbot
+Allow: /
+
+# Apple Intelligence Crawler
+User-agent: Applebot
+Allow: /
+
+# Meta AI Crawler
+User-agent: meta-externalagent
+Allow: /
+
+# Cohere AI Crawler
+User-agent: Cohere-ai
+Allow: /
+
+# Sitemap & LLM files
+Sitemap: https://baoddc.com/sitemap.xml

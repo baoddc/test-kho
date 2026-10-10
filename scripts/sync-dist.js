@@ -44,7 +44,12 @@ function runSync() {
     'manifest.json',
     'sw.js',
     'version.json',
-    'vercel.json'
+    'vercel.json',
+    'robots.txt',
+    'sitemap.xml',
+    'llms.txt',
+    'llms-full.txt',
+    'BingSiteAuth.xml'
   ];
 
   staticFiles.forEach(file => {

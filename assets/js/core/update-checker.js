@@ -1114,6 +1114,29 @@
     return 'Hàng về kho';
   }
 
+  function buildArrivalItemLabel(row, typeKey) {
+    if (typeKey === 'TOLE') {
+      // Đối với Tole: Mã vật tư + Tên vật tư + Batch: Số lượng
+      const ma = String(row['Mã vật tư'] || '').trim();
+      const ten = String(row['Tên vật tư'] || '').trim();
+      const batch = String(row['Batch'] || '').trim();
+      const parts = [ma, ten, batch].filter(Boolean);
+      return parts.length > 0 ? parts.join(' - ') : 'Vật tư khác';
+    } else {
+      // Đối với xà gồ: Mã vật tư + Batch: Số lượng
+      const ma = String(row['Mã vật tư'] || '').trim();
+      const batch = String(row['Batch'] || '').trim();
+      if (ma && batch) {
+        return `${ma} - ${batch}`;
+      } else if (ma) {
+        return ma;
+      } else if (batch) {
+        return batch;
+      }
+      return String(row['Tên vật tư'] || 'Vật tư khác').trim();
+    }
+  }
+
   function buildArrivalContent(rows) {
     const typeMap = { XG: new Map(), TOLE: new Map() };
     (rows || []).forEach(row => {
@@ -1123,7 +1146,7 @@
       let proj = String(row['Tên công trình'] || '').trim();
       if (!proj) proj = 'Tồn trơn';
 
-      let mat = String(row['Tên vật tư'] || row['Mã vật tư'] || 'Vật tư khác').trim();
+      let mat = buildArrivalItemLabel(row, typeKey);
       let kg = parseWeightKg(row['Số lượng (Kg)']);
 
       const pMap = typeMap[typeKey];

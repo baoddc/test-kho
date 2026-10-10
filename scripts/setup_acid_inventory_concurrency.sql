@@ -124,12 +124,14 @@ BEGIN
 
     DELETE FROM public.inventory_locks 
     WHERE module_type = p_module 
-      AND cuon_id = ANY(p_cuon_ids) 
+      AND LOWER(TRIM(cuon_id)) = ANY(SELECT LOWER(TRIM(unnest(p_cuon_ids))))
       AND (
           LOWER(TRIM(locked_by)) = v_clean_user 
+          OR LOWER(TRIM(locked_by)) = LOWER(TRIM(COALESCE(p_user, '')))
           OR v_clean_user = 'admin' 
           OR v_clean_user = 'bao.lt'
           OR v_clean_user = 'thaibao06061997@gmail.com'
+          OR LOWER(TRIM(COALESCE(p_user, ''))) IN ('admin', 'bao.lt')
       );
 END;
 $$;
