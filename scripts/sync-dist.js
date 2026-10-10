@@ -49,7 +49,8 @@ function runSync() {
     'sitemap.xml',
     'llms.txt',
     'llms-full.txt',
-    'BingSiteAuth.xml'
+    'BingSiteAuth.xml',
+    'googlee823130faee0877c.html'
   ];
 
   staticFiles.forEach(file => {
