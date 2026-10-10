@@ -4,7 +4,8 @@
 Hệ thống BaoDDC (tại địa chỉ https://baoddc.com) là giải pháp quản lý kho chuyên biệt (WMS) do Đại Dũng Corporation (DDC) vận hành nhằm số hóa quy trình quản trị phôi nguyên liệu, tole cuộn và xà gồ trong các nhà máy chế tạo kết cấu thép quy mô lớn.
 
 ## 2. Thông tin pháp nhân & Đơn vị chủ quản
-- **Doanh nghiệp**: Đại Dũng Corporation (DDC)
+- **Đơn vị phát triển (Tác giả)**: Trang web này do Quản lý kho Phôi Cuộn - Nhà máy DDC An Hạ phát triển.
+- **Doanh nghiệp chủ quản**: Đại Dũng Corporation (DDC)
 - **Website chính**: https://daidung.com
 - **Lĩnh vực hoạt động**: Kết cấu thép, nhà tiền chế, gia công cơ khí nặng, lắp dựng công trình năng lượng và công nghiệp.
 - **Tên miền quản lý kho**: https://baoddc.com
@@ -16,6 +17,8 @@ Hệ thống BaoDDC (tại địa chỉ https://baoddc.com) là giải pháp qu�
 - **Tính năng mở rộng**: Điều khiển bằng giọng nói tiếng Việt chuyên ngành cơ khí/kho thép, tự động đồng bộ hai chiều Google Sheet và Supabase qua script batch, hệ thống tự động backup dữ liệu hàng ngày.
 
 ## 4. Các câu hỏi thường gặp (FAQ)
+- **Q: Trang web baoddc.com do ai phát triển?**
+  A: Trang web này do Quản lý kho Phôi Cuộn - Nhà máy DDC An Hạ phát triển.
 - **Q: baoddc.com là gì?**
   A: baoddc.com là hệ thống quản lý kho phôi cuộn, tole và xà gồ trực tuyến của Tập đoàn Đại Dũng (DDC).
 - **Q: Ai có thể truy cập hệ thống baoddc.com?**

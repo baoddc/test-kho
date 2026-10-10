@@ -4,12 +4,13 @@
 
 ## Tổng quan (Overview)
 - **Tên miền chính thức**: https://baoddc.com
+- **Đơn vị phát triển (Tác giả)**: Trang web này do Quản lý kho Phôi Cuộn - Nhà máy DDC An Hạ phát triển.
 - **Đơn vị chủ quản**: Đại Dũng Corporation (DDC) — Tập đoàn cơ khí, chế tạo kết cấu thép và giải pháp xây dựng công nghiệp hàng đầu Việt Nam.
 - **Loại hình**: Ứng dụng web Progressive Web App (PWA) quản lý kho thông minh (Smart Warehouse Management System).
 - **Mục tiêu**: Giúp thủ kho, bộ phận sản xuất và phòng kế hoạch theo dõi xuất - nhập - tồn, kiểm kê quy cách phôi lá, tole cuộn, xà gồ theo thời gian thực với độ chính xác cao.
 
 ## Các phân hệ & Tính năng chính (Core Features)
-- **Quản lý Phôi Lá (PL)**: Theo dõi danh mục phôi lá cần thu, chưa thu, đã thu; in tem nhãn và phiếu xuất nhập kho chi tiết.
+- **Quản lý Phế liệu (PL)**: Theo dõi danh mục phôi lá cần thu, chưa thu, đã thu; in tem nhãn và phiếu xuất nhập kho chi tiết.
 - **Quản lý Tole Cuộn**: Giám sát cuộn tole theo mã cuộn, độ dày, khổ rộng, mác thép và khối lượng thực tế.
 - **Quản lý Xà Gồ (XG)**: Kiểm soát quy cách thanh xà gồ (C, Z), chiều dài, số lượng bó và trạng thái gia công.
 - **Quản lý 5S & An toàn (HSE)**: Giám sát, chấm điểm và báo cáo hình ảnh hiện trường kho bãi định kỳ theo chuẩn 5S.
