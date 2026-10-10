@@ -1026,6 +1026,10 @@ function openAddDataModal() {
         window.XgSapLookup.syncFromGoogleSheets(btnSyncGgSheet);
       }
     };
+    // Tự động đồng bộ Google Sheets nền khi mở modal
+    if (window.XgSapLookup && window.XgSapLookup.syncFromGoogleSheets) {
+      window.XgSapLookup.syncFromGoogleSheets(btnSyncGgSheet, { isAuto: true });
+    }
   }
 
   const maVatTuInput = commonFieldsContainer.querySelector('input[name="col_5"]');
@@ -1117,6 +1121,10 @@ function openEditDataModal() {
         window.XgSapLookup.syncFromGoogleSheets(btnEditSyncGgSheet);
       }
     };
+    // Tự động đồng bộ Google Sheets nền khi mở modal sửa
+    if (window.XgSapLookup && window.XgSapLookup.syncFromGoogleSheets) {
+      window.XgSapLookup.syncFromGoogleSheets(btnEditSyncGgSheet, { isAuto: true });
+    }
   }
 
   const maVatTuInput = commonFieldsContainer.querySelector('input[name="col_5"]');

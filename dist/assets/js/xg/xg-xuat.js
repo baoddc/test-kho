@@ -2197,6 +2197,10 @@ function openAddDataModal() {
         window.XgSapLookup.syncFromGoogleSheets(btnSyncGgSheet);
       }
     };
+    // Tự động đồng bộ Google Sheets nền khi mở modal
+    if (window.XgSapLookup && window.XgSapLookup.syncFromGoogleSheets) {
+      window.XgSapLookup.syncFromGoogleSheets(btnSyncGgSheet, { isAuto: true });
+    }
   }
 
   if (!modalEl._hasLockCleanupListener) {

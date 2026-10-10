@@ -1715,6 +1715,7 @@
   }
 
   function showAutofillToast(msg) {
+    if (typeof document === 'undefined' || !document.body) return;
     let toast = document.getElementById('sapAutofillToast');
     if (!toast) {
       toast = document.createElement('div');
@@ -1946,150 +1947,169 @@
     }
   }
 
+  // Biến cờ kiểm soát trạng thái đồng bộ tránh chạy trùng lặp
+  let _isSyncing = false;
+  let _activeSyncPromise = null;
+  let _syncingButtons = [];
+
   /**
    * Đồng bộ trực tiếp dữ liệu từ Google Sheets sang Supabase
    * Sử dụng Google GViz JSON endpoint (hỗ trợ CORS trực tiếp trên trình duyệt)
-   * @param {HTMLElement} btnEl - Nút bấm kích hoạt đồng bộ
+   * @param {HTMLElement} [btnEl] - Nút bấm kích hoạt đồng bộ (nếu có)
+   * @param {Object} [options] - Tùy chọn đồng bộ: { isAuto: boolean, silentOnError: boolean }
+   * @returns {Promise<void>}
    */
-  async function syncFromGoogleSheets(btnEl) {
+  function syncFromGoogleSheets(btnEl, options = {}) {
+    const isAuto = Boolean(options && options.isAuto);
+    const silentOnError = isAuto || Boolean(options && options.silentOnError);
+
     if (!window.supabase) {
-      alert('Kết nối Supabase chưa sẵn sàng. Vui lòng tải lại trang.');
-      return;
+      if (!silentOnError) {
+        if (typeof alert === 'function') {
+          alert('Kết nối Supabase chưa sẵn sàng. Vui lòng tải lại trang.');
+        } else {
+          console.warn('[XgSapLookup] Kết nối Supabase chưa sẵn sàng. Vui lòng tải lại trang.');
+        }
+      } else {
+        console.warn('[XgSapLookup] Kết nối Supabase chưa sẵn sàng khi tự động đồng bộ.');
+      }
+      return Promise.resolve();
     }
 
-    const GVIZ_URL = 'https://docs.google.com/spreadsheets/d/1BPY6k2bQuDu-RNpkRc3BhS57CuM1Ol__FYXvY8ezRjs/gviz/tq?tqx=out:json&sheet=mb51';
-    const originalHtml = btnEl ? btnEl.innerHTML : '';
+    // Cơ chế chống gọi trùng (Concurrency Guard)
+    if (_isSyncing) {
+      console.log('[XgSapLookup] Quá trình đồng bộ Google Sheets đang diễn ra, tái sử dụng tiến trình hiện tại.');
+      if (btnEl && !btnEl.disabled) {
+        _syncingButtons.push({
+          el: btnEl,
+          originalHtml: btnEl.innerHTML
+        });
+        btnEl.disabled = true;
+        btnEl.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Đang đồng bộ...';
+      }
+      return _activeSyncPromise;
+    }
+
+    _isSyncing = true;
+    _syncingButtons = [];
+
     if (btnEl) {
+      _syncingButtons.push({
+        el: btnEl,
+        originalHtml: btnEl.innerHTML
+      });
       btnEl.disabled = true;
       btnEl.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Đang tải Google Sheets...';
     }
 
-    try {
-      showAutofillToast('Đang tải dữ liệu mới nhất từ Google Sheets...');
-
-      // 1. Tải dữ liệu JSON trực tiếp qua Google GViz API (Hỗ trợ CORS đầy đủ)
-      const response = await fetch(GVIZ_URL);
-      if (!response.ok) {
-        throw new Error(`Không thể kết nối Google Sheets (Mã HTTP ${response.status}).`);
-      }
-      const rawText = await response.text();
-      const start = rawText.indexOf('{');
-      const end = rawText.lastIndexOf('}');
-      if (start === -1 || end === -1) {
-        throw new Error('Định dạng dữ liệu Google Sheets trả về không hợp lệ.');
-      }
-      const data = JSON.parse(rawText.substring(start, end + 1));
-      const gvizRows = (data.table && Array.isArray(data.table.rows)) ? data.table.rows : [];
-
-      if (btnEl) {
-        btnEl.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Đang phân tích dữ liệu...';
-      }
-
-      // Helper lấy giá trị text từ cell GViz
-      const getVal = (c) => {
-        if (!c || c.v === null || c.v === undefined) return null;
-        const s = String(c.v).trim();
-        return s ? s : null;
-      };
-
-      // Helper parse ngày an toàn
-      const parseGvizDate = (c) => {
-        if (!c) return null;
-        const val = c.f || c.v;
-        if (!val) return null;
-        const s = String(val).trim();
-        const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-        if (iso) return `${iso[1]}-${String(iso[2]).padStart(2, '0')}-${String(iso[3]).padStart(2, '0')}`;
-        const vn = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
-        if (vn) {
-          let y = parseInt(vn[3], 10);
-          if (y < 100) y += y < 50 ? 2000 : 1900;
-          return `${y}-${String(vn[2]).padStart(2, '0')}-${String(vn[1]).padStart(2, '0')}`;
+    _activeSyncPromise = (async () => {
+      try {
+        if (!isAuto) {
+          showAutofillToast('Đang tải dữ liệu mới nhất từ Google Sheets...');
         }
-        if (typeof val === 'string') {
-          const m = val.match(/Date\((\d+),(\d+),(\d+)/);
-          if (m) {
-            const y = m[1];
-            const month = parseInt(m[2], 10) + 1;
-            const day = parseInt(m[3], 10);
-            return `${y}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+        const GVIZ_URL = 'https://docs.google.com/spreadsheets/d/1BPY6k2bQuDu-RNpkRc3BhS57CuM1Ol__FYXvY8ezRjs/gviz/tq?tqx=out:json&sheet=mb51';
+        const response = await fetch(GVIZ_URL);
+        if (!response.ok) {
+          throw new Error(`Không thể kết nối Google Sheets (Mã HTTP ${response.status}).`);
+        }
+        const rawText = await response.text();
+        const start = rawText.indexOf('{');
+        const end = rawText.lastIndexOf('}');
+        if (start === -1 || end === -1) {
+          throw new Error('Định dạng dữ liệu Google Sheets trả về không hợp lệ.');
+        }
+        const data = JSON.parse(rawText.substring(start, end + 1));
+        const gvizRows = (data.table && Array.isArray(data.table.rows)) ? data.table.rows : [];
+
+        if (btnEl) {
+          btnEl.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Đang phân tích dữ liệu...';
+        }
+
+        // Helper lấy giá trị text từ cell GViz
+        const getVal = (c) => {
+          if (!c || c.v === null || c.v === undefined) return null;
+          const s = String(c.v).trim();
+          return s ? s : null;
+        };
+
+        // Helper parse ngày an toàn
+        const parseGvizDate = (c) => {
+          if (!c) return null;
+          const val = c.f || c.v;
+          if (!val) return null;
+          const s = String(val).trim();
+          const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+          if (iso) return `${iso[1]}-${String(iso[2]).padStart(2, '0')}-${String(iso[3]).padStart(2, '0')}`;
+          const vn = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+          if (vn) {
+            let y = parseInt(vn[3], 10);
+            if (y < 100) y += y < 50 ? 2000 : 1900;
+            return `${y}-${String(vn[2]).padStart(2, '0')}-${String(vn[1]).padStart(2, '0')}`;
           }
-        }
-        return null;
-      };
+          if (typeof val === 'string') {
+            const m = val.match(/Date\((\d+),(\d+),(\d+)/);
+            if (m) {
+              const y = m[1];
+              const month = parseInt(m[2], 10) + 1;
+              const day = parseInt(m[3], 10);
+              return `${y}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            }
+          }
+          return null;
+        };
 
-      // Helper parse số thực (luôn chuyển về số dương để đối chiếu chính xác)
-      const parseNum = (c) => {
-        if (!c || c.v === null || c.v === undefined) return 0;
-        if (typeof c.v === 'number') return Math.abs(c.v);
-        let s = String(c.v).trim().replace(/\s+/g, '');
-        if (s.includes(',') && s.includes('.')) {
-          s = s.lastIndexOf(',') > s.lastIndexOf('.') ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
-        } else if (s.includes(',')) {
-          s = s.replace(',', '.');
-        }
-        const n = parseFloat(s);
-        return isNaN(n) ? 0 : Math.abs(n);
-      };
+        // Helper parse số thực (luôn chuyển về số dương để đối chiếu chính xác)
+        const parseNum = (c) => {
+          if (!c || c.v === null || c.v === undefined) return 0;
+          if (typeof c.v === 'number') return Math.abs(c.v);
+          let s = String(c.v).trim().replace(/\s+/g, '');
+          if (s.includes(',') && s.includes('.')) {
+            s = s.lastIndexOf(',') > s.lastIndexOf('.') ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
+          } else if (s.includes(',')) {
+            s = s.replace(',', '.');
+          }
+          const n = parseFloat(s);
+          return isNaN(n) ? 0 : Math.abs(n);
+        };
 
-      const records = [];
-      const nowIso = new Date().toISOString();
+        const records = [];
+        const nowIso = new Date().toISOString();
 
-      // Duyệt qua tất cả các dòng
-      for (let i = 0; i < gvizRows.length; i++) {
-        const row = gvizRows[i].c;
-        if (!row) continue;
+        // Duyệt qua tất cả các dòng
+        for (let i = 0; i < gvizRows.length; i++) {
+          const row = gvizRows[i].c;
+          if (!row) continue;
 
-        const doc = getVal(row[2]);
-        const date = parseGvizDate(row[3]);
-        const matGroup = getVal(row[4]);
-        const mat = getVal(row[5]);
-        const matDesc = getVal(row[6]);
-        const batch = getVal(row[7]);
-        const dcInd = getVal(row[15]) ? getVal(row[15]).toUpperCase() : null;
+          const doc = getVal(row[2]);
+          const date = parseGvizDate(row[3]);
+          const matGroup = getVal(row[4]);
+          const mat = getVal(row[5]);
+          const matDesc = getVal(row[6]);
+          const batch = getVal(row[7]);
+          const dcInd = getVal(row[15]) ? getVal(row[15]).toUpperCase() : null;
 
-        // Bỏ qua dòng tiêu đề
-        if (doc && (doc.toLowerCase().includes('material') || (date && date.includes('Posting')))) {
-          continue;
-        }
+          // Bỏ qua dòng tiêu đề
+          if (doc && (doc.toLowerCase().includes('material') || (date && date.includes('Posting')))) {
+            continue;
+          }
 
-        // Định dạng cột chuẩn (Cột C / index 2 là Material Document)
-        if (doc) {
-          records.push({
-            material_document: doc,
-            posting_date: date,
-            material: mat,
-            material_description: matDesc,
-            batch: batch,
-            quantity: Math.abs(parseNum(row[9])),
-            unit_of_entry: getVal(row[8]),
-            project_id: getVal(row[10]),
-            project_name: getVal(row[11]),
-            storage_location: getVal(row[12]),
-            movement_type: getVal(row[13]),
-            movement_type_text: getVal(row[14]),
-            plant: getVal(row[16]),
-            vendor_name: getVal(row[24]),
-            raw_data: {
-              material_group: matGroup,
-              debit_credit_ind: dcInd
-            },
-            synced_at: nowIso
-          });
-        } else {
-          // Định dạng lệch cột (Cột AF / index 31 hoặc 36)
-          const docAlt = getVal(row[31]) || getVal(row[36]);
-          if (docAlt && !docAlt.toLowerCase().includes('material')) {
+          // Định dạng cột chuẩn (Cột C / index 2 là Material Document)
+          if (doc) {
             records.push({
-              material_document: docAlt,
+              material_document: doc,
               posting_date: date,
               material: mat,
               material_description: matDesc,
               batch: batch,
-              quantity: Math.abs(parseNum(row[28]) || parseNum(row[9])),
-              unit_of_entry: getVal(row[32]) || getVal(row[8]),
+              quantity: Math.abs(parseNum(row[9])),
+              unit_of_entry: getVal(row[8]),
               project_id: getVal(row[10]),
-              project_name: getVal(row[33]) || getVal(row[11]),
+              project_name: getVal(row[11]),
+              storage_location: getVal(row[12]),
+              movement_type: getVal(row[13]),
+              movement_type_text: getVal(row[14]),
+              plant: getVal(row[16]),
               vendor_name: getVal(row[24]),
               raw_data: {
                 material_group: matGroup,
@@ -2097,57 +2117,94 @@
               },
               synced_at: nowIso
             });
+          } else {
+            // Định dạng lệch cột (Cột AF / index 31 hoặc 36)
+            const docAlt = getVal(row[31]) || getVal(row[36]);
+            if (docAlt && !docAlt.toLowerCase().includes('material')) {
+              records.push({
+                material_document: docAlt,
+                posting_date: date,
+                material: mat,
+                material_description: matDesc,
+                batch: batch,
+                quantity: Math.abs(parseNum(row[28]) || parseNum(row[9])),
+                unit_of_entry: getVal(row[32]) || getVal(row[8]),
+                project_id: getVal(row[10]),
+                project_name: getVal(row[33]) || getVal(row[11]),
+                vendor_name: getVal(row[24]),
+                raw_data: {
+                  material_group: matGroup,
+                  debit_credit_ind: dcInd
+                },
+                synced_at: nowIso
+              });
+            }
           }
         }
-      }
 
-      if (btnEl) {
-        btnEl.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status"></span> Đang cập nhật Supabase...`;
-      }
-
-      // 3. Làm sạch bảng cũ trên Supabase để khớp chính xác dữ liệu Google Sheets
-      const { error: delErr } = await window.supabase.from('xg_sap_mb51').delete().gt('id', 0);
-      if (delErr) {
-        console.warn('[XgSapLookup] Cảnh báo khi xóa bảng cũ:', delErr);
-      }
-
-      // Trường hợp Google Sheet không có dòng dữ liệu nào
-      if (records.length === 0) {
-        showAutofillToast('✓ Google Sheet hiện không có dữ liệu. Đã xóa sạch toàn bộ dữ liệu trên Supabase (0 dòng)!');
-        return;
-      }
-
-      // 4. Batch insert theo chunks 1.000 dòng
-      const batchSize = 1000;
-      const totalBatches = Math.ceil(records.length / batchSize);
-      for (let b = 0; b < totalBatches; b++) {
         if (btnEl) {
-          btnEl.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status"></span> Đang lưu (${b + 1}/${totalBatches})...`;
+          btnEl.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status"></span> Đang cập nhật Supabase...`;
         }
-        const chunk = records.slice(b * batchSize, (b + 1) * batchSize);
-        const { error: insertErr } = await window.supabase.from('xg_sap_mb51').insert(chunk);
-        if (insertErr) throw insertErr;
+
+        // 3. Làm sạch bảng cũ trên Supabase để khớp chính xác dữ liệu Google Sheets
+        const { error: delErr } = await window.supabase.from('xg_sap_mb51').delete().gt('id', 0);
+        if (delErr) {
+          console.warn('[XgSapLookup] Cảnh báo khi xóa bảng cũ:', delErr);
+        }
+
+        // Trường hợp Google Sheet không có dòng dữ liệu nào
+        if (records.length === 0) {
+          showAutofillToast('✓ Google Sheet hiện không có dữ liệu. Đã xóa sạch toàn bộ dữ liệu trên Supabase (0 dòng)!');
+          return;
+        }
+
+        // 4. Batch insert theo chunks 1.000 dòng
+        const batchSize = 1000;
+        const totalBatches = Math.ceil(records.length / batchSize);
+        for (let b = 0; b < totalBatches; b++) {
+          if (btnEl) {
+            btnEl.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status"></span> Đang lưu (${b + 1}/${totalBatches})...`;
+          }
+          const chunk = records.slice(b * batchSize, (b + 1) * batchSize);
+          const { error: insertErr } = await window.supabase.from('xg_sap_mb51').insert(chunk);
+          if (insertErr) throw insertErr;
+        }
+
+        showAutofillToast(`✓ Đã đồng bộ thành công ${records.length.toLocaleString('vi-VN')} dòng từ Google Sheets sang Supabase!`);
+
+        // Kích hoạt tìm kiếm lại nếu ô Phiếu nhập đang có chữ
+        const activeInput = document.querySelector('#addDataForm input[name="col_3"]') ||
+                            document.querySelector('#editDataForm input[name="col_3"]');
+        if (activeInput && activeInput.value.trim().length >= 2) {
+          activeInput.dispatchEvent(new Event('input'));
+        }
+
+      } catch (err) {
+        console.error('[XgSapLookup] Lỗi khi đồng bộ Google Sheets:', err);
+        if (silentOnError) {
+          showAutofillToast('⚠️ Tự động đồng bộ GgSheet không thành công: ' + (err.message || err));
+        } else {
+          if (typeof alert === 'function') {
+            alert(`Lỗi khi đồng bộ Google Sheets: ${err.message || err}`);
+          } else {
+            console.error(`Lỗi khi đồng bộ Google Sheets: ${err.message || err}`);
+          }
+        }
+      } finally {
+        _isSyncing = false;
+        _activeSyncPromise = null;
+        const buttonsToRestore = _syncingButtons;
+        _syncingButtons = [];
+        buttonsToRestore.forEach(item => {
+          if (item && item.el) {
+            item.el.disabled = false;
+            item.el.innerHTML = item.originalHtml || '<i class="bi bi-arrow-repeat me-1"></i> Đồng bộ Google Sheets';
+          }
+        });
       }
+    })();
 
-      showAutofillToast(`✓ Đã đồng bộ thành công ${records.length.toLocaleString('vi-VN')} dòng từ Google Sheets sang Supabase!`);
-
-
-      // Kích hoạt tìm kiếm lại nếu ô Phiếu nhập đang có chữ
-      const activeInput = document.querySelector('#addDataForm input[name="col_3"]') ||
-                          document.querySelector('#editDataForm input[name="col_3"]');
-      if (activeInput && activeInput.value.trim().length >= 2) {
-        activeInput.dispatchEvent(new Event('input'));
-      }
-
-    } catch (err) {
-      console.error('[XgSapLookup] Lỗi khi đồng bộ Google Sheets:', err);
-      alert(`Lỗi khi đồng bộ Google Sheets: ${err.message || err}`);
-    } finally {
-      if (btnEl) {
-        btnEl.disabled = false;
-        btnEl.innerHTML = originalHtml || '<i class="bi bi-arrow-repeat me-1"></i> Đồng bộ Google Sheets';
-      }
-    }
+    return _activeSyncPromise;
   }
 
   // Export các hàm và quy tắc ra window
