@@ -2300,6 +2300,20 @@ function openEditDataModal() {
     window.XgSapLookup.initSapDocumentAutocomplete(phieuXuatEditInput, editFormEl, 'tole-xuat');
   }
 
+  // Tích hợp nút Đồng bộ Google Sheets trong modal Sửa
+  const btnEditSyncGgSheet = document.getElementById('btnEditSyncGgSheet');
+  if (btnEditSyncGgSheet) {
+    btnEditSyncGgSheet.onclick = () => {
+      if (window.XgSapLookup && window.XgSapLookup.syncFromGoogleSheets) {
+        window.XgSapLookup.syncFromGoogleSheets(btnEditSyncGgSheet);
+      }
+    };
+    // Tự động đồng bộ Google Sheets nền khi mở modal sửa
+    if (window.XgSapLookup && window.XgSapLookup.syncFromGoogleSheets) {
+      window.XgSapLookup.syncFromGoogleSheets(btnEditSyncGgSheet, { isAuto: true });
+    }
+  }
+
   new bootstrap.Modal(modalEl).show();
 }
 

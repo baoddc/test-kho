@@ -927,3 +927,50 @@ body.fixed-viewport {
     padding: 8px !important;
   }
 }
+
+/* =============================================================================
+   HIỆU ỨNG NÚT ĐỒNG BỘ GOOGLE SHEETS NHẤP 3 LẦN
+================================================================================ */
+@keyframes syncPulse3x {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(13, 110, 253, 0.7);
+    background-color: #ffffff;
+    color: #0d6efd;
+  }
+  30% {
+    transform: scale(1.06);
+    box-shadow: 0 0 0 8px rgba(13, 110, 253, 0.35);
+    background-color: #0d6efd;
+    color: #ffffff;
+  }
+  60% {
+    transform: scale(1.02);
+    box-shadow: 0 0 0 12px rgba(13, 110, 253, 0);
+    background-color: #0d6efd;
+    color: #ffffff;
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(13, 110, 253, 0);
+    background-color: #ffffff;
+    color: #0d6efd;
+  }
+}
+
+@keyframes syncSpinIcon {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.btn-sync-pulsing-3x {
+  animation: syncPulse3x 0.6s ease-in-out 3 !important;
+  transition: all 0.2s ease;
+  z-index: 10;
+  position: relative;
+}
+
+.btn-sync-pulsing-3x i.bi-arrow-repeat {
+  display: inline-block;
+  animation: syncSpinIcon 0.6s linear infinite !important;
+}
