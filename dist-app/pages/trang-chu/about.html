@@ -5,6 +5,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Giới thiệu - Hệ thống Quản lý Kho Phôi Cuộn & Vật Tư (DDC)</title>
+  <meta name="description"
+    content="Giới thiệu chi tiết các chức năng của BaoDDC: quản lý xà gồ, tole, phế liệu, sơ đồ kho 2D, tem QR & kiểm kê, 5S/HSE, công việc, trợ lý giọng nói, phân quyền RBAC — Đại Dũng Corporation.">
 
   <!-- Logo hiển thị trên tab -->
   <link rel="icon" type="image/png" href="/assets/images/logos/Logo-DDC.png">
@@ -92,8 +94,8 @@
           <div class="col-md-6 col-lg-3">
             <div class="glass-card">
               <div class="card-icon"><i class="fa-solid fa-cubes"></i></div>
-              <h3>Xà Gồ C/Z (XG)</h3>
-              <p>Quản lý toàn diện quy trình Nhập - Xuất - Tồn xà gồ C/Z; trực quan hóa dữ liệu qua biểu đồ Top 10 sản
+              <h3>Xà Gồ (XG)</h3>
+              <p>Quản lý toàn diện quy trình Nhập - Xuất - Tồn xà gồ; trực quan hóa dữ liệu qua biểu đồ Top 10 sản
                 lượng, báo cáo biến động theo ngày/tháng, tích hợp bóc tách phiếu cân tự động bằng AI OCR.</p>
             </div>
           </div>
@@ -102,7 +104,7 @@
           <div class="col-md-6 col-lg-3">
             <div class="glass-card">
               <div class="card-icon"><i class="fa-solid fa-layer-group"></i></div>
-              <h3>Tole Cuộn & Tấm</h3>
+              <h3>Tole Cuộn</h3>
               <p>Theo dõi chi tiết cuộn tole theo mã số, quy cách, nguồn gốc; tự động tính toán <strong>Tuổi lưu kho
                   (Storage Age)</strong>, cảnh báo sớm tole tồn đọng lâu ngày để chủ động tối ưu vòng quay vốn vật tư.
               </p>
@@ -120,14 +122,14 @@
             </div>
           </div>
 
-          <!-- Phân hệ 4: Đối Soát SAP & Google Sheets -->
+          <!-- Phân hệ 4: Đồng Bộ & Đối Soát SAP ERP (MB51) -->
           <div class="col-md-6 col-lg-3">
             <div class="glass-card">
-              <div class="card-icon"><i class="fa-solid fa-arrow-right-arrow-left"></i></div>
-              <h3>Đối Soát SAP & Sheets</h3>
-              <p>Tự động gợi ý mã SAP khi lập phiếu, đối soát phát hiện sai lệch số liệu giữa nhập xuất thực tế và sổ
-                sách kế toán SAP MB51; tích hợp đồng bộ tự động 2 chiều linh hoạt với Google Sheets qua Google Apps
-                Script.</p>
+              <div class="card-icon"><i class="fa-solid fa-arrows-rotate"></i></div>
+              <h3>Đồng Bộ & Đối Soát SAP</h3>
+              <p>Pipeline đồng bộ dữ liệu tự động từ SAP MB51 vào Supabase; tự động Autocomplete &amp; điền sẵn 8
+                trường thông tin, kiểm soát chiều Nhập (S) / Xuất (H) và đối soát chéo khối lượng thực tế chống lệch sổ
+                sách kế toán.</p>
             </div>
           </div>
 
@@ -170,8 +172,76 @@
                 nhắc hẹn deadline thông minh giúp ngăn ngừa thiếu sót và trễ hạn bàn giao.</p>
             </div>
           </div>
+
+          <!-- Phân hệ 9: Trợ lý giọng nói -->
+          <div class="col-md-6 col-lg-3">
+            <div class="glass-card">
+              <div class="card-icon"><i class="fa-solid fa-microphone-lines"></i></div>
+              <h3>Trợ Lý Giọng Nói</h3>
+              <p>Widget hội thoại AI nhận lệnh tiếng Việt rảnh tay: điều hướng nhanh đến các trang, tra cứu tồn kho
+                Xà gồ / Tole và đọc kết quả bằng giọng nói ngay trong xưởng.</p>
+            </div>
+          </div>
+
+          <!-- Phân hệ 10: Thông báo hàng về -->
+          <div class="col-md-6 col-lg-3">
+            <div class="glass-card">
+              <div class="card-icon"><i class="fa-solid fa-truck-ramp-box"></i></div>
+              <h3>Thông Báo Hàng Về Kho</h3>
+              <p>Tự động gom nhóm hàng nhập từ Xà gồ và Tole theo tên công trình &amp; tồn trơn, đẩy thông báo lên
+                Supabase để toàn bộ người dùng nắm hàng mới về theo thời gian thực.</p>
+            </div>
+          </div>
+
+          <!-- Phân hệ 11: Báo cáo Excel -->
+          <div class="col-md-6 col-lg-3">
+            <div class="glass-card">
+              <div class="card-icon"><i class="fa-solid fa-file-excel"></i></div>
+              <h3>Excel &amp; Báo Cáo</h3>
+              <p>Nhập file Excel tồn kho (SAP) để đối chiếu, xuất báo cáo Nhập - Xuất - Tồn, phiếu in xuất bán/xuất
+                trả, dữ liệu kiểm kê ra file .xlsx chỉ với một cú nhấp.</p>
+            </div>
+          </div>
+
+          <!-- Phân hệ 12: Quản lý người dùng -->
+          <div class="col-md-6 col-lg-3">
+            <div class="glass-card">
+              <div class="card-icon"><i class="fa-solid fa-users-gear"></i></div>
+              <h3>Quản Lý Người Dùng</h3>
+              <p>Dành cho Admin: tạo tài khoản, cấp quyền Xem/Thêm/Sửa/Xóa theo từng nhóm trang; menu và nút bấm
+                tự động ẩn/hiện theo quyền của từng người dùng.</p>
+            </div>
+          </div>
         </div>
       </div>
+
+      <!-- Workflow Section -->
+      <div class="mb-5 fade-up delay-1">
+        <h2 class="text-center mb-4"><span class="highlight-line">Quy Trình Vận Hành Khép Kín</span></h2>
+        <div class="workflow-steps">
+          <div class="workflow-step"><span class="step-num">1</span>
+            <h4>Hàng về kho</h4>
+            <p>Lập phiếu Nhập Xà gồ / Tole, chụp phiếu cân để AI OCR tự điền, gợi ý mã SAP.</p>
+          </div>
+          <div class="workflow-step"><span class="step-num">2</span>
+            <h4>Dán tem &amp; xếp kệ</h4>
+            <p>In tem Barcode cuộn và tem QR vị trí kệ; gán vị trí lưu trữ trên sơ đồ kho 2D.</p>
+          </div>
+          <div class="workflow-step"><span class="step-num">3</span>
+            <h4>Xuất &amp; theo dõi tồn</h4>
+            <p>Lập phiếu Xuất, kiểm tra tồn khả dụng (chống âm kho), xem Tồn &amp; Biểu đồ realtime.</p>
+          </div>
+          <div class="workflow-step"><span class="step-num">4</span>
+            <h4>Kiểm kê &amp; đối soát</h4>
+            <p>Quét QR hiện trường, so với Excel/SAP MB51, phát hiện cuộn thừa, thiếu, sai kệ.</p>
+          </div>
+          <div class="workflow-step"><span class="step-num">5</span>
+            <h4>Báo cáo &amp; 5S</h4>
+            <p>Xuất Excel, đồng bộ Google Sheets, chấm 5S/HSE kèm ảnh, thu hồi phế liệu.</p>
+          </div>
+        </div>
+      </div>
+
 
       <!-- Tech Stack Section -->
       <div class="tech-stack-container mb-5 fade-up delay-2">
@@ -277,14 +347,14 @@
           </div>
         </div>
 
-        <!-- Card 6: Đối Soát SAP & Auto-Sync -->
+        <!-- Card 6: Pipeline Đồng Bộ SAP MB51 -->
         <div class="col-md-6 col-lg-4 mb-4">
           <div class="spotlight-card">
-            <div class="spotlight-icon icon-teal"><i class="fa-solid fa-table-columns"></i></div>
-            <h4 class="icon-teal">Đối Soát SAP MB51 & Auto-Sync</h4>
-            <p>Thuật toán tự động so khớp dữ liệu xuất nhập kho thực tế với bảng kế toán SAP MB51
-              (<code>xg_sap_mb51</code>), tự động phát hiện chênh lệch số liệu và hỗ trợ batch sync hai chiều với Google
-              Sheets.</p>
+            <div class="spotlight-icon icon-teal"><i class="fa-solid fa-arrows-rotate"></i></div>
+            <h4 class="icon-teal">Pipeline Đồng Bộ Dữ Liệu SAP MB51</h4>
+            <p>Trích xuất dữ liệu chứng từ vật tư SAP ERP (MB51), nạp tự động vào bảng <code>xg_sap_mb51</code> qua REST
+              API. Thuật toán tự động nhận diện ngữ cảnh Nhập (S) / Xuất (H), autofill 8 trường và phát hiện sai lệch
+              khối lượng thời gian thực.</p>
           </div>
         </div>
 
@@ -325,6 +395,75 @@
             <h4 class="icon-teal">PWA Mobile & Desktop EXE</h4>
             <p>Service Worker thông minh lưu cache tài nguyên tĩnh, cho phép tra cứu khi mất kết nối mạng; đóng gói EXE
               cho máy trạm công nghiệp kèm hệ thống Update Checker tự động thông báo phiên bản mới.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- SAP Data Sync Architecture Section -->
+      <div class="sap-sync-section mb-5 fade-up delay-3">
+        <h2 class="text-center mb-4"><span class="highlight-line">Cơ Chế Đồng Bộ & Đối Soát SAP MB51</span></h2>
+
+        <div class="glass-card p-4 p-md-5 mb-4">
+          <div class="row g-4 align-items-center mb-4">
+            <div class="col-lg-8">
+              <h3 class="gradient-text mb-3" style="font-size: 1.5rem;">Kết Nối Kế Toán SAP ERP Với Hiện Trường Kho</h3>
+              <p class="text-secondary mb-0" style="font-size: 0.95rem; line-height: 1.6;">
+                Hệ thống đóng vai trò cầu nối thông minh giữa số liệu kế toán <strong>SAP ERP (giao dịch MB51 - Material
+                  Document List)</strong> và thực tế xuất nhập tại nhà xưởng DDC. Dữ liệu chứng từ được đồng bộ tự động
+                2 chiều, phân loại chính xác theo phân hệ kho và bảo vệ tính toàn vẹn của sổ sách.
+              </p>
+            </div>
+            <div class="col-lg-4 text-lg-end">
+              <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 p-2 px-3 rounded-pill me-1">
+                <i class="fa-solid fa-bolt me-1"></i> Auto Batch Sync
+              </span>
+              <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 p-2 px-3 rounded-pill">
+                <i class="fa-solid fa-check-double me-1"></i> Khớp Số Liệu 100%
+              </span>
+            </div>
+          </div>
+
+          <!-- 4 Steps of SAP Sync Flow -->
+          <div class="row g-3">
+            <div class="col-md-6 col-lg-3">
+              <div class="sap-step-card">
+                <div class="step-badge">BƯỚC 1</div>
+                <div class="step-icon"><i class="fa-solid fa-file-export"></i></div>
+                <h5>Trích Xuất SAP MB51</h5>
+                <p>Xuất danh mục chứng từ luân chuyển vật tư từ hệ thống SAP ERP tập đoàn với đầy đủ số phiếu, mã vật tư,
+                  batch, đơn vị tính và khối lượng.</p>
+              </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+              <div class="sap-step-card">
+                <div class="step-badge">BƯỚC 2</div>
+                <div class="step-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+                <h5>ETL Pipeline Sync</h5>
+                <p>Script tự động (Python &amp; Batch) nạp hàng ngàn dòng dữ liệu từ Google Sheets vào bảng
+                  <code>xg_sap_mb51</code> trên Supabase, tự động khử trùng lặp và đồng bộ tức thời.</p>
+              </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+              <div class="sap-step-card">
+                <div class="step-badge">BƯỚC 3</div>
+                <div class="step-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                <h5>Autofill 8 Trường</h5>
+                <p>Phân loại thông minh theo Debit/Credit (Nhập S / Xuất H) và mã nhóm vật tư. Gợi ý autocomplete và tự
+                  điền tức thì 8 trường thông tin trong 0.1s khi gõ số phiếu.</p>
+              </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+              <div class="sap-step-card">
+                <div class="step-badge">BƯỚC 4</div>
+                <div class="step-icon"><i class="fa-solid fa-scale-unbalanced"></i></div>
+                <h5>Đối Soát &amp; Cảnh Báo</h5>
+                <p>So khớp tổng khối lượng cân thực tế tại kho với số liệu SAP, phát hiện và cảnh báo sai lệch (+kg /
+                  -kg) ngay trên giao diện trước khi lưu phiếu.</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
