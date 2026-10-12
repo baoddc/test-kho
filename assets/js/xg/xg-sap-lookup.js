@@ -1953,6 +1953,34 @@
   let _syncingButtons = [];
 
   /**
+   * Kích hoạt hiệu ứng nhấp nháy 3 nhịp trực quan trên nút
+   * @param {HTMLElement} btnEl
+   */
+  function triggerButtonPulse3x(btnEl) {
+    if (!btnEl) return;
+    if (btnEl.classList && typeof btnEl.classList.remove === 'function') {
+      btnEl.classList.remove('btn-sync-pulsing-3x');
+      if (typeof btnEl.offsetWidth !== 'undefined') {
+        void btnEl.offsetWidth; // Force reflow
+      }
+      btnEl.classList.add('btn-sync-pulsing-3x');
+
+      const onAnimationEnd = () => {
+        if (btnEl.classList) {
+          btnEl.classList.remove('btn-sync-pulsing-3x');
+        }
+        if (typeof btnEl.removeEventListener === 'function') {
+          btnEl.removeEventListener('animationend', onAnimationEnd);
+        }
+      };
+
+      if (typeof btnEl.addEventListener === 'function') {
+        btnEl.addEventListener('animationend', onAnimationEnd);
+      }
+    }
+  }
+
+  /**
    * Đồng bộ trực tiếp dữ liệu từ Google Sheets sang Supabase
    * Sử dụng Google GViz JSON endpoint (hỗ trợ CORS trực tiếp trên trình duyệt)
    * @param {HTMLElement} [btnEl] - Nút bấm kích hoạt đồng bộ (nếu có)
@@ -1962,6 +1990,10 @@
   function syncFromGoogleSheets(btnEl, options = {}) {
     const isAuto = Boolean(options && options.isAuto);
     const silentOnError = isAuto || Boolean(options && options.silentOnError);
+
+    if (btnEl && isAuto) {
+      triggerButtonPulse3x(btnEl);
+    }
 
     if (!window.supabase) {
       if (!silentOnError) {
@@ -1979,13 +2011,17 @@
     // Cơ chế chống gọi trùng (Concurrency Guard)
     if (_isSyncing) {
       console.log('[XgSapLookup] Quá trình đồng bộ Google Sheets đang diễn ra, tái sử dụng tiến trình hiện tại.');
-      if (btnEl && !btnEl.disabled) {
-        _syncingButtons.push({
-          el: btnEl,
-          originalHtml: btnEl.innerHTML
-        });
-        btnEl.disabled = true;
-        btnEl.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Đang đồng bộ...';
+      if (btnEl) {
+        if (isAuto) {
+          triggerButtonPulse3x(btnEl);
+        } else if (!btnEl.disabled) {
+          _syncingButtons.push({
+            el: btnEl,
+            originalHtml: btnEl.innerHTML
+          });
+          btnEl.disabled = true;
+          btnEl.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Đang đồng bộ...';
+        }
       }
       return _activeSyncPromise;
     }
@@ -1998,8 +2034,12 @@
         el: btnEl,
         originalHtml: btnEl.innerHTML
       });
-      btnEl.disabled = true;
-      btnEl.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Đang tải Google Sheets...';
+      if (isAuto) {
+        triggerButtonPulse3x(btnEl);
+      } else {
+        btnEl.disabled = true;
+        btnEl.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Đang tải Google Sheets...';
+      }
     }
 
     _activeSyncPromise = (async () => {
@@ -2022,7 +2062,7 @@
         const data = JSON.parse(rawText.substring(start, end + 1));
         const gvizRows = (data.table && Array.isArray(data.table.rows)) ? data.table.rows : [];
 
-        if (btnEl) {
+        if (btnEl && !isAuto) {
           btnEl.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Đang phân tích dữ liệu...';
         }
 
@@ -2199,6 +2239,9 @@
           if (item && item.el) {
             item.el.disabled = false;
             item.el.innerHTML = item.originalHtml || '<i class="bi bi-arrow-repeat me-1"></i> Đồng bộ Google Sheets';
+            if (item.el.classList && typeof item.el.classList.remove === 'function') {
+              item.el.classList.remove('btn-sync-pulsing-3x');
+            }
           }
         });
       }
@@ -2226,6 +2269,7 @@
     validateSapMatch,
     validateExportReceiptAgainstMb51,
     showExportReceiptMismatchModal,
+    triggerButtonPulse3x,
     syncFromGoogleSheets,
     showAutofillToast
   };

@@ -100,8 +100,52 @@ async function runAsyncTest(description, testFn) {
     assert.strictEqual(mockBtn2.disabled, false);
   });
 
+  // Test 4: Kiểm tra hàm triggerButtonPulse3x được xuất ra và gán class chính xác
+  runTest('Hàm triggerButtonPulse3x thêm class btn-sync-pulsing-3x và xử lý gỡ class sau animationend', () => {
+    assert.strictEqual(typeof SapLookup.triggerButtonPulse3x, 'function');
+    let classes = [];
+    let listeners = {};
+    const mockEl = {
+      classList: {
+        add: (cls) => classes.push(cls),
+        remove: (cls) => { classes = classes.filter(c => c !== cls); },
+        contains: (cls) => classes.includes(cls)
+      },
+      offsetWidth: 100,
+      addEventListener: (evt, fn) => { listeners[evt] = fn; },
+      removeEventListener: (evt, fn) => { delete listeners[evt]; }
+    };
+    SapLookup.triggerButtonPulse3x(mockEl);
+    assert(mockEl.classList.contains('btn-sync-pulsing-3x'), 'Phải gắn class btn-sync-pulsing-3x vào nút');
+    assert(typeof listeners['animationend'] === 'function', 'Phải đăng ký lắng nghe sự kiện animationend');
+    
+    // Giả lập animation kết thúc
+    listeners['animationend']();
+    assert(!mockEl.classList.contains('btn-sync-pulsing-3x'), 'Phải gỡ bỏ class btn-sync-pulsing-3x sau animationend');
+  });
+
+  // Test 5: syncFromGoogleSheets tự động kích hoạt class btn-sync-pulsing-3x khi isAuto = true
+  await runAsyncTest('syncFromGoogleSheets tự động kích hoạt class btn-sync-pulsing-3x khi isAuto = true', async () => {
+    let classAdded = false;
+    const mockBtn = {
+      disabled: false,
+      innerHTML: 'Sync',
+      classList: {
+        add: (cls) => { if (cls === 'btn-sync-pulsing-3x') classAdded = true; },
+        remove: () => {},
+        contains: () => false
+      },
+      offsetWidth: 50,
+      addEventListener: () => {},
+      removeEventListener: () => {}
+    };
+    await SapLookup.syncFromGoogleSheets(mockBtn, { isAuto: true });
+    assert.strictEqual(classAdded, true, 'Phải tự động kích hoạt class btn-sync-pulsing-3x khi isAuto = true');
+  });
+
   console.log(`\nTổng kết: ${passCount}/${totalTests} bài test thành công.\n`);
   if (passCount !== totalTests) {
     process.exit(1);
   }
 })();
+
