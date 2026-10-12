@@ -367,14 +367,9 @@
     </details>
   </footer>
   <style>
-    .geo-about { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; max-height: 40vh; overflow-y: auto;
-      padding: 6px 12px; text-align: center; font: 11px/1.4 'Outfit', sans-serif; color: rgba(255,255,255,.55);
-      background: rgba(15,23,42,.45); backdrop-filter: blur(6px); }
-    .geo-about h1 { font-size: 11px; font-weight: 500; margin: 0 0 2px; color: rgba(255,255,255,.7); }
-    .geo-about h2 { font-size: 11px; font-weight: 600; margin: 6px 0 0; }
-    .geo-about p { margin: 0 0 2px; }
-    .geo-about summary { cursor: pointer; }
-    .geo-about a { color: inherit; text-decoration: underline; }
+    /* Ẩn khỏi giao diện nhưng vẫn nằm trong DOM để crawler/AI đọc được */
+    .geo-about { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+      overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
   </style>
 
   <!-- MODALS FOR INTERACTIVE WIDGETS -->
