@@ -35,6 +35,39 @@ Allow: /
 User-agent: PerplexityBot
 Allow: /
 
+User-agent: Perplexity-User
+Allow: /
+
+# OpenAI Search (ChatGPT Search)
+User-agent: OAI-SearchBot
+Allow: /
+
+# Anthropic search / user fetch
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+# Others
+User-agent: Google-CloudVertexBot
+Allow: /
+
+User-agent: DuckAssistBot
+Allow: /
+
+User-agent: YouBot
+Allow: /
+
+User-agent: MistralAI-User
+Allow: /
+
+User-agent: Amazonbot
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
 # Microsoft Bing / Copilot Crawler
 User-agent: Bingbot
 Allow: /

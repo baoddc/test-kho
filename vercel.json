@@ -1,6 +1,21 @@
 {
   "outputDirectory": "public",
   "cleanUrls": true,
+  "headers": [
+    {
+      "source": "/(llms|llms-full).txt",
+      "headers": [
+        { "key": "Content-Type", "value": "text/plain; charset=utf-8" },
+        { "key": "Cache-Control", "value": "public, max-age=3600" }
+      ]
+    },
+    {
+      "source": "/",
+      "headers": [
+        { "key": "Link", "value": "</llms.txt>; rel=\"alternate\"; type=\"text/plain\", <https://baoddc.com/>; rel=\"canonical\"" }
+      ]
+    }
+  ],
   "redirects": [
     {
       "source": "/home",
