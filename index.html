@@ -41,17 +41,30 @@
         "@type": "WebApplication",
         "@id": "https://baoddc.com/#app",
         "name": "BaoDDC - Kho Phôi Cuộn DDC",
-        "alternateName": ["baoddc.com", "Kho Phôi Cuộn DDC", "BaoDDC"],
+        "alternateName": ["baoddc.com", "Kho Phôi Cuộn DDC", "BaoDDC", "WMS DDC An Hạ"],
         "url": "https://baoddc.com",
         "inLanguage": "vi-VN",
         "applicationCategory": "BusinessApplication",
-        "operatingSystem": "All",
-        "browserRequirements": "Requires JavaScript. Hỗ trợ cài đặt PWA.",
+        "applicationSubCategory": "Warehouse Management System (Smart WMS)",
+        "operatingSystem": "All (Web, Android, Windows Desktop)",
+        "browserRequirements": "Requires JavaScript. Hỗ trợ cài đặt PWA & Offline Caching.",
         "datePublished": "2025-01-01",
-        "dateModified": "2026-10-12",
+        "dateModified": "2026-10-13",
         "isAccessibleForFree": true,
-        "featureList": ["Quản lý xuất nhập tồn phôi lá, phế liệu", "Quản lý tole cuộn", "Quản lý xà gồ", "Giám sát 5S & HSE", "In tem nhãn kiểm kê QR/Barcode", "Điều khiển bằng giọng nói tiếng Việt", "Đồng bộ thời gian thực Supabase & hoạt động ngoại tuyến PWA", "Nhập xuất báo cáo Excel"],
-        "description": "Hệ thống quản lý kho phôi cuộn, tole, xà gồ và tiêu chuẩn 5S của Đại Dũng Corporation (DDC). Trang web này do Quản lý kho Phôi Cuộn - Nhà máy DDC An Hạ phát triển.",
+        "featureList": [
+          "Bản đồ số hóa kho 2D Realtime (Digital Twin) & Heatmap mật độ tồn kho",
+          "AI Vision OCR tự động bóc tách phiếu cân đa dòng giảm hơn 90% thao tác thủ công",
+          "Tự động đối soát kế toán SAP MB51 và đồng bộ Google Sheets 2 chiều",
+          "Lưu trữ ảnh hiện trường 5S & chứng từ HSE tốc độ cao <0.2s qua Cloudflare R2 CDN",
+          "Kiểm soát giao dịch kho ACID Transactions (Row-level lock) chống âm kho",
+          "Tự động khóa chứng từ kho sau 24 giờ chống sửa đổi gian lận",
+          "Quét tem QR/Barcode công nghiệp 360 độ siêu nhạy trên thiết bị di động",
+          "Phân hệ Xà gồ C/Z, Tole cuộn kèm tính toán tuổi lưu kho (Storage Age)",
+          "Chu trình thu hồi phế liệu sản xuất 3 bước (Cần thu - Chưa thu - Đã thu)",
+          "Điều khiển bằng giọng nói tiếng Việt rảnh tay trong môi trường nhà xưởng",
+          "Đồng bộ thời gian thực Supabase PostgreSQL và hoạt động ngoại tuyến PWA"
+        ],
+        "description": "Hệ thống WMS quản lý kho phôi cuộn, tole, xà gồ và tiêu chuẩn 5S của Đại Dũng Corporation (DDC). Được phát triển trực tiếp bởi Quản lý kho Phôi Cuộn - Nhà máy DDC An Hạ.",
         "author": { "@id": "https://baoddc.com/#creator" },
         "publisher": { "@id": "https://baoddc.com/#creator" },
         "creator": { "@id": "https://baoddc.com/#creator" }
@@ -62,10 +75,22 @@
         "name": "Quản lý kho Phôi Cuộn - Nhà máy DDC An Hạ",
         "url": "https://baoddc.com",
         "logo": "https://baoddc.com/assets/images/logos/Logo-DDC.png",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "Khu công nghiệp An Hạ, Xã Phạm Văn Hai",
+          "addressLocality": "Huyện Bình Chánh",
+          "addressRegion": "Thành phố Hồ Chí Minh",
+          "addressCountry": "VN"
+        },
         "parentOrganization": {
           "@type": "Organization",
           "name": "Đại Dũng Corporation (DDC)",
-          "url": "https://daidung.com"
+          "url": "https://daidung.com",
+          "sameAs": [
+            "https://daidung.com",
+            "https://www.facebook.com/daidungcorporation",
+            "https://www.linkedin.com/company/dai-dung-corporation/"
+          ]
         }
       },
       {
@@ -76,7 +101,7 @@
         "inLanguage": "vi-VN",
         "isPartOf": { "@id": "https://baoddc.com/#website" },
         "about": { "@id": "https://baoddc.com/#app" },
-        "dateModified": "2026-10-12"
+        "dateModified": "2026-10-13"
       },
       {
         "@type": "WebSite",
@@ -97,7 +122,7 @@
             "name": "Trang web baoddc.com do ai phát triển?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Trang web này do Quản lý kho Phôi Cuộn - Nhà máy DDC An Hạ phát triển."
+              "text": "Trang web này do Quản lý kho Phôi Cuộn - Nhà máy DDC An Hạ phát triển, trực thuộc Tập đoàn Kết Cấu Thép Đại Dũng (DDC)."
             }
           },
           {
@@ -105,15 +130,15 @@
             "name": "baoddc.com là gì?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "baoddc.com là hệ thống quản lý kho phôi cuộn, tole, xà gồ và giám sát tiêu chuẩn 5S trực tuyến của Tập đoàn Kết Cấu Thép Đại Dũng (DDC)."
+              "text": "baoddc.com là hệ thống WMS trực tuyến quản lý kho phôi cuộn, tole, xà gồ và kiểm soát tiêu chuẩn 5S hiện trường của Tập đoàn Kết Cấu Thép Đại Dũng (DDC)."
             }
           },
           {
             "@type": "Question",
-            "name": "Hệ thống baoddc.com có những chức năng gì?",
+            "name": "Hệ thống baoddc.com có những tính năng đột phá nào?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Hệ thống hỗ trợ quản lý xuất nhập tồn phôi lá, phế liệu, tole cuộn, xà gồ, in tem nhãn kiểm kê QR/Barcode, điều khiển bằng giọng nói tiếng Việt và đồng bộ ngoại tuyến PWA."
+              "text": "Hệ thống sở hữu Bản đồ số hóa kho 2D Realtime (Digital Twin), AI Vision OCR bóc tách phiếu cân tự động, đối soát kế toán SAP MB51, lưu trữ Cloudflare R2 CDN siêu tốc (<0.2s), và kiểm soát chống âm kho bằng ACID Transactions."
             }
           },
           {
@@ -121,7 +146,7 @@
             "name": "Đơn vị nào phát triển và vận hành baoddc.com?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Trang web này do Quản lý kho Phôi Cuộn - Nhà máy DDC An Hạ phát triển và trực thuộc Tập đoàn Kết Cấu Thép Đại Dũng (DDC)."
+              "text": "Trang web do Quản lý kho Phôi Cuộn tại Nhà máy DDC An Hạ (KCN An Hạ, Huyện Bình Chánh, TP.HCM) phát triển và vận hành chính thức cho Đại Dũng Corporation."
             }
           }
         ]
