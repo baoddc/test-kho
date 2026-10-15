@@ -1,19 +1,20 @@
 name = "hse-r2-api"
 main = "worker.js"
-compatibility_date = "2024-01-01"
+compatibility_date = "2026-09-21"
 
-# Bindings to R2 Bucket
+# Bindings to R2 Bucket (khớp với Worker đang chạy, kiểm tra ngày 2026-10-15)
 [[r2_buckets]]
 binding = "HSE_BUCKET"
-bucket_name = "ten-bucket-cua-ban" # Thay bằng tên Bucket R2 thực tế của bạn
+bucket_name = "img-5s"
 
 [vars]
 # BẢO MẬT: Upload/Delete bắt buộc token đăng nhập Supabase hợp lệ.
-# (Publishable/anon key là khóa công khai, an toàn để đặt ở đây.)
+# (Publishable/anon key là khóa công khai, an toàn để đặt ở đây; worker.js cũng có sẵn giá trị mặc định.)
 SUPABASE_URL = "https://ahcethtonjwktjtmxzog.supabase.co"
 SUPABASE_ANON_KEY = "sb_publishable_zxmsB9cyjDwi9ai9Vw-s1w_QlqKMG0S"
-# Danh sách Origin được phép gọi API (phân tách bằng dấu phẩy)
-ALLOWED_ORIGINS = "https://baoddc.com,https://www.baoddc.com,http://localhost:3000,http://127.0.0.1:3000,https://localhost,capacitor://localhost"
+# ALLOWED_ORIGINS: để trống để dùng danh sách mặc định trong worker.js (baoddc.com, vercel.app,
+# github.io, Android, Electron 127.0.0.1 mọi cổng). Chỉ đặt khi cần THAY THẾ toàn bộ danh sách đó.
+# ALLOWED_ORIGINS = "https://baoddc.com,https://www.baoddc.com"
 
 # Tùy chọn: Thêm tên miền công khai nếu bạn đã bật R2.dev hoặc Custom Domain
 # PUBLIC_URL = "https://pub-xxxx.r2.dev"
