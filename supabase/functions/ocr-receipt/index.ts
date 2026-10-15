@@ -8,11 +8,13 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 const DEFAULT_ALLOWED_ORIGINS = [
   "https://baoddc.com",
   "https://www.baoddc.com",
-  "http://localhost:3000",
-  "http://127.0.0.1:3000",
-  "https://localhost",
+  "https://web-supabase-five.vercel.app", // Electron (bản online) + update checker
+  "https://baoddc.github.io",             // Shortcut desktop (GitHub Pages)
+  "https://localhost",                    // Android (Capacitor)
   "capacitor://localhost",
 ];
+// App desktop (Electron) chạy server nội bộ trên cổng ngẫu nhiên
+const LOCAL_ORIGIN_RE = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
 const ALLOWED_ORIGINS = (Deno.env.get("ALLOWED_ORIGINS") || "")
   .split(",").map((s) => s.trim()).filter(Boolean);
 const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/heic", "image/heif", "application/pdf"];
@@ -26,7 +28,7 @@ function buildCorsHeaders(req: Request): Record<string, string> {
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Vary": "Origin",
   };
-  if (allowed.includes(origin)) headers["Access-Control-Allow-Origin"] = origin;
+  if (allowed.includes(origin) || LOCAL_ORIGIN_RE.test(origin)) headers["Access-Control-Allow-Origin"] = origin;
   return headers;
 }
 
@@ -37,11 +39,11 @@ function jsonError(message: string, status: number, corsHeaders: Record<string, 
   });
 }
 
-// Khi OCR_REQUIRE_AUTH = "true": bắt buộc access token của user Supabase Auth hợp lệ.
-// (Bật sau khi đã chuyển toàn bộ tài khoản sang Supabase Auth.)
+// Bắt buộc access token của user Supabase Auth hợp lệ (mọi tài khoản đã chuyển sang
+// Supabase Auth từ 2026-10-15). Chỉ tắt khẩn cấp bằng secret OCR_REQUIRE_AUTH = "false".
 async function verifyCaller(req: Request): Promise<boolean> {
-  if (Deno.env.get("OCR_REQUIRE_AUTH") !== "true") return true;
-  const match = (req.headers.get("Authorization") || "").match(/^Bearers+(.+)$/i);
+  if (Deno.env.get("OCR_REQUIRE_AUTH") === "false") return true;
+  const match = (req.headers.get("Authorization") || "").match(/^Bearer\s+(.+)$/i);
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
   if (!match || !supabaseUrl || !anonKey || match[1].trim() === anonKey) return false;

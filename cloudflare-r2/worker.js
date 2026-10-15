@@ -16,11 +16,18 @@
 const DEFAULT_ALLOWED_ORIGINS = [
     'https://baoddc.com',
     'https://www.baoddc.com',
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    'https://localhost',
+    'https://web-supabase-five.vercel.app', // Electron (bản online) + update checker
+    'https://baoddc.github.io',             // Shortcut desktop (GitHub Pages)
+    'https://localhost',                    // Android (Capacitor)
     'capacitor://localhost'
 ];
+// App desktop (Electron) chạy server nội bộ trên cổng ngẫu nhiên
+const LOCAL_ORIGIN_RE = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+
+// Giá trị CÔNG KHAI (đã có sẵn trong mã JS phía trình duyệt) — dùng khi Worker
+// chưa cấu hình biến môi trường, để chỉ cần dán code lên Dashboard là chạy.
+const DEFAULT_SUPABASE_URL = 'https://ahcethtonjwktjtmxzog.supabase.co';
+const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_zxmsB9cyjDwi9ai9Vw-s1w_QlqKMG0S';
 
 const ALLOWED_IMAGE_TYPES = {
     'image/jpeg': 'jpg',
@@ -50,7 +57,7 @@ function buildCorsHeaders(request, env) {
         'Access-Control-Max-Age': '86400',
         'Vary': 'Origin'
     };
-    if (origin && allowed.includes(origin)) {
+    if (origin && (allowed.includes(origin) || LOCAL_ORIGIN_RE.test(origin))) {
         headers['Access-Control-Allow-Origin'] = origin;
     }
     return headers;
@@ -113,20 +120,22 @@ async function verifySupabaseUser(request, env) {
         return { ok: false, reason: 'Thiếu token đăng nhập. Vui lòng đăng nhập để thực hiện thao tác này.' };
     }
 
+    const supabaseUrl = env.SUPABASE_URL || DEFAULT_SUPABASE_URL;
+    const anonKey = env.SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY;
     // Thiếu cấu hình xác thực => TỪ CHỐI (fail-closed), không cho upload/xóa ẩn danh
-    if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+    if (!supabaseUrl || !anonKey) {
         return { ok: false, reason: 'Worker chưa cấu hình SUPABASE_URL / SUPABASE_ANON_KEY.' };
     }
 
     const token = match[1].trim();
-    if (token === env.SUPABASE_ANON_KEY) {
+    if (token === anonKey) {
         return { ok: false, reason: 'Token ẩn danh không được phép.' };
     }
 
     try {
-        const res = await fetch(env.SUPABASE_URL.replace(/\/+$/, '') + '/auth/v1/user', {
+        const res = await fetch(supabaseUrl.replace(/\/+$/, '') + '/auth/v1/user', {
             headers: {
-                'apikey': env.SUPABASE_ANON_KEY,
+                'apikey': anonKey,
                 'Authorization': 'Bearer ' + token
             }
         });
