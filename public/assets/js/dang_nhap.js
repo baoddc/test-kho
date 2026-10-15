@@ -166,18 +166,16 @@ function initLoginForm() {
  * Phát sinh mã OTP và mở Modal xác thực + Gửi qua EmailJS
  */
 function triggerOtpVerification(account) {
-   // Sinh mã 6 chữ số
-   currentGeneratedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+   // Sinh mã 6 chữ số bằng bộ sinh số ngẫu nhiên an toàn (CSPRNG)
+   currentGeneratedOtp = generateSecureOtp();
 
    // Cập nhật thông tin email lên Modal
    const emailElem = document.getElementById('otpTargetEmail');
    if (emailElem) emailElem.textContent = account.email || 'Email đã đăng ký';
 
-   // Gửi Email thật qua EmailJS
-   sendOtpViaEmailJS(account.email, currentGeneratedOtp);
-
-   // Mở Modal
+   // Mở Modal trước (reset lỗi), sau đó gửi Email thật qua EmailJS
    openOtpModal();
+   sendOtpViaEmailJS(account.email, currentGeneratedOtp);
 }
 
 /**
@@ -204,26 +202,30 @@ function sendOtpViaEmailJS(targetEmail, otpCode) {
          })
          .catch((error) => {
             console.error('❌ EmailJS Error:', error);
-            // Hiển thị Toast dự phòng nếu EmailJS trả về lỗi
-            showDemoOtpToast(otpCode);
+            showOtpDeliveryError();
          });
    } else {
-      showDemoOtpToast(otpCode);
+      showOtpDeliveryError();
    }
 }
 
 /**
- * Hiển thị Toast Demo chứa mã OTP
+ * Sinh OTP 6 chữ số bằng crypto.getRandomValues (không dùng Math.random)
  */
-function showDemoOtpToast(otpCode) {
-   const toast = document.getElementById('demoOtpToast');
-   const codeElem = document.getElementById('demoOtpCode');
-   if (toast && codeElem) {
-      codeElem.textContent = otpCode;
-      toast.classList.add('show');
-      setTimeout(() => {
-         toast.classList.remove('show');
-      }, 8000);
+function generateSecureOtp() {
+   const buf = new Uint32Array(1);
+   window.crypto.getRandomValues(buf);
+   return String(100000 + (buf[0] % 900000));
+}
+
+/**
+ * BẢO MẬT: Không bao giờ hiển thị mã OTP lên màn hình.
+ * (Trước đây chặn request EmailJS là OTP hiện ngay trên Toast → vô hiệu hóa xác thực 2 lớp.)
+ */
+function showOtpDeliveryError() {
+   const errorElem = document.getElementById('otpError');
+   if (errorElem) {
+      errorElem.textContent = 'Không gửi được email OTP. Vui lòng bấm "Gửi lại" sau ít phút hoặc liên hệ Quản trị viên.';
    }
 }
 

@@ -14,6 +14,19 @@ const CONFIG = {
     SIMULATE_DATA: false // Set to false when API Key is provided
 };
 
+async function getR2AuthHeaders() {
+    const headers = {};
+    try {
+        if (window.supabase?.auth) {
+            const { data } = await window.supabase.auth.getSession();
+            if (data?.session?.access_token) {
+                headers['Authorization'] = `Bearer ${data.session.access_token}`;
+            }
+        }
+    } catch (_) {}
+    return headers;
+}
+
 // --- 6 Standard DDC Warehouses ---
 const HSE_WAREHOUSES = [
     { id: 'kho-son', name: 'Kho sơn', shortName: 'Kho sơn', tag: 'sơn' },
@@ -2460,8 +2473,10 @@ class DashboardManager {
                 formData.append('folder', moduleId);
 
                 const workerUrl = CONFIG.R2_WORKER_URL.replace(/\/+$/, '') + '/upload';
+                const r2AuthHeaders = await getR2AuthHeaders();
                 const r2Response = await fetch(workerUrl, {
                     method: 'POST',
+                    headers: r2AuthHeaders,
                     body: formData
                 });
 
@@ -2585,9 +2600,10 @@ class DashboardManager {
             if (CONFIG.R2_WORKER_URL && !imageUrl.includes('drive.google.com')) {
                 try {
                     const deleteUrl = CONFIG.R2_WORKER_URL.replace(/\/+$/, '') + '/delete';
+                    const r2AuthHeaders = await getR2AuthHeaders();
                     await fetch(deleteUrl, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 'Content-Type': 'application/json', ...r2AuthHeaders },
                         body: JSON.stringify({ fileUrl: imageUrl })
                     });
                 } catch (r2Err) {
@@ -3207,8 +3223,10 @@ class DashboardManager {
                 formData.append('folder', '5s-fix');
 
                 const workerUrl = CONFIG.R2_WORKER_URL.replace(/\/+$/, '') + '/upload';
+                const r2AuthHeaders = await getR2AuthHeaders();
                 const r2Response = await fetch(workerUrl, {
                     method: 'POST',
+                    headers: r2AuthHeaders,
                     body: formData
                 });
 
@@ -3298,9 +3316,10 @@ class DashboardManager {
             if (CONFIG.R2_WORKER_URL && url && !url.includes('drive.google.com')) {
                 try {
                     const deleteUrl = CONFIG.R2_WORKER_URL.replace(/\/+$/, '') + '/delete';
+                    const r2AuthHeaders = await getR2AuthHeaders();
                     await fetch(deleteUrl, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 'Content-Type': 'application/json', ...r2AuthHeaders },
                         body: JSON.stringify({ fileUrl: url })
                     });
                 } catch (r2Err) {

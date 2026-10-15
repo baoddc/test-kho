@@ -7,6 +7,13 @@ compatibility_date = "2024-01-01"
 binding = "HSE_BUCKET"
 bucket_name = "ten-bucket-cua-ban" # Thay bằng tên Bucket R2 thực tế của bạn
 
+[vars]
+# BẢO MẬT: Upload/Delete bắt buộc token đăng nhập Supabase hợp lệ.
+# (Publishable/anon key là khóa công khai, an toàn để đặt ở đây.)
+SUPABASE_URL = "https://ahcethtonjwktjtmxzog.supabase.co"
+SUPABASE_ANON_KEY = "sb_publishable_zxmsB9cyjDwi9ai9Vw-s1w_QlqKMG0S"
+# Danh sách Origin được phép gọi API (phân tách bằng dấu phẩy)
+ALLOWED_ORIGINS = "https://baoddc.com,https://www.baoddc.com,http://localhost:3000,http://127.0.0.1:3000,https://localhost,capacitor://localhost"
+
 # Tùy chọn: Thêm tên miền công khai nếu bạn đã bật R2.dev hoặc Custom Domain
-# [vars]
 # PUBLIC_URL = "https://pub-xxxx.r2.dev"

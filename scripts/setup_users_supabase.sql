@@ -28,6 +28,7 @@ ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 
 -- 3. Tạo hàm RPC check_login (Chạy 100% trên Server Supabase)
 -- Trả về duy nhất các cột quyền hạn & thông tin user. KHÔNG TRẢ VỀ MẬT KHẨU!
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
 DROP FUNCTION IF EXISTS public.check_login(TEXT, TEXT);
 CREATE OR REPLACE FUNCTION public.check_login(p_username TEXT, p_password TEXT)
 RETURNS TABLE (
@@ -42,8 +43,10 @@ RETURNS TABLE (
 ) 
 LANGUAGE plpgsql
 SECURITY DEFINER -- Thực thi với quyền Admin của Server để bỏ qua RLS
+SET search_path = public, extensions
 AS $$
 BEGIN
+    -- Mật khẩu được lưu dạng bcrypt (xem scripts/fix_security_vulnerabilities_2026-10-15.sql)
     RETURN QUERY
     SELECT 
         u.username,
@@ -56,25 +59,10 @@ BEGIN
         u.allowed_pages
     FROM public.users u
     WHERE u.username = p_username 
-      AND u.password = p_password;
+      AND u.password = extensions.crypt(p_password, u.password);
 END;
 $$;
 
--- 4. Chèn dữ liệu người dùng ban đầu
-INSERT INTO public.users 
-    (username, password, email, require_otp, can_add, can_edit, can_delete, can_view, allowed_pages)
-VALUES 
-    ('bao.lt', '6697@', 'thaibao06061997@gmail.com', TRUE, TRUE, TRUE, TRUE, TRUE, '["*"]'::jsonb),
-    ('admin', 'admin123', NULL, FALSE, FALSE, FALSE, FALSE, TRUE, '["*"]'::jsonb),
-    ('user1', 'pass123', NULL, FALSE, FALSE, FALSE, FALSE, TRUE, '["/pages/home.html"]'::jsonb),
-    ('user2', 'pass456', NULL, FALSE, FALSE, FALSE, FALSE, TRUE, '["/pages/home.html"]'::jsonb)
-ON CONFLICT (username) 
-DO UPDATE SET 
-    password = EXCLUDED.password,
-    email = EXCLUDED.email,
-    require_otp = EXCLUDED.require_otp,
-    can_add = EXCLUDED.can_add,
-    can_edit = EXCLUDED.can_edit,
-    can_delete = EXCLUDED.can_delete,
-    can_view = EXCLUDED.can_view,
-    allowed_pages = EXCLUDED.allowed_pages;
+-- 4. Dữ liệu người dùng ban đầu
+-- BẢO MẬT: KHÔNG lưu mật khẩu mẫu trong mã nguồn. Tạo người dùng qua trang
+-- Quản lý người dùng (RPC admin_save_user) — mật khẩu sẽ được băm bcrypt tự động.

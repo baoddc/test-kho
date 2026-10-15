@@ -79,15 +79,12 @@ function isRecordLocked(record) {
   if (!record) return false;
 
   const profile = getCachedUserProfile();
-  if (profile?.is_admin || profile?.username?.toLowerCase() === 'bao.lt') {
+  if (profile?.is_admin) {
     return false;
   }
 
-  // Bypass 24h lock restriction for user "bao.lt"
-  const currentUser = (typeof localStorage !== 'undefined' && localStorage.getItem('currentUser')) || (typeof window !== 'undefined' && window.currentUser);
-  if (currentUser && String(currentUser).trim().toLowerCase() === 'bao.lt') {
-    return false;
-  }
+  // BẢO MẬT: Không bypass theo localStorage.currentUser (ai cũng sửa được qua F12).
+  // Quyền admin chỉ lấy từ hồ sơ Supabase Auth đã đồng bộ; RLS vẫn là lớp bảo vệ cuối.
 
   const createdAtStr = record.created_at || record.createdAt || record.created_Time;
   if (!createdAtStr) return false;
@@ -113,7 +110,7 @@ if (typeof window !== 'undefined') {
 function getUserPermissions(groupName = null) {
   const profile = getCachedUserProfile();
   if (profile) {
-    if (profile.is_admin || profile.username?.toLowerCase() === 'bao.lt') {
+    if (profile.is_admin) {
       return { canView: true, canAdd: true, canEdit: true, canDelete: true, isAdmin: true };
     }
     return {
@@ -128,10 +125,6 @@ function getUserPermissions(groupName = null) {
   const currentUser = (typeof localStorage !== 'undefined' && localStorage.getItem('currentUser')) || (typeof window !== 'undefined' && window.currentUser);
   if (!currentUser) {
     return { canView: false, canAdd: false, canEdit: false, canDelete: false, isAdmin: false };
-  }
-  
-  if (String(currentUser).trim().toLowerCase() === 'bao.lt') {
-    return { canView: true, canAdd: true, canEdit: true, canDelete: true, isAdmin: true };
   }
 
   if (groupName && typeof localStorage !== 'undefined') {
@@ -266,7 +259,7 @@ function showWarningModal(message, title = 'Cảnh báo hệ thống') {
         <div class="modal-content shadow-lg border-0" style="border-radius: 16px; overflow: hidden; background: #1e2438; color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.15) !important;">
           <div class="modal-header border-0 py-3 px-4" style="background: rgba(220, 53, 69, 0.2); border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;">
             <h5 class="modal-title fw-bold fs-5 d-flex align-items-center gap-2 mb-0 text-white" style="color: #ffffff !important;">
-              <span style="font-size: 1.5rem;">⚠️</span> ${title}
+              <span style="font-size: 1.5rem;">⚠️</span>
             </h5>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
@@ -291,7 +284,8 @@ function showWarningModal(message, title = 'Cảnh báo hệ thống') {
 
   const titleEl = modalEl.querySelector('.modal-title');
   if (titleEl) {
-    titleEl.innerHTML = `<span style="font-size: 1.3rem;">⚠️</span> ${title}`;
+    titleEl.innerHTML = '<span style="font-size: 1.3rem;">⚠️</span> ';
+    titleEl.appendChild(document.createTextNode(String(title)));
   }
 
   const bodyEl = modalEl.querySelector('#globalWarningModalBody');

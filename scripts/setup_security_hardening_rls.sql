@@ -19,18 +19,22 @@ CREATE TABLE IF NOT EXISTS public.user_profiles (
 );
 
 -- 2. HÀM KIỂM TRA QUYỀN QUẢN TRỊ VIÊN (IS_ADMIN)
+-- BẢO MẬT: anon (auth.uid() IS NULL) KHÔNG BAO GIỜ là admin.
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS BOOLEAN
 LANGUAGE sql
 SECURITY DEFINER
 STABLE
+SET search_path = public
 AS $$
-    SELECT COALESCE(
-        (SELECT is_admin FROM public.user_profiles WHERE id = auth.uid()),
-        (auth.jwt() ->> 'email' = 'thaibao06061997@gmail.com'),
-        (auth.uid() IS NULL),
-        false
-    );
+    SELECT CASE
+        WHEN auth.uid() IS NULL THEN FALSE
+        ELSE COALESCE(
+            (SELECT is_admin FROM public.user_profiles WHERE id = auth.uid()),
+            (auth.jwt() ->> 'email') = 'thaibao06061997@gmail.com',
+            FALSE
+        )
+    END;
 $$;
 
 -- 3. HÀM TỰ ĐỘNG ĐỒNG BỘ USER MỚI TỪ AUTH.USERS SANG USER_PROFILES
@@ -38,19 +42,21 @@ CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
     v_username TEXT;
     v_is_admin BOOLEAN := FALSE;
 BEGIN
+    -- BẢO MẬT: Không tin raw_user_meta_data (client tự gửi khi signUp)
     v_username := COALESCE(
-        NEW.raw_user_meta_data->>'username',
-        SPLIT_PART(NEW.email, '@', 1),
+        NULLIF(SPLIT_PART(NEW.email, '@', 1), ''),
         'user_' || SUBSTRING(NEW.id::TEXT, 1, 8)
     );
 
-    IF NEW.email = 'thaibao06061997@gmail.com' OR LOWER(v_username) = 'bao.lt' THEN
+    IF NEW.email = 'thaibao06061997@gmail.com' THEN
         v_is_admin := TRUE;
+        v_username := 'bao.lt';
     END IF;
 
     INSERT INTO public.user_profiles (

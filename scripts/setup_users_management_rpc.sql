@@ -3,20 +3,23 @@
 -- Hướng dẫn: Chép toàn bộ nội dung script này và chạy trong SQL Editor trên Supabase Dashboard
 -- =============================================================================
 
--- 0. Hàm kiểm tra quyền Quản trị viên (Hỗ trợ cả Supabase JWT và Custom Auth từ public.users)
+-- 0. Hàm kiểm tra quyền Quản trị viên (CHỈ dựa trên Supabase Auth JWT)
+-- BẢO MẬT: Người dùng ẩn danh (anon key công khai) KHÔNG BAO GIỜ là admin.
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS BOOLEAN
 LANGUAGE sql
 SECURITY DEFINER
 STABLE
+SET search_path = public
 AS $$
-    SELECT COALESCE(
-        (SELECT is_admin FROM public.user_profiles WHERE id = auth.uid()),
-        (auth.jwt() ->> 'email' = 'thaibao06061997@gmail.com'),
-        -- Khi gọi qua client sử dụng public.users / anon key, cho phép thực thi
-        (auth.uid() IS NULL),
-        false
-    );
+    SELECT CASE
+        WHEN auth.uid() IS NULL THEN FALSE
+        ELSE COALESCE(
+            (SELECT is_admin FROM public.user_profiles WHERE id = auth.uid()),
+            (auth.jwt() ->> 'email') = 'thaibao06061997@gmail.com',
+            FALSE
+        )
+    END;
 $$;
 
 -- 1. Hàm lấy danh sách tất cả người dùng (CHỈ ADMIN MỚI ĐƯỢC GỌI)
@@ -189,8 +192,12 @@ BEGIN
 END;
 $$;
 
--- 4. CẤP QUYỀN THỰC THI (GRANT EXECUTE) CHO ANON VÀ AUTHENTICATED
-GRANT EXECUTE ON FUNCTION public.is_admin TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.admin_get_users TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.admin_save_user TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.admin_delete_user TO anon, authenticated;
+-- 4. CẤP QUYỀN THỰC THI: CHỈ AUTHENTICATED (thu hồi khỏi anon / PUBLIC)
+REVOKE EXECUTE ON FUNCTION public.is_admin FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.admin_get_users FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.admin_save_user FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.admin_delete_user FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.is_admin TO authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_get_users TO authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_save_user TO authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_delete_user TO authenticated;

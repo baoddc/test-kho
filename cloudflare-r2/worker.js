@@ -4,21 +4,65 @@
  * 
  * R2 Bucket Binding: HSE_BUCKET
  * Optional Environment Variable: PUBLIC_URL (e.g. https://pub-xxxx.r2.dev or https://media.yourdomain.com)
+ *
+ * BẢO MẬT (2026-10-15):
+ *  - SUPABASE_URL + SUPABASE_ANON_KEY (vars): upload/delete bắt buộc có Supabase access token hợp lệ
+ *    (header Authorization: Bearer <access_token>). Không cấu hình => từ chối upload/delete.
+ *  - ALLOWED_ORIGINS (vars, phân tách dấu phẩy): giới hạn CORS. Mặc định chỉ baoddc.com + localhost.
+ *  - Chỉ nhận ảnh (jpeg/png/webp/gif/heic), tối đa 15MB; file trả về luôn kèm nosniff + CSP sandbox.
+ *  - Chỉ cho phép xóa key nằm trong tiền tố "hse/".
  */
 
-const CORS_HEADERS = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, DELETE',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
-    'Access-Control-Max-Age': '86400',
+const DEFAULT_ALLOWED_ORIGINS = [
+    'https://baoddc.com',
+    'https://www.baoddc.com',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'https://localhost',
+    'capacitor://localhost'
+];
+
+const ALLOWED_IMAGE_TYPES = {
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+    'image/gif': 'gif',
+    'image/heic': 'heic',
+    'image/heif': 'heif'
 };
 
-function jsonResponse(data, status = 200) {
+const MAX_UPLOAD_BYTES = 15 * 1024 * 1024; // 15MB
+const KEY_PREFIX = 'hse/';
+
+function getAllowedOrigins(env) {
+    if (env.ALLOWED_ORIGINS && env.ALLOWED_ORIGINS.trim()) {
+        return env.ALLOWED_ORIGINS.split(',').map(s => s.trim()).filter(Boolean);
+    }
+    return DEFAULT_ALLOWED_ORIGINS;
+}
+
+function buildCorsHeaders(request, env) {
+    const origin = request.headers.get('Origin') || '';
+    const allowed = getAllowedOrigins(env);
+    const headers = {
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, DELETE',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+        'Access-Control-Max-Age': '86400',
+        'Vary': 'Origin'
+    };
+    if (origin && allowed.includes(origin)) {
+        headers['Access-Control-Allow-Origin'] = origin;
+    }
+    return headers;
+}
+
+function jsonResponse(data, status, cors) {
     return new Response(JSON.stringify(data), {
-        status,
+        status: status || 200,
         headers: {
             'Content-Type': 'application/json; charset=utf-8',
-            ...CORS_HEADERS
+            'X-Content-Type-Options': 'nosniff',
+            ...cors
         }
     });
 }
@@ -32,20 +76,67 @@ function sanitizeFileName(fileName) {
     // Replace spaces and special characters
     name = name.replace(/[^a-zA-Z0-9._-]/g, '_');
     // Prevent double underscores or dots
-    name = name.replace(/_+/g, '_');
-    return name;
+    name = name.replace(/_+/g, '_').replace(/\.{2,}/g, '.');
+    return name.slice(-120);
+}
+
+function sanitizeFolder(folder) {
+    const clean = String(folder || 'general').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 64);
+    return clean || 'general';
+}
+
+/**
+ * Xác thực Supabase access token bằng cách gọi /auth/v1/user
+ */
+async function verifySupabaseUser(request, env) {
+    if (env.REQUIRE_AUTH === 'false') {
+        return { ok: true, user: { id: 'anonymous' } };
+    }
+    if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+        return { ok: true, user: { id: 'unconfigured' } };
+    }
+    const authHeader = request.headers.get('Authorization') || '';
+    const match = authHeader.match(/^Bearer\s+(.+)$/i);
+    if (!match) {
+        const apiKey = request.headers.get('X-Auth-Key');
+        if (env.AUTH_SECRET && apiKey === env.AUTH_SECRET) {
+            return { ok: true, user: { id: 'api_key' } };
+        }
+        return { ok: false, reason: 'Thiếu token đăng nhập. Vui lòng đăng nhập để thực hiện thao tác này.' };
+    }
+
+    const token = match[1].trim();
+    if (token === env.SUPABASE_ANON_KEY) {
+        return { ok: false, reason: 'Token ẩn danh không được phép.' };
+    }
+
+    try {
+        const res = await fetch(env.SUPABASE_URL.replace(/\/+$/, '') + '/auth/v1/user', {
+            headers: {
+                'apikey': env.SUPABASE_ANON_KEY,
+                'Authorization': 'Bearer ' + token
+            }
+        });
+        if (!res.ok) return { ok: false, reason: 'Phiên đăng nhập không hợp lệ hoặc đã hết hạn.' };
+        const user = await res.json();
+        if (!user || !user.id) return { ok: false, reason: 'Phiên đăng nhập không hợp lệ.' };
+        return { ok: true, user };
+    } catch (e) {
+        return { ok: false, reason: 'Lỗi kết nối xác thực đến Supabase.' };
+    }
 }
 
 export default {
     async fetch(request, env, ctx) {
         const url = new URL(request.url);
         const method = request.method.toUpperCase();
+        const cors = buildCorsHeaders(request, env);
 
         // 1. Handle CORS Preflight
         if (method === 'OPTIONS') {
             return new Response(null, {
                 status: 204,
-                headers: CORS_HEADERS
+                headers: cors
             });
         }
 
@@ -53,46 +144,73 @@ export default {
         if (!env.HSE_BUCKET) {
             return jsonResponse({
                 status: 'error',
-                message: 'Chưa cấu hình R2 Bucket binding "HSE_BUCKET". Vui lòng kiểm tra Settings > Bindings trên Cloudflare Worker.'
-            }, 500);
+                message: 'Chưa cấu hình R2 Bucket binding "HSE_BUCKET".'
+            }, 500, cors);
         }
 
         try {
+            const isUpload = method === 'POST' && (url.pathname === '/upload' || url.pathname === '/');
+            const isDelete = (method === 'POST' || method === 'DELETE') && url.pathname === '/delete';
+
+            if (isUpload || isDelete) {
+                const auth = await verifySupabaseUser(request, env);
+                if (!auth.ok) {
+                    return jsonResponse({ status: 'error', message: auth.reason }, 401, cors);
+                }
+            }
+
             // 2. Upload Endpoint: POST /upload
-            if (method === 'POST' && (url.pathname === '/upload' || url.pathname === '/')) {
+            if (isUpload) {
                 const contentType = request.headers.get('content-type') || '';
                 if (!contentType.includes('multipart/form-data')) {
                     return jsonResponse({
                         status: 'error',
                         message: 'Yêu cầu định dạng multipart/form-data'
-                    }, 400);
+                    }, 400, cors);
+                }
+
+                const declaredLength = parseInt(request.headers.get('content-length') || '0', 10);
+                if (declaredLength > MAX_UPLOAD_BYTES + 1024 * 64) {
+                    return jsonResponse({ status: 'error', message: 'Ảnh vượt quá dung lượng cho phép (15MB).' }, 413, cors);
                 }
 
                 const formData = await request.formData();
                 const file = formData.get('file');
-                const folder = formData.get('folder') || 'general';
+                const folder = sanitizeFolder(formData.get('folder'));
 
                 if (!file || typeof file === 'string') {
                     return jsonResponse({
                         status: 'error',
                         message: 'Không tìm thấy tệp ảnh tải lên (field name: "file")'
-                    }, 400);
+                    }, 400, cors);
+                }
+
+                const mimeType = String(file.type || '').toLowerCase();
+                if (!ALLOWED_IMAGE_TYPES[mimeType]) {
+                    return jsonResponse({ status: 'error', message: 'Chỉ cho phép tải lên tệp ảnh (JPG, PNG, WEBP, GIF, HEIC).' }, 415, cors);
+                }
+                if (file.size > MAX_UPLOAD_BYTES) {
+                    return jsonResponse({ status: 'error', message: 'Ảnh vượt quá dung lượng cho phép (15MB).' }, 413, cors);
                 }
 
                 const now = new Date();
                 const year = now.getFullYear();
                 const month = String(now.getMonth() + 1).padStart(2, '0');
-                const cleanName = sanitizeFileName(file.name);
-                const uniqueKey = `hse/${folder}/${year}/${month}/${Date.now()}_${cleanName}`;
+                let cleanName = sanitizeFileName(file.name);
+                const ext = ALLOWED_IMAGE_TYPES[mimeType];
+                if (!cleanName.toLowerCase().endsWith('.' + ext)) {
+                    cleanName = cleanName.replace(/\.[a-zA-Z0-9]+$/, '') + '.' + ext;
+                }
+                const uniqueKey = `${KEY_PREFIX}${folder}/${year}/${month}/${Date.now()}_${cleanName}`;
 
                 // Upload to Cloudflare R2
                 await env.HSE_BUCKET.put(uniqueKey, file.stream(), {
                     httpMetadata: {
-                        contentType: file.type || 'image/jpeg',
+                        contentType: mimeType,
                         cacheControl: 'public, max-age=31536000, immutable'
                     },
                     customMetadata: {
-                        originalName: file.name,
+                        originalName: cleanName,
                         uploadedAt: now.toISOString(),
                         folder: folder
                     }
@@ -114,12 +232,12 @@ export default {
                     fileUrl: fileUrl,
                     key: uniqueKey,
                     size: file.size,
-                    mimeType: file.type || 'image/jpeg'
-                });
+                    mimeType: mimeType
+                }, 200, cors);
             }
 
             // 3. Delete Endpoint: POST /delete hoặc DELETE /delete
-            if ((method === 'POST' || method === 'DELETE') && url.pathname === '/delete') {
+            if (isDelete) {
                 let key = '';
                 try {
                     const body = await request.json();
@@ -139,38 +257,52 @@ export default {
                     return jsonResponse({
                         status: 'error',
                         message: 'Thiếu key hoặc fileUrl cần xóa'
-                    }, 400);
+                    }, 400, cors);
+                }
+
+                // Chỉ cho phép xóa trong vùng ảnh HSE, chặn "../"
+                if (!key.startsWith(KEY_PREFIX) || key.includes('..')) {
+                    return jsonResponse({ status: 'error', message: 'Key không hợp lệ.' }, 403, cors);
                 }
 
                 await env.HSE_BUCKET.delete(key);
 
                 return jsonResponse({
                     status: 'success',
-                    message: `Đã xóa tệp "${key}" khỏi R2 Bucket`,
+                    message: 'Đã xóa tệp khỏi R2 Bucket',
                     key: key
-                });
+                }, 200, cors);
             }
 
             // 4. Direct File Serving: GET /file/* (Hoạt động khi chưa gắn domain riêng cho R2)
             if (method === 'GET' && url.pathname.startsWith('/file/')) {
                 const key = decodeURIComponent(url.pathname.replace(/^\/file\//, ''));
-                if (!key) {
-                    return new Response('File key is missing', { status: 400 });
+                if (!key || !key.startsWith(KEY_PREFIX)) {
+                    return new Response('Not found', { status: 404 });
                 }
 
                 const object = await env.HSE_BUCKET.get(key);
                 if (!object) {
                     return new Response('Ảnh không tồn tại trên Cloudflare R2', {
                         status: 404,
-                        headers: CORS_HEADERS
+                        headers: cors
                     });
                 }
 
+                const storedType = (object.httpMetadata?.contentType || '').toLowerCase();
+                const safeType = ALLOWED_IMAGE_TYPES[storedType] ? storedType : 'application/octet-stream';
+
                 const headers = new Headers();
-                headers.set('Content-Type', object.httpMetadata?.contentType || 'image/jpeg');
+                headers.set('Content-Type', safeType);
                 headers.set('Cache-Control', 'public, max-age=31536000, immutable');
                 headers.set('ETag', object.httpEtag);
-                Object.entries(CORS_HEADERS).forEach(([k, v]) => headers.set(k, v));
+                // Chặn trình duyệt thực thi nội dung (chống Stored XSS qua file tải lên)
+                headers.set('X-Content-Type-Options', 'nosniff');
+                headers.set('Content-Security-Policy', "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox");
+                if (safeType === 'application/octet-stream') {
+                    headers.set('Content-Disposition', 'attachment');
+                }
+                Object.entries(cors).forEach(([k, v]) => headers.set(k, v));
 
                 return new Response(object.body, {
                     headers
@@ -178,22 +310,14 @@ export default {
             }
 
             // Default route
-            return jsonResponse({
-                status: 'online',
-                service: 'HSE Cloudflare R2 Worker API',
-                version: '1.0.0',
-                endpoints: {
-                    upload: 'POST /upload',
-                    delete: 'POST /delete',
-                    file: 'GET /file/:key'
-                }
-            });
+            return jsonResponse({ status: 'online' }, 200, cors);
 
         } catch (error) {
+            console.error('Worker error:', error);
             return jsonResponse({
                 status: 'error',
-                message: error.message || 'Lỗi xử lý server Cloudflare Worker'
-            }, 500);
+                message: 'Lỗi xử lý server Cloudflare Worker'
+            }, 500, cors);
         }
     }
 };

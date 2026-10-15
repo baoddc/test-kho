@@ -1718,46 +1718,26 @@
   }
 
   async function fetchUserPermissionsFromSupabase(username) {
-    const SUPABASE_URL = 'https://ahcethtonjwktjtmxzog.supabase.co';
-    const SUPABASE_ANON_KEY = 'sb_publishable_zxmsB9cyjDwi9ai9Vw-s1w_QlqKMG0S';
-
-    // 1. Thử gọi RPC admin_get_users để bypass RLS
+    // BẢO MẬT: Không gọi admin_get_users bằng anon key (lộ toàn bộ danh sách user).
+    // Chỉ đọc hồ sơ của CHÍNH người dùng đang đăng nhập qua Supabase Auth (RLS cho phép).
     try {
-      const resRpc = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_users`, {
-        method: 'POST',
-        headers: {
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({}),
-        cache: 'no-store'
-      });
-      if (resRpc.ok) {
-        const users = await resRpc.json();
-        if (Array.isArray(users)) {
-          const matched = users.find(u => u.username === username);
-          if (matched) return matched;
-        }
-      }
-    } catch (e) {
-      console.warn('Error fetching via RPC admin_get_users:', e);
-    }
+      const client = (window.supabase && typeof window.supabase.from === 'function') ? window.supabase : null;
+      if (!client || !client.auth) return null;
 
-    // 2. Fallback: Trực tiếp qua REST Endpoint bảng users
-    try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/users?username=eq.${encodeURIComponent(username)}&select=allowed_pages,can_view,can_add,can_edit,can_delete`, {
-        headers: {
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-        },
-        cache: 'no-store'
-      });
-      if (!res.ok) return null;
-      const data = await res.json();
-      return (data && data.length > 0) ? data[0] : null;
+      const { data: { session } } = await client.auth.getSession();
+      if (!session?.user) return null;
+
+      const { data, error } = await client
+        .from('user_profiles')
+        .select('username, allowed_pages, can_view, can_add, can_edit, can_delete')
+        .eq('id', session.user.id)
+        .maybeSingle();
+
+      if (error || !data) return null;
+      if (username && data.username && data.username !== username) return null;
+      return data;
     } catch (e) {
-      console.warn('Error fetching user perms via REST:', e);
+      console.warn('Error fetching own user profile:', e);
       return null;
     }
   }
