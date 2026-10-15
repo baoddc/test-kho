@@ -233,6 +233,13 @@
       const cleanId = String(cuonId || '').trim();
       if (!cleanId || !window.supabase) return true;
 
+      // Người không có quyền Thêm/Sửa vẫn thao tác được trên form nhưng không lưu được,
+      // nên không giữ khóa cuộn (tránh chặn người có quyền xuất đúng cuộn đó trong 5 phút).
+      if (typeof getUserPermissions === 'function') {
+        const p = getUserPermissions(this.moduleType) || {};
+        if (!(p.isAdmin || p.canAdd || p.canEdit)) return true;
+      }
+
       const key = cleanId.toLowerCase();
       const currentUser = (typeof localStorage !== 'undefined' && localStorage.getItem('currentUser')) || this.currentUser || 'anonymous';
 

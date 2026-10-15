@@ -2664,44 +2664,48 @@ function setupModalPermissions(modalEl) {
     hasPerm = perms.isAdmin || perms.canEdit || perms.canAdd;
   }
 
-  // Vô hiệu hóa tất cả các input, select, textarea trong modal nếu không có quyền
+  // Form luôn thao tác được với mọi người dùng: bật toàn bộ trường nhập liệu
   const inputs = modalEl.querySelectorAll('input, select, textarea');
   inputs.forEach(input => {
-    input.disabled = !hasPerm;
+    input.disabled = false;
   });
 
-  // Ẩn/hiện các nút hành động trong modal theo quyền tương ứng
+  // Các nút hành động luôn hiện; quyền được kiểm tra khi bấm (data-perm)
   const submitBtns = modalEl.querySelectorAll('button[type="submit"]');
   submitBtns.forEach(btn => {
-    btn.style.display = hasPerm ? '' : 'none';
+    btn.style.display = '';
   });
 
   const btnConfirmDelete = modalEl.querySelector('#btnConfirmDelete');
   if (btnConfirmDelete) {
-    btnConfirmDelete.style.display = (perms.isAdmin || perms.canDelete) ? '' : 'none';
+    btnConfirmDelete.style.display = '';
   }
 
   const btnEditAddRowModal = modalEl.querySelector('#btnEditAddRowModal');
   if (btnEditAddRowModal) {
-    btnEditAddRowModal.style.display = (perms.isAdmin || perms.canEdit) ? '' : 'none';
+    btnEditAddRowModal.style.display = '';
   }
 
   const btnAddRowModal = modalEl.querySelector('#btnAddRowModal');
   if (btnAddRowModal) {
-    btnAddRowModal.style.display = (perms.isAdmin || perms.canAdd) ? '' : 'none';
+    btnAddRowModal.style.display = '';
   }
 
-  // Ẩn các nút "Xóa" dòng trong modal nếu không có quyền
+  // Nút xóa dòng trong form luôn dùng được
   const removeBtns = modalEl.querySelectorAll('.btn-remove-edit-row, .btn-remove-row');
   removeBtns.forEach(btn => {
-    btn.style.display = hasPerm ? '' : 'none';
+    btn.style.display = '';
   });
 
-  // Ẩn các nút "Thêm mặt hàng mới" trong dropdown nếu không có quyền thêm
+  // Nút "Thêm mặt hàng mới" luôn hiện (nút Lưu mặt hàng có data-perm="add")
   const addNewItemBtns = modalEl.querySelectorAll('.btn-add-new-item');
   addNewItemBtns.forEach(btn => {
-    btn.style.display = (perms.isAdmin || perms.canAdd) ? '' : 'none';
+    btn.style.display = '';
   });
+
+  // Chỉ các nút hành động có data-perm (Thêm / Cập nhật / Xóa / Đồng bộ...) bị khóa khi không có quyền:
+  // bấm vào sẽ bị chặn kèm thông báo (applyElementPermissions trong supabase-config.js).
+  if (typeof applyElementPermissions === 'function') applyElementPermissions('pl');
 
   return hasPerm;
 }

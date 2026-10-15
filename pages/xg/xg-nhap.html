@@ -45,9 +45,9 @@
 
         <!-- Action buttons -->
         <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
-          <button id="btnAddData" data-perm="add" class="btn btn-sm btn-success add-row-btn">Thêm dữ liệu</button>
-          <button id="btnEditData" data-perm="edit" class="btn btn-sm btn-primary add-row-btn" disabled>Sửa dữ liệu</button>
-          <button id="btnDeleteData" data-perm="delete" class="btn btn-sm btn-danger add-row-btn" disabled>Xóa dữ liệu</button>
+          <button id="btnAddData" class="btn btn-sm btn-success add-row-btn">Thêm dữ liệu</button>
+          <button id="btnEditData" class="btn btn-sm btn-primary add-row-btn" disabled>Sửa dữ liệu</button>
+          <button id="btnDeleteData" class="btn btn-sm btn-danger add-row-btn" disabled>Xóa dữ liệu</button>
           <button id="btnResetFilter" class="btn btn-secondary btn-sm">Reset</button>
           <button id="btnExport" class="btn btn-success btn-sm" disabled>Tải file Excel (.xlsx)</button>
         </div>
@@ -101,7 +101,7 @@
               <div class="card mb-3">
                 <div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center">
                   <h6 class="mb-0">Thông tin chung</h6>
-                  <button type="button" id="btnSyncGgSheet" class="btn btn-sm btn-light text-primary fw-bold" title="Đồng bộ dữ liệu mới nhất từ Google Sheets">
+                  <button data-perm="add" type="button" id="btnSyncGgSheet" class="btn btn-sm btn-light text-primary fw-bold" title="Đồng bộ dữ liệu mới nhất từ Google Sheets">
                     <i class="bi bi-arrow-repeat me-1"></i> Đồng bộ Google Sheets
                   </button>
                 </div>
@@ -178,7 +178,7 @@
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-              <button type="submit" class="btn btn-primary" id="btnAddDataSubmit">Thêm</button>
+              <button data-perm="add" type="submit" class="btn btn-primary" id="btnAddDataSubmit">Thêm</button>
             </div>
           </form>
         </div>
@@ -199,7 +199,7 @@
               <div class="card mb-3">
                 <div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center">
                   <h6 class="mb-0">Thông tin chung</h6>
-                  <button type="button" id="btnEditSyncGgSheet" class="btn btn-sm btn-light text-primary fw-bold" title="Đồng bộ dữ liệu mới nhất từ Google Sheets">
+                  <button data-perm="add" type="button" id="btnEditSyncGgSheet" class="btn btn-sm btn-light text-primary fw-bold" title="Đồng bộ dữ liệu mới nhất từ Google Sheets">
                     <i class="bi bi-arrow-repeat me-1"></i> Đồng bộ Google Sheets
                   </button>
                 </div>
@@ -271,7 +271,7 @@
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-              <button type="submit" class="btn btn-primary" id="btnEditDataSubmit">Cập nhật</button>
+              <button data-perm="edit" type="submit" class="btn btn-primary" id="btnEditDataSubmit">Cập nhật</button>
             </div>
           </form>
         </div>
@@ -293,7 +293,7 @@
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-            <button type="button" id="btnConfirmDelete" class="btn btn-danger">Xóa</button>
+            <button data-perm="delete" type="button" id="btnConfirmDelete" class="btn btn-danger">Xóa</button>
           </div>
         </div>
       </div>

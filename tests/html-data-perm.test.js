@@ -21,6 +21,9 @@ function createTestSandbox(pathname, currentUser, userGroupPerms, elements = [])
         if (event === 'click') {
           sandbox._clickHandler = handler;
         }
+        if (event === 'submit') {
+          sandbox._submitHandler = handler;
+        }
       }
     },
     document: {
@@ -135,6 +138,56 @@ function createTestSandbox(pathname, currentUser, userGroupPerms, elements = [])
   console.log('[PASS] Test 2b: Click on locked button is blocked with a warning; permitted buttons work');
 }
 
+// Test 2c: data-perm nhiều quyền ("add|edit"): chỉ cần 1 quyền là dùng được
+{
+  const mk = () => ({ dataset: { perm: 'add|edit' }, style: {}, setAttribute: function(k, v) { this[k] = v; } });
+  const onlyEdit = [mk()];
+  createTestSandbox('/pages/pl/pl-phieu-in.html', 'user_test', {
+    pl: { canView: true, canAdd: false, canEdit: true, canDelete: false }
+  }, onlyEdit).window.applyElementPermissions();
+  assert.strictEqual(onlyEdit[0]['data-perm-locked'], undefined, 'add|edit must be usable with only canEdit');
+
+  const none = [mk()];
+  createTestSandbox('/pages/pl/pl-phieu-in.html', 'user_test', {
+    pl: { canView: true, canAdd: false, canEdit: false, canDelete: false }
+  }, none).window.applyElementPermissions();
+  assert.strictEqual(none[0]['data-perm-locked'], 'true', 'add|edit must be locked without canAdd and canEdit');
+  assert.ok(String(none[0].title).includes('Thêm/Sửa'), 'Tooltip must name both actions');
+  console.log('[PASS] Test 2c: data-perm="add|edit" works as any-of');
+}
+
+// Test 2d: Nhấn Enter / gửi form bằng nút submit bị khóa => chặn; nút không khóa => cho gửi
+{
+  const sandbox = createTestSandbox('/pages/xg/xg-nhap.html', 'user_test', {
+    xg: { canView: true, canAdd: false, canEdit: false, canDelete: false }
+  }, []);
+  assert.ok(typeof sandbox._submitHandler === 'function', 'A capture-phase submit guard must be registered on window');
+  let warned = null;
+  sandbox.showWarningModal = (msg) => { warned = msg; };
+
+  const mkSubmit = (locked) => ({
+    getAttribute: (k) => (k === 'data-perm-locked' ? (locked ? 'true' : null) : k === 'data-perm' ? 'add' : null)
+  });
+  const mkEvent = (submitter) => ({
+    target: { querySelector: () => submitter, id: 'addDataForm' },
+    submitter,
+    prevented: false,
+    preventDefault() { this.prevented = true; },
+    stopPropagation() {},
+    stopImmediatePropagation() {}
+  });
+
+  const e1 = mkEvent(mkSubmit(true));
+  sandbox._submitHandler(e1);
+  assert.ok(e1.prevented && warned && warned.includes('không có quyền Thêm'), 'Locked submit must be blocked with a warning');
+
+  warned = null;
+  const e2 = mkEvent(mkSubmit(false));
+  sandbox._submitHandler(e2);
+  assert.ok(!e2.prevented && warned === null, 'Permitted submit must pass through');
+  console.log('[PASS] Test 2d: Form submit (incl. Enter key) is blocked only when the submit button is locked');
+}
+
 // Test 3: URL detection for tem_qr group
 {
   const elements = [
@@ -180,6 +233,35 @@ function createTestSandbox(pathname, currentUser, userGroupPerms, elements = [])
       `File ${relPath} must contain at least one data-perm attribute`
     );
     console.log(`[PASS] Verified data-perm in ${relPath}`);
+  });
+}
+
+// Test 5: Trang nhập liệu: nút thanh công cụ mở form TỰ DO; nút hành động TRONG form mang data-perm
+{
+  const dataPages = [
+    'pages/xg/xg-nhap.html', 'pages/xg/xg-xuat.html',
+    'pages/tole/tole-nhap.html', 'pages/tole/tole-xuat.html',
+    'pages/pl/pl-can-thu.html', 'pages/pl/pl-da-thu.html', 'pages/pl/pl-chua-thu.html',
+    'pages/pl/pl-phieu-in.html'
+  ];
+  const modalBlock = (html, id) => {
+    const start = html.indexOf(`id="${id}"`);
+    assert.ok(start >= 0, `Missing #${id}`);
+    const re = /class="modal[\s"]/g;
+    re.lastIndex = start + 10;
+    const next = re.exec(html);
+    return html.slice(start, next ? next.index : html.length);
+  };
+  dataPages.forEach(relPath => {
+    const html = fs.readFileSync(path.join(__dirname, '..', relPath), 'utf8');
+    ['btnAddData', 'btnEditData', 'btnDeleteData'].forEach(id => {
+      const m = html.match(new RegExp(`<button[^>]*id="${id}"[^>]*>`));
+      if (m) assert.ok(!m[0].includes('data-perm='), `${relPath}: #${id} must open its modal freely (no data-perm)`);
+    });
+    assert.ok(/<button data-perm="add"[^>]*type="submit"/.test(modalBlock(html, 'addDataModal')), `${relPath}: add modal submit needs data-perm="add"`);
+    assert.ok(/<button data-perm="edit"[^>]*type="submit"/.test(modalBlock(html, 'editDataModal')), `${relPath}: edit modal submit needs data-perm="edit"`);
+    assert.ok(/<button data-perm="delete"[^>]*id="btnConfirmDelete"/.test(html), `${relPath}: #btnConfirmDelete needs data-perm="delete"`);
+    console.log(`[PASS] Test 5: ${relPath} toolbar opens forms; modal actions are permission-guarded`);
   });
 }
 

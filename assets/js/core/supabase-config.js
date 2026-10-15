@@ -248,18 +248,14 @@ function applyElementPermissions(targetGroup = null) {
     const requiredPerm = (rawVal || '').toLowerCase().trim();
     if (!requiredPerm) return;
 
-    let allowed = !!perms.isAdmin;
-    if (!allowed) {
-      if (requiredPerm === 'add') {
-        allowed = !!perms.canAdd;
-      } else if (requiredPerm === 'edit') {
-        allowed = !!perms.canEdit;
-      } else if (requiredPerm === 'delete') {
-        allowed = !!perms.canDelete;
-      } else if (requiredPerm === 'view') {
-        allowed = !!perms.canView;
-      }
-    }
+    // data-perm có thể là 1 quyền ("add") hoặc nhiều quyền, chỉ cần 1 ("add|edit")
+    const required = requiredPerm.split('|').map(p => p.trim()).filter(Boolean);
+    const allowed = !!perms.isAdmin || required.some(p =>
+      (p === 'add' && perms.canAdd) ||
+      (p === 'edit' && perms.canEdit) ||
+      (p === 'delete' && perms.canDelete) ||
+      (p === 'view' && perms.canView)
+    );
 
     if (allowed) {
       if (typeof el.removeAttribute === 'function') el.removeAttribute('data-perm-locked');
@@ -267,10 +263,29 @@ function applyElementPermissions(targetGroup = null) {
       el.setAttribute('data-perm-locked', 'true');
       const hasTitle = typeof el.getAttribute === 'function' && el.getAttribute('title');
       if (!hasTitle) {
-        el.setAttribute('title', 'Bạn không có quyền ' + (PERM_ACTION_LABELS[requiredPerm] || 'thực hiện') + ' dữ liệu ở mục này');
+        el.setAttribute('title', 'Bạn không có quyền ' + permActionLabel(requiredPerm) + ' dữ liệu ở mục này');
       }
     }
   });
+}
+
+function permActionLabel(rawPerm) {
+  const parts = String(rawPerm || '').toLowerCase().split('|').map(p => p.trim()).filter(Boolean);
+  return parts.length ? parts.map(p => PERM_ACTION_LABELS[p] || p).join('/') : 'thực hiện thao tác với';
+}
+
+function showPermDeniedWarning(el) {
+  const perm = el && typeof el.getAttribute === 'function' ? el.getAttribute('data-perm') : '';
+  showWarningModal(
+    'Tài khoản của bạn không có quyền ' + permActionLabel(perm) + ' dữ liệu ở mục này. Vui lòng liên hệ Quản trị viên nếu cần được cấp quyền.',
+    'Không có quyền thao tác'
+  );
+}
+
+function stopPermEvent(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
 }
 
 /**
@@ -281,17 +296,26 @@ function blockLockedPermClick(e) {
   const target = e.target;
   const el = target && typeof target.closest === 'function' ? target.closest('[data-perm-locked="true"]') : null;
   if (!el) return;
+  stopPermEvent(e);
+  showPermDeniedWarning(el);
+}
 
-  e.preventDefault();
-  e.stopPropagation();
-  if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
-
-  const perm = (el.getAttribute('data-perm') || '').toLowerCase().trim();
-  const action = PERM_ACTION_LABELS[perm] || 'thực hiện thao tác với';
-  showWarningModal(
-    'Tài khoản của bạn không có quyền ' + action + ' dữ liệu ở mục này. Vui lòng liên hệ Quản trị viên nếu cần được cấp quyền.',
-    'Không có quyền thao tác'
-  );
+/**
+ * Chặn gửi form (kể cả nhấn Enter trong ô nhập) khi nút submit của form đang bị khóa quyền.
+ */
+function blockLockedPermSubmit(e) {
+  const form = e.target;
+  let submitter = e.submitter || null;
+  if (!submitter && form && typeof form.querySelector === 'function') {
+    submitter = form.querySelector('[type="submit"]') ||
+      (form.id && typeof document !== 'undefined'
+        ? document.querySelector('[type="submit"][form="' + form.id + '"]')
+        : null);
+  }
+  if (!submitter || typeof submitter.getAttribute !== 'function') return;
+  if (submitter.getAttribute('data-perm-locked') !== 'true') return;
+  stopPermEvent(e);
+  showPermDeniedWarning(submitter);
 }
 
 if (typeof window !== 'undefined') {
@@ -300,6 +324,7 @@ if (typeof window !== 'undefined') {
 
   if (typeof window.addEventListener === 'function') {
     window.addEventListener('click', blockLockedPermClick, true);
+    window.addEventListener('submit', blockLockedPermSubmit, true);
   }
 
   if (typeof document !== 'undefined') {

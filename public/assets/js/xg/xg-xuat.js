@@ -914,14 +914,14 @@ function setupModalPermissions(modalEl) {
     hasPerm = perms.isAdmin || perms.canEdit || perms.canAdd;
   }
 
-  // Chỉ disable các trường nhập liệu cụ thể của form dữ liệu
+  // Form luôn thao tác được với mọi người dùng: bật các trường nhập liệu của form dữ liệu
   const formInputs = modalEl.querySelectorAll(
     '#addDataCommonFields input, #addDataCommonFields select, #addDataAdditionalFields input, #addDataAdditionalFields select, ' +
     '#itemsContainer input, #itemsContainer select, ' +
     '#editDataCommonFields input, #editDataCommonFields select, #editDataAdditionalFields input, #editDataAdditionalFields select, ' +
     '#rollsTableBody input, #editRollsTableBody input'
   );
-  formInputs.forEach(input => { input.disabled = !hasPerm; });
+  formInputs.forEach(input => { input.disabled = false; });
 
   // Luôn đảm bảo các input OCR file không bị disable
   const ocrFileInput = modalEl.querySelector('#receiptImageInput');
@@ -930,20 +930,24 @@ function setupModalPermissions(modalEl) {
   if (ocrCamInput) ocrCamInput.disabled = false;
 
   const submitBtn = modalEl.querySelector('button[type="submit"]');
-  if (submitBtn) submitBtn.style.display = hasPerm ? '' : 'none';
+  if (submitBtn) submitBtn.style.display = '';
 
   const btnConfirmDelete = modalEl.querySelector('#btnConfirmDelete');
-  if (btnConfirmDelete) btnConfirmDelete.style.display = (perms.isAdmin || perms.canDelete) ? '' : 'none';
+  if (btnConfirmDelete) btnConfirmDelete.style.display = '';
 
   const btnAddRollEl = modalEl.querySelector('#btnAddRoll, #btnEditAddRoll');
-  if (btnAddRollEl) btnAddRollEl.style.display = hasPerm ? '' : 'none';
+  if (btnAddRollEl) btnAddRollEl.style.display = '';
 
   const btnAddItemCard = modalEl.querySelector('#btnAddItemCard');
-  if (btnAddItemCard) btnAddItemCard.style.display = hasPerm ? '' : 'none';
+  if (btnAddItemCard) btnAddItemCard.style.display = '';
 
   modalEl.querySelectorAll('.btn-remove-roll, .btn-remove-edit-roll, .btn-remove-item-card, .btn-item-pick-inv, .btn-item-add-manual, .btn-remove-item-roll').forEach(btn => {
-    btn.style.display = hasPerm ? '' : 'none';
+    btn.style.display = '';
   });
+
+  // Chỉ các nút hành động có data-perm (Thêm / Cập nhật / Xóa / Đồng bộ...) bị khóa khi không có quyền:
+  // bấm vào sẽ bị chặn kèm thông báo (applyElementPermissions trong supabase-config.js).
+  if (typeof applyElementPermissions === 'function') applyElementPermissions('xg');
 
   return hasPerm;
 }
@@ -2332,10 +2336,8 @@ function openDeleteDataModal() {
   const modalEl = document.getElementById('deleteDataModal');
   if (!modalEl) return;
 
-  const perms = (typeof getUserPermissions === 'function') ? getUserPermissions('xg') : { canDelete: true, isAdmin: true };
-  const canDelete = perms.isAdmin || perms.canDelete;
-  const deleteBtn = modalEl.querySelector('#btnConfirmDelete');
-  if (deleteBtn) deleteBtn.style.display = canDelete ? '' : 'none';
+  // Nút "Xóa" luôn hiện; người không có quyền bấm vào sẽ bị chặn kèm thông báo (data-perm="delete")
+  if (typeof applyElementPermissions === 'function') applyElementPermissions('xg');
 
   new bootstrap.Modal(modalEl).show();
 }

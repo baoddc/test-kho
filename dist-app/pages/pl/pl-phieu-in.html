@@ -151,7 +151,7 @@
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-              <button type="submit" class="btn btn-primary">Thêm</button>
+              <button data-perm="add" type="submit" class="btn btn-primary">Thêm</button>
             </div>
           </form>
         </div>
@@ -165,7 +165,7 @@
           <div class="modal-header">
             <h5 class="modal-title">Tạo phiếu in</h5>
             <div class="d-flex gap-2 ms-auto">
-              <button type="submit" form="phieuInForm" class="btn btn-primary btn-sm">In phiếu</button>
+              <button data-perm="add|edit" type="submit" form="phieuInForm" class="btn btn-primary btn-sm">In phiếu</button>
               <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Hủy</button>
               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -376,7 +376,7 @@
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-              <button type="submit" class="btn btn-primary">Cập nhật</button>
+              <button data-perm="edit" type="submit" class="btn btn-primary">Cập nhật</button>
             </div>
           </form>
         </div>
@@ -398,7 +398,7 @@
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-            <button type="button" id="btnConfirmDelete" class="btn btn-danger">Xóa</button>
+            <button data-perm="delete" type="button" id="btnConfirmDelete" class="btn btn-danger">Xóa</button>
           </div>
         </div>
       </div>
@@ -436,7 +436,7 @@
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-              <button type="submit" class="btn btn-success">Lưu mặt hàng</button>
+              <button data-perm="add" type="submit" class="btn btn-success">Lưu mặt hàng</button>
             </div>
           </form>
         </div>

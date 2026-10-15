@@ -941,34 +941,38 @@ function setupModalPermissions(modalEl) {
     hasPerm = perms.isAdmin || perms.canEdit || perms.canAdd;
   }
 
-  // Vô hiệu hóa tất cả các input, select, textarea trong modal nếu không có quyền
+  // Form luôn thao tác được với mọi người dùng: bật toàn bộ trường nhập liệu
   const inputs = modalEl.querySelectorAll('input, select, textarea');
   inputs.forEach(input => {
-    input.disabled = !hasPerm;
+    input.disabled = false;
   });
 
-  // Ẩn/hiện các nút hành động trong modal
+  // Các nút hành động luôn hiện; quyền được kiểm tra khi bấm (data-perm)
   const submitBtn = modalEl.querySelector('button[type="submit"]');
   if (submitBtn) {
-    submitBtn.style.display = hasPerm ? '' : 'none';
+    submitBtn.style.display = '';
   }
 
-  // Ẩn nút "Xác nhận xóa" nếu không có quyền xóa
+  // Nút "Xác nhận xóa" luôn hiện; bấm khi không có quyền sẽ bị chặn (data-perm="delete")
   const btnConfirmDelete = modalEl.querySelector('#btnConfirmDelete');
   if (btnConfirmDelete) {
-    btnConfirmDelete.style.display = (perms.isAdmin || perms.canDelete) ? '' : 'none';
+    btnConfirmDelete.style.display = '';
   }
 
-  // Ẩn các nút "Thêm loại" và "Xóa loại" trong modal nếu không có quyền
+  // Nút thêm/xóa loại trong form luôn dùng được
   const btnAddLoai = modalEl.querySelector('#btnAddLoai, #btnEditAddLoai');
   if (btnAddLoai) {
-    btnAddLoai.style.display = hasPerm ? '' : 'none';
+    btnAddLoai.style.display = '';
   }
 
   const btnRemoveLoai = modalEl.querySelectorAll('.btn-remove-loai');
   btnRemoveLoai.forEach(btn => {
-    btn.style.display = hasPerm ? '' : 'none';
+    btn.style.display = '';
   });
+
+  // Chỉ các nút hành động có data-perm (Thêm / Cập nhật / Xóa / Đồng bộ...) bị khóa khi không có quyền:
+  // bấm vào sẽ bị chặn kèm thông báo (applyElementPermissions trong supabase-config.js).
+  if (typeof applyElementPermissions === 'function') applyElementPermissions('pl');
 
   return hasPerm;
 }

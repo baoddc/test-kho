@@ -1991,6 +1991,14 @@
     const isAuto = Boolean(options && options.isAuto);
     const silentOnError = isAuto || Boolean(options && options.silentOnError);
 
+    // Người không có quyền Thêm: bỏ qua đồng bộ tự động khi mở form (database sẽ từ chối ghi);
+    // bấm nút đồng bộ bằng tay sẽ bị chặn kèm thông báo (data-perm="add").
+    if (isAuto && typeof getUserPermissions === 'function') {
+      const group = typeof detectCurrentGroupName === 'function' ? detectCurrentGroupName() : null;
+      const p = getUserPermissions(group) || {};
+      if (!(p.isAdmin || p.canAdd)) return Promise.resolve();
+    }
+
     if (btnEl && isAuto) {
       triggerButtonPulse3x(btnEl);
     }

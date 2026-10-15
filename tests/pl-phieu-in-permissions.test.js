@@ -138,9 +138,11 @@ filePaths.forEach((fp) => {
     vm.runInContext(setupModalPermissionsMatch[0], sandbox);
 
     const hasPerm = sandbox.setupModalPermissions(modalEl);
+    // Yêu cầu: form vẫn thao tác được, nút Cập nhật vẫn hiện; chỉ bị chặn KHI BẤM
+    // (nút mang data-perm="edit", được khóa bởi applyElementPermissions trong supabase-config.js)
     assert.strictEqual(hasPerm, false, `Expected hasPerm=false when canEdit=false in ${fp}`);
-    assert.strictEqual(input1.disabled, true, `Expected input disabled when canEdit=false in ${fp}`);
-    assert.strictEqual(submitBtn.style.display, 'none', `Expected submitBtn hidden when canEdit=false in ${fp}`);
+    assert.strictEqual(input1.disabled, false, `Expected input still usable when canEdit=false in ${fp}`);
+    assert.strictEqual(submitBtn.style.display, '', `Expected submitBtn still visible when canEdit=false in ${fp}`);
   }
 
   console.log(`[PASS] ${path.relative(process.cwd(), fp)} passed all modal permission tests!`);
