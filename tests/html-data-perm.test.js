@@ -18,6 +18,9 @@ function createTestSandbox(pathname, currentUser, userGroupPerms, elements = [])
         if (event === 'DOMContentLoaded') {
           sandbox._domLoadedHandler = handler;
         }
+        if (event === 'click') {
+          sandbox._clickHandler = handler;
+        }
       }
     },
     document: {
@@ -92,10 +95,44 @@ function createTestSandbox(pathname, currentUser, userGroupPerms, elements = [])
 
   sandbox.window.applyElementPermissions();
 
-  assert.strictEqual(elements[0].style.display, 'none', 'data-perm="add" must be hidden when canAdd is false');
-  assert.strictEqual(elements[1].style.display, undefined, 'data-perm="edit" must remain visible when canEdit is true');
-  assert.strictEqual(elements[2].style.display, 'none', 'data-perm="delete" must be hidden when canDelete is false');
-  console.log('[PASS] Test 2: Elements correctly hidden based on userGroupPermissions for xg');
+  // Yêu cầu: nút vẫn HIỆN với mọi user, chỉ bị KHÓA thao tác khi không có quyền
+  elements.forEach(el => assert.strictEqual(el.style.display, undefined, `${el.id} must stay visible`));
+  assert.strictEqual(elements[0]['data-perm-locked'], 'true', 'data-perm="add" must be locked when canAdd is false');
+  assert.strictEqual(elements[1]['data-perm-locked'], undefined, 'data-perm="edit" must stay usable when canEdit is true');
+  assert.strictEqual(elements[2]['data-perm-locked'], 'true', 'data-perm="delete" must be locked when canDelete is false');
+  console.log('[PASS] Test 2: Buttons stay visible; only those without permission are locked (xg)');
+}
+
+// Test 2b: Bấm vào nút bị khóa => chặn và báo không có quyền; nút được phép => không chặn
+{
+  const lockedBtn = { getAttribute: (k) => (k === 'data-perm' ? 'add' : null) };
+  const freeBtn = { getAttribute: () => null };
+  const sandbox = createTestSandbox('/pages/xg/xg-nhap.html', 'user_test', {
+    xg: { canView: true, canAdd: false, canEdit: true, canDelete: false }
+  }, []);
+
+  assert.ok(typeof sandbox._clickHandler === 'function', 'A capture-phase click guard must be registered on window');
+  let warned = null;
+  sandbox.showWarningModal = (msg) => { warned = msg; };
+
+  const makeEvent = (btn, locked) => ({
+    target: { closest: (sel) => (sel === '[data-perm-locked="true"]' && locked ? btn : null) },
+    prevented: false, stopped: false,
+    preventDefault() { this.prevented = true; },
+    stopPropagation() { this.stopped = true; },
+    stopImmediatePropagation() { this.stopped = true; }
+  });
+
+  const e1 = makeEvent(lockedBtn, true);
+  sandbox._clickHandler(e1);
+  assert.ok(e1.prevented && e1.stopped, 'Click on a locked button must be blocked');
+  assert.ok(warned && warned.includes('không có quyền Thêm'), 'User must be told they lack the Add permission');
+
+  warned = null;
+  const e2 = makeEvent(freeBtn, false);
+  sandbox._clickHandler(e2);
+  assert.ok(!e2.prevented && !e2.stopped && warned === null, 'Click on a permitted button must pass through');
+  console.log('[PASS] Test 2b: Click on locked button is blocked with a warning; permitted buttons work');
 }
 
 // Test 3: URL detection for tem_qr group
@@ -112,7 +149,9 @@ function createTestSandbox(pathname, currentUser, userGroupPerms, elements = [])
   sandbox.window.applyElementPermissions();
 
   assert.strictEqual(elements[0].style.display, undefined, 'tem_qr canAdd is true, so add remains visible');
-  assert.strictEqual(elements[1].style.display, 'none', 'tem_qr canDelete is false, so delete is hidden');
+  assert.strictEqual(elements[0]['data-perm-locked'], undefined, 'tem_qr canAdd is true, so add is usable');
+  assert.strictEqual(elements[1].style.display, undefined, 'delete stays visible even without permission');
+  assert.strictEqual(elements[1]['data-perm-locked'], 'true', 'tem_qr canDelete is false, so delete is locked');
   console.log('[PASS] Test 3: Correctly detects tem_qr group from URL /pages/tem-nhan-kiem-ke/kiem-ke.html');
 }
 

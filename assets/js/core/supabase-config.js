@@ -84,7 +84,11 @@ async function syncUserProfile() {
 if (typeof window !== 'undefined' && window.supabase?.auth) {
   window.supabase.auth.onAuthStateChange((event, session) => {
     if (session?.user) {
-      syncUserProfile();
+      // Không await trong callback (tránh khóa phiên của supabase-js); xong thì áp lại quyền
+      // để các nút luôn khớp với người đang đăng nhập thật.
+      setTimeout(() => {
+        syncUserProfile().then(() => applyElementPermissions());
+      }, 0);
     } else if (event === 'SIGNED_OUT') {
       sessionStorage.removeItem('supabase_user_profile');
       localStorage.removeItem('currentUser');
@@ -225,19 +229,18 @@ function detectCurrentGroupName(pathname) {
   return 'chung';
 }
 
+const PERM_ACTION_LABELS = { add: 'Thêm', edit: 'Sửa', delete: 'Xóa', view: 'Xem' };
+
 /**
- * Tự động quét và áp dụng quyền thao tác lên tất cả các phần tử có thuộc tính [data-perm]
+ * Tự động quét và áp dụng quyền thao tác lên tất cả các phần tử có thuộc tính [data-perm].
+ * Nút luôn HIỂN THỊ với mọi người dùng; nếu không có quyền, nút được đánh dấu data-perm-locked
+ * và mọi cú bấm bị chặn kèm thông báo (Database RLS vẫn là lớp bảo vệ cuối cùng).
  * @param {string} [targetGroup=null] - Mã nhóm cần áp dụng quyền (nếu để trống sẽ tự nhận diện theo URL)
  */
 function applyElementPermissions(targetGroup = null) {
   if (typeof document === 'undefined') return;
   const group = targetGroup || detectCurrentGroupName();
-  const perms = getUserPermissions(group);
-
-  // Nếu là Admin (bao.lt) hoặc có toàn quyền admin, giữ nguyên tất cả các nút
-  if (perms && perms.isAdmin) {
-    return;
-  }
+  const perms = getUserPermissions(group) || {};
 
   const elements = document.querySelectorAll('[data-perm]');
   elements.forEach(el => {
@@ -245,29 +248,59 @@ function applyElementPermissions(targetGroup = null) {
     const requiredPerm = (rawVal || '').toLowerCase().trim();
     if (!requiredPerm) return;
 
-    let allowed = false;
-    if (requiredPerm === 'add') {
-      allowed = !!perms.canAdd;
-    } else if (requiredPerm === 'edit') {
-      allowed = !!perms.canEdit;
-    } else if (requiredPerm === 'delete') {
-      allowed = !!perms.canDelete;
-    } else if (requiredPerm === 'view') {
-      allowed = !!perms.canView;
+    let allowed = !!perms.isAdmin;
+    if (!allowed) {
+      if (requiredPerm === 'add') {
+        allowed = !!perms.canAdd;
+      } else if (requiredPerm === 'edit') {
+        allowed = !!perms.canEdit;
+      } else if (requiredPerm === 'delete') {
+        allowed = !!perms.canDelete;
+      } else if (requiredPerm === 'view') {
+        allowed = !!perms.canView;
+      }
     }
 
-    if (!allowed) {
-      el.style.display = 'none';
-      if (typeof el.setAttribute === 'function') {
-        el.setAttribute('data-perm-hidden', 'true');
+    if (allowed) {
+      if (typeof el.removeAttribute === 'function') el.removeAttribute('data-perm-locked');
+    } else if (typeof el.setAttribute === 'function') {
+      el.setAttribute('data-perm-locked', 'true');
+      const hasTitle = typeof el.getAttribute === 'function' && el.getAttribute('title');
+      if (!hasTitle) {
+        el.setAttribute('title', 'Bạn không có quyền ' + (PERM_ACTION_LABELS[requiredPerm] || 'thực hiện') + ' dữ liệu ở mục này');
       }
     }
   });
 }
 
+/**
+ * Chặn mọi cú bấm vào nút/nhãn bị khóa quyền (chạy ở pha capture, trước handler của trang
+ * và Bootstrap data-bs-toggle), rồi báo cho người dùng biết họ không có quyền.
+ */
+function blockLockedPermClick(e) {
+  const target = e.target;
+  const el = target && typeof target.closest === 'function' ? target.closest('[data-perm-locked="true"]') : null;
+  if (!el) return;
+
+  e.preventDefault();
+  e.stopPropagation();
+  if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+
+  const perm = (el.getAttribute('data-perm') || '').toLowerCase().trim();
+  const action = PERM_ACTION_LABELS[perm] || 'thực hiện thao tác với';
+  showWarningModal(
+    'Tài khoản của bạn không có quyền ' + action + ' dữ liệu ở mục này. Vui lòng liên hệ Quản trị viên nếu cần được cấp quyền.',
+    'Không có quyền thao tác'
+  );
+}
+
 if (typeof window !== 'undefined') {
   window.detectCurrentGroupName = detectCurrentGroupName;
   window.applyElementPermissions = applyElementPermissions;
+
+  if (typeof window.addEventListener === 'function') {
+    window.addEventListener('click', blockLockedPermClick, true);
+  }
 
   if (typeof document !== 'undefined') {
     if (document.readyState === 'loading') {

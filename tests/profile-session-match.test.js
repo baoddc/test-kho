@@ -33,12 +33,16 @@ function store(init) {
   };
 }
 
-/** Chạy supabase-config.js thật trên trang Nhập XG giả lập, trả về các nút còn hiện */
+/**
+ * Chạy supabase-config.js thật trên trang Nhập XG giả lập, trả về các nút DÙNG ĐƯỢC (không bị khóa).
+ * Yêu cầu: mọi nút luôn hiện; nút không có quyền chỉ bị khóa thao tác.
+ */
 function visibleButtons(sessionInit, localInit) {
   const btns = ['add', 'edit', 'delete'].map((perm) => ({
     perm, style: { display: '' }, attrs: {},
     getAttribute(n) { return n === 'data-perm' ? this.perm : this.attrs[n]; },
-    setAttribute(n, v) { this.attrs[n] = v; }
+    setAttribute(n, v) { this.attrs[n] = v; },
+    removeAttribute(n) { delete this.attrs[n]; }
   }));
   const ctx = {
     window: {
@@ -53,7 +57,8 @@ function visibleButtons(sessionInit, localInit) {
   };
   vm.createContext(ctx);
   vm.runInContext(src, ctx);
-  return btns.filter((b) => b.style.display !== 'none').map((b) => b.perm);
+  btns.forEach((b) => assert.notStrictEqual(b.style.display, 'none', `nút ${b.perm} phải luôn hiện`));
+  return btns.filter((b) => b.attrs['data-perm-locked'] !== 'true').map((b) => b.perm);
 }
 
 const vuongLocal = {
@@ -73,19 +78,19 @@ function check(name, actual, expected) {
   console.log('✅ ' + name);
 }
 
-check('vuong.pm đăng nhập bình thường: ẩn hết nút',
+check('vuong.pm đăng nhập bình thường: khóa hết nút',
   visibleButtons({ supabase_user_profile: JSON.stringify(vuong) }, { ...vuongLocal, [AUTH_KEY]: session(vuong) }), []);
 
-check('Tab còn sót hồ sơ bao.lt nhưng phiên thật là vuong.pm: ẩn hết nút (lỗi cũ: hiện cả 3)',
+check('Tab còn sót hồ sơ bao.lt nhưng phiên thật là vuong.pm: khóa hết nút (lỗi cũ: dùng được cả 3)',
   visibleButtons({ supabase_user_profile: JSON.stringify(bao) }, { ...vuongLocal, [AUTH_KEY]: session(vuong) }), []);
 
-check('bao.lt (admin): hiện đủ 3 nút',
+check('bao.lt (admin): dùng được cả 3 nút',
   visibleButtons({ supabase_user_profile: JSON.stringify(bao) }, { ...baoLocal, [AUTH_KEY]: session(bao) }), ['add', 'edit', 'delete']);
 
-check('Tab còn sót hồ sơ vuong.pm nhưng phiên thật là bao.lt: hiện theo quyền bao.lt',
+check('Tab còn sót hồ sơ vuong.pm nhưng phiên thật là bao.lt: dùng được theo quyền bao.lt',
   visibleButtons({ supabase_user_profile: JSON.stringify(vuong) }, { ...baoLocal, [AUTH_KEY]: session(bao) }), ['add', 'edit', 'delete']);
 
-check('Đã đăng xuất (không còn phiên) dù tab còn hồ sơ bao.lt: ẩn hết nút',
+check('Đã đăng xuất (không còn phiên) dù tab còn hồ sơ bao.lt: khóa hết nút',
   visibleButtons({ supabase_user_profile: JSON.stringify(bao) }, {}), []);
 
 console.log(`\n🎉 ${passed}/5 kiểm tra đồng bộ hồ sơ quyền với phiên đăng nhập đạt.`);
