@@ -5,7 +5,8 @@
 --   Supabase Auth dùng, nên chép thẳng hash sang auth.users.encrypted_password.
 -- * Email đăng nhập khớp với cách dang_nhap.js suy ra từ username:
 --     bao.lt    -> thaibao06061997@gmail.com
---     <user>    -> <email trong public.users> hoặc <user>@ddc.com
+--     <user>    -> <user>@noemail.baoddc.com  (email nội bộ, không có hộp thư;
+--                  chỉ bao.lt dùng email thật, cột email của user khác bị bỏ qua)
 -- * Trang Quản lý user (admin_save_user / admin_delete_user) từ nay tự đồng bộ
 --   sang auth.users + user_profiles, nên tạo/sửa/xóa user vẫn có hiệu lực.
 -- * Idempotent: chạy lại không tạo trùng.
@@ -55,7 +56,7 @@ UPDATE public.user_profiles p SET
 WHERE p.email IS DISTINCT FROM 'thaibao06061997@gmail.com'
   AND NOT EXISTS (
       SELECT 1 FROM public.users u
-      WHERE LOWER(COALESCE(NULLIF(TRIM(u.email), ''), u.username || '@ddc.com')) = LOWER(p.email)
+      WHERE LOWER(u.username) || '@noemail.baoddc.com' = LOWER(p.email)
   );
 
 
@@ -81,7 +82,7 @@ BEGIN
     IF u.username = 'bao.lt' THEN
         v_email := 'thaibao06061997@gmail.com';
     ELSE
-        v_email := LOWER(COALESCE(NULLIF(TRIM(u.email), ''), u.username || '@ddc.com'));
+        v_email := LOWER(u.username) || '@noemail.baoddc.com';
     END IF;
 
     -- Chỉ khớp theo EMAIL (không theo username: username của hồ sơ Auth được suy
@@ -178,7 +179,7 @@ DECLARE
 BEGIN
     IF TG_OP = 'DELETE' THEN
         SELECT id INTO v_uid FROM auth.users
-        WHERE LOWER(email) = LOWER(COALESCE(NULLIF(TRIM(OLD.email), ''), OLD.username || '@ddc.com'));
+        WHERE LOWER(email) = LOWER(OLD.username) || '@noemail.baoddc.com';
         IF v_uid IS NOT NULL AND OLD.username <> 'bao.lt' THEN
             DELETE FROM auth.users WHERE id = v_uid;  -- user_profiles xóa theo (cascade hoặc dòng dưới)
             DELETE FROM public.user_profiles WHERE id = v_uid;

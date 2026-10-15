@@ -62,7 +62,9 @@ function initLoginForm() {
          if (username.toLowerCase() === 'bao.lt') {
             emailToLogin = 'thaibao06061997@gmail.com';
          } else {
-            emailToLogin = `${username}@ddc.com`;
+            // Chỉ bao.lt có email thật. User khác dùng email nội bộ (tên miền không có hộp thư,
+            // không ai nhận được mail đặt lại mật khẩu) — phải khớp với sync_legacy_user_to_auth().
+            emailToLogin = `${username.toLowerCase()}@noemail.baoddc.com`;
          }
       }
 
