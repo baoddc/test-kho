@@ -30,7 +30,12 @@ SHEET_NAME = 'mb51'
 # Cấu hình Supabase (nạp tự động từ biến môi trường hoặc assets/js/core/supabase-config.js)
 def get_supabase_credentials():
     url = os.environ.get('SUPABASE_URL')
-    key = os.environ.get('SUPABASE_ANON_KEY')
+    # BẢO MẬT: Sau khi khóa RLS cho anon, phải dùng secret/service_role key đặt trong
+    # BIẾN MÔI TRƯỜNG (không commit vào repo), nếu không lệnh ghi sẽ bị từ chối.
+    key = (os.environ.get('SUPABASE_SERVICE_ROLE_KEY') or os.environ.get('SUPABASE_SECRET_KEY')
+           or os.environ.get('SUPABASE_ANON_KEY'))
+    if key and not url:
+        url = _read_config_url()
     if url and key:
         return url, key
 
@@ -50,6 +55,15 @@ def get_supabase_credentials():
                     return url_m.group(1), key_m.group(1)
 
     raise ValueError("Không tìm thấy cấu hình Supabase trong môi trường hoặc supabase-config.js")
+
+def _read_config_url():
+    p = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'assets', 'js', 'core', 'supabase-config.js'))
+    if os.path.exists(p):
+        with open(p, 'r', encoding='utf-8') as f:
+            m = re.search(r"const\s+SUPABASE_URL\s*=\s*['\"]([^'\"]+)['\"]", f.read())
+            if m:
+                return m.group(1)
+    return None
 
 SUPABASE_URL, SUPABASE_ANON_KEY = get_supabase_credentials()
 TABLE_NAME = 'xg_sap_mb51'

@@ -57,6 +57,19 @@ function convertJsonToCsv(records) {
  * @returns {{ url: string, anonKey: string }}
  */
 function extractSupabaseCredentials() {
+  // BẢO MẬT: Khi các bảng đã khóa RLS cho anon, script chạy nền phải dùng
+  // secret/service_role key đặt trong BIẾN MÔI TRƯỜNG (không bao giờ commit vào repo).
+  // Nếu vẫn dùng publishable key, RLS sẽ trả về 0 dòng => file backup rỗng.
+  const serviceKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || '').trim();
+  if (serviceKey) {
+    const fromConfig = process.env.SUPABASE_URL ? null : readConfigFile();
+    return {
+      url: (process.env.SUPABASE_URL || (fromConfig && fromConfig.url) || '').trim(),
+      anonKey: serviceKey,
+      isServiceKey: true
+    };
+  }
+
   if (process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY) {
     return {
       url: process.env.SUPABASE_URL.trim(),
@@ -64,6 +77,13 @@ function extractSupabaseCredentials() {
     };
   }
 
+  const fromConfig = readConfigFile();
+  if (fromConfig) return fromConfig;
+
+  throw new Error('Không tìm thấy cấu hình SUPABASE_URL và SUPABASE_ANON_KEY trong file supabase-config.js');
+}
+
+function readConfigFile() {
   const candidates = [
     path.join(__dirname, '..', 'assets', 'js', 'core', 'supabase-config.js'),
     path.join(__dirname, '..', 'assets', 'js', 'supabase-config.js'),
@@ -83,8 +103,7 @@ function extractSupabaseCredentials() {
       }
     }
   }
-
-  throw new Error('Không tìm thấy cấu hình SUPABASE_URL và SUPABASE_ANON_KEY trong file supabase-config.js');
+  return null;
 }
 
 module.exports = {

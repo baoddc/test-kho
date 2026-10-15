@@ -1770,7 +1770,20 @@
     return `P:[${pagesStr}]|G:[${sortedGroupsStr}]|S:[${sysPermsStr}]`;
   }
 
-  function performUserLogout() {
+  async function performUserLogout() {
+    // BẢO MẬT: Hủy phiên Supabase Auth (JWT lưu trong localStorage), nếu không
+    // người dùng kế tiếp trên cùng máy vẫn mang quyền của người vừa đăng xuất.
+    try {
+      if (window.supabase?.auth?.signOut) {
+        await Promise.race([
+          window.supabase.auth.signOut(),
+          new Promise((resolve) => setTimeout(resolve, 3000))
+        ]);
+      }
+    } catch (e) {
+      console.warn('signOut error:', e);
+    }
+    try { sessionStorage.removeItem('supabase_user_profile'); } catch (e) {}
     localStorage.removeItem('currentUser');
     localStorage.removeItem('userPermissions');
     localStorage.removeItem('userAllowedPages');

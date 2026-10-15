@@ -481,7 +481,7 @@
     toast.innerHTML = `
       <div class="update-toast-header">
         <div class="update-toast-icon" style="background: ${meta.bg}">${meta.icon}</div>
-        <div class="update-toast-title">${announcement.title}</div>
+        <div class="update-toast-title">${escapeHtml(announcement.title || "")}</div>
       </div>
       <div class="update-toast-body">${formatNotificationText(announcement.content)}</div>
       <div class="update-toast-actions">
@@ -733,10 +733,10 @@
             margin-bottom: 0.75rem;
           ">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem;">
-              <span class="announcement-badge ${item.type}">${meta.icon} ${meta.label}</span>
+              <span class="announcement-badge ${escapeHtml(item.type || "")}">${meta.icon} ${meta.label}</span>
               <span style="font-size: 0.75rem; color: #64748b;">${formatTimeAgo(item.created_at)}</span>
             </div>
-            <div style="font-weight: 600; font-size: 0.92rem; color: #f8fafc; margin-bottom: 0.25rem;">${item.title}</div>
+            <div style="font-weight: 600; font-size: 0.92rem; color: #f8fafc; margin-bottom: 0.25rem;">${escapeHtml(item.title || "")}</div>
             <div style="font-size: 0.83rem; color: #94a3b8; line-height: 1.5; white-space: pre-wrap;">${formatNotificationText(item.content)}</div>
           </div>
         `;
@@ -818,8 +818,8 @@
       ">
         <div style="flex: 1;">
           <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
-            <span class="announcement-badge ${item.type}">${item.type}</span>
-            <span style="font-weight: 600; font-size: 0.88rem; color: #f8fafc;">${item.title}</span>
+            <span class="announcement-badge ${escapeHtml(item.type || "")}">${escapeHtml(item.type || "")}</span>
+            <span style="font-weight: 600; font-size: 0.88rem; color: #f8fafc;">${escapeHtml(item.title || "")}</span>
           </div>
           <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.35rem; white-space: pre-wrap;">${formatNotificationText(item.content)}</div>
           <div style="font-size: 0.72rem; color: #64748b;">Tạo lúc: ${new Date(item.created_at).toLocaleString('vi-VN')}</div>
@@ -1322,7 +1322,7 @@
         const kg = parseWeightKg(row['Số lượng (Kg)']);
         const kgStr = kg.toLocaleString('vi-VN', { maximumFractionDigits: 3 });
         const proj = String(row['Tên công trình'] || '').trim();
-        const projText = proj ? proj : '<span style="color: #94a3b8; font-style: italic;">Tồn trơn</span>';
+        const projText = proj ? escapeHtml(proj) : '<span style="color: #94a3b8; font-style: italic;">Tồn trơn</span>';
         const typeBadge = row._sourceType === 'XG' 
           ? '<span style="background: linear-gradient(135deg, #1d4ed8, #2563eb); color: white; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 800; border: 1px solid rgba(255,255,255,0.25); box-shadow: 0 1px 4px rgba(37,99,235,0.4);">XG</span>'
           : '<span style="background: linear-gradient(135deg, #d97706, #ea580c); color: white; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 800; border: 1px solid rgba(255,255,255,0.25); box-shadow: 0 1px 4px rgba(217,119,6,0.4);">TOLE</span>';
@@ -1333,9 +1333,9 @@
               <input type="checkbox" class="tab-goods-check" data-idx="${idx}" checked />
             </td>
             <td style="padding: 6px; text-align: center;">${typeBadge}</td>
-            <td style="padding: 6px; color: #94a3b8;">${row['Phiếu nhập'] || '-'}</td>
-            <td style="padding: 6px; font-weight: 600; color: #f8fafc;">${row['Tên vật tư'] || row['Mã vật tư'] || '-'}</td>
-            <td style="padding: 6px; color: #38bdf8; font-family: monospace;">${row['Cuộn ID'] || '-'}</td>
+            <td style="padding: 6px; color: #94a3b8;">${escapeHtml(row['Phiếu nhập'] || '-')}</td>
+            <td style="padding: 6px; font-weight: 600; color: #f8fafc;">${escapeHtml(row['Tên vật tư'] || row['Mã vật tư'] || '-')}</td>
+            <td style="padding: 6px; color: #38bdf8; font-family: monospace;">${escapeHtml(row['Cuộn ID'] || '-')}</td>
             <td style="padding: 6px; text-align: right; font-weight: 600;">${kgStr} kg</td>
             <td style="padding: 6px;">${projText}</td>
           </tr>
@@ -1345,7 +1345,7 @@
       updateTabPreview(modalContainer, tabGoodsArrivalRows);
     } catch (err) {
       console.error('[loadGoodsArrivalDataForTab]', err);
-      tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 20px; color: #f87171;">Lỗi: ${err.message || err}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 20px; color: #f87171;">Lỗi: ${escapeHtml(err.message || err)}</td></tr>`;
     }
   }
 

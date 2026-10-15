@@ -4,11 +4,58 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+// BẢO MẬT: chỉ cho phép các origin của ứng dụng (cấu hình thêm qua secret ALLOWED_ORIGINS)
+const DEFAULT_ALLOWED_ORIGINS = [
+  "https://baoddc.com",
+  "https://www.baoddc.com",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+  "https://localhost",
+  "capacitor://localhost",
+];
+const ALLOWED_ORIGINS = (Deno.env.get("ALLOWED_ORIGINS") || "")
+  .split(",").map((s) => s.trim()).filter(Boolean);
+const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/heic", "image/heif", "application/pdf"];
+const MAX_BASE64_LENGTH = 10 * 1024 * 1024; // ~7.5MB ảnh gốc
+
+function buildCorsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get("Origin") || "";
+  const allowed = ALLOWED_ORIGINS.length ? ALLOWED_ORIGINS : DEFAULT_ALLOWED_ORIGINS;
+  const headers: Record<string, string> = {
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Vary": "Origin",
+  };
+  if (allowed.includes(origin)) headers["Access-Control-Allow-Origin"] = origin;
+  return headers;
+}
+
+function jsonError(message: string, status: number, corsHeaders: Record<string, string>): Response {
+  return new Response(JSON.stringify({ success: false, error: message }), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+// Khi OCR_REQUIRE_AUTH = "true": bắt buộc access token của user Supabase Auth hợp lệ.
+// (Bật sau khi đã chuyển toàn bộ tài khoản sang Supabase Auth.)
+async function verifyCaller(req: Request): Promise<boolean> {
+  if (Deno.env.get("OCR_REQUIRE_AUTH") !== "true") return true;
+  const match = (req.headers.get("Authorization") || "").match(/^Bearers+(.+)$/i);
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  if (!match || !supabaseUrl || !anonKey || match[1].trim() === anonKey) return false;
+  try {
+    const res = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      headers: { apikey: anonKey, Authorization: `Bearer ${match[1].trim()}` },
+    });
+    if (!res.ok) return false;
+    const user = await res.json();
+    return !!user?.id;
+  } catch (_) {
+    return false;
+  }
+}
 
 const CANDIDATE_MODELS = [
   "gemini-3.1-flash-lite",
@@ -164,8 +211,20 @@ function normalizeDate(dateStr: string): string {
 
 serve(async (req: Request) => {
   // Xử lý CORS preflight
+  const corsHeaders = buildCorsHeaders(req);
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
+  }
+  if (req.method !== "POST") {
+    return jsonError("Method not allowed", 405, corsHeaders);
+  }
+  // Chặn gọi từ website lạ (trình duyệt luôn gửi Origin)
+  const reqOrigin = req.headers.get("Origin");
+  if (reqOrigin && !corsHeaders["Access-Control-Allow-Origin"]) {
+    return jsonError("Origin không được phép.", 403, corsHeaders);
+  }
+  if (!(await verifyCaller(req))) {
+    return jsonError("Phiên đăng nhập không hợp lệ hoặc đã hết hạn.", 401, corsHeaders);
   }
 
   try {
@@ -183,7 +242,18 @@ serve(async (req: Request) => {
       );
     }
 
+    const declaredLength = parseInt(req.headers.get("content-length") || "0", 10);
+    if (declaredLength > MAX_BASE64_LENGTH + 4096) {
+      return jsonError("Ảnh vượt quá dung lượng cho phép.", 413, corsHeaders);
+    }
+
     const { base64Data, mimeType } = await req.json();
+    if (typeof base64Data === "string" && base64Data.length > MAX_BASE64_LENGTH) {
+      return jsonError("Ảnh vượt quá dung lượng cho phép.", 413, corsHeaders);
+    }
+    if (mimeType && !ALLOWED_MIME_TYPES.includes(String(mimeType).toLowerCase())) {
+      return jsonError("Định dạng ảnh không được hỗ trợ.", 415, corsHeaders);
+    }
     if (!base64Data) {
       return new Response(
         JSON.stringify({ success: false, error: "Thiếu dữ liệu hình ảnh (base64Data)." }),

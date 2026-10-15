@@ -113,6 +113,21 @@ function getUserPermissions(groupName = null) {
     if (profile.is_admin) {
       return { canView: true, canAdd: true, canEdit: true, canDelete: true, isAdmin: true };
     }
+    // Quyền theo nhóm (allowed_pages.groups) do trang Quản lý user cấu hình
+    let allowed = profile.allowed_pages;
+    if (typeof allowed === 'string') {
+      try { allowed = JSON.parse(allowed); } catch (e) { allowed = null; }
+    }
+    const gPerm = groupName && allowed && !Array.isArray(allowed) && allowed.groups ? allowed.groups[groupName] : null;
+    if (gPerm) {
+      return {
+        canView: !!gPerm.canView,
+        canAdd: !!gPerm.canAdd,
+        canEdit: !!gPerm.canEdit,
+        canDelete: !!gPerm.canDelete,
+        isAdmin: false
+      };
+    }
     return {
       canView: !!profile.can_view,
       canAdd: !!profile.can_add,

@@ -164,6 +164,9 @@ async function executeBackup(options = {}) {
   };
 
   writeLog(`=== BẮT ĐẦU SAO LƯU SUPABASE (${tables.length} bảng) ===`);
+  if (!creds.isServiceKey && creds.url !== 'mock') {
+    writeLog('⚠️ Đang dùng publishable/anon key. Sau khi khóa RLS, backup sẽ RỖNG — hãy đặt biến môi trường SUPABASE_SERVICE_ROLE_KEY.');
+  }
   writeLog(`Thư mục lưu trữ: ${targetFolder}`);
 
   const summary = {

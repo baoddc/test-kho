@@ -85,6 +85,17 @@ function sanitizeFolder(folder) {
     return clean || 'general';
 }
 
+function timingSafeEqual(a, b) {
+    const enc = new TextEncoder();
+    const x = enc.encode(String(a));
+    const y = enc.encode(String(b));
+    let diff = x.length ^ y.length;
+    for (let i = 0; i < Math.max(x.length, y.length); i++) {
+        diff |= (x[i] || 0) ^ (y[i] || 0);
+    }
+    return diff === 0;
+}
+
 /**
  * Xác thực Supabase access token bằng cách gọi /auth/v1/user
  */
@@ -92,17 +103,19 @@ async function verifySupabaseUser(request, env) {
     if (env.REQUIRE_AUTH === 'false') {
         return { ok: true, user: { id: 'anonymous' } };
     }
-    if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
-        return { ok: true, user: { id: 'unconfigured' } };
-    }
     const authHeader = request.headers.get('Authorization') || '';
     const match = authHeader.match(/^Bearer\s+(.+)$/i);
     if (!match) {
-        const apiKey = request.headers.get('X-Auth-Key');
-        if (env.AUTH_SECRET && apiKey === env.AUTH_SECRET) {
+        const apiKey = request.headers.get('X-Auth-Key') || '';
+        if (env.AUTH_SECRET && timingSafeEqual(apiKey, env.AUTH_SECRET)) {
             return { ok: true, user: { id: 'api_key' } };
         }
         return { ok: false, reason: 'Thiếu token đăng nhập. Vui lòng đăng nhập để thực hiện thao tác này.' };
+    }
+
+    // Thiếu cấu hình xác thực => TỪ CHỐI (fail-closed), không cho upload/xóa ẩn danh
+    if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+        return { ok: false, reason: 'Worker chưa cấu hình SUPABASE_URL / SUPABASE_ANON_KEY.' };
     }
 
     const token = match[1].trim();

@@ -370,7 +370,11 @@ class DashboardManager {
         if (btnLogout) {
             if (user) {
                 btnLogout.textContent = 'Đăng xuất';
-                btnLogout.onclick = () => {
+                btnLogout.onclick = async () => {
+                    try {
+                        if (window.supabase?.auth?.signOut) await window.supabase.auth.signOut();
+                    } catch (e) {}
+                    try { sessionStorage.removeItem('supabase_user_profile'); } catch (e) {}
                     localStorage.removeItem('currentUser');
                     window.location.replace('/pages/index.html');
                 };

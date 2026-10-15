@@ -17,6 +17,15 @@
 
   // --- CORE ENGINE FUNCTIONS (Dùng chung cả Node.js test & Browser) ---
 
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
   function parseNumeric(val) {
     if (val === null || val === undefined) return 0;
     if (typeof val === 'number') return isNaN(val) ? 0 : val;
@@ -431,7 +440,7 @@
           banner.className = 'alert alert-warning mb-0 py-2 px-3 d-flex align-items-center gap-2';
         }
         if (bannerText) {
-          bannerText.innerHTML = `<strong>Đã có thông báo:</strong> "${matchedAnn.title}" trên hệ thống. Khi bấm Lưu sẽ <strong>Cập nhật</strong> nội dung mới.`;
+          bannerText.innerHTML = `<strong>Đã có thông báo:</strong> "${escapeHtml(matchedAnn.title || '')}" trên hệ thống. Khi bấm Lưu sẽ <strong>Cập nhật</strong> nội dung mới.`;
         }
         if (publishBtnText) publishBtnText.textContent = 'Cập nhật thông báo';
       } else {
@@ -448,7 +457,7 @@
       renderTableRows(currentLoadedRows);
     } catch (err) {
       console.error('[GoodsArrivalNotice] Lỗi nạp dữ liệu:', err);
-      tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-3">Lỗi: ${err.message || err}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-3">Lỗi: ${escapeHtml(err.message || err)}</td></tr>`;
     }
   }
 
@@ -476,7 +485,7 @@
       const kgFormatted = kg.toLocaleString('vi-VN', { maximumFractionDigits: 3 });
       const proj = String(row['Tên công trình'] || '').trim();
       const projBadge = proj
-        ? `<span class="badge bg-light text-dark border">${proj}</span>`
+        ? `<span class="badge bg-light text-dark border">${escapeHtml(proj)}</span>`
         : `<span class="badge bg-secondary opacity-75">Tồn trơn</span>`;
       const typeBadge = row._sourceType === 'XG'
         ? `<span class="badge" style="background: linear-gradient(135deg, #1d4ed8, #2563eb); color: white; font-weight: 800; padding: 4px 8px; border-radius: 6px;">🔷 XG</span>`
@@ -488,12 +497,12 @@
             <input type="checkbox" class="form-check-input gan-row-checkbox" data-index="${idx}" checked>
           </td>
           <td class="text-center">${typeBadge}</td>
-          <td class="fw-semibold text-secondary">${row['Phiếu nhập'] || row['Mã chứng từ'] || '-'}</td>
-          <td class="fw-bold text-dark">${row['Tên vật tư'] || row['Mã vật tư'] || '-'}</td>
-          <td><code class="text-primary">${row['Cuộn ID'] || '-'}</code></td>
+          <td class="fw-semibold text-secondary">${escapeHtml(row['Phiếu nhập'] || row['Mã chứng từ'] || '-')}</td>
+          <td class="fw-bold text-dark">${escapeHtml(row['Tên vật tư'] || row['Mã vật tư'] || '-')}</td>
+          <td><code class="text-primary">${escapeHtml(row['Cuộn ID'] || '-')}</code></td>
           <td class="text-end fw-bold">${kgFormatted} kg</td>
           <td>${projBadge}</td>
-          <td class="text-muted small">${row['Vị trí'] || '-'}</td>
+          <td class="text-muted small">${escapeHtml(row['Vị trí'] || '-')}</td>
         </tr>
       `;
     }).join('');
