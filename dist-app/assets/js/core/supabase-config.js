@@ -22,10 +22,34 @@ window.supabase = _supabaseLib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 /**
  * Lấy hồ sơ người dùng đã xác thực từ Supabase Auth session
  */
+// Khóa localStorage nơi supabase-js lưu phiên đăng nhập (dùng chung cho mọi tab)
+const SUPABASE_AUTH_STORAGE_KEY = 'sb-' + SUPABASE_URL.replace(/^https?:\/\//, '').split('.')[0] + '-auth-token';
+
+/**
+ * ID người dùng của phiên Supabase Auth hiện tại (đọc đồng bộ từ localStorage).
+ */
+function getSessionUserId() {
+  try {
+    const raw = localStorage.getItem(SUPABASE_AUTH_STORAGE_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw);
+    return (s && s.user && s.user.id) ||
+      (s && s.currentSession && s.currentSession.user && s.currentSession.user.id) || null;
+  } catch (e) {
+    return null;
+  }
+}
+
 function getCachedUserProfile() {
   try {
     const raw = sessionStorage.getItem('supabase_user_profile') || localStorage.getItem('supabase_user_profile');
-    if (raw) return JSON.parse(raw);
+    if (!raw) return null;
+    const profile = JSON.parse(raw);
+    // Hồ sơ được cache THEO TỪNG TAB, còn phiên đăng nhập DÙNG CHUNG mọi tab. Nếu tab khác đã
+    // đăng nhập tài khoản khác thì bỏ hồ sơ cũ, tránh hiện nút/quyền của người khác.
+    const sessionUserId = getSessionUserId();
+    if (!profile || !sessionUserId || profile.id !== sessionUserId) return null;
+    return profile;
   } catch (e) {}
   return null;
 }

@@ -2003,6 +2003,10 @@
     window.addEventListener('storage', (e) => {
       if (e.key === 'currentUser' && !e.newValue) {
         forceLogoutUser();
+      } else if (e.key === 'currentUser' && e.oldValue && e.newValue !== e.oldValue) {
+        // Tab khác vừa đăng nhập TÀI KHOẢN KHÁC (phiên dùng chung mọi tab): tải lại để giao diện
+        // hiển thị đúng quyền của người đang đăng nhập.
+        try { (window.top || window).location.reload(); } catch (err) { window.location.reload(); }
       } else if (e.key === 'userAllowedPages' || e.key === 'userGroupPermissions' || e.key === 'userPermissions') {
         updateSidebarNav();
         closeRevokedTabs();
