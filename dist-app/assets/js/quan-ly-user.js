@@ -492,6 +492,14 @@ async function handleSaveUser() {
         return;
     }
 
+    // Username được dùng làm email đăng nhập nội bộ (<username>@noemail.baoddc.com),
+    // nên chỉ cho phép ký tự an toàn; database cũng kiểm tra lại (users_username_format).
+    if (!editId && !/^[A-Za-z0-9._-]{2,50}$/.test(username)) {
+        errElem.textContent = 'Tên đăng nhập chỉ gồm chữ KHÔNG dấu, số, dấu chấm (.), gạch dưới (_), gạch ngang (-), dài 2-50 ký tự. Ví dụ: nguyen.van.a';
+        errElem.classList.remove('d-none');
+        return;
+    }
+
     const isBaoLt = username === 'bao.lt';
     const allowedPagesList = [];
 
