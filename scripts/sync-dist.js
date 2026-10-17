@@ -26,6 +26,7 @@ function runSync() {
   const distDir = path.join(rootDir, 'dist');
   const distAppDir = path.join(rootDir, 'dist-app');
   const publicDir = path.join(rootDir, 'public');
+  const seoDir = path.join(rootDir, 'seo');
 
   console.log('[Sync Script] 🚀 Starting full synchronization...');
 
@@ -44,17 +45,25 @@ function runSync() {
     'manifest.json',
     'sw.js',
     'version.json',
-    'vercel.json',
+    'vercel.json'
+  ];
+
+  // SEO & site-verification files: sourced from seo/, served from the site root
+  const seoFiles = [
     'robots.txt',
     'sitemap.xml',
     'llms.txt',
     'llms-full.txt',
     'BingSiteAuth.xml',
-    'googlee823130faee0877c.html'
+    'googlee823130faee0877c.html',
+    '28306d9154cafe7b.txt'
   ];
 
   staticFiles.forEach(file => {
     syncFile(path.join(rootDir, file), path.join(distDir, file));
+  });
+  seoFiles.forEach(file => {
+    syncFile(path.join(seoDir, file), path.join(distDir, file));
   });
 
   // 2. Sync to public (for Vercel deployment)
@@ -67,6 +76,9 @@ function runSync() {
 
   staticFiles.forEach(file => {
     syncFile(path.join(rootDir, file), path.join(publicDir, file));
+  });
+  seoFiles.forEach(file => {
+    syncFile(path.join(seoDir, file), path.join(publicDir, file));
   });
 
   // 3. Sync to dist-app

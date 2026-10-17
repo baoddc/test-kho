@@ -46,7 +46,7 @@ SECURITY DEFINER -- Thực thi với quyền Admin của Server để bỏ qua R
 SET search_path = public, extensions
 AS $$
 BEGIN
-    -- Mật khẩu được lưu dạng bcrypt (xem scripts/fix_security_vulnerabilities_2026-10-15.sql)
+    -- Mật khẩu được lưu dạng bcrypt (xem supabase/sql/migrations/fix_security_vulnerabilities_2026-10-15.sql)
     RETURN QUERY
     SELECT 
         u.username,

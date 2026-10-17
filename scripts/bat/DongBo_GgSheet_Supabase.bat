@@ -6,9 +6,11 @@ echo    HỆ THỐNG ĐỒNG BỘ DỮ LIỆU SAP MB51 TỪ GOOGLE SHEETS SANG S
 echo =====================================================================
 echo.
 
-python "%~dp0scripts\sync-mb51-to-supabase.py"
+pushd "%~dp0..\.."
+python "%CD%\scripts\sync-mb51-to-supabase.py"
 
 echo.
 echo =====================================================================
 echo Nhấn phím bất kỳ để đóng cửa sổ...
 pause >nul
+popd

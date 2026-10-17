@@ -39,7 +39,7 @@ if (fs.existsSync(edgeFnPath)) {
 
 // 3. Kiểm tra SQL RLS Policies & 24h Lock
 console.log('\n--- 3. Kiểm tra SQL Row Level Security & Khóa 24h ---');
-const rlsSqlPath = path.join(__dirname, '../scripts/setup_security_hardening_rls.sql');
+const rlsSqlPath = path.join(__dirname, '../supabase/sql/setup/setup_security_hardening_rls.sql');
 assert(fs.existsSync(rlsSqlPath), 'Tập tin setup_security_hardening_rls.sql tồn tại');
 if (fs.existsSync(rlsSqlPath)) {
   const rlsCode = fs.readFileSync(rlsSqlPath, 'utf8');
@@ -51,7 +51,7 @@ if (fs.existsSync(rlsSqlPath)) {
 
 // 4. Kiểm tra RPC Hardening & Chặn Anon Role
 console.log('\n--- 4. Kiểm tra gia cố RPC Functions ---');
-const rpcSqlPath = path.join(__dirname, '../scripts/setup_users_management_rpc.sql');
+const rpcSqlPath = path.join(__dirname, '../supabase/sql/setup/setup_users_management_rpc.sql');
 assert(fs.existsSync(rpcSqlPath), 'Tập tin setup_users_management_rpc.sql tồn tại');
 if (fs.existsSync(rpcSqlPath)) {
   const rpcCode = fs.readFileSync(rpcSqlPath, 'utf8');
@@ -59,7 +59,7 @@ if (fs.existsSync(rpcSqlPath)) {
   assert(rpcCode.includes('GRANT EXECUTE ON FUNCTION public.admin_save_user'), 'Cấp quyền thực thi admin_save_user an toàn');
 }
 
-const acidSqlPath = path.join(__dirname, '../scripts/setup_acid_inventory_concurrency.sql');
+const acidSqlPath = path.join(__dirname, '../supabase/sql/setup/setup_acid_inventory_concurrency.sql');
 assert(fs.existsSync(acidSqlPath), 'Tập tin setup_acid_inventory_concurrency.sql tồn tại');
 if (fs.existsSync(acidSqlPath)) {
   const acidCode = fs.readFileSync(acidSqlPath, 'utf8');

@@ -91,7 +91,7 @@ REVOKE ALL ON public.user_profiles FROM anon;
 
 -- =============================================================================
 -- PHẦN D — đã chuyển sang 2 file riêng, chạy theo thứ tự:
---   1. scripts/migrate_legacy_users_to_supabase_auth.sql
+--   1. supabase/sql/migrations/migrate_legacy_users_to_supabase_auth.sql
 --   2. (đăng nhập thử cả 3 tài khoản)
---   3. scripts/lock_rls_after_auth_migration.sql
+--   3. supabase/sql/migrations/lock_rls_after_auth_migration.sql
 -- =============================================================================

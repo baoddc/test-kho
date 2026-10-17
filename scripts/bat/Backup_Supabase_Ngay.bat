@@ -7,10 +7,12 @@ echo                   (MỖI BẢNG LÀ 1 FILE .CSV RIÊNG)
 echo =====================================================================
 echo.
 
-node "%~dp0scripts\backup-supabase-to-csv.js"
+pushd "%~dp0..\.."
+node "%CD%\scripts\backup-supabase-to-csv.js"
 
 echo.
 echo =====================================================================
-echo Hoàn tất phiên sao lưu. File CSV được lưu tại thư mục: %~dp0backups\
+echo Hoàn tất phiên sao lưu. File CSV được lưu tại thư mục: %CD%\backups\
 echo Nhấn phím bất kỳ để đóng cửa sổ...
 pause >nul
+popd

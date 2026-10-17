@@ -7,7 +7,8 @@ echo                (TỰ ĐỘNG CHẠY VÀO 17:00 MỖI NGÀY)
 echo =====================================================================
 echo.
 
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\register-task.ps1"
+pushd "%~dp0..\.."
+powershell -NoProfile -ExecutionPolicy Bypass -File "%CD%\scripts\register-task.ps1"
 
 if %ERRORLEVEL% equ 0 (
     echo.
@@ -18,7 +19,7 @@ if %ERRORLEVEL% equ 0 (
     echo     - Thời gian chạy: 17:00 (5 giờ chiều) mỗi ngày
     echo     - Chế độ chạy bù: Bật (Tự động sao lưu ngay khi bật máy nếu 17h tắt máy)
     echo     - Chế độ chạy: Ngầm trong nền (không làm phiền màn hình làm việc)
-    echo     - Thư mục lưu: %~dp0backups\
+    echo     - Thư mục lưu: %CD%\backups\
     echo =====================================================================
 ) else (
     echo.
@@ -29,3 +30,4 @@ if %ERRORLEVEL% equ 0 (
 echo.
 echo Nhấn phím bất kỳ để đóng cửa sổ...
 pause >nul
+popd

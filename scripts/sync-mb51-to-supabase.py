@@ -80,7 +80,7 @@ def find_service_account_path():
         abs_p = os.path.abspath(p)
         if os.path.exists(abs_p):
             return abs_p
-    raise FileNotFoundError("Không tìm thấy file service_account.json. Vui lòng đặt file tại thư mục gốc.")
+    raise FileNotFoundError("Không tìm thấy file service_account.json. Vui lòng đặt file tại thư mục scripts/.")
 
 def parse_date(raw_date):
     if not raw_date:

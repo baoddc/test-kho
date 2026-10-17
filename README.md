@@ -13,30 +13,43 @@ Hệ thống quản lý kho phôi cuộn cho Đại Dũng Corporation (DDC), tí
 ## 📁 Cấu trúc thư mục
 
 ```text
-├── assets/          # CSS, JS, Icons và hình ảnh ứng dụng
-│   ├── css/         # CSS theo module (5s, pl, tole, xg, sidebar, home, ...)
-│   ├── js/          # Logic Javascript & Supabase Engine
-│   ├── icons/       # PWA Icons
-│   └── images/      # Hình ảnh & Logo
-├── dist-app/        # Nguồn và cấu hình đóng gói Desktop App (Electron Wrapper)
-├── docs/            # Tài liệu dự án và hướng dẫn Supabase
-├── pages/           # Các trang HTML phân theo module
-│   ├── index.html   # Trang điều hướng chính
-│   ├── home.html    # Trang chủ
-│   ├── about.html   # Trang giới thiệu
-│   ├── 5s/          # Quản lý 5S & HSE
-│   ├── pl/          # Quản lý Phôi Lá (PL)
-│   ├── tole/        # Quản lý Tole
-│   └── xg/          # Quản lý Xà Gồ (XG)
-├── scripts/         # Các script tiện ích (Build EXE, PWA Icons generator, Migration, Local Server)
-├── voice-service/   # Dịch vụ nhận diện giọng nói (PowerShell / VBScript)
-├── index.html       # File chuyển hướng PWA Root
-├── manifest.json    # PWA Manifest configuration
-├── sw.js            # PWA Service Worker
-├── version.json     # Tự động cập nhật phiên bản
-├── vercel.json      # Cấu hình deployment cho Vercel
-└── package.json     # Metadata & Dependencies
+├── assets/            # Nguồn CSS, JS và hình ảnh ứng dụng
+│   ├── css/           # CSS theo module (5s, pl, tole, xg, tem-nhan-kiem-ke, trang-chu, ...)
+│   ├── js/            # Logic Javascript (core/, components/, theo module)
+│   └── images/        # Logo & hình nền
+├── pages/             # Các trang HTML phân theo module
+│   ├── index.html     # Trang đăng nhập
+│   ├── 5s/            # Quản lý 5S & HSE
+│   ├── pl/            # Quản lý Phôi Lá (PL)
+│   ├── tem-nhan-kiem-ke/  # Kiểm kê, in tem cuộn, vị trí tồn
+│   ├── tole/          # Quản lý Tole
+│   ├── trang-chu/     # Trang chủ, giới thiệu
+│   └── xg/            # Quản lý Xà Gồ (XG)
+├── supabase/          # Mọi thứ phía Supabase
+│   ├── functions/     # Edge Functions (ocr-receipt, ocr-scorecard-5s)
+│   └── sql/           # SQL chạy thủ công trong Supabase SQL Editor
+│       ├── setup/       # Tạo bảng / RPC / RLS (setup_*.sql, create_*.sql)
+│       ├── migrations/  # Thay đổi một lần trên DB đang chạy (fix_*, migrate_*, lock_*, ...)
+│       └── schema/      # Định nghĩa bảng theo module (pl, tole)
+├── scripts/           # Script tiện ích (build/sync, backup, PWA icons, local server)
+│   └── bat/           # Launcher 1-click: sao lưu, đặt/hủy lịch 17h, đồng bộ Google Sheets
+├── tests/             # Test tự động & script kiểm thử
+├── docs/              # Tài liệu: versioning.md, superpowers/ (plans, specs)
+├── cloudflare-r2/     # Cloudflare Worker lưu ảnh HSE (R2)
+├── voice-service/     # Dịch vụ nhận diện giọng nói (PowerShell / VBScript)
+├── android/           # Dự án Capacitor Android
+├── dist-app/          # Desktop App (Electron wrapper) — được sync-dist.js đồng bộ từ nguồn
+├── public/, dist/     # Output build (Vercel phục vụ public/) — sinh bởi `npm run build`
+├── seo/               # robots.txt, sitemap.xml, llms*.txt, file xác minh Google/Bing/IndexNow
+│                      #   (build copy ra gốc site: /robots.txt, /sitemap.xml, ...)
+├── index.html, home.html, offline.html, manifest.json, sw.js, version.json
+│                      # File gốc của web/PWA, phải nằm ở thư mục gốc
+├── vercel.json        # Cấu hình deployment cho Vercel
+└── package.json       # Metadata & Dependencies
 ```
+
+> **Lưu ý:** Sửa mã nguồn trong `assets/` và `pages/`, sau đó chạy `npm run build` để đồng bộ sang `public/`, `dist/`, `dist-app/`.
+> File bí mật `scripts/service_account.json` (Google Service Account, đã được `.gitignore`) chỉ dùng cho `scripts/sync-mb51-to-supabase.py`.
 
 ## 🛠️ Hướng dẫn chạy cục bộ (Local Development)
 
