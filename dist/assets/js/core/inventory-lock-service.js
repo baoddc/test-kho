@@ -7,6 +7,10 @@
 (function(window) {
   'use strict';
 
+  // Phải khớp quy ước email trong dang_nhap.js và sync_legacy_user_to_auth()
+  const INTERNAL_EMAIL_DOMAIN = '@noemail.baoddc.com';
+  const EMAIL_TO_USERNAME = { 'thaibao06061997@gmail.com': 'bao.lt' };
+
   class InventoryLockService {
     constructor() {
       this.moduleType = null; // 'xg' | 'tole'
@@ -60,6 +64,24 @@
       });
 
       this.isInitialized = true;
+    }
+
+    /**
+     * Đưa danh tính người giữ khóa về tên đăng nhập. RPC acquire_inventory_lock lưu email của JWT
+     * (bao.lt -> thaibao06061997@gmail.com, user khác -> <username>@noemail.baoddc.com) trong khi
+     * giao diện so sánh với localStorage.currentUser (tên đăng nhập), nên khóa của chính mình bị coi là của người khác.
+     */
+    normalizeUser(identity) {
+      const raw = String(identity || '').trim();
+      const low = raw.toLowerCase();
+      if (EMAIL_TO_USERNAME[low]) return EMAIL_TO_USERNAME[low];
+      if (low.endsWith(INTERNAL_EMAIL_DOMAIN)) return raw.slice(0, -INTERNAL_EMAIL_DOMAIN.length);
+      return raw;
+    }
+
+    isSameUser(a, b) {
+      const na = this.normalizeUser(a).toLowerCase();
+      return !!na && na === this.normalizeUser(b).toLowerCase();
     }
 
     setupSupabaseRealtime() {
@@ -184,7 +206,6 @@
         this.activeLocks.clear();
         this.myLockedRolls.clear();
         const currentUser = (typeof localStorage !== 'undefined' && localStorage.getItem('currentUser')) || this.currentUser || 'anonymous';
-        const cleanCurrentUser = String(currentUser).trim().toLowerCase();
 
         if (locksData && Array.isArray(locksData)) {
           locksData.forEach(item => {
@@ -197,7 +218,7 @@
                 expiresAt: new Date(item.expires_at).getTime()
               });
               // Đồng bộ các khóa thuộc về chính user hiện tại vào myLockedRolls
-              if (cleanCurrentUser && String(item.locked_by || '').trim().toLowerCase() === cleanCurrentUser) {
+              if (this.isSameUser(item.locked_by, currentUser)) {
                 this.myLockedRolls.add(key);
               }
             }
@@ -246,7 +267,7 @@
       // Kiểm tra local cache trước
       const currentLock = this.activeLocks.get(key);
       if (currentLock && currentLock.expiresAt > Date.now()) {
-        if (String(currentLock.lockedBy).trim().toLowerCase() !== String(currentUser).trim().toLowerCase()) {
+        if (!this.isSameUser(currentLock.lockedBy, currentUser)) {
           return false; // Đã bị người khác khóa
         }
       }
@@ -399,11 +420,10 @@
     async cleanOrphanLocks(validRollIds = []) {
       const validSet = new Set((validRollIds || []).map(id => String(id || '').trim().toLowerCase()));
       const currentUser = (typeof localStorage !== 'undefined' && localStorage.getItem('currentUser')) || this.currentUser || 'anonymous';
-      const cleanUser = String(currentUser).trim().toLowerCase();
 
       const staleIds = [];
       for (const [key, lock] of this.activeLocks.entries()) {
-        if (String(lock.lockedBy || '').trim().toLowerCase() === cleanUser) {
+        if (this.isSameUser(lock.lockedBy, currentUser)) {
           if (!validSet.has(key)) {
             staleIds.push(lock.cuonId);
           }
@@ -441,16 +461,14 @@
       }
 
       const currentUser = (typeof localStorage !== 'undefined' && localStorage.getItem('currentUser')) || this.currentUser || 'anonymous';
-      const cleanCurrentUser = String(currentUser).trim().toLowerCase();
-      const cleanLockedBy = String(lock.lockedBy || '').trim().toLowerCase();
 
       // Cuộn này là isMe khi do chính user này đang giữ khóa (trong tab hiện tại hoặc cùng tài khoản đăng nhập)
-      const isMe = this.myLockedRolls.has(key) || (cleanCurrentUser && cleanLockedBy && cleanCurrentUser === cleanLockedBy);
+      const isMe = this.myLockedRolls.has(key) || this.isSameUser(currentUser, lock.lockedBy);
       const remainingSeconds = Math.max(0, Math.floor((lock.expiresAt - Date.now()) / 1000));
 
       return {
         isLocked: true,
-        lockedBy: lock.lockedBy,
+        lockedBy: this.normalizeUser(lock.lockedBy),
         isMe: isMe,
         remainingSeconds: remainingSeconds
       };

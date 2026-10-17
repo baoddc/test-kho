@@ -23,7 +23,7 @@ async function getR2AuthHeaders() {
                 headers['Authorization'] = `Bearer ${data.session.access_token}`;
             }
         }
-    } catch (_) {}
+    } catch (_) { }
     return headers;
 }
 
@@ -199,6 +199,9 @@ const MockData = {
     // Add more mock data as needed for other modules
 };
 
+// 6 kho trong bảng xếp hạng 5S (khớp với edge function ocr-scorecard-5s)
+const HSE_5S_AREAS = ['Kho sơn', 'Kho vật tư', 'Thép tấm', 'Kho thép cuộn', 'Kho vật liệu hàn', 'Thép hình'];
+
 // --- GSheets Service ---
 class GSheetsService {
     static async fetchSheetData(sheetId, mockKey) {
@@ -373,8 +376,8 @@ class DashboardManager {
                 btnLogout.onclick = async () => {
                     try {
                         if (window.supabase?.auth?.signOut) await window.supabase.auth.signOut();
-                    } catch (e) {}
-                    try { sessionStorage.removeItem('supabase_user_profile'); } catch (e) {}
+                    } catch (e) { }
+                    try { sessionStorage.removeItem('supabase_user_profile'); } catch (e) { }
                     localStorage.removeItem('currentUser');
                     window.location.replace('/pages/index.html');
                 };
@@ -1219,7 +1222,7 @@ class DashboardManager {
             const group = groupIdx !== -1 ? (r[groupIdx] || 'Chung') : 'Chung';
             const qty = qtyIdx !== -1 ? (parseInt(r[qtyIdx]) || 1) : 1;
             const status = statusIdx !== -1 ? (r[statusIdx] || 'Tốt') : 'Tốt';
-            const loc = locIdx !== -1 ? (r[locIdx] || 'Kho CCDC') : 'Kho CCDC';
+            const loc = locIdx !== -1 ? (r[locIdx] || 'Tủ CCDC') : 'Tủ CCDC';
             return { name, code, group, qty, status, loc, raw: r };
         });
 
@@ -1458,7 +1461,7 @@ class DashboardManager {
                 if (!name) return;
                 const rejectCriterion = rejectIdx !== -1 ? r[rejectIdx] : (r[1] || 'Có dấu hiệu nứt gãy, biến dạng vượt mức an toàn.');
                 const warnCriterion = warnIdx !== -1 ? r[warnIdx] : (r[2] || 'Hao mòn bề mặt > 10%, cần đo kiểm định kỳ.');
-                const processAction = actionIdx !== -1 ? r[actionIdx] : (r[3] || 'Ngưng sử dụng ngay, dán nhãn HỎNG và bàn giao về kho CCDC.');
+                const processAction = actionIdx !== -1 ? r[actionIdx] : (r[3] || 'Ngưng sử dụng ngay, dán nhãn HỎNG và bàn giao về Tủ CCDC.');
                 items.push({ name, rejectCriterion, warnCriterion, processAction });
             });
         }
@@ -1559,12 +1562,13 @@ class DashboardManager {
     // 5S RACE & MONTHLY SCORECARDS METHODS (BẢNG ĐIỂM 5S TỪNG THÁNG)
     // ==========================================================================
 
-    renderRaceLeaderboard(data) {
+    async renderRaceLeaderboard(data) {
         if (!data || data.length === 0) {
             this.modalBody.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 3rem;">Không có dữ liệu thi đua 5S.</p>';
             return;
         }
 
+        await this.loadDbScores();
         this.raceRawData = data;
         const headers = data[0] || [];
         const rows = data.slice(1);
@@ -1742,9 +1746,14 @@ class DashboardManager {
             }
         };
 
-        const monthConfig = monthlyScoresMap[monthKey] || monthlyScoresMap['2026-07'];
-        const items = [...monthConfig.items];
-        const xuongAvg = monthConfig.xuongAvg || '90.0';
+        this.legacyScoresMap = monthlyScoresMap; // để tính xu hướng so với tháng trước khi lưu điểm mới
+
+        // Điểm đã lưu trong Supabase (đọc từ ảnh) ưu tiên hơn số liệu cũ viết sẵn ở trên
+        const monthConfig = (this.dbScoresMap && this.dbScoresMap[monthKey]) || monthlyScoresMap[monthKey] || null;
+        const items = monthConfig ? monthConfig.items.map(it => ({ ...it })) : [];
+        const xuongAvg = monthConfig && monthConfig.xuongAvg !== null && monthConfig.xuongAvg !== undefined
+            ? Number(monthConfig.xuongAvg).toFixed(1)
+            : '--';
 
         items.sort((a, b) => b.score - a.score);
         items.forEach((it, idx) => it.rank = idx + 1);
@@ -1801,6 +1810,26 @@ class DashboardManager {
                                 <span>Xem Tất Cả Các Tháng</span>
                             </button>
                         </div>
+                    </div>
+                `;
+            }
+
+            if (monthConfig) {
+                html += `
+                    <div style="display: flex; justify-content: flex-end; margin-top: 0.75rem;">
+                        <button class="btn-more" style="background: rgba(255,255,255,0.08); color: var(--text-main); padding: 0.35rem 0.8rem; border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer; border: 1px solid rgba(255,255,255,0.15);" onclick="app.editMonthScores('${monthKey}')">✏️ Sửa điểm tháng này</button>
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div class="scorecard-origin-banner" style="margin-top: 1rem;">
+                        <div style="font-size: 0.9rem; color: var(--text-muted);">
+                            Chưa có điểm 5S của <strong style="color: var(--text-main);">${monthLabel}</strong>. Bảng xếp hạng bên dưới chưa phản ánh tháng này.
+                        </div>
+                        ${currentCard ? `
+                        <button class="btn-more" style="background: var(--primary); color: white; padding: 0.45rem 0.9rem; border-radius: 6px; font-size: 0.82rem; font-weight: 600; cursor: pointer; border: none;" onclick="app.analyzeExistingScorecard('${monthKey}')">
+                            🤖 Đọc điểm từ ảnh bảng điểm
+                        </button>` : ''}
                     </div>
                 `;
             }
@@ -1961,6 +1990,336 @@ class DashboardManager {
                 });
             });
         }
+    }
+
+    // ==========================================================================
+    // ĐỌC ĐIỂM TỪ ẢNH BẢNG ĐIỂM 5S (Gemini qua Edge Function ocr-scorecard-5s)
+    // ==========================================================================
+
+    async loadDbScores() {
+        this.dbScoresMap = {};
+        try {
+            const { data, error } = await window.supabase.from('hse_5s_scores').select('month_key, xuong_avg, items');
+            if (error) throw error;
+            (data || []).forEach(r => {
+                this.dbScoresMap[r.month_key] = { xuongAvg: r.xuong_avg, items: r.items || [] };
+            });
+        } catch (err) {
+            console.warn('Không tải được hse_5s_scores, dùng số liệu mặc định:', err.message || err);
+        }
+    }
+
+    // 'd/m/yyyy' (ngày lưu trên Sheet) -> 'yyyy-mm', cùng cách tách với renderRaceLeaderboard
+    monthKeyFromDateStr(dStr) {
+        const parts = String(dStr || '').split(/[-/]/);
+        if (parts.length !== 3) return null;
+        return `${parts[2]}-${parts[1].padStart(2, '0')}`;
+    }
+
+    async prepareScorecardImage(blob) {
+        const MAX_SIDE = 2000;
+        try {
+            const bmp = await createImageBitmap(blob);
+            const scale = Math.min(1, MAX_SIDE / Math.max(bmp.width, bmp.height));
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.round(bmp.width * scale);
+            canvas.height = Math.round(bmp.height * scale);
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+            return { base64Data: canvas.toDataURL('image/jpeg', 0.9).split(',')[1], mimeType: 'image/jpeg' };
+        } catch (_) {
+            // Trình duyệt không giải mã được (vd HEIC): gửi nguyên bản
+            const dataUrl = await new Promise((res, rej) => {
+                const reader = new FileReader();
+                reader.onload = () => res(reader.result);
+                reader.onerror = rej;
+                reader.readAsDataURL(blob);
+            });
+            return { base64Data: dataUrl.split(',')[1], mimeType: blob.type || 'image/jpeg' };
+        }
+    }
+
+    async callScorecardOcr(base64Data, mimeType) {
+        if (!window.supabase || typeof window.supabase.functions?.invoke !== 'function') {
+            throw new Error('Supabase client chưa được khởi tạo đầy đủ.');
+        }
+        const { data, error } = await window.supabase.functions.invoke('ocr-scorecard-5s', {
+            body: { base64Data, mimeType }
+        });
+        if (error) {
+            let msg = error.message || '';
+            try {
+                const body = await error.context?.json?.();
+                if (body?.error) msg = body.error;
+            } catch (_) { /* giữ error.message */ }
+            throw new Error(msg || 'Lỗi kết nối Edge Function ocr-scorecard-5s.');
+        }
+        if (!data?.success) throw new Error(data?.error || 'Không đọc được điểm từ ảnh.');
+        return data.data;
+    }
+
+    // Tháng đã có điểm nhưng chưa có số liệu (vd ảnh tải lên trước khi có tính năng này)
+    async analyzeExistingScorecard(monthKey) {
+        if (!this.checkPermission()) return;
+        const card = (this.monthlyScorecards || []).find(sc => sc.monthKey === monthKey);
+        if (!card) return;
+
+        let url = card.imgUrl;
+        const driveMatch = url.match(/drive\.google\.com\/file\/d\/([-\w]{25,})/);
+        if (driveMatch) url = `https://drive.google.com/thumbnail?id=${driveMatch[1]}&sz=w2000`;
+
+        let blob;
+        try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            blob = await res.blob();
+        } catch (err) {
+            alert(`Không tải được ảnh gốc để đọc điểm (${err.message || 'lỗi mạng'}). Hãy tải lại ảnh bằng nút "Tải Lên Bảng Điểm Tháng Mới".`);
+            return;
+        }
+        return this.analyzeScorecard(blob, card.imgUrl, card.dStr);
+    }
+
+    async analyzeScorecard(file, imgUrl, dStr) {
+        const monthKey = this.monthKeyFromDateStr(dStr);
+        if (!monthKey) return;
+
+        const busy = document.createElement('div');
+        busy.className = 'modal-backdrop active';
+        busy.style.zIndex = '100000';
+        busy.innerHTML = `
+            <div class="modal-content glass-card" style="max-width: 360px; text-align: center; padding: 2rem;">
+                <div class="spinner" style="margin: 0 auto 1rem;"></div>
+                <div style="color: var(--text-main); font-weight: 600;">🤖 Đang đọc điểm 5S từ ảnh...</div>
+            </div>`;
+        document.body.appendChild(busy);
+
+        let result = { thang: null, items: [] };
+        let ocrError = '';
+        try {
+            const { base64Data, mimeType } = await this.prepareScorecardImage(file);
+            result = await this.callScorecardOcr(base64Data, mimeType);
+        } catch (err) {
+            console.error('Lỗi đọc bảng điểm 5S:', err);
+            ocrError = err.message || 'Không đọc được ảnh';
+        } finally {
+            busy.remove();
+        }
+
+        // Đọc đủ 6 kho, số nào cũng có và tổng khớp với phiếu: lưu thẳng, không cần xác nhận
+        const rows = ocrError ? null : this.rowsFromOcr(result.items || []);
+        const [year, month] = monthKey.split('-');
+        if (rows) {
+            try {
+                await this.saveScores(monthKey, rows, imgUrl, dStr);
+                this.showScoreToast(`✅ Đã đọc ảnh và cập nhật bảng xếp hạng Tháng ${month}/${year}`);
+                return;
+            } catch (err) {
+                console.error('Lỗi lưu điểm 5S:', err);
+                ocrError = `${err.message || err}. Nếu lỗi báo thiếu bảng hse_5s_scores, hãy chạy scripts/setup_hse_5s_scores.sql trong Supabase SQL Editor`;
+            }
+        }
+
+        this.openScoreReviewDialog({ monthKey, imgUrl, dStr, ocrItems: result.items || [], ocrThang: result.thang, ocrError, needsReview: !ocrError });
+    }
+
+    // Trả về 6 dòng điểm nếu kết quả OCR đủ tin cậy để lưu tự động, ngược lại null
+    rowsFromOcr(items) {
+        const byArea = {};
+        items.forEach(it => { byArea[it.area] = it; });
+        const fields = ['s1', 's2', 's3', 's4', 's5'];
+        const rows = [];
+        for (const area of HSE_5S_AREAS) {
+            const it = byArea[area];
+            if (!it || fields.some(k => typeof it[k] !== 'number' || it[k] < 0)) return null;
+            const row = { area };
+            fields.forEach(k => { row[k] = it[k]; });
+            row.score = Math.round(fields.reduce((t, k) => t + row[k], 0) * 10) / 10;
+            if (row.score > 100) return null;
+            if (typeof it.total === 'number' && Math.abs(row.score - it.total) > 0.01) return null;
+            rows.push(row);
+        }
+        return rows;
+    }
+
+    showScoreToast(text) {
+        const toast = document.createElement('div');
+        toast.textContent = text;
+        toast.style.cssText = 'position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 100001; background: #059669; color: #fff; padding: 0.8rem 1.1rem; border-radius: 10px; font-weight: 600; box-shadow: 0 8px 24px rgba(0,0,0,0.35);';
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 6000);
+    }
+
+    // Sửa lại điểm đã lưu của một tháng (khi AI đọc sai)
+    editMonthScores(monthKey) {
+        if (!this.checkPermission()) return;
+        const cfg = (this.dbScoresMap || {})[monthKey] || (this.legacyScoresMap || {})[monthKey];
+        if (!cfg) return;
+        const card = (this.monthlyScorecards || []).find(sc => sc.monthKey === monthKey);
+        this.openScoreReviewDialog({
+            monthKey,
+            imgUrl: card ? card.imgUrl : '',
+            dStr: card ? card.dStr : '',
+            ocrItems: cfg.items,
+            ocrThang: null,
+            ocrError: '',
+            editing: true
+        });
+    }
+
+    openScoreReviewDialog({ monthKey, imgUrl, dStr, ocrItems, ocrThang, ocrError, needsReview = false, editing = false }) {
+        const [year, month] = monthKey.split('-');
+        const monthLabel = `Tháng ${month}/${year}`;
+        const byArea = {};
+        ocrItems.forEach(it => { byArea[it.area] = it; });
+
+        const sumOf = (it) => ['s1', 's2', 's3', 's4', 's5'].reduce((t, k) => t + (Number(it[k]) || 0), 0);
+
+        const rowsHtml = HSE_5S_AREAS.map((area, i) => {
+            const it = byArea[area] || {};
+            const sum = sumOf(it);
+            const mismatch = it.total !== null && it.total !== undefined && sum > 0 && Math.abs(sum - it.total) > 0.01;
+            const cells = ['s1', 's2', 's3', 's4', 's5'].map(k => `
+                <td style="padding: 4px;"><input type="number" step="0.5" min="0" max="100" data-row="${i}" data-field="${k}" value="${it[k] ?? ''}"
+                    style="width: 62px; padding: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.06); color: var(--text-main); text-align: center;"></td>`).join('');
+            return `
+                <tr>
+                    <td style="padding: 4px 8px; font-weight: 600; white-space: nowrap;">${area}</td>
+                    ${cells}
+                    <td style="padding: 4px 8px; text-align: center; font-weight: 800; color: var(--primary);" data-total="${i}">${sum || '--'}</td>
+                    <td style="padding: 4px 8px; font-size: 0.78rem; color: var(--warning);">${mismatch ? `⚠ Phiếu ghi ${it.total}` : ''}</td>
+                </tr>`;
+        }).join('');
+
+        const notes = [];
+        if (ocrError) notes.push(`<div style="color: var(--danger); margin-bottom: 0.5rem;">Chưa tự động cập nhật được: ${ocrError.replace(/</g, '&lt;')}. Bạn có thể nhập hoặc kiểm tra điểm bằng tay bên dưới.</div>`);
+        else if (needsReview) notes.push('<div style="color: var(--warning); margin-bottom: 0.5rem;">AI đọc chưa chắc chắn (thiếu kho hoặc tổng lệch với phiếu) nên chưa tự lưu. Hãy đối chiếu với phiếu rồi bấm Xác nhận.</div>');
+        else if (editing) notes.push('<div style="color: var(--text-muted); margin-bottom: 0.5rem;">Chỉnh điểm đã lưu của tháng này. Bảng xếp hạng cập nhật ngay khi xác nhận.</div>');
+        if (ocrThang && ocrThang !== monthKey) {
+            notes.push(`<div style="color: var(--warning); margin-bottom: 0.5rem;">⚠ Phiếu ghi tháng ${ocrThang.slice(5)}/${ocrThang.slice(0, 4)} nhưng ảnh được lưu ngày ${dStr} (${monthLabel}). Điểm sẽ được lưu vào ${monthLabel}.</div>`);
+        }
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-backdrop active';
+        modal.style.zIndex = '100000';
+        modal.innerHTML = `
+            <div class="modal-content glass-card" style="max-width: 760px; width: 95vw; max-height: 90vh; overflow: auto; padding: 1.5rem;">
+                <h3 style="margin-bottom: 0.75rem; color: var(--text-main);">Điểm 5S ${monthLabel}</h3>
+                <div style="font-size: 0.88rem;">${notes.join('')}</div>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                        <thead><tr style="color: var(--text-muted); font-size: 0.8rem;">
+                            <th style="text-align: left; padding: 4px 8px;">Kho</th><th>S1</th><th>S2</th><th>S3</th><th>S4</th><th>S5</th><th>Tổng</th><th></th>
+                        </tr></thead>
+                        <tbody>${rowsHtml}</tbody>
+                    </table>
+                </div>
+                <div id="scoreReviewAvg" style="margin-top: 0.75rem; font-size: 0.85rem; color: var(--text-muted);"></div>
+                <div id="scoreReviewMsg" style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--danger);"></div>
+                <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.25rem;">
+                    <button type="button" id="scoreReviewCancel" class="btn-more" style="background: rgba(255,255,255,0.08); color: var(--text-main); padding: 0.6rem 1.1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); cursor: pointer;">Bỏ qua</button>
+                    <button type="button" id="scoreReviewSave" class="btn-more" style="background: var(--primary); color: white; padding: 0.6rem 1.1rem; border-radius: 8px; border: none; font-weight: 600; cursor: pointer;">Xác nhận &amp; cập nhật xếp hạng</button>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+
+        const readRows = () => HSE_5S_AREAS.map((area, i) => {
+            const row = { area };
+            ['s1', 's2', 's3', 's4', 's5'].forEach(k => {
+                const v = parseFloat(modal.querySelector(`input[data-row="${i}"][data-field="${k}"]`).value);
+                row[k] = Number.isFinite(v) ? v : 0;
+            });
+            row.score = Math.round(sumOf(row) * 10) / 10;
+            return row;
+        });
+
+        const refresh = () => {
+            const rows = readRows();
+            rows.forEach((r, i) => {
+                modal.querySelector(`[data-total="${i}"]`).textContent = r.score || '--';
+            });
+            const scored = rows.filter(r => r.score > 0);
+            const avg = scored.length ? (scored.reduce((t, r) => t + r.score, 0) / scored.length).toFixed(1) : '--';
+            modal.querySelector('#scoreReviewAvg').innerHTML = `Điểm TB toàn xưởng: <strong style="color: #34d399;">${avg}đ</strong> (${scored.length}/${rows.length} kho đã chấm)`;
+        };
+        modal.addEventListener('input', refresh);
+        refresh();
+
+        modal.querySelector('#scoreReviewCancel').onclick = () => modal.remove();
+        modal.querySelector('#scoreReviewSave').onclick = async (e) => {
+            const btn = e.currentTarget;
+            const msg = modal.querySelector('#scoreReviewMsg');
+            msg.textContent = '';
+            const rows = readRows();
+            if (!rows.some(r => r.score > 0)) {
+                msg.textContent = 'Chưa có kho nào có điểm.';
+                return;
+            }
+            if (rows.some(r => ['s1', 's2', 's3', 's4', 's5'].some(k => r[k] < 0) || r.score > 100)) {
+                msg.textContent = 'Điểm không hợp lệ (tổng mỗi kho tối đa 100).';
+                return;
+            }
+            btn.disabled = true;
+            btn.textContent = 'Đang lưu...';
+            try {
+                await this.saveScores(monthKey, rows, imgUrl, dStr);
+                modal.remove();
+            } catch (err) {
+                console.error('Lỗi lưu điểm 5S:', err);
+                msg.textContent = `Không lưu được: ${err.message || err}. Nếu lỗi báo thiếu bảng hse_5s_scores, hãy chạy scripts/setup_hse_5s_scores.sql trong Supabase SQL Editor.`;
+                btn.disabled = false;
+                btn.textContent = 'Xác nhận & cập nhật xếp hạng';
+            }
+        };
+    }
+
+    findPreviousScores(monthKey) {
+        const all = { ...(this.legacyScoresMap || {}), ...(this.dbScoresMap || {}) };
+        const prevKey = Object.keys(all).filter(k => k < monthKey).sort().pop();
+        return prevKey ? all[prevKey] : null;
+    }
+
+    async saveScores(monthKey, rows, imgUrl, dStr) {
+        const prev = this.findPreviousScores(monthKey);
+        const prevByArea = {};
+        (prev?.items || []).forEach(it => { prevByArea[it.area] = it; });
+
+        const items = rows.map(r => {
+            const p = prevByArea[r.area];
+            let trend = '→';
+            if (p && p.score > 0 && r.score > 0) {
+                const diff = Math.round((r.score - p.score) * 10) / 10;
+                if (diff > 0) trend = `↑ ${diff}`;
+                else if (diff < 0) trend = `↓ ${Math.abs(diff)}`;
+            }
+            return { ...r, trend };
+        });
+        const scored = items.filter(it => it.score > 0);
+        const xuongAvg = scored.length ? Math.round(scored.reduce((t, it) => t + it.score, 0) / scored.length * 10) / 10 : null;
+
+        const { error } = await window.supabase.from('hse_5s_scores').upsert({
+            month_key: monthKey,
+            xuong_avg: xuongAvg,
+            items,
+            source_image_url: imgUrl || null,
+            updated_at: new Date().toISOString()
+        }, { onConflict: 'month_key' });
+        if (error) throw error;
+
+        // Cập nhật giao diện ngay, không cần tải lại Sheet
+        this.dbScoresMap = this.dbScoresMap || {};
+        this.dbScoresMap[monthKey] = { xuongAvg, items };
+
+        const list = this.monthlyScorecards || (this.monthlyScorecards = []);
+        if (!list.some(sc => sc.monthKey === monthKey)) {
+            const [y, m] = monthKey.split('-');
+            list.push({ dStr, imgUrl, note: '', monthKey, monthLabel: `Tháng ${m}/${y}`, raw: [] });
+            list.sort((a, b) => b.monthKey.localeCompare(a.monthKey));
+        }
+        this.selectedRaceMonth = monthKey;
+        this.renderRaceView('leaderboard');
     }
 
     renderMonthlyScorecardsView() {
@@ -2559,6 +2918,11 @@ class DashboardManager {
                     p3.style.color = 'var(--primary)';
                 }
             }
+
+            // Bảng điểm 5S: đọc điểm từ ảnh vừa tải lên để cập nhật bảng xếp hạng
+            if (moduleId === '5s-race') {
+                this.analyzeScorecard(file, finalImageUrl, today);
+            }
         } catch (error) {
             console.error('Lỗi upload ảnh:', error);
             alert('Có lỗi xảy ra: ' + error.message);
@@ -2936,7 +3300,7 @@ class DashboardManager {
         const titleEl = document.getElementById('scrap-viewing-title');
         const openTabBtn = document.getElementById('scrap-open-tab-btn');
         const fullBtn = document.getElementById('scrap-fullscreen-btn');
-        
+
         if (iframe) iframe.src = previewUrl;
         if (titleEl) titleEl.textContent = name || 'Quy định PDF';
         if (openTabBtn) openTabBtn.href = url;

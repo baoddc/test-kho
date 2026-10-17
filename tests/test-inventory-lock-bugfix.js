@@ -83,6 +83,26 @@ runTest('inventory-lock-service.js: getLockStatus nhận diện chính xác isMe
   assert.strictEqual(statusOtherUser.isMe, false, 'Khi lockedBy là người khác thì isMe phải là false');
 });
 
+// 2b. RPC acquire_inventory_lock lưu email của JWT; khóa của chính mình không được coi là của người khác
+runTest('inventory-lock-service.js: khóa lưu bằng email của chính user vẫn là isMe và hiển thị tên đăng nhập', () => {
+  global.localStorage = { getItem: (k) => ({ currentUser: 'bao.lt' }[k] || null) };
+  global.window = { localStorage: global.localStorage };
+  delete require.cache[require.resolve('../assets/js/core/inventory-lock-service.js')];
+  require('../assets/js/core/inventory-lock-service.js');
+  const service = global.window.inventoryLockService;
+  const lock = (id, by) => service.activeLocks.set(id.toLowerCase(), { cuonId: id, lockedBy: by, expiresAt: Date.now() + 100000 });
+
+  lock('10001189 - Cuộn 652', 'thaibao06061997@gmail.com');
+  const mine = service.getLockStatus('10001189 - Cuộn 652');
+  assert.strictEqual(mine.isMe, true, 'Email của bao.lt phải được nhận là chính mình');
+  assert.strictEqual(mine.lockedBy, 'bao.lt', 'Phải hiển thị tên đăng nhập thay vì email');
+
+  lock('Cuon Khac', 'vuong.pm@noemail.baoddc.com');
+  const other = service.getLockStatus('Cuon Khac');
+  assert.strictEqual(other.isMe, false, 'Email nội bộ của user khác không phải mình');
+  assert.strictEqual(other.lockedBy, 'vuong.pm', 'Email nội bộ phải hiển thị thành tên đăng nhập');
+});
+
 // 3. Kiểm tra openInventoryModal đã gọi refreshLocks trước cleanOrphanLocks
 runTest('xg-xuat.js và tole-xuat.js: openInventoryModal gọi refreshLocks trước cleanOrphanLocks', () => {
   const xgContent = fs.readFileSync(path.join(__dirname, '../assets/js/xg/xg-xuat.js'), 'utf8');
