@@ -740,7 +740,23 @@ function renderTableWithPagination() {
   const pageData = getPageData(dataToPaginate);
   renderTableData(pageData);
   updatePaginationControls();
+  updateQuantitySummary(dataToPaginate);
   displayedData = dataToPaginate;
+}
+
+// Tổng Số lượng (Kg) + số dòng theo toàn bộ dữ liệu đang lọc (tất cả các trang)
+function updateQuantitySummary(data) {
+  const valueEl = document.getElementById('totalQtyValue');
+  const rowsEl = document.getElementById('totalQtyRows');
+  if (!valueEl || !rowsEl) return;
+  const qtyIdx = data && data[0] ? data[0].indexOf('Số lượng (Kg)') : -1;
+  const rowCount = data && data.length > 1 ? data.length - 1 : 0;
+  let total = 0;
+  if (qtyIdx !== -1) {
+    for (let i = 1; i < data.length; i++) total += parseNumericInput(data[i][qtyIdx]) || 0;
+  }
+  valueEl.textContent = total.toLocaleString('vi-VN', { maximumFractionDigits: 3 });
+  rowsEl.textContent = rowCount.toLocaleString('vi-VN');
 }
 
 

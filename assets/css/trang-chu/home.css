@@ -887,6 +887,49 @@ nav a:hover::after {
 }
 
 /* =============================================================================
+   TỔNG SỐ LƯỢNG (KG)
+   Ô tổng hợp bên trái thanh phân trang (trang Nhập/Xuất/Tồn XG & Tole)
+================================================================================ */
+
+.qty-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  background: rgba(13, 110, 253, 0.08);
+  border: 1px solid rgba(13, 110, 253, 0.25);
+  color: #334155;
+}
+
+.qty-summary i {
+  color: #0d6efd;
+}
+
+.qty-summary strong {
+  color: #0d6efd;
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.qty-summary .qty-summary-sep {
+  opacity: 0.4;
+}
+
+[data-bs-theme="dark"] .qty-summary {
+  background: rgba(99, 102, 241, 0.15);
+  border-color: rgba(129, 140, 248, 0.4);
+  color: #cbd5e1;
+}
+
+[data-bs-theme="dark"] .qty-summary i,
+[data-bs-theme="dark"] .qty-summary strong {
+  color: #a5b4fc;
+}
+
+/* =============================================================================
    COLUMN RESIZER
    Style cho chức năng thay đổi độ rộng cột
 ================================================================================ */

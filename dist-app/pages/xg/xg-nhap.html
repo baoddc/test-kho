@@ -17,6 +17,7 @@
   <!-- Sidebar CSS -->
   <link rel="stylesheet" href="/assets/css/sidebar.css">
   <link rel="stylesheet" href="/assets/css/trang-chu/home.css">
+  <link rel="stylesheet" href="/assets/css/kho/kho-nhap.css">
   <link rel="stylesheet" href="/assets/css/xg/xg-nhap.css">
 </head>
 
@@ -70,7 +71,15 @@
         </div>
 
         <!-- Pagination Controls -->
-        <div class="d-flex align-items-center justify-content-end mb-0 flex-wrap" style="margin-top: 2px;">
+        <div class="d-flex align-items-center justify-content-end mb-0 flex-wrap gap-2" style="margin-top: 2px;">
+          <!-- Tổng số lượng (Kg) theo dữ liệu đang lọc -->
+          <div class="qty-summary me-auto" title="Tổng theo toàn bộ dữ liệu đang lọc (tất cả các trang)">
+            <i class="bi bi-box-seam"></i>
+            <span>Tổng số lượng:</span>
+            <strong id="totalQtyValue">0</strong><span>kg</span>
+            <span class="qty-summary-sep">|</span>
+            <span id="totalQtyRows">0</span><span>dòng</span>
+          </div>
           <div class="d-flex align-items-center gap-2">
             <button id="prevPage" class="btn btn-sm btn-outline-secondary">← Trang trước</button>
             <select id="pageSelect" class="form-select form-select-sm" style="width: auto;">
@@ -324,7 +333,7 @@
 
   <!-- Supabase version of xg-nhap -->
   <script src="/assets/js/xg/xg-sap-lookup.js?v=2.0.4"></script>
-  <script src="/assets/js/xg/xg-nhap.js?v=2.0.4"></script>
+  <script src="/assets/js/xg/xg-nhap.js?v=2.0.5"></script>
   <script src="/assets/js/components/goods-arrival-notice.js?v=2.0.4"></script>
 
   <!-- Bootstrap JS (for dropdown) -->

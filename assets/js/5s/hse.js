@@ -1879,7 +1879,7 @@ class DashboardManager {
                 <div class="workspace-search-wrap" style="margin-top: 2rem;">
                     <input type="text" id="raceTableSearch" class="workspace-search-input" placeholder="🔍 Tìm nhanh kho trong bảng điểm...">
                     <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">
-                        Kỳ đánh giá: <strong style="color: var(--primary);">${monthLabel}</strong> • Điểm TB toàn xưởng: <strong style="color: #34d399;">${xuongAvg}đ</strong>
+                        Kỳ đánh giá: <strong style="color: var(--primary);">${monthLabel}</strong> • Điểm TB toàn kho: <strong style="color: #34d399;">${xuongAvg}đ</strong>
                     </div>
                 </div>
 
@@ -2242,7 +2242,7 @@ class DashboardManager {
             });
             const scored = rows.filter(r => r.score > 0);
             const avg = scored.length ? (scored.reduce((t, r) => t + r.score, 0) / scored.length).toFixed(1) : '--';
-            modal.querySelector('#scoreReviewAvg').innerHTML = `Điểm TB toàn xưởng: <strong style="color: #34d399;">${avg}đ</strong> (${scored.length}/${rows.length} kho đã chấm)`;
+            modal.querySelector('#scoreReviewAvg').innerHTML = `Điểm TB toàn kho: <strong style="color: #34d399;">${avg}đ</strong> (${scored.length}/${rows.length} kho đã chấm)`;
         };
         modal.addEventListener('input', refresh);
         refresh();
