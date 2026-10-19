@@ -163,6 +163,17 @@
     }
   ];
 
+  // Escape dữ liệu từ DB/ô tìm kiếm trước khi chèn vào innerHTML (chống XSS)
+  function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
   // State
   let rawRows = [];
   let availablePeriods = [];
@@ -681,8 +692,8 @@
             </div>
           </div>
           <div class="mt-2">
-            <span class="text-xs font-bold text-blue-600 dark:text-blue-400 truncate block" title="${selectedPeriod}">
-              ${selectedPeriod === 'ALL' ? 'Tất cả các kỳ đổ' : selectedPeriod}
+            <span class="text-xs font-bold text-blue-600 dark:text-blue-400 truncate block" title="${escapeHtml(selectedPeriod)}">
+              ${selectedPeriod === 'ALL' ? 'Tất cả các kỳ đổ' : escapeHtml(selectedPeriod)}
             </span>
           </div>
           <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center justify-between">
@@ -703,7 +714,7 @@
           <select id="select-period" class="form-select form-select-sm font-semibold rounded-lg w-full md:w-64 border-slate-200 dark:border-[#2e3652] dark:bg-[#1a1d2d] dark:text-white">
             <option value="ALL" ${selectedPeriod === 'ALL' ? 'selected' : ''}>-- Tất cả các kỳ đổ --</option>
             ${availablePeriods.map(p => `
-              <option value="${p}" ${selectedPeriod === p ? 'selected' : ''}>${p}</option>
+              <option value="${escapeHtml(p)}" ${selectedPeriod === p ? 'selected' : ''}>${escapeHtml(p)}</option>
             `).join('')}
           </select>
         </div>
@@ -716,7 +727,7 @@
             id="input-search" 
             class="form-control form-control-sm pl-9 rounded-lg text-xs border-slate-200 dark:border-[#2e3652] dark:bg-[#1a1d2d] dark:text-white" 
             placeholder="Tìm xưởng (AH1, AH2...), loại phế liệu (Mỹ Thủy, Inox...)"
-            value="${searchQuery}"
+            value="${escapeHtml(searchQuery)}"
           >
         </div>
       </div>
@@ -724,7 +735,7 @@
       ${errorMessage ? `
         <div class="mb-4 p-3 bg-red-50 dark:bg-[#331118] border border-red-200 dark:border-[#6b1426] text-red-600 dark:text-red-300 rounded-xl text-xs flex items-center gap-2">
           <i data-lucide="alert-circle" class="w-4 h-4"></i>
-          <span>${errorMessage}</span>
+          <span>${escapeHtml(errorMessage)}</span>
         </div>
       ` : ''}
 

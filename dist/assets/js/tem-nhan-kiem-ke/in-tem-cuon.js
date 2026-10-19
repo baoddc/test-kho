@@ -8,6 +8,17 @@
    HELPER UTILITY FUNCTIONS (MODULE & BROWSER SCOPE)
 ================================================================================ */
 
+// Escape dữ liệu từ DB/file Excel trước khi chèn vào innerHTML (chống XSS)
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 function formatCoilBarcodeData(row, mode = 'standard') {
   if (!row) return '';
   if (mode === 'cuon_id') {
@@ -461,23 +472,23 @@ if (typeof document !== 'undefined') {
 
       tr.innerHTML = `
         <td class="text-center">
-          <input type="checkbox" class="form-check-input coil-row-checkbox" data-key="${coil._uniqueKey}" ${isChecked ? 'checked' : ''}>
+          <input type="checkbox" class="form-check-input coil-row-checkbox" data-key="${escapeHtml(coil._uniqueKey)}" ${isChecked ? 'checked' : ''}>
         </td>
         <td class="text-center text-muted small">${idx + 1}</td>
         <td>
-          <div class="fw-bold text-dark">${coil['Mã vật tư'] || '---'}</div>
-          <small class="text-muted text-truncate d-inline-block" style="max-width: 260px;" title="${coil['Tên vật tư'] || ''}">${coil['Tên vật tư'] || ''}</small>
+          <div class="fw-bold text-dark">${escapeHtml(coil['Mã vật tư'] || '---')}</div>
+          <small class="text-muted text-truncate d-inline-block" style="max-width: 260px;" title="${escapeHtml(coil['Tên vật tư'] || '')}">${escapeHtml(coil['Tên vật tư'] || '')}</small>
         </td>
         <td>
-          <span class="badge bg-secondary font-monospace">${coil['Batch'] || '---'}</span>
+          <span class="badge bg-secondary font-monospace">${escapeHtml(coil['Batch'] || '---')}</span>
         </td>
         <td>
-          <span class="fw-bold text-primary font-monospace">${coil['Cuộn ID'] || '---'}</span>
+          <span class="fw-bold text-primary font-monospace">${escapeHtml(coil['Cuộn ID'] || '---')}</span>
         </td>
-        <td class="text-end fw-bold text-dark">${weightText}</td>
+        <td class="text-end fw-bold text-dark">${escapeHtml(weightText)}</td>
         <td class="text-center">${storageAgeHtml}</td>
         <td class="text-center">
-          <span class="badge bg-dark">${coil['Vị trí'] || '---'}</span>
+          <span class="badge bg-dark">${escapeHtml(coil['Vị trí'] || '---')}</span>
         </td>
       `;
 
@@ -602,45 +613,45 @@ if (typeof document !== 'undefined') {
           <div class="label-header">
             <div class="label-logo-area">
               ${showLogo ? '<img src="/assets/images/logos/Logo-DDC.png" alt="DDC Logo" class="label-logo-img">' : ''}
-              <span class="label-company-title">${coil._warehouseName || 'KHO VẬT TƯ - ĐẠI DŨNG'}</span>
+              <span class="label-company-title">${escapeHtml(coil._warehouseName || 'KHO VẬT TƯ - ĐẠI DŨNG')}</span>
             </div>
-            <div class="label-rack-pill">${coil['Vị trí'] || '---'}</div>
+            <div class="label-rack-pill">${escapeHtml(coil['Vị trí'] || '---')}</div>
           </div>
 
           <!-- Material Name -->
-          <div class="label-material-title">${coil['Tên vật tư'] || 'THÉP CUỘN MẠ / PHÔI XÀ GỒ'}</div>
+          <div class="label-material-title">${escapeHtml(coil['Tên vật tư'] || 'THÉP CUỘN MẠ / PHÔI XÀ GỒ')}</div>
 
           <!-- Coil Data Grid -->
           <div class="label-data-grid">
             <div class="label-data-item">
               <span class="label-data-label">Mã vật tư</span>
-              <span class="label-data-value">${coil['Mã vật tư'] || '---'}</span>
+              <span class="label-data-value">${escapeHtml(coil['Mã vật tư'] || '---')}</span>
             </div>
             <div class="label-data-item">
               <span class="label-data-label">Cuộn ID</span>
-              <span class="label-data-value">${coil['Cuộn ID'] || '---'}</span>
+              <span class="label-data-value">${escapeHtml(coil['Cuộn ID'] || '---')}</span>
             </div>
             <div class="label-data-item">
               <span class="label-data-label">Số Lô / Batch</span>
-              <span class="label-data-value">${coil['Batch'] || '---'}</span>
+              <span class="label-data-value">${escapeHtml(coil['Batch'] || '---')}</span>
             </div>
             <div class="label-data-item">
               <span class="label-data-label">Khối lượng</span>
-              <span class="label-data-value highlight-weight">${weightDisplay}</span>
+              <span class="label-data-value highlight-weight">${escapeHtml(weightDisplay)}</span>
             </div>
             <div class="label-data-item">
               <span class="label-data-label">Ngày nhập kho</span>
-              <span class="label-data-value">${coil['Ngày nhập'] || '---'}</span>
+              <span class="label-data-value">${escapeHtml(coil['Ngày nhập'] || '---')}</span>
             </div>
             ${showProject && coil['Tên công trình'] ? `
               <div class="label-data-item">
                 <span class="label-data-label">Công trình</span>
-                <span class="label-data-value text-truncate" title="${coil['Tên công trình']}">${coil['Tên công trình']}</span>
+                <span class="label-data-value text-truncate" title="${escapeHtml(coil['Tên công trình'])}">${escapeHtml(coil['Tên công trình'])}</span>
               </div>
             ` : `
               <div class="label-data-item">
                 <span class="label-data-label">Vị trí kệ</span>
-                <span class="label-data-value">${coil['Vị trí'] || '---'}</span>
+                <span class="label-data-value">${escapeHtml(coil['Vị trí'] || '---')}</span>
               </div>
             `}
           </div>

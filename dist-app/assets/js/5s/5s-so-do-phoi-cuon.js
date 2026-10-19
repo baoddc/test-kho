@@ -9,6 +9,17 @@
 (function () {
   'use strict';
 
+  // Escape dữ liệu từ DB trước khi chèn vào innerHTML (chống XSS)
+  function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
   // Sơ đồ kệ tiêu chuẩn: A14 -> A01 và B14 -> B01
   const SHELVES_A = Array.from({ length: 14 }, (_, i) => {
     const num = 14 - i;
@@ -443,8 +454,8 @@
             ${topRolls.map(r => `
               <div class="p-1.5 rounded bg-slate-50 border border-slate-100 text-[11px] flex justify-between items-center gap-2">
                 <div class="min-w-0">
-                  <div class="font-bold text-slate-900 truncate">${r.cuonId}</div>
-                  <div class="text-slate-500 truncate text-[10px]" title="${r.maVatTu} - ${r.tenVatTu}">${r.maVatTu}</div>
+                  <div class="font-bold text-slate-900 truncate">${escapeHtml(r.cuonId)}</div>
+                  <div class="text-slate-500 truncate text-[10px]" title="${escapeHtml(r.maVatTu)} - ${escapeHtml(r.tenVatTu)}">${escapeHtml(r.maVatTu)}</div>
                 </div>
                 <div class="text-end flex-shrink-0">
                   <span class="font-semibold text-red-600">${formatNumber(r.weight)} Kg</span>
@@ -519,8 +530,8 @@
             ${topRolls.map(r => `
               <div class="p-1 rounded bg-amber-50 border border-amber-200 text-[11px] flex justify-between items-center gap-2">
                 <div class="min-w-0">
-                  <div class="font-bold text-slate-900 truncate">${r.cuonId}</div>
-                  <div class="text-slate-500 truncate text-[10px]">${r.maVatTu}</div>
+                  <div class="font-bold text-slate-900 truncate">${escapeHtml(r.cuonId)}</div>
+                  <div class="text-slate-500 truncate text-[10px]">${escapeHtml(r.maVatTu)}</div>
                 </div>
                 <div class="text-end flex-shrink-0">
                   <span class="font-semibold text-amber-800">${formatNumber(r.weight)} Kg</span>
@@ -712,10 +723,10 @@
         <tr>
           <td class="text-center text-slate-500 font-medium">${idx + 1}</td>
           <td>${whBadge}</td>
-          <td class="font-bold text-slate-900">${roll.cuonId}</td>
-          <td class="font-semibold text-slate-700">${roll.maVatTu}</td>
-          <td class="text-slate-600 truncate max-w-[200px]" title="${roll.tenVatTu}">${roll.tenVatTu}</td>
-          <td><span class="badge bg-slate-100 text-slate-700 border border-slate-200">${roll.batch || '--'}</span></td>
+          <td class="font-bold text-slate-900">${escapeHtml(roll.cuonId)}</td>
+          <td class="font-semibold text-slate-700">${escapeHtml(roll.maVatTu)}</td>
+          <td class="text-slate-600 truncate max-w-[200px]" title="${escapeHtml(roll.tenVatTu)}">${escapeHtml(roll.tenVatTu)}</td>
+          <td><span class="badge bg-slate-100 text-slate-700 border border-slate-200">${escapeHtml(roll.batch || '--')}</span></td>
           <td class="text-end font-bold text-red-600">${formatNumber(roll.weight)}</td>
           <td class="text-center text-slate-600">${formatDate(roll.importDate)}</td>
           <td class="text-center">
@@ -723,8 +734,8 @@
               ${roll.storageDays} ngày
             </span>
           </td>
-          <td class="text-slate-600 truncate max-w-[150px]" title="${roll.projectCode} - ${roll.projectName}">
-            ${roll.projectCode || '--'}
+          <td class="text-slate-600 truncate max-w-[150px]" title="${escapeHtml(roll.projectCode)} - ${escapeHtml(roll.projectName)}">
+            ${escapeHtml(roll.projectCode || '--')}
           </td>
         </tr>
       `;

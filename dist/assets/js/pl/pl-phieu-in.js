@@ -27,6 +27,17 @@ const XLSX_PHIEU_IN_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/ex
 const ROWS_PER_PAGE = 100; // Số dòng hiển thị mỗi trang
 // ============================================================
 
+// Escape dữ liệu từ DB trước khi chèn vào innerHTML (chống XSS)
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 // Apps Script URL cho việc ghi dữ liệu vào Google Sheets
 // Cần tạo Google Apps Script để write vào các ô cụ thể
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxyBbVr8UmPEX9bCdO-65N4GxnqJQ0MZJZdg15C7sXzAM7pkMFWxXKgc_k8O4rDZObEcQ/exec'; // Điền URL Apps Script sau khi deploy
@@ -204,13 +215,13 @@ function renderDropdownItems(container, items) {
   let html = '';
   items.forEach(item => {
     const displayName = typeof item === 'string' ? item : item.name;
-    const itemCode = item.code ? `<span class="item-code">${item.code}</span>` : '';
-    const itemUnit = item.unit ? `<span class="item-unit">${item.unit}</span>` : '';
+    const itemCode = item.code ? `<span class="item-code">${escapeHtml(item.code)}</span>` : '';
+    const itemUnit = item.unit ? `<span class="item-unit">${escapeHtml(item.unit)}</span>` : '';
 
     html += `
-      <div class="custom-dropdown-item" data-value="${displayName}" data-unit="${item.unit || ''}">
+      <div class="custom-dropdown-item" data-value="${escapeHtml(displayName)}" data-unit="${escapeHtml(item.unit || '')}">
         <div class="item-info">
-          <span class="item-name">${displayName}</span>
+          <span class="item-name">${escapeHtml(displayName)}</span>
           ${itemCode}
         </div>
         ${itemUnit}
@@ -622,13 +633,13 @@ function renderPhieuSearchResults(results) {
     const itemCountText = itemCount > 0 ? ` (${itemCount} mặt hàng)` : '';
 
     html += `
-      <div class="phieu-search-item" data-index="${index}" data-so-phieu="${phieu.soPhieu}">
-        <div class="phieu-so-phieu">${phieu.soPhieu}${itemCountText}</div>
+      <div class="phieu-search-item" data-index="${index}" data-so-phieu="${escapeHtml(phieu.soPhieu)}">
+        <div class="phieu-so-phieu">${escapeHtml(phieu.soPhieu)}${itemCountText}</div>
         <div class="phieu-info">
-          ${phieu.soXe ? 'Xe: ' + phieu.soXe + ' | ' : ''}
-          ${phieu.benNhan ? 'Bên nhận: ' + phieu.benNhan + ' | ' : ''}
-          ${phieu.loaiXuat ? 'Loại: ' + phieu.loaiXuat : ''}
-          ${phieu.ngay ? ' | Ngày: ' + phieu.ngay : ''}
+          ${phieu.soXe ? 'Xe: ' + escapeHtml(phieu.soXe) + ' | ' : ''}
+          ${phieu.benNhan ? 'Bên nhận: ' + escapeHtml(phieu.benNhan) + ' | ' : ''}
+          ${phieu.loaiXuat ? 'Loại: ' + escapeHtml(phieu.loaiXuat) : ''}
+          ${phieu.ngay ? ' | Ngày: ' + escapeHtml(phieu.ngay) : ''}
         </div>
       </div>
     `;
@@ -2403,17 +2414,17 @@ function fillFormBySoPhieu(soPhieuValue) {
         newRow.innerHTML = `
           <div class="col-md-4">
             <div class="form-group">
-              <input type="text" class="form-control mat-hang read-only-field" name="matHang[]" required value="${matHang}" readonly>
+              <input type="text" class="form-control mat-hang read-only-field" name="matHang[]" required value="${escapeHtml(matHang)}" readonly>
             </div>
           </div>
           <div class="col-md-3">
             <div class="form-group">
-              <input type="text" class="form-control dvt read-only-field" name="dvt[]" required value="${dvt}" readonly>
+              <input type="text" class="form-control dvt read-only-field" name="dvt[]" required value="${escapeHtml(dvt)}" readonly>
             </div>
           </div>
           <div class="col-md-3">
             <div class="form-group">
-              <input type="number" class="form-control trongLuong read-only-field" name="trongLuong[]" step="0.1" required value="${trongLuong}" readonly>
+              <input type="number" class="form-control trongLuong read-only-field" name="trongLuong[]" step="0.1" required value="${escapeHtml(trongLuong)}" readonly>
             </div>
           </div>
           <div class="col-md-2 d-flex align-items-end">
@@ -2550,7 +2561,7 @@ function renderTableData(data) {
         }
       }
 
-      html += `<td>${cellValue}</td>`;
+      html += `<td>${escapeHtml(cellValue)}</td>`;
     }
 
     tr.innerHTML = html;
@@ -2804,7 +2815,7 @@ function openEditDataModal() {
       <div class="col-md-6">
         <div class="mb-3">
           <label for="edit_col_${colIdx}" class="form-label">${header || `Cột ${colIdx + 1}`} ${isOptional ? '' : '<span class="text-danger">*</span>'}</label>
-          <input type="${inputType}" class="form-control" id="edit_col_${colIdx}" name="col_${colIdx}" value="${inputValue}" ${inputType === 'number' ? 'step="0.01"' : ''} ${isOptional ? '' : 'required'}>
+          <input type="${inputType}" class="form-control" id="edit_col_${colIdx}" name="col_${colIdx}" value="${escapeHtml(inputValue)}" ${inputType === 'number' ? 'step="0.01"' : ''} ${isOptional ? '' : 'required'}>
         </div>
       </div>
     `;
@@ -2851,10 +2862,10 @@ function addEditHangHoaRow(matHang = '', dvt = '', trongLuong = '') {
       <!-- Custom dropdown will be inserted here -->
     </div>
     <div class="col-md-3">
-      <input type="text" class="form-control" placeholder="ĐVT" name="dvt[]" value="${dvt}" required>
+      <input type="text" class="form-control" placeholder="ĐVT" name="dvt[]" value="${escapeHtml(dvt)}" required>
     </div>
     <div class="col-md-3">
-      <input type="number" class="form-control" placeholder="Trọng lượng" name="trongLuong[]" step="0.01" value="${trongLuong}" required>
+      <input type="number" class="form-control" placeholder="Trọng lượng" name="trongLuong[]" step="0.01" value="${escapeHtml(trongLuong)}" required>
     </div>
     <div class="col-md-2">
       <button type="button" class="btn btn-danger btn-remove-edit-row">Xóa</button>
@@ -3471,21 +3482,21 @@ function showPreviewModal(formData) {
       <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
         <tr>
           <td style="padding: 8px; border: 1px solid #ddd;"><strong>Số phiếu:</strong></td>
-          <td style="padding: 8px; border: 1px solid #ddd;">${formData.soPhieu}</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">${escapeHtml(formData.soPhieu)}</td>
           <td style="padding: 8px; border: 1px solid #ddd;"><strong>Số xe:</strong></td>
-          <td style="padding: 8px; border: 1px solid #ddd;">${formData.soXe}</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">${escapeHtml(formData.soXe)}</td>
         </tr>
         <tr>
           <td style="padding: 8px; border: 1px solid #ddd;"><strong>Ngày:</strong></td>
-          <td style="padding: 8px; border: 1px solid #ddd;">${formData.ngay}</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">${escapeHtml(formData.ngay)}</td>
           <td style="padding: 8px; border: 1px solid #ddd;"><strong>Bên nhận/Xưởng/Đội:</strong></td>
-          <td style="padding: 8px; border: 1px solid #ddd;">${formData.benNhan}</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">${escapeHtml(formData.benNhan)}</td>
         </tr>
         <tr>
           <td style="padding: 8px; border: 1px solid #ddd;"><strong>Loại xuất:</strong></td>
-          <td style="padding: 8px; border: 1px solid #ddd;">${formData.loaiXuat || ''}</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">${escapeHtml(formData.loaiXuat || '')}</td>
           <td style="padding: 8px; border: 1px solid #ddd;"><strong>Bên giao:</strong></td>
-          <td style="padding: 8px; border: 1px solid #ddd;">${formData.benGiao || ''}</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">${escapeHtml(formData.benGiao || '')}</td>
         </tr>
       </table>
       
@@ -3506,8 +3517,8 @@ function showPreviewModal(formData) {
     html += `
           <tr>
             <td style="padding: 10px; border: 1px solid #ddd;">${index + 1}</td>
-            <td style="padding: 10px; border: 1px solid #ddd;">${item.matHang}</td>
-            <td style="padding: 10px; border: 1px solid #ddd;">${item.dvt}</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${escapeHtml(item.matHang)}</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${escapeHtml(item.dvt)}</td>
             <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">${item.trongLuong ? (parseVietnameseFloat(item.trongLuong) || 0).toLocaleString('vi-VN', { minimumFractionDigits: 0, maximumFractionDigits: 3 }) : ''}</td>
           </tr>
     `;

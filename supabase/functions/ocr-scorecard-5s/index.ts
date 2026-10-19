@@ -51,7 +51,15 @@ async function verifyCaller(req: Request): Promise<boolean> {
     });
     if (!res.ok) return false;
     const user = await res.json();
-    return !!user?.id;
+    if (!user?.id) return false;
+
+    // Chỉ admin được chấm điểm 5S (khớp checkPermission() trong hse.js và RLS is_admin() của hse_5s_scores)
+    const adminRes = await fetch(`${supabaseUrl}/rest/v1/rpc/is_admin`, {
+      method: "POST",
+      headers: { apikey: anonKey, Authorization: `Bearer ${match[1].trim()}`, "Content-Type": "application/json" },
+      body: "{}",
+    });
+    return adminRes.ok && (await adminRes.json()) === true;
   } catch (_) {
     return false;
   }
@@ -105,7 +113,7 @@ serve(async (req: Request) => {
     return jsonError("Origin không được phép.", 403, corsHeaders);
   }
   if (!(await verifyCaller(req))) {
-    return jsonError("Phiên đăng nhập không hợp lệ hoặc đã hết hạn.", 401, corsHeaders);
+    return jsonError("Phiên đăng nhập không hợp lệ, đã hết hạn hoặc không phải quản trị viên.", 401, corsHeaders);
   }
 
   try {

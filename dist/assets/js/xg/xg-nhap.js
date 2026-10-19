@@ -31,6 +31,17 @@ const COLUMN_HEADERS = [
 // Cột ẩn khỏi bảng hiển thị (nhưng vẫn dùng trong form)
 const HIDDEN_COLUMNS = [];
 
+// Escape dữ liệu từ DB/URL/QR trước khi chèn vào innerHTML (chống XSS)
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 // ==================== PAGINATION CONFIG ====================
 const ROWS_PER_PAGE = 100;
 // ============================================================
@@ -1460,11 +1471,11 @@ function addRollRow(cuonId = '', kgValue = '', viTri = '') {
 
   tr.innerHTML = `
     <td class="text-center roll-stt">${rollCount}</td>
-    <td><input type="text" class="form-control form-control-sm roll-cuon-id" readonly placeholder="Cuộn ID" value="${cuonId}"></td>
-    <td><input type="number" class="form-control form-control-sm roll-kg" step="any" min="0" inputMode="decimal" required placeholder="Nhập số kg" value="${kgValue}"></td>
+    <td><input type="text" class="form-control form-control-sm roll-cuon-id" readonly placeholder="Cuộn ID" value="${escapeHtml(cuonId)}"></td>
+    <td><input type="number" class="form-control form-control-sm roll-kg" step="any" min="0" inputMode="decimal" required placeholder="Nhập số kg" value="${escapeHtml(kgValue)}"></td>
     <td>
       <div class="input-group input-group-sm">
-        <input type="text" class="form-control form-control-sm roll-vi-tri" required placeholder="Vị trí" value="${viTri}">
+        <input type="text" class="form-control form-control-sm roll-vi-tri" required placeholder="Vị trí" value="${escapeHtml(viTri)}">
         <button type="button" class="btn btn-outline-secondary btn-scan-row-loc" title="Quét mã QR vị trí"><i class="bi bi-qr-code-scan"></i></button>
       </div>
     </td>
@@ -1529,11 +1540,11 @@ function addEditRollRow(cuonId = '', kgValue = '', viTri = '') {
   tr.dataset.rollId = editRollCount;
   tr.innerHTML = `
     <td class="text-center edit-roll-stt">${editRollCount}</td>
-    <td><input type="text" class="form-control form-control-sm edit-roll-cuon-id" readonly placeholder="Cuộn ID" value="${cuonId}"></td>
-    <td><input type="number" class="form-control form-control-sm edit-roll-kg" step="any" min="0" inputMode="decimal" required placeholder="Nhập số kg" value="${kgValue}"></td>
+    <td><input type="text" class="form-control form-control-sm edit-roll-cuon-id" readonly placeholder="Cuộn ID" value="${escapeHtml(cuonId)}"></td>
+    <td><input type="number" class="form-control form-control-sm edit-roll-kg" step="any" min="0" inputMode="decimal" required placeholder="Nhập số kg" value="${escapeHtml(kgValue)}"></td>
     <td>
       <div class="input-group input-group-sm">
-        <input type="text" class="form-control form-control-sm edit-roll-vi-tri" required placeholder="Vị trí" value="${viTri}">
+        <input type="text" class="form-control form-control-sm edit-roll-vi-tri" required placeholder="Vị trí" value="${escapeHtml(viTri)}">
         <button type="button" class="btn btn-outline-secondary btn-scan-edit-row-loc" title="Quét mã QR vị trí"><i class="bi bi-qr-code-scan"></i></button>
       </div>
     </td>

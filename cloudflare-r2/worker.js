@@ -11,6 +11,7 @@
  *  - ALLOWED_ORIGINS (vars, phân tách dấu phẩy): giới hạn CORS. Mặc định chỉ baoddc.com + localhost.
  *  - Chỉ nhận ảnh (jpeg/png/webp/gif/heic), tối đa 15MB; file trả về luôn kèm nosniff + CSP sandbox.
  *  - Chỉ cho phép xóa key nằm trong tiền tố "hse/".
+ *  - (2026-10-19) Upload/delete bằng token Supabase chỉ dành cho admin (RPC is_admin).
  */
 
 const DEFAULT_ALLOWED_ORIGINS = [
@@ -142,6 +143,20 @@ async function verifySupabaseUser(request, env) {
         if (!res.ok) return { ok: false, reason: 'Phiên đăng nhập không hợp lệ hoặc đã hết hạn.' };
         const user = await res.json();
         if (!user || !user.id) return { ok: false, reason: 'Phiên đăng nhập không hợp lệ.' };
+
+        // Chỉ quản trị viên được tải lên / xóa ảnh HSE (khớp checkPermission() trong hse.js)
+        const adminRes = await fetch(supabaseUrl.replace(/\/+$/, '') + '/rest/v1/rpc/is_admin', {
+            method: 'POST',
+            headers: {
+                'apikey': anonKey,
+                'Authorization': 'Bearer ' + token,
+                'Content-Type': 'application/json'
+            },
+            body: '{}'
+        });
+        if (!adminRes.ok || (await adminRes.json()) !== true) {
+            return { ok: false, status: 403, reason: 'Chỉ quản trị viên mới được tải lên hoặc xóa ảnh HSE.' };
+        }
         return { ok: true, user };
     } catch (e) {
         return { ok: false, reason: 'Lỗi kết nối xác thực đến Supabase.' };
@@ -177,7 +192,7 @@ export default {
             if (isUpload || isDelete) {
                 const auth = await verifySupabaseUser(request, env);
                 if (!auth.ok) {
-                    return jsonResponse({ status: 'error', message: auth.reason }, 401, cors);
+                    return jsonResponse({ status: 'error', message: auth.reason }, auth.status || 401, cors);
                 }
             }
 

@@ -3,6 +3,17 @@
    Xử lý tổng hợp tồn kho Xà gồ & Tole theo mã kệ A01-A14, B01-B14 & Grating
 ================================================================================ */
 
+// Escape dữ liệu từ DB trước khi chèn vào innerHTML (chống XSS)
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 /* Global Modal Opener - Available immediately */
 window.openCoilScanModal = function () {
   const modalEl = document.getElementById('coilScanModal');
@@ -325,16 +336,16 @@ function initViTriTonPage() {
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td class="text-center fw-bold cell-muted">${index + 1}</td>
-        <td class="cell-mat-code">${item['Mã vật tư'] || ''}</td>
-        <td>${item['Tên vật tư'] || ''}</td>
-        <td class="fw-bold">${item['Cuộn ID'] || ''}</td>
-        <td>${item['Batch'] || ''}</td>
-        <td class="text-end cell-quantity">${formatKg(item['Số lượng (Kg)'])}</td>
-        <td>${formatDate(item['Ngày nhập'])}</td>
+        <td class="cell-mat-code">${escapeHtml(item['Mã vật tư'] || '')}</td>
+        <td>${escapeHtml(item['Tên vật tư'] || '')}</td>
+        <td class="fw-bold">${escapeHtml(item['Cuộn ID'] || '')}</td>
+        <td>${escapeHtml(item['Batch'] || '')}</td>
+        <td class="text-end cell-quantity">${escapeHtml(formatKg(item['Số lượng (Kg)']))}</td>
+        <td>${escapeHtml(formatDate(item['Ngày nhập']))}</td>
         <td>${ageBadge}</td>
-        <td>${item['Mã công trình'] || ''}</td>
-        <td>${item['Tên công trình'] || ''}</td>
-        <td class="small cell-muted">${item['Ghi chú'] || ''}</td>
+        <td>${escapeHtml(item['Mã công trình'] || '')}</td>
+        <td>${escapeHtml(item['Tên công trình'] || '')}</td>
+        <td class="small cell-muted">${escapeHtml(item['Ghi chú'] || '')}</td>
       `;
       tbody.appendChild(tr);
     });
@@ -468,23 +479,23 @@ function initViTriTonPage() {
       tr.innerHTML = `
         <td class="text-center fw-bold text-secondary">${index + 1}</td>
         <td class="text-center">
-          <button type="button" class="btn btn-sm rack-cell-btn btn-table-rack" data-rack="${rowRack}">
-            <i class="bi bi-geo-alt-fill me-1"></i>${rowRack || 'Chưa gán'}
+          <button type="button" class="btn btn-sm rack-cell-btn btn-table-rack" data-rack="${escapeHtml(rowRack)}">
+            <i class="bi bi-geo-alt-fill me-1"></i>${escapeHtml(rowRack || 'Chưa gán')}
           </button>
         </td>
         <td class="fw-bold">
-          ${item['Cuộn ID'] || item['Mã vật tư'] || ''}
+          ${escapeHtml(item['Cuộn ID'] || item['Mã vật tư'] || '')}
           ${isMatchedRoll ? `<span class="badge badge-scanned-pill ms-2"><i class="bi bi-geo-alt-fill me-1"></i>Cuộn Vừa Quét</span>` : ''}
         </td>
         <td>
-          ${item['Batch'] || ''}
+          ${escapeHtml(item['Batch'] || '')}
           ${isSameBatch && !isMatchedRoll ? `<span class="badge badge-correct-batch ms-2"><i class="bi bi-check2"></i> Đúng Batch</span>` : ''}
         </td>
-        <td class="text-end fw-semibold text-warning">${formatKg(rollKg)}</td>
-        <td>${formatDate(item['Ngày nhập'])}</td>
+        <td class="text-end fw-semibold text-warning">${escapeHtml(formatKg(rollKg))}</td>
+        <td>${escapeHtml(formatDate(item['Ngày nhập']))}</td>
         <td class="text-center">${ageBadge}</td>
-        <td class="small text-truncate" style="max-width: 100px;">${item['Mã công trình'] || '-'}</td>
-        <td class="small text-truncate" style="max-width: 180px;" title="${item['Tên công trình'] || ''}">${item['Tên công trình'] || '-'}</td>
+        <td class="small text-truncate" style="max-width: 100px;">${escapeHtml(item['Mã công trình'] || '-')}</td>
+        <td class="small text-truncate" style="max-width: 180px;" title="${escapeHtml(item['Tên công trình'] || '')}">${escapeHtml(item['Tên công trình'] || '-')}</td>
       `;
 
       popupRollsTableBody.appendChild(tr);
@@ -540,8 +551,8 @@ function initViTriTonPage() {
         showCoilScanAlert(
           '',
           'info',
-          `<div><i class="bi bi-info-circle me-1"></i> Mã <strong>"${trimmed}"</strong> là mã vị trí kệ <strong>${rackCheck}</strong>.</div>
-           <div class="mt-2"><button type="button" class="btn btn-sm btn-primary" id="btnSwitchToScannedRack"><i class="bi bi-arrow-right-circle me-1"></i> Chuyển sang Kệ ${rackCheck}</button></div>`
+          `<div><i class="bi bi-info-circle me-1"></i> Mã <strong>"${escapeHtml(trimmed)}"</strong> là mã vị trí kệ <strong>${escapeHtml(rackCheck)}</strong>.</div>
+           <div class="mt-2"><button type="button" class="btn btn-sm btn-primary" id="btnSwitchToScannedRack"><i class="bi bi-arrow-right-circle me-1"></i> Chuyển sang Kệ ${escapeHtml(rackCheck)}</button></div>`
         );
         const btnSwitch = document.getElementById('btnSwitchToScannedRack');
         if (btnSwitch) {
@@ -608,7 +619,7 @@ function initViTriTonPage() {
         }
         if (bannerTextTitle) bannerTextTitle.textContent = 'Cuộn này đang nằm tại:';
         if (bannerRackHighlight) {
-          bannerRackHighlight.innerHTML = `<i class="bi bi-geo-alt-fill me-1"></i> KỆ ${rollRack}`;
+          bannerRackHighlight.innerHTML = `<i class="bi bi-geo-alt-fill me-1"></i> KỆ ${escapeHtml(rollRack)}`;
         }
         if (btnBannerSwitchRack && lblBannerSwitchRack) {
           btnBannerSwitchRack.style.display = 'inline-flex';
@@ -632,7 +643,7 @@ function initViTriTonPage() {
         }
         if (bannerTextTitle) bannerTextTitle.textContent = 'Batch này đang nằm tại:';
         if (bannerRackHighlight) {
-          bannerRackHighlight.innerHTML = `<i class="bi bi-geo-alt-fill me-1"></i> KỆ ${distinctRacks.join(', KỆ ')}`;
+          bannerRackHighlight.innerHTML = `<i class="bi bi-geo-alt-fill me-1"></i> KỆ ${escapeHtml(distinctRacks.join(', KỆ '))}`;
         }
         if (btnBannerSwitchRack && lblBannerSwitchRack) {
           btnBannerSwitchRack.style.display = 'inline-flex';

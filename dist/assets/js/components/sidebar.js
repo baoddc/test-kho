@@ -1389,7 +1389,24 @@
     }
   }
 
+  // BẢO MẬT: Tab chỉ được nạp URL cùng origin. Chặn ?openTab=javascript:... (XSS)
+  // và domain ngoài (nhúng trang giả mạo vào khung ứng dụng).
+  function isSafeTabUrl(url) {
+    if (!url) return false;
+    try {
+      const u = new URL(String(url), window.location.origin + '/');
+      return u.protocol === window.location.protocol && u.origin === window.location.origin;
+    } catch (e) {
+      return false;
+    }
+  }
+
   function openTab(url, title, updateHistory = true) {
+    if (!isSafeTabUrl(url)) {
+      console.warn('[Sidebar] Chặn mở tab với URL không hợp lệ:', url);
+      return;
+    }
+
     // Resolve legacy URLs to new canonical paths
     const LEGACY_URL_EXACT = {
       '/pages/in-tem-vitri.html': '/pages/tem-nhan-kiem-ke/in-tem-vitri.html',
@@ -1958,7 +1975,9 @@
     const urlParams = new URLSearchParams(window.location.search);
     const openTabTarget = urlParams.get('openTab');
     if (openTabTarget) {
-      const targetUrl = decodeURIComponent(openTabTarget);
+      let targetUrl = '';
+      try { targetUrl = decodeURIComponent(openTabTarget); } catch (e) { return; }
+      if (!isSafeTabUrl(targetUrl)) return;
       const targetTitle = getTitleForUrl(targetUrl);
       openTab(targetUrl, targetTitle, false);
       const baseTitle = 'Kho Phôi cuộn - DDC';

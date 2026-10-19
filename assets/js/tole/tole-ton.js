@@ -27,6 +27,17 @@ const COLUMN_HEADERS = [
 // Cột ẩn khỏi bảng hiển thị
 const HIDDEN_COLUMNS = ['id'];
 
+// Escape dữ liệu từ DB trước khi chèn vào innerHTML (chống XSS)
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 const displayColIndexes = COLUMN_HEADERS
   .map((col, i) => ({ col, i }))
   .filter(({ col }) => !HIDDEN_COLUMNS.includes(col))
@@ -1149,8 +1160,8 @@ function showRowDetail(row) {
     if (header) {
       const isLongText = (value && String(value).length > 50);
       const inputHtml = isLongText 
-        ? `<textarea class="form-control detail-input" rows="2">${value || ''}</textarea>`
-        : `<input type="text" class="form-control detail-input" value="${value || ''}" placeholder="---">`;
+        ? `<textarea class="form-control detail-input" rows="2">${escapeHtml(value || '')}</textarea>`
+        : `<input type="text" class="form-control detail-input" value="${escapeHtml(value || '')}" placeholder="---">`;
 
       html += `
         <div class="detail-item ${isLongText ? 'grid-col-2' : ''}">

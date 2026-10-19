@@ -40,6 +40,17 @@ let error = null;
 
 const appDiv = document.getElementById('app');
 
+// Escape dữ liệu từ DB trước khi chèn vào innerHTML (chống XSS)
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 function getScrapIcon(name) {
   const lower = name.toLowerCase();
   if (lower.includes('sắt') || lower.includes('thép')) return 'weight';
@@ -489,7 +500,7 @@ function render() {
           <i data-lucide="${icon}" class="h-4 w-4 ${palette.text}"></i>
         </div>
         <div class="flex flex-col">
-          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">${key}</span>
+          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">${escapeHtml(key)}</span>
           <span class="text-lg font-black text-slate-900 animate-pop">
             ${amount.toLocaleString('vi-VN')} kg
           </span>
@@ -524,7 +535,7 @@ function render() {
               <div class="relative w-full md:w-fit">
                 <select id="period-select" class="w-full md:w-auto bg-white border border-slate-200 shadow-sm h-12 rounded-xl pl-4 pr-10 appearance-none focus:ring-2 focus:ring-blue-600/20 outline-none cursor-pointer font-medium text-slate-700">
                   <option value="All" ${selectedPeriod === 'All' ? 'selected' : ''}>Tất cả các kì</option>
-                  ${periods.map(p => `<option value="${p}" ${selectedPeriod === p ? 'selected' : ''}>${p}</option>`).join('')}
+                  ${periods.map(p => `<option value="${escapeHtml(p)}" ${selectedPeriod === p ? 'selected' : ''}>${escapeHtml(p)}</option>`).join('')}
                 </select>
                 <i data-lucide="chevron-down" class="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none"></i>
               </div>
@@ -558,7 +569,7 @@ function render() {
                         <div class="rounded-xl ${colors.iconBg} p-2.5 shadow-sm">
                           <i data-lucide="factory" class="h-5 w-5 ${colors.text}"></i>
                         </div>
-                        <h3 class="text-xl font-bold ${colors.text} m-0">${workshop.name}</h3>
+                        <h3 class="text-xl font-bold ${colors.text} m-0">${escapeHtml(workshop.name)}</h3>
                       </div>
                       <div class="p-1 rounded-full group-hover:bg-black/5 transition-colors">
                         <i data-lucide="chevron-down" id="workshop-chevron-${index}" class="h-5 w-5 ${colors.text} opacity-70 chevron-icon"></i>
@@ -582,7 +593,7 @@ function render() {
                                   <div class="bg-white/80 p-1.5 rounded-md shadow-sm">
                                     <i data-lucide="${scrapIcon}" class="h-4 w-4 ${colors.text}"></i>
                                   </div>
-                                  <span class="text-sm font-bold ${colors.text}">${scrap.type}</span>
+                                  <span class="text-sm font-bold ${colors.text}">${escapeHtml(scrap.type)}</span>
                                 </div>
                                 <div class="flex items-center gap-2">
                                   <div class="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-bold transition-colors ${colors.badge}">
@@ -599,12 +610,12 @@ function render() {
                                       <div class="flex flex-col gap-1.5">
                                         <span class="font-semibold text-slate-700 flex items-center">
                                           <i data-lucide="calendar" class="h-3.5 w-3.5 mr-1.5 text-slate-400"></i>
-                                          ${detail.date}
+                                          ${escapeHtml(detail.date)}
                                         </span>
                                         ${detail.notes ? `
                                           <span class="italic text-slate-500 flex items-start">
                                             <i data-lucide="file-text" class="h-3.5 w-3.5 mr-1.5 mt-0.5 text-slate-400 shrink-0"></i>
-                                            <span>${detail.notes}</span>
+                                            <span>${escapeHtml(detail.notes)}</span>
                                           </span>
                                         ` : ''}
                                       </div>
@@ -656,7 +667,7 @@ window.showGroupDetail = function (groupName) {
     .sort((a, b) => b[1] - a[1])
     .map(([type, amount]) => `
       <div class="modal-item">
-        <span class="text-sm font-bold text-slate-700">${type}</span>
+        <span class="text-sm font-bold text-slate-700">${escapeHtml(type)}</span>
         <span class="text-sm font-black text-blue-600">${amount.toLocaleString('vi-VN')} kg</span>
       </div>
     `).join('');
@@ -669,7 +680,7 @@ window.showGroupDetail = function (groupName) {
             <div class="bg-blue-100 p-2 rounded-lg">
               <i data-lucide="${groupName === 'Loại 1' ? 'award' : 'medal'}" class="h-5 w-5 text-blue-600"></i>
             </div>
-            <h2 class="text-xl font-bold text-slate-900">Chi tiết ${groupName}</h2>
+            <h2 class="text-xl font-bold text-slate-900">Chi tiết ${escapeHtml(groupName)}</h2>
           </div>
           <button onclick="closeModal()" class="p-2 hover:bg-slate-100 rounded-full transition-colors">
             <i data-lucide="x" class="h-5 w-5 text-slate-400"></i>

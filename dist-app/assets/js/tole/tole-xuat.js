@@ -32,6 +32,17 @@ const COLUMN_HEADERS = [
 // Cột ẩn khỏi bảng hiển thị
 const HIDDEN_COLUMNS = [];
 
+// Escape dữ liệu từ DB/OCR trước khi chèn vào innerHTML (chống XSS)
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 // ==================== PAGINATION CONFIG ====================
 const ROWS_PER_PAGE = 100;
 // ============================================================
@@ -1288,7 +1299,7 @@ function generateItemCardHTML(item, index, totalItems) {
         <tr data-roll-id="${r.id}">
           <td class="text-center">${rIdx + 1}</td>
           <td>
-            <input type="text" class="form-control form-control-sm item-roll-cuon-id font-monospace bg-light" value="${r.cuonId || ''}" placeholder="Cuộn ID" readonly data-item-idx="${index}" data-roll-idx="${rIdx}" style="cursor: not-allowed;">
+            <input type="text" class="form-control form-control-sm item-roll-cuon-id font-monospace bg-light" value="${escapeHtml(r.cuonId || '')}" placeholder="Cuộn ID" readonly data-item-idx="${index}" data-roll-idx="${rIdx}" style="cursor: not-allowed;">
           </td>
           <td>
             <input type="text" class="form-control form-control-sm item-roll-kg fw-bold text-end bg-light" value="${r.kg ? formatNumericValue(r.kg) : ''}" placeholder="Số kg" readonly data-item-idx="${index}" data-roll-idx="${rIdx}" style="cursor: not-allowed;" required>
@@ -1324,7 +1335,7 @@ function generateItemCardHTML(item, index, totalItems) {
               <i class="bi bi-shield-lock-fill me-1"></i>ĐÃ XUẤT (${lockKg} kg) - KHÓA
             </span>
           ` : ''}
-          <span class="fw-bold text-primary small item-card-header-title text-truncate" style="max-width: 450px;" title="${titleText}">${titleText}</span>
+          <span class="fw-bold text-primary small item-card-header-title text-truncate" style="max-width: 450px;" title="${escapeHtml(titleText)}">${escapeHtml(titleText)}</span>
         </div>
         <div class="d-flex align-items-center gap-2">
           ${isLocked ? `
@@ -1340,15 +1351,15 @@ function generateItemCardHTML(item, index, totalItems) {
         <div class="row g-2 mb-2">
           <div class="col-12 col-md-4">
             <label class="form-label small fw-bold">Mã vật tư <span class="text-danger">*</span></label>
-            <input type="text" class="form-control form-control-sm fw-bold item-ma-vt ${isLocked ? 'bg-light' : ''}" value="${item.maVatTu || ''}" placeholder="VD: 10001189" data-item-idx="${index}" ${isLocked ? 'readonly style="cursor: not-allowed; background-color: #f1f5f9;"' : 'required'}>
+            <input type="text" class="form-control form-control-sm fw-bold item-ma-vt ${isLocked ? 'bg-light' : ''}" value="${escapeHtml(item.maVatTu || '')}" placeholder="VD: 10001189" data-item-idx="${index}" ${isLocked ? 'readonly style="cursor: not-allowed; background-color: #f1f5f9;"' : 'required'}>
           </div>
           <div class="col-12 col-md-4">
             <label class="form-label small fw-bold">Tên vật tư <span class="text-danger">*</span></label>
-            <input type="text" class="form-control form-control-sm fw-bold item-ten-vt ${isLocked ? 'bg-light' : ''}" value="${item.tenVatTu || ''}" placeholder="VD: Thép phôi kẽm Z275 G450" data-item-idx="${index}" ${isLocked ? 'readonly style="cursor: not-allowed; background-color: #f1f5f9;"' : 'required'}>
+            <input type="text" class="form-control form-control-sm fw-bold item-ten-vt ${isLocked ? 'bg-light' : ''}" value="${escapeHtml(item.tenVatTu || '')}" placeholder="VD: Thép phôi kẽm Z275 G450" data-item-idx="${index}" ${isLocked ? 'readonly style="cursor: not-allowed; background-color: #f1f5f9;"' : 'required'}>
           </div>
           <div class="col-12 col-md-4">
             <label class="form-label small fw-bold">Lô / Batch <span class="text-danger">*</span></label>
-            <input type="text" class="form-control form-control-sm fw-bold item-batch ${isLocked ? 'bg-light' : ''}" value="${item.batch || ''}" placeholder="VD: 1.8X351VN" data-item-idx="${index}" ${isLocked ? 'readonly style="cursor: not-allowed; background-color: #f1f5f9;"' : 'required'}>
+            <input type="text" class="form-control form-control-sm fw-bold item-batch ${isLocked ? 'bg-light' : ''}" value="${escapeHtml(item.batch || '')}" placeholder="VD: 1.8X351VN" data-item-idx="${index}" ${isLocked ? 'readonly style="cursor: not-allowed; background-color: #f1f5f9;"' : 'required'}>
           </div>
         </div>
 
@@ -2575,11 +2586,11 @@ function updateInventoryTableLockStates() {
         const currentUser = (typeof localStorage !== 'undefined' && localStorage.getItem('currentUser')) || 'anonymous';
         const canForceUnlock = (String(currentUser).toLowerCase() === 'admin' || String(currentUser).toLowerCase() === 'bao.lt' || String(lockStatus.lockedBy).toLowerCase() === String(currentUser).toLowerCase());
         badgeContainer.innerHTML = `
-          <span class="badge bg-warning text-dark px-2 py-1 shadow-sm" style="font-size: 0.78rem; border: 1px solid #d97706; font-weight: 600;" title="Cuộn đang được tài khoản [${lockStatus.lockedBy}] chọn xuất">
-            <i class="bi bi-person-fill-lock me-1"></i>${lockStatus.lockedBy} đang giữ
+          <span class="badge bg-warning text-dark px-2 py-1 shadow-sm" style="font-size: 0.78rem; border: 1px solid #d97706; font-weight: 600;" title="Cuộn đang được tài khoản [${escapeHtml(lockStatus.lockedBy)}] chọn xuất">
+            <i class="bi bi-person-fill-lock me-1"></i>${escapeHtml(lockStatus.lockedBy)} đang giữ
           </span>
           ${canForceUnlock ? `
-            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 ms-1 btn-force-unlock" data-cuon-id="${cuonId}" title="Mở khóa cuộn này">
+            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 ms-1 btn-force-unlock" data-cuon-id="${escapeHtml(cuonId)}" title="Mở khóa cuộn này">
               <i class="bi bi-unlock-fill"></i> Mở
             </button>
           ` : ''}
@@ -2719,11 +2730,11 @@ function renderInventoryTable(data, searchVal = '') {
 
     if (isLockedByOther) {
       statusContent = `
-        <span class="badge bg-warning text-dark px-2 py-1 shadow-sm" style="font-size: 0.78rem; border: 1px solid #d97706; font-weight: 600;" title="Cuộn đang được tài khoản [${lockStatus.lockedBy}] chọn xuất">
-          <i class="bi bi-person-fill-lock me-1"></i>${lockStatus.lockedBy} đang giữ
+        <span class="badge bg-warning text-dark px-2 py-1 shadow-sm" style="font-size: 0.78rem; border: 1px solid #d97706; font-weight: 600;" title="Cuộn đang được tài khoản [${escapeHtml(lockStatus.lockedBy)}] chọn xuất">
+          <i class="bi bi-person-fill-lock me-1"></i>${escapeHtml(lockStatus.lockedBy)} đang giữ
         </span>
         ${canForceUnlock ? `
-          <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 ms-1 btn-force-unlock" data-cuon-id="${cuonId}" title="Mở khóa cuộn này">
+          <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 ms-1 btn-force-unlock" data-cuon-id="${escapeHtml(cuonId)}" title="Mở khóa cuộn này">
             <i class="bi bi-unlock-fill"></i> Mở
           </button>
         ` : ''}
@@ -2739,21 +2750,21 @@ function renderInventoryTable(data, searchVal = '') {
     tr.innerHTML = `
       <td class="text-center">
         <input type="checkbox" class="form-check-input inventory-checkbox" 
-          data-cuon-id="${cuonId}" 
-          data-ma-vattu="${maVatTu}" 
-          data-ten-vattu="${tenVatTu}" 
-          data-batch="${batch}" 
-          data-ton-kg="${tonKg}"
-          data-ton-m="${tonM}"
+          data-cuon-id="${escapeHtml(cuonId)}" 
+          data-ma-vattu="${escapeHtml(maVatTu)}"
+          data-ten-vattu="${escapeHtml(tenVatTu)}"
+          data-batch="${escapeHtml(batch)}"
+          data-ton-kg="${escapeHtml(tonKg)}"
+          data-ton-m="${escapeHtml(tonM)}"
           ${(isAlreadyInForm || (lockStatus.isLocked && lockStatus.isMe)) ? 'checked' : ''}
           ${(isLockedByOther || isMismatched) ? 'disabled' : ''}>
       </td>
-      <td class="fw-bold">${maVatTu}</td>
-      <td>${tenVatTu}</td>
-      <td>${batch}</td>
-      <td class="font-monospace fw-bold text-primary">${cuonId}</td>
-      <td class="text-end fw-bold">${typeof formatNumber === 'function' ? formatNumber(tonKg) : tonKg}</td>
-      <td class="text-end fw-bold">${typeof formatNumber === 'function' ? formatNumber(tonM) : tonM}</td>
+      <td class="fw-bold">${escapeHtml(maVatTu)}</td>
+      <td>${escapeHtml(tenVatTu)}</td>
+      <td>${escapeHtml(batch)}</td>
+      <td class="font-monospace fw-bold text-primary">${escapeHtml(cuonId)}</td>
+      <td class="text-end fw-bold">${escapeHtml(typeof formatNumber === 'function' ? formatNumber(tonKg) : tonKg)}</td>
+      <td class="text-end fw-bold">${escapeHtml(typeof formatNumber === 'function' ? formatNumber(tonM) : tonM)}</td>
       <td class="text-center">
         <span class="lock-badge-container">${statusContent}</span>
       </td>
@@ -2939,10 +2950,10 @@ function addRollRow(maVatTu = '', cuonId = '', kgValue = '', mValue = '') {
   tr.dataset.rollId = rollCount;
   tr.innerHTML = `
     <td class="text-center roll-stt">${rollCount}</td>
-    <td><input type="text" class="form-control form-control-sm roll-ma-vt" readonly required placeholder="Mã VT" value="${maVatTu}"></td>
-    <td><input type="text" class="form-control form-control-sm roll-cuon-id" readonly placeholder="Cuộn ID" value="${cuonId}"></td>
-    <td><input type="number" class="form-control form-control-sm roll-kg" readonly step="any" min="0" inputMode="decimal" required placeholder="Nhập số kg" value="${kgValue}"></td>
-    <td><input type="number" class="form-control form-control-sm roll-m" readonly step="any" min="0" inputMode="decimal" required placeholder="Nhập số m" value="${mValue}"></td>
+    <td><input type="text" class="form-control form-control-sm roll-ma-vt" readonly required placeholder="Mã VT" value="${escapeHtml(maVatTu)}"></td>
+    <td><input type="text" class="form-control form-control-sm roll-cuon-id" readonly placeholder="Cuộn ID" value="${escapeHtml(cuonId)}"></td>
+    <td><input type="number" class="form-control form-control-sm roll-kg" readonly step="any" min="0" inputMode="decimal" required placeholder="Nhập số kg" value="${escapeHtml(kgValue)}"></td>
+    <td><input type="number" class="form-control form-control-sm roll-m" readonly step="any" min="0" inputMode="decimal" required placeholder="Nhập số m" value="${escapeHtml(mValue)}"></td>
     <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger btn-remove-roll">X</button></td>
   `;
   tbody.appendChild(tr);
@@ -2997,9 +3008,9 @@ function addEditRollRow(cuonId = '', kgValue = '', mValue = '') {
   tr.dataset.rollId = editRollCount;
   tr.innerHTML = `
     <td class="text-center edit-roll-stt">${editRollCount}</td>
-    <td><input type="text" class="form-control form-control-sm edit-roll-cuon-id font-monospace bg-light" readonly value="${cuonId}"></td>
-    <td><input type="number" class="form-control form-control-sm edit-roll-kg" readonly step="any" min="0" inputMode="decimal" required placeholder="Nhập số kg" value="${kgValue}"></td>
-    <td><input type="number" class="form-control form-control-sm edit-roll-m" readonly step="any" min="0" inputMode="decimal" placeholder="Nhập số m" value="${mValue}"></td>
+    <td><input type="text" class="form-control form-control-sm edit-roll-cuon-id font-monospace bg-light" readonly value="${escapeHtml(cuonId)}"></td>
+    <td><input type="number" class="form-control form-control-sm edit-roll-kg" readonly step="any" min="0" inputMode="decimal" required placeholder="Nhập số kg" value="${escapeHtml(kgValue)}"></td>
+    <td><input type="number" class="form-control form-control-sm edit-roll-m" readonly step="any" min="0" inputMode="decimal" placeholder="Nhập số m" value="${escapeHtml(mValue)}"></td>
     <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger btn-remove-edit-roll">X</button></td>
   `;
   tbody.appendChild(tr);
