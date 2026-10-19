@@ -102,7 +102,10 @@
     normCurrentPath.endsWith('/in-tem-cuon') ||
     normCurrentPath.endsWith('/vi-tri-ton');
 
-  if (!isIframe && !isStandalonePage && normCurrentPath.startsWith('/pages/')) {
+  // Bot tìm kiếm/AI không bị đẩy vào khung tab /?openTab=..., để index đúng nội dung trang gốc
+  const isCrawler = /bot|crawler|spider|crawling|google-inspectiontool|chrome-lighthouse/i.test(navigator.userAgent || '');
+
+  if (!isIframe && !isStandalonePage && !isCrawler && normCurrentPath.startsWith('/pages/')) {
     const targetUrl = currentPath + window.location.search + window.location.hash;
     window.location.replace('/?openTab=' + encodeURIComponent(targetUrl));
     return;

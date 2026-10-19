@@ -56,6 +56,7 @@ function loadIsPageAllowedFromCode(code) {
     },
     URL: global.URL,
     URLSearchParams: global.URLSearchParams,
+    navigator: { userAgent: 'Mozilla/5.0 (node-test)' },
     setInterval: () => {},
     setTimeout: () => {},
     console: { log: () => {}, warn: () => {}, error: () => {} }

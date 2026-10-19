@@ -22,7 +22,19 @@
     {
       "source": "/",
       "headers": [
-        { "key": "Link", "value": "</llms.txt>; rel=\"alternate\"; type=\"text/plain\", <https://baoddc.com/>; rel=\"canonical\"" }
+        { "key": "Link", "value": "</llms.txt>; rel=\"alternate\"; type=\"text/plain\", <https://www.baoddc.com/>; rel=\"canonical\"" }
+      ]
+    },
+    {
+      "source": "/pages/((?!trang-chu/about).+)",
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex" }
+      ]
+    },
+    {
+      "source": "/offline",
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex" }
       ]
     }
   ],

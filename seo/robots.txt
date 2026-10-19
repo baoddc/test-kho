@@ -1,88 +1,41 @@
-# robots.txt cho baoddc.com
-# Cho phép tất cả các công cụ tìm kiếm và AI Agents / Chatbots thu thập dữ liệu
+# robots.txt cho www.baoddc.com
+# Cho phép tất cả các công cụ tìm kiếm và AI Agents / Chatbots thu thập dữ liệu.
+# Các trang nội bộ cần đăng nhập (/pages/...) vẫn cho quét nhưng gửi header
+# "X-Robots-Tag: noindex" (xem vercel.json) để không lên kết quả tìm kiếm.
+# Lưu ý: bot chỉ đọc MỘT nhóm khớp tên nó nhất, nên mọi bot được gom chung một nhóm.
 
+# Công cụ tìm kiếm truyền thống
 User-agent: *
-Allow: /
-Disallow: /backups/
-Disallow: /service_account.json
-Disallow: /supabase/
-
-# Google & Gemini AI Crawlers
 User-agent: Googlebot
-Allow: /
-
-User-agent: Google-Extended
-Allow: /
-
-# OpenAI / ChatGPT Crawlers
-User-agent: GPTBot
-Allow: /
-
-User-agent: ChatGPT-User
-Allow: /
-
-# Anthropic / Claude Crawlers
-User-agent: ClaudeBot
-Allow: /
-
-User-agent: anthropic-ai
-Allow: /
-
-User-agent: Claude-Web
-Allow: /
-
-# Perplexity AI Crawler
-User-agent: PerplexityBot
-Allow: /
-
-User-agent: Perplexity-User
-Allow: /
-
-# OpenAI Search (ChatGPT Search)
-User-agent: OAI-SearchBot
-Allow: /
-
-# Anthropic search / user fetch
-User-agent: Claude-SearchBot
-Allow: /
-
-User-agent: Claude-User
-Allow: /
-
-# Others
-User-agent: Google-CloudVertexBot
-Allow: /
-
-User-agent: DuckAssistBot
-Allow: /
-
-User-agent: YouBot
-Allow: /
-
-User-agent: MistralAI-User
-Allow: /
-
+User-agent: Bingbot
+User-agent: Applebot
+User-agent: DuckDuckBot
 User-agent: Amazonbot
-Allow: /
-
+# Google Gemini / Vertex AI
+User-agent: Google-Extended
+User-agent: Google-CloudVertexBot
+# OpenAI ChatGPT
+User-agent: GPTBot
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+# Anthropic Claude
+User-agent: ClaudeBot
+User-agent: Claude-SearchBot
+User-agent: Claude-User
+User-agent: anthropic-ai
+User-agent: Claude-Web
+# Perplexity
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+# Apple Intelligence, Meta AI, Mistral, DuckDuckGo AI, You.com, Cohere, Common Crawl
+# (Microsoft Copilot dùng chỉ mục của Bingbot ở trên)
+User-agent: Applebot-Extended
+User-agent: meta-externalagent
+User-agent: MistralAI-User
+User-agent: DuckAssistBot
+User-agent: YouBot
+User-agent: Cohere-ai
 User-agent: CCBot
 Allow: /
 
-# Microsoft Bing / Copilot Crawler
-User-agent: Bingbot
-Allow: /
-
-# Apple Intelligence Crawler
-User-agent: Applebot
-Allow: /
-
-# Meta AI Crawler
-User-agent: meta-externalagent
-Allow: /
-
-# Cohere AI Crawler
-User-agent: Cohere-ai
-Allow: /
-
-# Sitemap & LLM files
-Sitemap: https://baoddc.com/sitemap.xml
+Sitemap: https://www.baoddc.com/sitemap.xml

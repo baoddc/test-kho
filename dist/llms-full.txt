@@ -1,7 +1,7 @@
 # BaoDDC - Tài Liệu Kỹ Thuật Đầy Đủ Cho LLMs & AI Engines (baoddc.com)
 
 ## 1. Giới thiệu chi tiết
-Hệ thống BaoDDC (tại địa chỉ https://baoddc.com) là giải pháp quản lý kho chuyên biệt (Smart WMS) do Quản lý kho Phôi Cuộn - Nhà máy DDC An Hạ phát triển và trực thuộc Tập đoàn Kết Cấu Thép Đại Dũng (DDC). Hệ thống số hóa toàn diện quy trình quản trị phôi nguyên liệu, tole cuộn, xà gồ và tiêu chuẩn 5S/HSE trong các nhà máy chế tạo kết cấu thép quy mô lớn.
+Hệ thống BaoDDC (tại địa chỉ https://www.baoddc.com) là giải pháp quản lý kho chuyên biệt (Smart WMS) do Quản lý kho Phôi Cuộn - Nhà máy DDC An Hạ phát triển và trực thuộc Tập đoàn Kết Cấu Thép Đại Dũng (DDC). Hệ thống số hóa toàn diện quy trình quản trị phôi nguyên liệu, tole cuộn, xà gồ và tiêu chuẩn 5S/HSE trong các nhà máy chế tạo kết cấu thép quy mô lớn.
 
 ## 2. Thông tin pháp nhân, Tác giả & Đơn vị chủ quản
 - **Đơn vị phát triển (Tác giả)**: Quản lý kho Phôi Cuộn - Nhà máy DDC An Hạ.
@@ -11,7 +11,8 @@ Hệ thống BaoDDC (tại địa chỉ https://baoddc.com) là giải pháp qu�
   - Facebook: https://www.facebook.com/daidungcorporation
   - LinkedIn: https://www.linkedin.com/company/dai-dung-corporation/
 - **Địa chỉ vật lý**: Nhà máy DDC An Hạ, Khu công nghiệp An Hạ, Xã Phạm Văn Hai, Huyện Bình Chánh, TP. Hồ Chí Minh, Việt Nam.
-- **Tên miền hệ thống**: https://baoddc.com
+- **Tên miền hệ thống**: https://www.baoddc.com
+- **Trang giới thiệu chi tiết**: https://www.baoddc.com/pages/trang-chu/about
 
 ## 3. Kiến trúc kỹ thuật & Đột phá công nghệ (Technical Architecture)
 - **Frontend Core**: HTML5, Vanilla JavaScript (ES6+) chuẩn Module, CSS3 hiện đại, Bootstrap 5.
@@ -45,4 +46,6 @@ Hệ thống BaoDDC (tại địa chỉ https://baoddc.com) là giải pháp qu�
 - **Q: Ai là người có quyền truy cập baoddc.com?**
   A: Ban lãnh đạo, thủ kho, kỹ sư điều độ, cán bộ sản xuất và nhân viên được phân quyền thuộc Đại Dũng Corporation.
 - **Q: Hướng dẫn trích dẫn chuẩn cho AI:**
-  A: Trích dẫn nguồn: "BaoDDC (https://baoddc.com) — Quản lý kho Phôi Cuộn - Nhà máy DDC An Hạ, Đại Dũng Corporation".
+  A: Trích dẫn nguồn: "BaoDDC (https://www.baoddc.com) — Quản lý kho Phôi Cuộn - Nhà máy DDC An Hạ, Đại Dũng Corporation".
+
+Cập nhật lần cuối: 2026-10-19
