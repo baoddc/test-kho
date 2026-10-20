@@ -285,12 +285,29 @@ function updateSyncStatus(message, type) {
 // GLOBAL VARIABLES
 // =============================================================================
 
+// Dữ liệu phân trang ở server: tableData = [tiêu đề, ...các dòng của trang hiện tại],
+// rawSupabaseData[i - 1] là bản ghi gốc của tableData[i]
+const PHIEU_TABLE = 'pl-phieu-in';
+const PHIEU_HEADERS = [
+  'Số phiếu',
+  'Ngày',
+  'Bên nhận/Xưởng/Đội',
+  'Loại xuất',
+  'Mặt hàng',
+  'ĐVT',
+  'Trọng lượng hàng',
+  'Số xe',
+  'Mã công trình',
+  'Tên công trình'
+];
+const DEFAULT_ORDER = [{ col: 'id', asc: true }];
+const PAGE1_CACHE_KEY = 'pl-phieu-in_page1';
+const pager = new SQ.ServerPager({ table: PHIEU_TABLE, pageSize: ROWS_PER_PAGE, order: DEFAULT_ORDER });
+
 let tableData = [];  // Lưu dữ liệu từ Google Sheet/Supabase
 let rawSupabaseData = []; // Lưu mảng đối tượng gốc từ Supabase
 let currentPage = 1;
 let totalPages = 1;
-let filteredData = [];         // dữ liệu sau khi lọc (chưa phân trang)
-let displayedData = [];        // dữ liệu đang hiển thị (trang hiện tại)
 
 // Selected row management for edit/delete
 let selectedRowIndex = -1;
@@ -503,17 +520,34 @@ function formatNumber(num) {
  * Search for phieu in data
  * @param {string} searchTerm - The search term
  */
-function searchPhieuIn(searchTerm) {
+// Tìm ở server, lấy tối đa PHIEU_SEARCH_MAX_ROWS dòng khớp mới nhất rồi gộp theo số phiếu
+const PHIEU_SEARCH_MAX_ROWS = 500;
+let phieuSearchSeq = 0;
+async function searchPhieuIn(searchTerm) {
   const resultsContainer = document.getElementById('phieuSearchResults');
   const statusContainer = document.getElementById('phieuSearchStatus');
 
-  if (tableData.length < 2) {
-    statusContainer.innerHTML = 'Không có dữ liệu phiếu in. Vui lòng chờ tải dữ liệu.';
+  const seq = ++phieuSearchSeq;
+  let matchedRows;
+  try {
+    const res = await SQ.rows({
+      table: PHIEU_TABLE,
+      filters: { search: searchTerm },
+      order: [{ col: 'id', asc: false }],
+      limit: PHIEU_SEARCH_MAX_ROWS,
+      withTotal: false
+    });
+    matchedRows = res.rows.map(toSheetRow);
+  } catch (err) {
+    if (seq !== phieuSearchSeq) return;
+    console.error('Lỗi tìm phiếu in:', err);
+    statusContainer.textContent = 'Lỗi tìm kiếm: ' + (err.message || err);
     statusContainer.className = 'phieu-search-status show error';
     return;
   }
+  if (seq !== phieuSearchSeq) return;  // đã có lượt tìm mới hơn
 
-  const headerRow = tableData[0];
+  const headerRow = PHIEU_HEADERS;
 
   // Find column indexes
   const findColIndex = (keywords) => {
@@ -542,12 +576,12 @@ function searchPhieuIn(searchTerm) {
     return;
   }
 
-  // Search in tableData - find all rows that match and group by số phiếu
+  // Lọc lại các dòng server trả về theo các trường thông tin phiếu và gộp theo số phiếu
   const normalizedSearch = searchTerm.toLowerCase().trim();
   const foundPhieuMap = new Map(); // Map to group by số phiếu
 
-  for (let i = 1; i < tableData.length; i++) {
-    const row = tableData[i];
+  for (let i = 0; i < matchedRows.length; i++) {
+    const row = matchedRows[i];
     if (!row || row.length === 0) continue;
 
     const soPhieu = String(row[soPhieuIdx] || '').trim();
@@ -610,7 +644,7 @@ function searchPhieuIn(searchTerm) {
   statusContainer.classList.remove('show');
 
   if (foundPhieu.length === 0) {
-    statusContainer.innerHTML = 'Không tìm thấy phiếu in nào phù hợp với từ khóa: "' + searchTerm + '"';
+    statusContainer.innerHTML = 'Không tìm thấy phiếu in nào phù hợp với từ khóa: "' + escapeHtml(searchTerm) + '"';
     statusContainer.className = 'phieu-search-status show no-results';
     resultsContainer.classList.remove('show');
     return;
@@ -662,10 +696,19 @@ function renderPhieuSearchResults(results) {
  * This will collect ALL items from all rows with the same số phiếu
  * @param {string} soPhieu - The receipt number
  */
-function selectPhieuFromSearch(soPhieu) {
-  if (!soPhieu || tableData.length < 2) return;
+async function selectPhieuFromSearch(soPhieu) {
+  if (!soPhieu) return;
 
-  const headerRow = tableData[0];
+  // Lấy đủ mọi dòng của số phiếu từ server (kết quả tìm kiếm có thể chỉ chứa 1 phần)
+  let phieuRows;
+  try {
+    phieuRows = await fetchRowsBySoPhieu(soPhieu);
+  } catch (err) {
+    console.error('Lỗi tải phiếu in:', err);
+    return;
+  }
+
+  const headerRow = PHIEU_HEADERS;
 
   const findColIndex = (keywords) => {
     return headerRow.findIndex(h => {
@@ -692,8 +735,8 @@ function selectPhieuFromSearch(soPhieu) {
   let firstRowData = null;
   const allHangHoa = [];
 
-  for (let i = 1; i < tableData.length; i++) {
-    const row = tableData[i];
+  for (let i = 0; i < phieuRows.length; i++) {
+    const row = phieuRows[i];
     if (!row || row.length === 0) continue;
 
     const rowSoPhieu = String(row[soPhieuIdx] || '').trim();
@@ -1352,7 +1395,9 @@ function setupEventListeners() {
       if (soPhieuValue) {
         fillFormBySoPhieu(soPhieuValue);
       } else {
-        // Khi xóa số phiếu, cho phép chỉnh sửa các trường khác
+        // Khi xóa số phiếu, cho phép chỉnh sửa các trường khác (và bỏ lượt tra cứu đang chờ)
+        clearTimeout(fillFormTimer);
+        fillFormSeq++;
         setFieldsEditable();
       }
     });
@@ -1363,7 +1408,9 @@ function setupEventListeners() {
       if (soPhieuValue) {
         fillFormBySoPhieu(soPhieuValue);
       } else {
-        // Khi xóa số phiếu, cho phép chỉnh sửa các trường khác
+        // Khi xóa số phiếu, cho phép chỉnh sửa các trường khác (và bỏ lượt tra cứu đang chờ)
+        clearTimeout(fillFormTimer);
+        fillFormSeq++;
         setFieldsEditable();
       }
     });
@@ -1377,8 +1424,7 @@ function setupEventListeners() {
   if (prevPageBtn) {
     prevPageBtn.addEventListener('click', function () {
       if (currentPage > 1) {
-        currentPage--;
-        renderTable(filteredData, false);
+        loadPage(currentPage - 1);
       }
     });
   }
@@ -1386,16 +1432,14 @@ function setupEventListeners() {
   if (nextPageBtn) {
     nextPageBtn.addEventListener('click', function () {
       if (currentPage < totalPages) {
-        currentPage++;
-        renderTable(filteredData, false);
+        loadPage(currentPage + 1);
       }
     });
   }
 
   if (pageSelect) {
     pageSelect.addEventListener('change', function () {
-      currentPage = parseInt(this.value, 10);
-      renderTable(filteredData, false);
+      loadPage(parseInt(this.value, 10));
     });
   }
 
@@ -1404,7 +1448,7 @@ function setupEventListeners() {
   if (btnResetFilter) {
     btnResetFilter.addEventListener('click', function () {
       clearSelectedPhieu();
-      renderTable(tableData, true);
+      loadPage(1);
     });
   }
 
@@ -1657,7 +1701,7 @@ function renderAddDataForm() {
 }
 
 // Tự động điền Số phiếu theo định dạng YYMM-XX
-function autoGenerateSoPhieu() {
+async function autoGenerateSoPhieu() {
   if (tableData.length < 1) return;
 
   const headerRow = tableData[0];
@@ -1682,14 +1726,24 @@ function autoGenerateSoPhieu() {
   const month = String(now.getMonth() + 1).padStart(2, '0'); // Tháng từ 01-12
   const yearMonthPrefix = year + month; // Ví dụ: "2603"
 
-  // Tìm số phiếu lớn nhất trong tháng hiện tại
+  // Tìm số phiếu lớn nhất trong tháng hiện tại (lấy từ server các số phiếu chứa "YYMM-")
   let maxSeq = 0;
+  let monthSoPhieu;
+  try {
+    monthSoPhieu = await SQ.distinct({
+      table: PHIEU_TABLE,
+      col: 'Số phiếu',
+      filters: { ilike: { 'Số phiếu': `${yearMonthPrefix}-` } },
+      limit: 10000,
+      fresh: true
+    });
+  } catch (err) {
+    console.error('Không lấy được số phiếu trong tháng:', err);
+    return;
+  }
 
-  for (let i = 1; i < tableData.length; i++) {
-    const row = tableData[i];
-    if (!row || row.length <= soPhieuIdx) continue;
-
-    const soPhieuValue = String(row[soPhieuIdx] || '').trim();
+  for (const value of monthSoPhieu) {
+    const soPhieuValue = String(value || '').trim();
 
     // Kiểm tra định dạng YYMM-XX
     const match = soPhieuValue.match(/^(\d{2})(\d{2})-(\d+)$/);
@@ -1997,9 +2051,6 @@ async function submitAddData() {
     // Reload data
     await loadGoogleSheet();
 
-    // Reload data
-    await loadGoogleSheet();
-
     hideLoadingOverlay();
 
   } catch (error) {
@@ -2012,96 +2063,118 @@ async function submitAddData() {
 // DATA LOADING
 // =============================================================================
 
+function formatSupabaseDate(isoString) {
+  if (!isoString) return '';
+  const parts = String(isoString).split('T')[0].split('-');
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return isoString;
+}
+
+// Bản ghi Supabase → 1 dòng theo thứ tự PHIEU_HEADERS
+function toSheetRow(row) {
+  const benNhanVal = row['Bên nhận/Xưởng/Đội'] ?? row['Bên nhận/ Xưởng/ Đội'] ?? row['Bên nhận / Xưởng / Đội'] ?? row['Bên nhận'] ?? row['ben_nhan'] ?? row['benNhan'] ?? row['Xưởng'] ?? '';
+  return [
+    row['Số phiếu'] || '',
+    formatSupabaseDate(row['Ngày']),
+    benNhanVal,
+    row['Loại xuất'] || '',
+    row['Mặt hàng'] || '',
+    row['ĐVT'] || '',
+    row['Trọng lượng hàng'] !== undefined && row['Trọng lượng hàng'] !== null ? Number(row['Trọng lượng hàng']) : (row['Trọng lượng'] !== undefined && row['Trọng lượng'] !== null ? Number(row['Trọng lượng']) : ''),
+    row['Số xe'] || '',
+    row['Mã công trình'] || '',
+    row['Tên công trình'] || ''
+  ];
+}
+
+// Tất cả các dòng của 1 số phiếu (so khớp không phân biệt hoa thường), theo thứ tự nhập
+async function fetchRowsBySoPhieu(soPhieu) {
+  const res = await SQ.fetchAll({
+    table: PHIEU_TABLE,
+    filters: { ieq: { 'Số phiếu': String(soPhieu).trim() } },
+    maxRows: 1000
+  });
+  return res.rows.map(toSheetRow);
+}
+
+function isDefaultView() {
+  return Object.keys(pager.filters).length === 0 && pager.order === DEFAULT_ORDER;
+}
+
+function applyPageRows(rows, page) {
+  rawSupabaseData = rows;
+  tableData = [PHIEU_HEADERS, ...rows.map(toSheetRow)];
+  currentPage = page;
+  totalPages = pager.totalPages;
+  renderTable();
+}
+
+// Tải 1 trang từ server (bộ lọc cột trên tiêu đề bảng chạy ở server qua ddcServerAdapter)
+async function loadPage(page) {
+  try {
+    const res = await pager.load(page);
+    if (!res) return;  // đã có yêu cầu mới hơn
+    applyPageRows(res.rows, res.page);
+    if (res.page === 1 && isDefaultView() && typeof setStoredTableCache === 'function') {
+      setStoredTableCache(PAGE1_CACHE_KEY, { rows: res.rows, total: res.total });
+    }
+  } catch (error) {
+    console.error('Lỗi tải dữ liệu từ Supabase:', error);
+  }
+}
+
 async function loadGoogleSheet(resetPage = false) {
   try {
-    const cachedData = typeof getStoredTableCache === 'function' ? getStoredTableCache('pl-phieu-in') : null;
+    SQ.applyColumnFilters(pager, {}, DEFAULT_ORDER);
 
-    const headers = [
-      'Số phiếu',
-      'Ngày',
-      'Bên nhận/Xưởng/Đội',
-      'Loại xuất',
-      'Mặt hàng',
-      'ĐVT',
-      'Trọng lượng hàng',
-      'Số xe',
-      'Mã công trình',
-      'Tên công trình'
-    ];
-
-    const formatSupabaseDate = (isoString) => {
-      if (!isoString) return '';
-      const parts = String(isoString).split('T')[0].split('-');
-      if (parts.length === 3) {
-        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    // 1. Lần mở đầu: hiện ngay trang 1 đã lưu (khi không có bộ lọc), rồi tải mới từ server
+    if (tableData.length === 0) {
+      const cached = typeof getStoredTableCache === 'function' ? getStoredTableCache(PAGE1_CACHE_KEY) : null;
+      if (cached && Array.isArray(cached.rows) && isDefaultView()) {
+        pager.total = cached.total || 0;
+        applyPageRows(cached.rows, 1);
+        renderAddDataForm();
       }
-      return isoString;
-    };
-
-    const processRows = (dataList) => {
-      const res = [headers];
-      (dataList || []).forEach(row => {
-        const benNhanVal = row['Bên nhận/Xưởng/Đội'] ?? row['Bên nhận/ Xưởng/ Đội'] ?? row['Bên nhận / Xưởng / Đội'] ?? row['Bên nhận'] ?? row['ben_nhan'] ?? row['benNhan'] ?? row['Xưởng'] ?? '';
-
-        res.push([
-          row['Số phiếu'] || '',
-          formatSupabaseDate(row['Ngày']),
-          benNhanVal,
-          row['Loại xuất'] || '',
-          row['Mặt hàng'] || '',
-          row['ĐVT'] || '',
-          row['Trọng lượng hàng'] !== undefined && row['Trọng lượng hàng'] !== null ? Number(row['Trọng lượng hàng']) : (row['Trọng lượng'] !== undefined && row['Trọng lượng'] !== null ? Number(row['Trọng lượng']) : ''),
-          row['Số xe'] || '',
-          row['Mã công trình'] || '',
-          row['Tên công trình'] || ''
-        ]);
-      });
-      return res;
-    };
-
-    // 1. Instant render from SWR cache (0ms delay)
-    if (cachedData && Array.isArray(cachedData) && cachedData.length > 0) {
-      rawSupabaseData = cachedData;
-      tableData = processRows(cachedData);
-      renderTable(tableData, resetPage);
-      renderAddDataForm();
-      if (tableData.length > 1) populateFormWithLatestData();
     }
 
-    // 2. Fetch fresh data in background with parallel batching
-    const freshData = typeof fetchAllFromSupabase === 'function'
-      ? await fetchAllFromSupabase('pl-phieu-in', '*', 'id', true)
-      : await (async () => {
-        let rows = [], from = 0, batchSize = 1000, hasMore = true;
-        while (hasMore) {
-          const { data, error } = await supabase.from('pl-phieu-in').select('*').order('id', { ascending: true }).range(from, from + batchSize - 1);
-          if (error) throw error;
-          if (data && data.length > 0) { rows = rows.concat(data); if (data.length < batchSize) hasMore = false; else from += batchSize; } else hasMore = false;
-        }
-        return rows;
-      })();
-
-    if (typeof setStoredTableCache === 'function') setStoredTableCache('pl-phieu-in', freshData);
-    rawSupabaseData = freshData;
-    tableData = processRows(freshData);
-
-    renderTable(tableData, resetPage);
+    // 2. Đếm lại tổng và tải trang hiện tại
+    pager.invalidate();
+    SQ.invalidateDistinct(PHIEU_TABLE);
+    await loadPage(resetPage ? 1 : currentPage);
     renderAddDataForm();
-    if (tableData.length > 1) {
-      populateFormWithLatestData();
-    }
+    await populateFormWithLatestData();
 
   } catch (error) {
     console.error('Lỗi tải dữ liệu từ Supabase:', error);
   }
 }
 
-function populateFormWithLatestData() {
-  if (tableData.length < 2) return;
+// Bộ lọc / sắp xếp theo cột trên tiêu đề bảng (home.js) chạy ở server
+window.ddcServerAdapter = {
+  table: PHIEU_TABLE,
+  column: (key) => SQ.headerColumn(PHIEU_HEADERS, key, { date: ['Ngày'], number: ['Trọng lượng hàng'] }),
+  baseFilters: () => ({}),
+  reload: () => {
+    SQ.applyColumnFilters(pager, {}, DEFAULT_ORDER);
+    return loadPage(1);
+  }
+};
 
-  // Lấy dòng dữ liệu mới nhất (dòng cuối cùng)
-  const latestRow = tableData[tableData.length - 1];
-  const headerRow = tableData[0];
+async function populateFormWithLatestData() {
+  // Lấy dòng dữ liệu mới nhất (id lớn nhất)
+  let latest;
+  try {
+    latest = await SQ.rows({ table: PHIEU_TABLE, order: [{ col: 'id', asc: false }], limit: 1, withTotal: false });
+  } catch (err) {
+    console.error('Không lấy được phiếu mới nhất:', err);
+    return;
+  }
+  if (!latest.rows.length) return;
+
+  const latestRow = toSheetRow(latest.rows[0]);
+  const headerRow = PHIEU_HEADERS;
 
   // Tìm index của các cột dựa trên header
   const findColIndex = (keywords) => {
@@ -2255,14 +2328,30 @@ function setFieldsEditable() {
   updateRemoveButtons();
 }
 
-// Tìm và điền form dựa trên số phiếu
+// Tìm và điền form dựa trên số phiếu (tra cứu ở server, chờ người dùng ngừng gõ 250ms)
+let fillFormTimer = null;
+let fillFormSeq = 0;
 function fillFormBySoPhieu(soPhieuValue) {
-  if (tableData.length < 2) return;
+  clearTimeout(fillFormTimer);
+  const seq = ++fillFormSeq;
+  fillFormTimer = setTimeout(async () => {
+    let rows;
+    try {
+      rows = await fetchRowsBySoPhieu(soPhieuValue);
+    } catch (err) {
+      console.error('Lỗi tra cứu số phiếu:', err);
+      return;
+    }
+    if (seq !== fillFormSeq) return;  // người dùng đã gõ số phiếu khác
+    fillFormFromRows(rows, soPhieuValue);
+  }, 250);
+}
 
+function fillFormFromRows(foundRows, soPhieuValue) {
   // Khi tìm thấy dữ liệu, set các trường khác thành read-only
   setFieldsReadOnly();
 
-  const headerRow = tableData[0];
+  const headerRow = PHIEU_HEADERS;
 
   // Tìm index của các cột dựa trên header
   const findColIndex = (keywords) => {
@@ -2286,18 +2375,6 @@ function fillFormBySoPhieu(soPhieuValue) {
   if (soPhieuIdx < 0) {
     console.log('Không tìm thấy cột số phiếu');
     return;
-  }
-
-  // Tìm tất cả các dòng dữ liệu có số phiếu khớp với giá trị nhập vào
-  // Chuyển cả hai về lowercase và trim để so sánh không phân biệt hoa thường
-  const normalizedSoPhieu = String(soPhieuValue).trim().toLowerCase();
-
-  const foundRows = [];
-  for (let i = 1; i < tableData.length; i++) {
-    const rowSoPhieu = String(tableData[i][soPhieuIdx] || '').trim().toLowerCase();
-    if (rowSoPhieu === normalizedSoPhieu) {
-      foundRows.push(tableData[i]);
-    }
   }
 
   if (foundRows.length === 0) {
@@ -2483,23 +2560,11 @@ function parseDate(dateValue) {
 // RENDER DATA TABLE
 // =============================================================================
 
-function renderTable(data, resetPage = true) {
-  if (tableData.length < 2) return;
+// tableData đã là đúng trang hiện tại (phân trang ở server)
+function renderTable() {
+  if (tableData.length < 1) return;
 
-  // Store all data for pagination
-  filteredData = data || tableData;
-
-  if (resetPage) {
-    currentPage = 1;
-  }
-
-  // Calculate pagination
-  calculatePagination(filteredData);
-
-  // Get data for current page
-  const pageData = getPageData(filteredData);
-
-  renderTableData(pageData);
+  renderTableData(tableData);
 
   // Update pagination controls
   updatePaginationControls();
@@ -3232,24 +3297,6 @@ async function handleEditFormSubmit(e) {
    PAGINATION
    Các chức năng phân trang
 ================================================================================ */
-
-function calculatePagination(data) {
-  totalPages = Math.max(1, Math.ceil((data.length - 1) / ROWS_PER_PAGE));
-  if (currentPage > totalPages) currentPage = totalPages;
-  if (currentPage < 1) currentPage = 1;
-}
-
-function getPageData(data) {
-  if (!data || data.length === 0) return [];
-
-  calculatePagination(data);
-
-  // Data includes header row at index 0
-  const startRow = (currentPage - 1) * ROWS_PER_PAGE + 1;
-  const endRow = Math.min(startRow + ROWS_PER_PAGE, data.length);
-
-  return data.slice(0, 1).concat(data.slice(startRow, endRow));
-}
 
 function updatePaginationControls() {
   const pageInfo = document.getElementById('pageInfo');

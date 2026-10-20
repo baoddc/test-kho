@@ -1,9 +1,6 @@
 // Tên bảng Supabase (mỗi trang truyền qua data-table của thẻ <script>)
 const TABLE_NAME = document.currentScript.dataset.table;
 
-// Bảng pl-chua-thu có thêm cột "Số lượng" song song với "Số lượng (kg)"
-const HAS_QTY_COLUMN = TABLE_NAME === 'pl-chua-thu';
-
 const PAGE_TITLES = {
   'pl-can-thu': 'Tổng hợp phế liệu - Xưởng đã đổ theo định kì',
   'pl-chua-thu': 'Tổng hợp phế liệu - Xưởng chưa trả phiếu',
@@ -28,12 +25,7 @@ const LAYOUT = CENTERED
       cards: 'md:ml-10'
     };
 
-function readQuantity(row) {
-  const value = (HAS_QTY_COLUMN ? row['Số lượng'] : undefined) ?? row['Số lượng (kg)'];
-  return value == null ? '0' : String(value);
-}
-
-let allRows = [];
+let summary = { periods: [], groups: [], types: [] };
 let selectedPeriod = sessionStorage.getItem('plFilterPeriod') || 'All';
 let loading = true;
 let error = null;
@@ -189,51 +181,44 @@ function parseRowDate(raw) {
   return null;
 }
 
+// Tổng hợp tính ở server (RPC pl_tong_hop): tổng theo Xưởng × Loại phế liệu + chi tiết
+// (tối đa DETAIL_LIMIT dòng / nhóm), lọc theo kì ngay tại server.
+const DETAIL_LIMIT = 300;
+const summaryCacheKey = () => `${TABLE_NAME}_tong_hop_${selectedPeriod}`;
+
 async function init() {
-  const cachedData = typeof getStoredTableCache === 'function' ? getStoredTableCache(TABLE_NAME) : null;
+  const cached = typeof getStoredTableCache === 'function' ? getStoredTableCache(summaryCacheKey()) : null;
 
   // 1. Instant render from cache (0ms delay)
-  if (cachedData && Array.isArray(cachedData) && cachedData.length > 0) {
-    allRows = cachedData.map(row => ({
-      'Ngày': row['Ngày'] || '',
-      'Kì đổ': row['Kì đổ'] || '',
-      'Xưởng': row['Xưởng'] || '',
-      'Loại phế liệu': row['Loại phế liệu'] || '',
-      'Số lượng (kg)': readQuantity(row),
-      'Ghi chú': row['Ghi chú'] || ''
-    }));
+  if (cached && Array.isArray(cached.groups)) {
+    summary = cached;
     loading = false;
     render();
   } else {
     render(); // show loading
   }
 
-  // 2. Background fetch fresh data from Supabase with parallel batching
+  // 2. Lấy số liệu mới từ server
+  await loadSummary();
+}
+
+async function loadSummary() {
   try {
-    const rawData = typeof fetchAllFromSupabase === 'function'
-      ? await fetchAllFromSupabase(TABLE_NAME, '*', 'id', true)
-      : await (async () => {
-          const { data, error: dbError } = await supabase.from(TABLE_NAME).select('*').order('id', { ascending: true });
-          if (dbError) throw dbError;
-          return data || [];
-        })();
-
-    if (typeof setStoredTableCache === 'function') setStoredTableCache(TABLE_NAME, rawData);
-
-    allRows = (rawData || []).map(row => ({
-      'Ngày': row['Ngày'] || '',
-      'Kì đổ': row['Kì đổ'] || '',
-      'Xưởng': row['Xưởng'] || '',
-      'Loại phế liệu': row['Loại phế liệu'] || '',
-      'Số lượng (kg)': readQuantity(row),
-      'Ghi chú': row['Ghi chú'] || ''
-    }));
-
+    let result = await SQ.plTongHop(TABLE_NAME, selectedPeriod, DETAIL_LIMIT);
+    // Kì đã chọn trước đó không còn dữ liệu → quay về tất cả các kì
+    if (selectedPeriod !== 'All' && !(result.periods || []).includes(selectedPeriod)) {
+      selectedPeriod = 'All';
+      sessionStorage.setItem('plFilterPeriod', selectedPeriod);
+      result = await SQ.plTongHop(TABLE_NAME, selectedPeriod, DETAIL_LIMIT);
+    }
+    summary = { periods: result.periods || [], groups: result.groups || [], types: result.types || [] };
+    if (typeof setStoredTableCache === 'function') setStoredTableCache(summaryCacheKey(), summary);
+    error = null;
     loading = false;
     render();
   } catch (err) {
     console.error('Error fetching summary:', err);
-    if (!allRows || allRows.length === 0) {
+    if (!summary.groups.length) {
       error = err.message;
       loading = false;
       render();
@@ -316,46 +301,32 @@ function render() {
     return;
   }
 
-  const periods = Array.from(new Set(allRows.map(r => r['Kì đổ']?.trim()).filter(Boolean))).sort();
+  const periods = summary.periods;
 
-  if (selectedPeriod !== 'All' && !periods.includes(selectedPeriod)) {
-    selectedPeriod = 'All';
-  }
-
-  const filtered = selectedPeriod === 'All'
-    ? allRows
-    : allRows.filter(r => r['Kì đổ']?.trim() === selectedPeriod);
-
-  const grouped = filtered.reduce((acc, row) => {
-    const workshop = row['Xưởng']?.trim();
-    const scrapType = (row['Loại phế liệu'] || row['Loại'])?.trim();
-    const rawAmount = row['Số lượng (kg)']?.trim() || '0';
-    const amountStr = rawAmount.replace(/\./g, '').replace(/,/g, '.');
-    const amount = parseFloat(amountStr) || 0;
-    const rawDate = (row['Ngày'] || row['Ngày trả'])?.trim() || '';
-    const date = formatDate(rawDate);
-    const notes = row['Ghi chú']?.trim() || '';
-
+  // Nhóm Xưởng → Loại phế liệu từ tổng đã tính ở server
+  const grouped = summary.groups.reduce((acc, g) => {
+    const workshop = g.xuong;
+    const scrapType = g.loai;
+    const amount = Number(g.kg) || 0;
     if (!workshop || !scrapType) return acc;
 
     if (!acc[workshop]) {
       acc[workshop] = { name: workshop, totalKg: 0, scrapTypesMap: {} };
     }
-
     acc[workshop].totalKg += amount;
 
-    if (!acc[workshop].scrapTypesMap[scrapType]) {
-      acc[workshop].scrapTypesMap[scrapType] = {
-        totalKg: 0,
-        details: []
-      };
+    const details = (g.details || []).map(d => ({
+      date: formatDate(d.ngay || ''),
+      kg: Number(d.kg) || 0,
+      notes: d.ghi_chu || ''
+    }));
+    // Nhóm quá nhiều dòng: chỉ hiện DETAIL_LIMIT dòng đầu, phần còn lại gộp 1 dòng
+    const hiddenCount = (Number(g.n) || 0) - details.length;
+    if (hiddenCount > 0) {
+      const shownKg = details.reduce((sum, d) => sum + d.kg, 0);
+      details.push({ date: `… và ${hiddenCount.toLocaleString('vi-VN')} dòng khác`, kg: amount - shownKg, notes: '' });
     }
-    acc[workshop].scrapTypesMap[scrapType].totalKg += amount;
-    acc[workshop].scrapTypesMap[scrapType].details.push({
-      date,
-      kg: amount,
-      notes
-    });
+    acc[workshop].scrapTypesMap[scrapType] = { totalKg: amount, details };
 
     return acc;
   }, {});
@@ -384,14 +355,12 @@ function render() {
     'Loại 2': {}
   };
 
-  filtered.forEach(row => {
-    const originalType = (row['Loại phế liệu'] || row['Loại'] || '').trim();
+  summary.types.forEach(t => {
+    const originalType = String(t.loai || '').trim();
     if (!originalType) return;
 
     const scrapType = originalType.toLowerCase();
-    const rawAmount = row['Số lượng (kg)']?.trim() || '0';
-    const amountStr = rawAmount.replace(/\./g, '').replace(/,/g, '.');
-    const amount = parseFloat(amountStr) || 0;
+    const amount = Number(t.kg) || 0;
 
     if (scrapType.includes('loại 1') || scrapType.includes('thùng thuốc hàn') || scrapType.includes('thầu phụ') || scrapType.includes('thau phu') || scrapType.includes('dây đai')) {
       let displayType = 'Loại 1';
@@ -651,7 +620,7 @@ function render() {
     selectEl.addEventListener('change', (e) => {
       selectedPeriod = e.target.value;
       sessionStorage.setItem('plFilterPeriod', selectedPeriod);
-      render();
+      loadSummary();
     });
   }
 }

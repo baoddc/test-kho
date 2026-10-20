@@ -223,44 +223,15 @@ function initViTriTonPage() {
     if (mainDataCard) mainDataCard.style.display = 'none';
 
     try {
-      const fetchFunc = typeof fetchAllFromSupabase === 'function'
-        ? fetchAllFromSupabase
-        : async (tbl) => {
-            if (!window.supabase) return [];
-            let rows = [], from = 0, batchSize = 1000, hasMore = true;
-            while (hasMore) {
-              const { data, error } = await supabase.from(tbl).select('*').order('id', { ascending: true }).range(from, from + batchSize - 1);
-              if (error) throw error;
-              if (data && data.length > 0) { rows = rows.concat(data); if (data.length < batchSize) hasMore = false; else from += batchSize; } else hasMore = false;
-            }
-            return rows;
-          };
-
-      // Parallel fetch for XG & Tole
-      const [xgNhapAll, xgXuatAll, toleNhapAll, toleXuatAll] = await Promise.all([
-        fetchFunc('xg-nhap').catch(() => []),
-        fetchFunc('xg-xuat').catch(() => []),
-        fetchFunc('tole-nhap').catch(() => []),
-        fetchFunc('tole-xuat').catch(() => [])
+      // Chỉ tải các cuộn còn tồn của cả kho (cờ con_ton do server duy trì) cho XG & Tole
+      const [xgTonAll, toleTonAll] = await Promise.all([
+        window.SQ.fetchTon('xg-nhap').catch(() => []),
+        window.SQ.fetchTon('tole-nhap').catch(() => [])
       ]);
 
-      const xgExportedIds = new Set(
-        xgXuatAll.map(r => String(r['Cuộn ID'] || '').trim().toLowerCase()).filter(Boolean)
-      );
-      const toleExportedIds = new Set(
-        toleXuatAll.map(r => String(r['Cuộn ID'] || '').trim().toLowerCase()).filter(Boolean)
-      );
-
       // Cache all active rolls across the entire warehouse (XG + Tole)
-      const activeXgAll = xgNhapAll.filter(row => {
-        const cid = String(row['Cuộn ID'] || '').trim().toLowerCase();
-        return cid && !xgExportedIds.has(cid);
-      }).map(r => ({ ...r, _wh: 'Kho Xà gồ' }));
-
-      const activeToleAll = toleNhapAll.filter(row => {
-        const cid = String(row['Cuộn ID'] || '').trim().toLowerCase();
-        return cid && !toleExportedIds.has(cid);
-      }).map(r => ({ ...r, _wh: 'Kho Tole' }));
+      const activeXgAll = xgTonAll.map(r => ({ ...r, _wh: 'Kho Xà gồ' }));
+      const activeToleAll = toleTonAll.map(r => ({ ...r, _wh: 'Kho Tole' }));
 
       allWarehouseActiveRolls = [...activeXgAll, ...activeToleAll];
 

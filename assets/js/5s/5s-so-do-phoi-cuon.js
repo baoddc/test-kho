@@ -156,48 +156,15 @@
 
     // 2. Fetch nền song song từ Supabase
     try {
-      const fetchFunc = typeof window.fetchAllFromSupabase === 'function'
-        ? window.fetchAllFromSupabase
-        : async (tbl, col) => {
-            if (!window.supabase) return [];
-            let rows = [], from = 0, batchSize = 1000, hasMore = true;
-            while (hasMore) {
-              const { data, error } = await window.supabase
-                .from(tbl)
-                .select(col || '*')
-                .order('id', { ascending: true })
-                .range(from, from + batchSize - 1);
-              if (error) throw error;
-              if (data && data.length > 0) {
-                rows = rows.concat(data);
-                if (data.length < batchSize) hasMore = false;
-                else from += batchSize;
-              } else {
-                hasMore = false;
-              }
-            }
-            return rows;
-          };
-
-      const [xgNhapAll, xgXuatAll, toleNhapAll, toleXuatAll] = await Promise.all([
-        fetchFunc('xg-nhap', '*').catch(() => []),
-        fetchFunc('xg-xuat', '"Cuộn ID"').catch(() => []),
-        fetchFunc('tole-nhap', '*').catch(() => []),
-        fetchFunc('tole-xuat', '"Cuộn ID"').catch(() => [])
+      // Chỉ tải các cuộn còn tồn (cờ con_ton do server duy trì), chỉ các cột cần cho sơ đồ
+      const TON_COLUMNS = ['id', 'Cuộn ID', 'Mã vật tư', 'Tên vật tư', 'Batch', 'Số lượng (Kg)', 'Ngày nhập', 'Vị trí', 'Mã công trình', 'Tên công trình', 'Ghi chú'];
+      const [xgTon, toleTon] = await Promise.all([
+        window.SQ.fetchTon('xg-nhap', { columns: TON_COLUMNS }),
+        window.SQ.fetchTon('tole-nhap', { columns: TON_COLUMNS.concat(['Số lượng (m)']) })
       ]);
 
-      const xgExportedIds = new Set(
-        xgXuatAll.map(r => String(r['Cuộn ID'] || '').trim().toLowerCase()).filter(Boolean)
-      );
-      const toleExportedIds = new Set(
-        toleXuatAll.map(r => String(r['Cuộn ID'] || '').trim().toLowerCase()).filter(Boolean)
-      );
-
-      // Tính tồn Xà gồ
-      const activeXg = xgNhapAll.filter(row => {
-        const cid = String(row['Cuộn ID'] || '').trim().toLowerCase();
-        return cid && !xgExportedIds.has(cid);
-      }).map(row => ({
+      // Tồn Xà gồ
+      const activeXg = xgTon.map(row => ({
         _warehouse: 'xg',
         _warehouseName: 'Kho Xà gồ',
         id: row.id,
@@ -215,11 +182,8 @@
         note: row['Ghi chú'] || ''
       }));
 
-      // Tính tồn Tole
-      const activeTole = toleNhapAll.filter(row => {
-        const cid = String(row['Cuộn ID'] || '').trim().toLowerCase();
-        return cid && !toleExportedIds.has(cid);
-      }).map(row => ({
+      // Tồn Tole
+      const activeTole = toleTon.map(row => ({
         _warehouse: 'tole',
         _warehouseName: 'Kho Tole',
         id: row.id,

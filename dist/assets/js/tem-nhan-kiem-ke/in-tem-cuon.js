@@ -216,46 +216,17 @@ if (typeof document !== 'undefined') {
   async function loadDataFromSupabase(sourceType) {
     showLoading(true, 'Đang tải dữ liệu tồn kho từ hệ thống...');
     try {
-      const fetchFunc = typeof fetchAllFromSupabase === 'function'
-        ? fetchAllFromSupabase
-        : async (tbl, col) => {
-            if (!window.supabase) return [];
-            let rows = [], from = 0, batchSize = 1000, hasMore = true;
-            while (hasMore) {
-              const { data, error } = await supabase.from(tbl).select(col || '*').order('id', { ascending: true }).range(from, from + batchSize - 1);
-              if (error) throw error;
-              if (data && data.length > 0) {
-                rows = rows.concat(data);
-                if (data.length < batchSize) hasMore = false; else from += batchSize;
-              } else hasMore = false;
-            }
-            return rows;
-          };
-
       let nhapTable = 'xg-nhap';
-      let xuatTable = 'xg-xuat';
       let defaultWarehouse = 'KHO XÀ GỒ - ĐẠI DŨNG';
 
       if (sourceType === 'tole') {
         nhapTable = 'tole-nhap';
-        xuatTable = 'tole-xuat';
         defaultWarehouse = 'KHO TOLE - ĐẠI DŨNG';
       }
 
-      const [nhapAll, xuatAll] = await Promise.all([
-        fetchFunc(nhapTable, '*').catch(err => { console.warn('Lỗi tải bảng nhập:', err); return []; }),
-        fetchFunc(xuatTable, '"Cuộn ID"').catch(err => { console.warn('Lỗi tải bảng xuất:', err); return []; })
-      ]);
-
-      const exportedIds = new Set(
-        xuatAll.map(r => String(r['Cuộn ID'] || '').trim().toLowerCase()).filter(Boolean)
-      );
-
-      // Active rolls: has Cuộn ID and not in export list
-      const tonData = nhapAll.filter(row => {
-        const cid = String(row['Cuộn ID'] || '').trim().toLowerCase();
-        return cid && !exportedIds.has(cid);
-      });
+      // Active rolls: chỉ tải các cuộn còn tồn (cờ con_ton do server duy trì)
+      const tonData = await window.SQ.fetchTon(nhapTable)
+        .catch(err => { console.warn('Lỗi tải tồn kho:', err); return []; });
 
       allRawCoils = tonData.map((row, idx) => {
         const importDateVal = row['Ngày nhập'] || row['ngay_nhap'] || row['Ngay nhap'] || row['Ngày Nhập'] || row['created_at'];

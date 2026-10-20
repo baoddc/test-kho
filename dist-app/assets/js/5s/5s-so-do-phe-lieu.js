@@ -174,9 +174,15 @@
       .replace(/'/g, '&#039;');
   }
 
+  // Tổng theo Xưởng × Loại phế liệu tính ở server (RPC pl_tong_hop); mỗi nhóm kèm tối đa
+  // DETAIL_LIMIT lần đổ để xem chi tiết
+  const DETAIL_LIMIT = 200;
+  const SUMMARY_CACHE_KEY = 'pl-can-thu_so_do_5s';
+
   // State
-  let rawRows = [];
+  let summaryGroups = [];
   let availablePeriods = [];
+  let loadSeq = 0;
   let selectedPeriod = sessionStorage.getItem('pl5s_selected_period') || '';
   let searchQuery = '';
   let isLoading = true;
@@ -254,10 +260,7 @@
   }
 
   function calculateAreaCapacities() {
-    // 1. Lọc bản ghi theo kỳ đổ
-    const filteredRows = selectedPeriod === 'ALL' || !selectedPeriod
-      ? rawRows
-      : rawRows.filter(r => (r['Kì đổ'] || '').trim() === selectedPeriod);
+    // 1. summaryGroups đã được server lọc theo kỳ đổ
 
     // 2. Gom nhóm theo khu vực
     const areaStats = {};
@@ -271,26 +274,26 @@
       };
     });
 
-    filteredRows.forEach(row => {
-      const type = (row['Loại phế liệu'] || '').trim();
-      const workshop = (row['Xưởng'] || 'Chưa rõ').trim();
-      const rawAmount = row['Số lượng (kg)'];
-      const kg = Number(rawAmount) || 0;
-      if (kg <= 0 && !type) return;
+    summaryGroups.forEach(g => {
+      const type = g.loai || '';
+      const workshop = g.xuong || 'Chưa rõ';
+      const kg = Number(g.kg) || 0;
 
       const matchedAreaId = matchAreaForScrapType(type);
       if (matchedAreaId && areaStats[matchedAreaId]) {
         const stat = areaStats[matchedAreaId];
         stat.totalKg += kg;
-        stat.count += 1;
+        stat.count += Number(g.n) || 0;
         stat.workshops[workshop] = (stat.workshops[workshop] || 0) + kg;
         stat.scrapSubtypes[type] = (stat.scrapSubtypes[type] || 0) + kg;
-        stat.records.push({
-          date: formatDate(row['Ngày']),
-          workshop: workshop,
-          scrapType: type,
-          kg: kg,
-          notes: row['Ghi chú'] || ''
+        (g.details || []).forEach(d => {
+          stat.records.push({
+            date: formatDate(d.ngay),
+            workshop: workshop,
+            scrapType: type,
+            kg: Number(d.kg) || 0,
+            notes: d.ghi_chu || ''
+          });
         });
       }
     });
@@ -303,13 +306,14 @@
           capacity: 0,
           percentage: 0,
           totalKg: 0,
+          count: 0,
           workshops: {},
           scrapSubtypes: {},
           records: []
         };
       }
 
-      const stat = areaStats[area.id] || { totalKg: 0, workshops: {}, scrapSubtypes: {}, records: [] };
+      const stat = areaStats[area.id] || { totalKg: 0, count: 0, workshops: {}, scrapSubtypes: {}, records: [] };
       const capacity = area.id === 'vo-xe' ? Math.round(stat.totalKg) : Number((stat.totalKg / 1000).toFixed(3));
       const percentage = area.maxCapacity > 0 ? Math.min((capacity / area.maxCapacity) * 100, 100) : 0;
 
@@ -318,6 +322,7 @@
         capacity,
         percentage,
         totalKg: stat.totalKg,
+        count: stat.count,
         workshops: stat.workshops,
         scrapSubtypes: stat.scrapSubtypes,
         records: stat.records
@@ -327,39 +332,42 @@
 
   // ==================== DATA FETCHING ====================
   async function loadData(forceFresh = false) {
+    const seq = ++loadSeq;
     isLoading = true;
     errorMessage = null;
     render();
 
     try {
-      // 1. Instant Cache Render (0ms)
+      // 1. Instant Cache Render (0ms) — chỉ khi bản lưu đúng kỳ đổ đang chọn
       if (!forceFresh && typeof getStoredTableCache === 'function') {
-        const cached = getStoredTableCache(TABLE_NAME);
-        if (Array.isArray(cached) && cached.length > 0) {
-          processRawData(cached);
+        const cached = getStoredTableCache(SUMMARY_CACHE_KEY);
+        if (cached && Array.isArray(cached.groups) && Array.isArray(cached.periods) &&
+            (!selectedPeriod || cached.period === selectedPeriod)) {
+          applySummary(cached.periods, cached.period, cached.groups);
           isLoading = false;
           render();
         }
       }
 
-      // 2. Fetch fresh data from Supabase
-      const freshData = typeof fetchAllFromSupabase === 'function'
-        ? await fetchAllFromSupabase(TABLE_NAME, '*', 'id', true)
-        : await (async () => {
-          const { data, error } = await window.supabase.from(TABLE_NAME).select('*').order('id', { ascending: true });
-          if (error) throw error;
-          return data || [];
-        })();
-
-      if (typeof setStoredTableCache === 'function') {
-        setStoredTableCache(TABLE_NAME, freshData);
+      // 2. Lấy tổng hợp mới từ server cho kỳ đang chọn (lần đầu chưa biết kỳ mới nhất → lấy danh sách kỳ trước)
+      const requested = selectedPeriod || 'ALL';
+      let res = await SQ.plTongHop(TABLE_NAME, requested === 'ALL' ? null : requested, DETAIL_LIMIT);
+      const periods = sortPeriods(res.periods || []);
+      const period = resolvePeriod(periods);
+      if (period !== requested) {
+        res = await SQ.plTongHop(TABLE_NAME, period === 'ALL' ? null : period, DETAIL_LIMIT);
       }
+      if (seq !== loadSeq) return;  // người dùng đã đổi kỳ trong lúc chờ
 
-      processRawData(freshData);
+      applySummary(periods, period, res.groups || []);
+      if (typeof setStoredTableCache === 'function') {
+        setStoredTableCache(SUMMARY_CACHE_KEY, { periods, period, groups: summaryGroups });
+      }
       lastUpdatedTime = new Date().toLocaleTimeString('vi-VN');
       isLoading = false;
       render();
     } catch (err) {
+      if (seq !== loadSeq) return;
       console.error('Lỗi tải dữ liệu kho phế liệu:', err);
       errorMessage = err.message || 'Không thể kết nối cơ sở dữ liệu Supabase';
       isLoading = false;
@@ -367,49 +375,55 @@
     }
   }
 
-  function processRawData(data) {
-    rawRows = data || [];
-
-    // Trích xuất danh sách các kỳ đổ duy nhất
-    const periodsSet = new Set();
-    rawRows.forEach(r => {
-      const p = (r['Kì đổ'] || '').trim();
-      if (p) periodsSet.add(p);
-    });
-
-    // Sắp xếp kỳ đổ theo số thứ tự (Kỳ 1, Kỳ 2...)
-    availablePeriods = Array.from(periodsSet).sort((a, b) => {
+  // Sắp xếp kỳ đổ theo số thứ tự (Kỳ 1, Kỳ 2...)
+  function sortPeriods(periods) {
+    return Array.from(new Set(periods.map(p => String(p || '').trim()).filter(Boolean))).sort((a, b) => {
       const matchA = a.match(/\d+/);
       const matchB = b.match(/\d+/);
       const numA = matchA ? parseInt(matchA[0], 10) : 0;
       const numB = matchB ? parseInt(matchB[0], 10) : 0;
       return numA - numB;
     });
+  }
 
-    // Khởi tạo kỳ đổ được chọn nếu chưa có
-    if (!selectedPeriod || (selectedPeriod !== 'ALL' && !availablePeriods.includes(selectedPeriod))) {
-      const saved = sessionStorage.getItem('pl5s_selected_period');
-      if (saved && (saved === 'ALL' || availablePeriods.includes(saved))) {
-        selectedPeriod = saved;
-      } else {
-        // Mặc định chọn Kỳ mới nhất
-        selectedPeriod = availablePeriods.length > 0 ? availablePeriods[availablePeriods.length - 1] : 'ALL';
-      }
-    }
+  // Kỳ đổ sẽ hiển thị: kỳ đang chọn → kỳ đã lưu trong phiên → kỳ mới nhất
+  function resolvePeriod(periods) {
+    if (selectedPeriod && (selectedPeriod === 'ALL' || periods.includes(selectedPeriod))) return selectedPeriod;
+    const saved = sessionStorage.getItem('pl5s_selected_period');
+    if (saved && (saved === 'ALL' || periods.includes(saved))) return saved;
+    return periods.length > 0 ? periods[periods.length - 1] : 'ALL';
+  }
 
+  function applySummary(periods, period, groups) {
+    availablePeriods = periods;
+    selectedPeriod = period;
+    summaryGroups = groups;
     calculateAreaCapacities();
   }
 
   // ==================== EXPORT EXCEL ====================
-  function exportToExcel() {
+  async function exportToExcel() {
     if (typeof XLSX === 'undefined') {
       alert('Thư viện Excel đang tải, vui lòng thử lại sau giây lát!');
       return;
     }
 
-    const filteredRows = selectedPeriod === 'ALL' || !selectedPeriod
-      ? rawRows
-      : rawRows.filter(r => (r['Kì đổ'] || '').trim() === selectedPeriod);
+    // Tải các lần đổ của kỳ đang chọn từ server (theo lô)
+    let filteredRows;
+    try {
+      const allPeriods = selectedPeriod === 'ALL' || !selectedPeriod;
+      const rows = await SQ.exportRows({
+        table: TABLE_NAME,
+        filters: allPeriods ? {} : { ieq: { 'Kì đổ': selectedPeriod } },
+        columns: ['id', 'Ngày', 'Kì đổ', 'Xưởng', 'Loại phế liệu', 'Số lượng (kg)', 'Ghi chú']
+      });
+      if (!rows) return;  // người dùng hủy
+      filteredRows = allPeriods ? rows : rows.filter(r => (r['Kì đổ'] || '').trim() === selectedPeriod);
+    } catch (err) {
+      console.error('Lỗi tải dữ liệu xuất Excel:', err);
+      alert('Không tải được dữ liệu để xuất Excel: ' + (err.message || err));
+      return;
+    }
 
     const exportData = filteredRows.map((r, index) => {
       const matchedId = matchAreaForScrapType(r['Loại phế liệu']);
@@ -492,7 +506,7 @@
           </li>
           <li class="nav-item" role="presentation">
             <button class="nav-link py-2 text-xs font-bold rounded-lg" id="detail-tab" data-bs-toggle="tab" data-bs-target="#detail-tab-pane" type="button" role="tab">
-              📋 Danh sách lần đổ (${(area.records || []).length})
+              📋 Danh sách lần đổ (${formatNumber(area.count || 0, 0)})
             </button>
           </li>
         </ul>
@@ -509,7 +523,7 @@
                   return `
                     <div class="p-2.5 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-100 transition-colors">
                       <div class="flex justify-between items-center mb-1 text-xs">
-                        <span class="font-bold text-gray-800">Xưởng: ${ws}</span>
+                        <span class="font-bold text-gray-800">Xưởng: ${escapeHtml(ws)}</span>
                         <span class="font-bold text-red-600">${formatNumber(kg, 1)} kg <span class="text-gray-400 text-[10px]">(${formatNumber(percent, 1)}%)</span></span>
                       </div>
                       <div class="w-full bg-gray-200 h-1.5 rounded-full overflow-hidden">
@@ -541,16 +555,21 @@
                   <tbody>
                     ${area.records.map(rec => `
                       <tr>
-                        <td class="py-1.5 px-3 text-gray-500 whitespace-nowrap">${rec.date}</td>
-                        <td class="py-1.5 px-3 font-semibold text-gray-800">${rec.workshop}</td>
-                        <td class="py-1.5 px-3">${rec.scrapType}</td>
+                        <td class="py-1.5 px-3 text-gray-500 whitespace-nowrap">${escapeHtml(rec.date)}</td>
+                        <td class="py-1.5 px-3 font-semibold text-gray-800">${escapeHtml(rec.workshop)}</td>
+                        <td class="py-1.5 px-3">${escapeHtml(rec.scrapType)}</td>
                         <td class="py-1.5 px-3 text-end font-bold text-red-600">${formatNumber(rec.kg, 1)}</td>
-                        <td class="py-1.5 px-3 text-gray-400 italic">${rec.notes || '-'}</td>
+                        <td class="py-1.5 px-3 text-gray-400 italic">${escapeHtml(rec.notes || '-')}</td>
                       </tr>
                     `).join('')}
                   </tbody>
                 </table>
               </div>
+              ${area.count > area.records.length ? `
+                <div class="text-center pt-2 text-gray-400 text-[11px]">
+                  Hiển thị ${formatNumber(area.records.length, 0)} / ${formatNumber(area.count, 0)} lần đổ (tối đa ${DETAIL_LIMIT} lần đổ mỗi xưởng × loại). Xuất Excel để xem đầy đủ.
+                </div>
+              ` : ''}
             `}
           </div>
         </div>
@@ -873,7 +892,7 @@
                   </div>
 
                   <div class="flex justify-between items-center text-[11px] text-slate-400 dark:text-slate-400">
-                    <span>${(area.records || []).length} lượt đổ</span>
+                    <span>${formatNumber(area.count || 0, 0)} lượt đổ</span>
                     <span class="font-bold ${area.percentage > 90 ? 'text-red-500' : area.percentage > 70 ? 'text-orange-500' : 'text-green-500'}">
                       ${formatNumber(area.percentage, 1)}%
                     </span>
@@ -916,8 +935,7 @@
       periodSelect.addEventListener('change', (e) => {
         selectedPeriod = e.target.value;
         sessionStorage.setItem('pl5s_selected_period', selectedPeriod);
-        calculateAreaCapacities();
-        render();
+        loadData();
       });
     }
 

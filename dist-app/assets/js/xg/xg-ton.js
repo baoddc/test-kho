@@ -47,11 +47,17 @@ function escapeHtml(str) {
 
 let currentPage = 1;
 let totalPages = 1;
-let tableData = [];           // lưu dữ liệu gốc từ Supabase [header, ...rows]
-let filteredData = [];         // dữ liệu sau khi lọc (chưa phân trang)
-let displayedData = [];        // dữ liệu đang hiển thị
+let tableData = [];           // trang hiện tại [header, ...rows]
 let groupByMode = true;        // chế độ nhóm theo Mã vật tư - mặc định bật
 const GROUP_COL = 4;           // index cột Mã vật tư (0-based)
+
+// Tồn kho = các dòng xg-nhap có con_ton (server tự cập nhật khi xuất / xóa phiếu xuất).
+// Lọc, phân trang và tính tổng ở server; trình duyệt chỉ giữ 1 trang.
+const NHAP_TABLE_NAME = 'xg-nhap';
+const QTY_COLUMNS = ['Số lượng (Kg)'];
+const DEFAULT_ORDER = groupByMode ? [{ col: 'Mã vật tư', asc: true }, { col: 'id', asc: true }] : [{ col: 'id', asc: true }];
+const pager = new SQ.ServerPager({ table: NHAP_TABLE_NAME, pageSize: ROWS_PER_PAGE, sumCols: QTY_COLUMNS, order: DEFAULT_ORDER });
+let groupTotals = new Map();   // Mã vật tư → { count, sums } của cả nhóm (mọi trang)
 
 const xgChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('xg_sync_channel') : null;
 let realtimeChannel = null;
@@ -212,7 +218,7 @@ window.addEventListener('load', () => {
   if (window.inventoryLockService) {
     window.inventoryLockService.init('xg');
     window.inventoryLockService.onLocksChange(() => {
-      filterTable(false);
+      renderCurrentPage();
     });
   }
 
@@ -226,94 +232,96 @@ window.addEventListener('load', () => {
    DATA LOADING - SUPABASE
 ================================================================================ */
 
+// Dòng xg-nhap → dòng tồn kho hiển thị
+function toTonRow(row) {
+  return {
+    id: row.id,
+    'Ngày nhập': row['Ngày nhập'] || '',
+    'Thời gian lưu kho': calculateStorageAge(row['Ngày nhập']),
+    'Vị trí': row['Vị trí'] || '',
+    'Mã vật tư': row['Mã vật tư'] || '',
+    'Tên vật tư': row['Tên vật tư'] || '',
+    'Batch': row['Batch'] || '',
+    'Cuộn ID': row['Cuộn ID'] || '',
+    'Số lượng (Kg)': row['Số lượng (Kg)'] || 0,
+    'Mã công trình': row['Mã công trình'] || '',
+    'Tên công trình': row['Tên công trình'] || '',
+    'Ghi chú': row['Ghi chú'] || ''
+  };
+}
+
+function buildServerFilters() {
+  return {
+    ton: true,
+    search: document.getElementById('searchInput')?.value?.trim() || ''
+  };
+}
+
 async function loadSupabaseData() {
-  try {
+  setupFilterEventListeners();
+  SQ.applyColumnFilters(pager, buildServerFilters(), DEFAULT_ORDER);
+
+  // Hiển thị ngay trang 1 đã lưu của lần mở trước (khi không có bộ lọc), rồi tải mới từ server
+  const cached = typeof getStoredTableCache === 'function' ? getStoredTableCache('xg-ton') : null;
+  if (cached && Array.isArray(cached.rows) && isDefaultView()) {
+    pager.total = cached.total || 0;
+    pager.sums = cached.sums || {};
+    groupTotals = new Map(cached.groups || []);
+    applyPageResult({ rows: cached.rows, page: 1, totalPages: pager.totalPages });
+  } else {
     const loadingEl = document.getElementById('loading');
-    const cachedTon = typeof getStoredTableCache === 'function' ? getStoredTableCache('xg-ton') : null;
-
-    // 1. Instant render from cache (0ms delay)
-    if (cachedTon && Array.isArray(cachedTon) && cachedTon.length > 0) {
-      window._rawSupabaseData = cachedTon;
-      tableData = [COLUMN_HEADERS, ...cachedTon.map(rowToArray)];
-      renderTable(tableData, false);
-      if (loadingEl) loadingEl.style.display = 'none';
-      const btnExport = document.getElementById('btnExport');
-      if (btnExport) btnExport.disabled = false;
-      setupFilterEventListeners();
-    } else {
-      if (loadingEl) {
-        loadingEl.style.display = '';
-        loadingEl.textContent = 'Đang tải dữ liệu...';
-      }
+    if (loadingEl) {
+      loadingEl.style.display = '';
+      loadingEl.textContent = 'Đang tải dữ liệu...';
     }
-
-    // 2. Fetch nhap & xuat in parallel using fetchAllFromSupabase
-    const fetchFunc = typeof fetchAllFromSupabase === 'function'
-      ? fetchAllFromSupabase
-      : async (tbl, col) => {
-          let rows = [], from = 0, batchSize = 1000, hasMore = true;
-          while (hasMore) {
-            const { data, error } = await supabase.from(tbl).select(col || '*').order('id', { ascending: true }).range(from, from + batchSize - 1);
-            if (error) throw error;
-            if (data && data.length > 0) { rows = rows.concat(data); if (data.length < batchSize) hasMore = false; else from += batchSize; } else hasMore = false;
-          }
-          return rows;
-        };
-
-    const [nhapAll, xuatAll] = await Promise.all([
-      fetchFunc('xg-nhap', '*'),
-      fetchFunc('xg-xuat', '"Cuộn ID"')
-    ]);
-
-    const exportedCuonIds = new Set(
-      xuatAll
-        .map(row => String(row['Cuộn ID'] || '').trim().toLowerCase())
-        .filter(cuonId => cuonId !== '')
-    );
-
-    const tonData = nhapAll.filter(row => {
-      const cuonId = String(row['Cuộn ID'] || '').trim().toLowerCase();
-      if (!cuonId) return false;
-      return !exportedCuonIds.has(cuonId);
-    });
-
-    const processedTon = tonData.map(row => {
-      return {
-        id: row.id,
-        'Ngày nhập': row['Ngày nhập'] || '',
-        'Thời gian lưu kho': calculateStorageAge(row['Ngày nhập']),
-        'Vị trí': row['Vị trí'] || '',
-        'Mã vật tư': row['Mã vật tư'] || '',
-        'Tên vật tư': row['Tên vật tư'] || '',
-        'Batch': row['Batch'] || '',
-        'Cuộn ID': row['Cuộn ID'] || '',
-        'Số lượng (Kg)': row['Số lượng (Kg)'] || 0,
-        'Mã công trình': row['Mã công trình'] || '',
-        'Tên công trình': row['Tên công trình'] || '',
-        'Ghi chú': row['Ghi chú'] || ''
-      };
-    });
-
-    if (typeof setStoredTableCache === 'function') setStoredTableCache('xg-ton', processedTon);
-    window._rawSupabaseData = processedTon;
-    tableData = [COLUMN_HEADERS, ...processedTon.map(rowToArray)];
-
-    renderTable(tableData, false);
-
-    if (loadingEl) loadingEl.style.display = 'none';
-    const btnExport = document.getElementById('btnExport');
-    if (btnExport) btnExport.disabled = false;
-
-    setupFilterEventListeners();
-    initSupabaseRealtime();
-
-  } catch (error) {
-    const loadingEl = document.getElementById('loading');
-    if (loadingEl && (!tableData || tableData.length === 0)) {
-      loadingEl.innerHTML = `Lỗi kết nối Supabase: ${error.message}`;
-    }
-    console.error('Supabase error:', error);
   }
+
+  await reloadPage(1);
+}
+
+// Đang xem toàn bộ tồn kho, thứ tự mặc định (mới lưu cache trang 1 cho lần mở sau)
+function isDefaultView() {
+  return Object.keys(pager.filters).length === 1 && pager.filters.ton && pager.order === DEFAULT_ORDER;
+}
+
+async function reloadPage(page) {
+  const loadingEl = document.getElementById('loading');
+  try {
+    const result = await pager.load(page);
+    if (!result) return;  // đã có yêu cầu mới hơn
+
+    // Tổng của từng nhóm Mã vật tư trên trang (tính trên toàn bộ tồn kho, không chỉ trang này)
+    if (groupByMode) {
+      const keys = Array.from(new Set(result.rows.map(r => r['Mã vật tư'] ?? null)));
+      const groups = await SQ.group({ table: NHAP_TABLE_NAME, filters: pager.filters, groupCol: 'Mã vật tư', sumCols: QTY_COLUMNS, keys });
+      groupTotals = new Map(groups.map(g => [String(g.key ?? '').trim(), g]));
+    }
+
+    applyPageResult(result);
+    if (result.page === 1 && isDefaultView() && typeof setStoredTableCache === 'function') {
+      setStoredTableCache('xg-ton', { rows: result.rows, total: pager.total, sums: pager.sums, groups: Array.from(groupTotals.entries()) });
+    }
+  } catch (error) {
+    console.error('Supabase error:', error);
+    if (loadingEl && (!tableData || tableData.length <= 1)) {
+      loadingEl.style.display = '';
+      loadingEl.textContent = `Lỗi kết nối Supabase: ${error.message}`;
+    }
+  }
+}
+
+function applyPageResult(result) {
+  currentPage = result.page;
+  totalPages = result.totalPages;
+  const tonRows = result.rows.map(toTonRow);
+  window._rawSupabaseData = tonRows;
+  tableData = [COLUMN_HEADERS, ...tonRows.map(rowToArray)];
+  renderCurrentPage();
+
+  const loadingEl = document.getElementById('loading');
+  if (loadingEl) loadingEl.style.display = 'none';
+  const btnExport = document.getElementById('btnExport');
+  if (btnExport) btnExport.disabled = false;
 }
 
 /* =============================================================================
@@ -350,165 +358,17 @@ function initSupabaseRealtime() {
   }
 }
 
-function applyCuonDeduction(cuonIdsToSubtract) {
-  if (!cuonIdsToSubtract || cuonIdsToSubtract.length === 0) return;
-  const subtractSet = new Set(
-    cuonIdsToSubtract.map(id => String(id || '').trim().toLowerCase()).filter(Boolean)
-  );
-  if (subtractSet.size === 0) return;
-
-  if (!window._rawSupabaseData || window._rawSupabaseData.length === 0) return;
-
-  const prevLen = window._rawSupabaseData.length;
-  window._rawSupabaseData = window._rawSupabaseData.filter(row => {
-    const cid = String(row['Cuộn ID'] || '').trim().toLowerCase();
-    return !subtractSet.has(cid);
-  });
-
-  if (window._rawSupabaseData.length !== prevLen) {
-    tableData = [COLUMN_HEADERS, ...window._rawSupabaseData.map(rowToArray)];
-    if (typeof setStoredTableCache === 'function') {
-      setStoredTableCache('xg-ton', window._rawSupabaseData);
-    }
-    filterTable(false);
-  }
+// Nhập / xuất ở tab khác hoặc máy khác → tải lại trang đang xem (server đã cập nhật con_ton)
+function handleXgSyncEvent(type) {
+  if (type && type.startsWith('XG_')) debouncedReloadQuietly();
 }
 
-function applyNhapInsert(newRecords) {
-  if (!newRecords || !Array.isArray(newRecords) || newRecords.length === 0) return;
-  if (!window._rawSupabaseData) window._rawSupabaseData = [];
-
-  const existingIds = new Set(window._rawSupabaseData.map(r => String(r.id)));
-  const recordsToAdd = newRecords.filter(r => !existingIds.has(String(r.id)));
-  if (recordsToAdd.length === 0) return;
-
-  const processedNewTon = recordsToAdd.map(row => ({
-    id: row.id,
-    'Ngày nhập': row['Ngày nhập'] || '',
-    'Thời gian lưu kho': calculateStorageAge(row['Ngày nhập']),
-    'Vị trí': row['Vị trí'] || '',
-    'Mã vật tư': row['Mã vật tư'] || '',
-    'Tên vật tư': row['Tên vật tư'] || '',
-    'Batch': row['Batch'] || '',
-    'Cuộn ID': row['Cuộn ID'] || '',
-    'Số lượng (Kg)': row['Số lượng (Kg)'] || 0,
-    'Mã công trình': row['Mã công trình'] || '',
-    'Tên công trình': row['Tên công trình'] || '',
-    'Ghi chú': row['Ghi chú'] || ''
-  }));
-
-  window._rawSupabaseData = [...window._rawSupabaseData, ...processedNewTon];
-  tableData = [COLUMN_HEADERS, ...window._rawSupabaseData.map(rowToArray)];
-  if (typeof setStoredTableCache === 'function') {
-    setStoredTableCache('xg-ton', window._rawSupabaseData);
-  }
-  filterTable(false);
+function handleRealtimeXuatChange() {
+  debouncedReloadQuietly();
 }
 
-function applyNhapDelete(deletedIds) {
-  if (!deletedIds || !Array.isArray(deletedIds) || deletedIds.length === 0) return;
-  const deleteSet = new Set(deletedIds.map(id => String(id)));
-  if (!window._rawSupabaseData || window._rawSupabaseData.length === 0) return;
-
-  const prevLen = window._rawSupabaseData.length;
-  window._rawSupabaseData = window._rawSupabaseData.filter(row => !deleteSet.has(String(row.id)));
-
-  if (window._rawSupabaseData.length !== prevLen) {
-    tableData = [COLUMN_HEADERS, ...window._rawSupabaseData.map(rowToArray)];
-    if (typeof setStoredTableCache === 'function') {
-      setStoredTableCache('xg-ton', window._rawSupabaseData);
-    }
-    filterTable(false);
-  }
-}
-
-function applyNhapUpdate(updatedRecord) {
-  if (!updatedRecord || !updatedRecord.id) return;
-  if (!window._rawSupabaseData || window._rawSupabaseData.length === 0) return;
-
-  const rowIdStr = String(updatedRecord.id);
-  const idx = window._rawSupabaseData.findIndex(r => String(r.id) === rowIdStr);
-  if (idx >= 0) {
-    window._rawSupabaseData[idx] = {
-      ...window._rawSupabaseData[idx],
-      id: updatedRecord.id,
-      'Ngày nhập': updatedRecord['Ngày nhập'] || '',
-      'Thời gian lưu kho': calculateStorageAge(updatedRecord['Ngày nhập']),
-      'Vị trí': updatedRecord['Vị trí'] || '',
-      'Mã vật tư': updatedRecord['Mã vật tư'] || '',
-      'Tên vật tư': updatedRecord['Tên vật tư'] || '',
-      'Batch': updatedRecord['Batch'] || '',
-      'Cuộn ID': updatedRecord['Cuộn ID'] || '',
-      'Số lượng (Kg)': updatedRecord['Số lượng (Kg)'] || 0,
-      'Mã công trình': updatedRecord['Mã công trình'] || '',
-      'Tên công trình': updatedRecord['Tên công trình'] || '',
-      'Ghi chú': updatedRecord['Ghi chú'] || ''
-    };
-    tableData = [COLUMN_HEADERS, ...window._rawSupabaseData.map(rowToArray)];
-    if (typeof setStoredTableCache === 'function') {
-      setStoredTableCache('xg-ton', window._rawSupabaseData);
-    }
-    filterTable(false);
-  } else {
-    debouncedReloadQuietly();
-  }
-}
-
-function handleXgSyncEvent(type, payload) {
-  if (type === 'XG_XUAT_INSERT') {
-    const cuonIds = payload.cuonIds || [];
-    if (cuonIds.length > 0) {
-      applyCuonDeduction(cuonIds);
-    }
-  } else if (type === 'XG_NHAP_INSERT') {
-    if (payload.records && payload.records.length > 0) {
-      applyNhapInsert(payload.records);
-    } else {
-      debouncedReloadQuietly();
-    }
-  } else if (type === 'XG_NHAP_UPDATE') {
-    if (payload.record) {
-      applyNhapUpdate(payload.record);
-    } else {
-      debouncedReloadQuietly();
-    }
-  } else if (type === 'XG_NHAP_DELETE') {
-    if (payload.ids && payload.ids.length > 0) {
-      applyNhapDelete(payload.ids);
-    } else {
-      debouncedReloadQuietly();
-    }
-  } else if (type === 'XG_XUAT_DELETE' || type === 'XG_XUAT_UPDATE') {
-    debouncedReloadQuietly();
-  }
-}
-
-function handleRealtimeXuatChange(payload) {
-  if (!payload || !payload.eventType) return;
-  if (payload.eventType === 'INSERT') {
-    const cuonId = payload.new ? String(payload.new['Cuộn ID'] || '').trim() : '';
-    if (cuonId) {
-      applyCuonDeduction([cuonId]);
-    }
-  } else if (payload.eventType === 'DELETE' || payload.eventType === 'UPDATE') {
-    debouncedReloadQuietly();
-  }
-}
-
-function handleRealtimeNhapChange(payload) {
-  if (!payload || !payload.eventType) {
-    debouncedReloadQuietly();
-    return;
-  }
-  if (payload.eventType === 'INSERT' && payload.new) {
-    applyNhapInsert([payload.new]);
-  } else if (payload.eventType === 'UPDATE' && payload.new) {
-    applyNhapUpdate(payload.new);
-  } else if (payload.eventType === 'DELETE' && payload.old && payload.old.id) {
-    applyNhapDelete([payload.old.id]);
-  } else {
-    debouncedReloadQuietly();
-  }
+function handleRealtimeNhapChange() {
+  debouncedReloadQuietly();
 }
 
 const debouncedReloadQuietly = debounce(() => {
@@ -516,59 +376,8 @@ const debouncedReloadQuietly = debounce(() => {
 }, 400);
 
 async function reloadInventoryDataQuietly() {
-  try {
-    const fetchFunc = typeof fetchAllFromSupabase === 'function'
-      ? fetchAllFromSupabase
-      : async (tbl, col) => {
-          let rows = [], from = 0, batchSize = 1000, hasMore = true;
-          while (hasMore) {
-            const { data, error } = await supabase.from(tbl).select(col || '*').order('id', { ascending: true }).range(from, from + batchSize - 1);
-            if (error) throw error;
-            if (data && data.length > 0) { rows = rows.concat(data); if (data.length < batchSize) hasMore = false; else from += batchSize; } else hasMore = false;
-          }
-          return rows;
-        };
-
-    const [nhapAll, xuatAll] = await Promise.all([
-      fetchFunc('xg-nhap', '*'),
-      fetchFunc('xg-xuat', '"Cuộn ID"')
-    ]);
-
-    const exportedCuonIds = new Set(
-      xuatAll
-        .map(row => String(row['Cuộn ID'] || '').trim().toLowerCase())
-        .filter(cuonId => cuonId !== '')
-    );
-
-    const tonData = nhapAll.filter(row => {
-      const cuonId = String(row['Cuộn ID'] || '').trim().toLowerCase();
-      if (!cuonId) return false;
-      return !exportedCuonIds.has(cuonId);
-    });
-
-    const processedTon = tonData.map(row => ({
-      id: row.id,
-      'Ngày nhập': row['Ngày nhập'] || '',
-      'Thời gian lưu kho': calculateStorageAge(row['Ngày nhập']),
-      'Vị trí': row['Vị trí'] || '',
-      'Mã vật tư': row['Mã vật tư'] || '',
-      'Tên vật tư': row['Tên vật tư'] || '',
-      'Batch': row['Batch'] || '',
-      'Cuộn ID': row['Cuộn ID'] || '',
-      'Số lượng (Kg)': row['Số lượng (Kg)'] || 0,
-      'Mã công trình': row['Mã công trình'] || '',
-      'Tên công trình': row['Tên công trình'] || '',
-      'Ghi chú': row['Ghi chú'] || ''
-    }));
-
-    if (typeof setStoredTableCache === 'function') setStoredTableCache('xg-ton', processedTon);
-    window._rawSupabaseData = processedTon;
-    tableData = [COLUMN_HEADERS, ...processedTon.map(rowToArray)];
-    filterTable(false);
-
-  } catch (err) {
-    console.error('Silent inventory reload error:', err);
-  }
+  pager.invalidate();
+  await reloadPage(currentPage);
 }
 
 function setupFilterEventListeners() {
@@ -579,13 +388,12 @@ function setupFilterEventListeners() {
   const searchInput = document.getElementById('searchInput');
   const btnScanQR = document.getElementById('btnScanQR');
 
-  // Check URL Query Param for vitri (Location Deep-link)
+  // Check URL Query Param for vitri (Location Deep-link) — loadSupabaseData đọc ô tìm kiếm ngay sau đó
   const urlParams = new URLSearchParams(window.location.search);
   const vitriParam = urlParams.get('vitri') || urlParams.get('loc') || urlParams.get('location');
   if (vitriParam && searchInput) {
     const cleanRack = window.qrScannerService ? window.qrScannerService.parseLocationQRCode(vitriParam) : vitriParam.trim().toUpperCase();
     searchInput.value = cleanRack;
-    filterTable(true);
   }
 
   if (btnScanQR) {
@@ -606,7 +414,7 @@ function setupFilterEventListeners() {
   if (btnReset) {
     btnReset.addEventListener('click', () => {
       if (searchInput) searchInput.value = '';
-      renderTable(tableData);
+      filterTable(true);
     });
   }
 
@@ -620,14 +428,15 @@ function setupFilterEventListeners() {
    TABLE RENDERING
 ================================================================================ */
 
-function renderTable(data, resetPage = true) {
-  filteredData = data;
-  if (resetPage) currentPage = 1;
+// Vẽ lại trang hiện tại (không tải lại server), vd: khi trạng thái khóa cuộn thay đổi
+function renderCurrentPage() {
   if (groupByMode) {
-    renderGroupedTable(data);
+    renderGroupedTable(tableData);
   } else {
-    renderTableWithPagination();
+    renderTableData(tableData);
   }
+  updatePaginationControls();
+  updateQuantitySummary();
 }
 
 function renderTableData(data) {
@@ -677,7 +486,7 @@ function renderTableData(data) {
         td.textContent = formatDate(cell);
       } else if (colIndex === 7 && lockStatus.isLocked) {
         const formatted = formatCellQuantityOrWeight(cell, data[0][colIndex]);
-        td.innerHTML = `${formatted} <span class="badge bg-warning text-dark ms-1" style="font-size: 0.75rem;"><i class="bi bi-hourglass-split"></i> ${lockStatus.lockedBy} đang soạn</span>`;
+        td.innerHTML = `${escapeHtml(formatted)} <span class="badge bg-warning text-dark ms-1" style="font-size: 0.75rem;"><i class="bi bi-hourglass-split"></i> ${escapeHtml(lockStatus.lockedBy)} đang soạn</span>`;
       } else {
         td.textContent = formatCellQuantityOrWeight(cell, data[0][colIndex]);
       }
@@ -765,20 +574,6 @@ function enableColumnResize(table) {
    PAGINATION
 ================================================================================ */
 
-function calculatePagination(data) {
-  totalPages = Math.max(1, Math.ceil((data.length - 1) / ROWS_PER_PAGE));
-  if (currentPage > totalPages) currentPage = totalPages;
-  if (currentPage < 1) currentPage = 1;
-}
-
-function getPageData(data) {
-  if (!data || data.length === 0) return [];
-  calculatePagination(data);
-  const startRow = (currentPage - 1) * ROWS_PER_PAGE + 1;
-  const endRow = Math.min(startRow + ROWS_PER_PAGE, data.length);
-  return data.slice(0, 1).concat(data.slice(startRow, endRow));
-}
-
 function updatePaginationControls() {
   const pageInfo = document.getElementById('pageInfo');
   const prevBtn = document.getElementById('prevPage');
@@ -805,41 +600,20 @@ function updatePaginationControls() {
 
 function goToPage(page) {
   const newPage = parseInt(page, 10);
-  if (newPage >= 1 && newPage <= totalPages) { currentPage = newPage; renderTableWithPagination(); }
+  if (newPage >= 1 && newPage <= totalPages) reloadPage(newPage);
 }
 
-function nextPage() { if (currentPage < totalPages) { currentPage++; renderTableWithPagination(); } }
-function prevPage() { if (currentPage > 1) { currentPage--; renderTableWithPagination(); } }
+function nextPage() { if (currentPage < totalPages) reloadPage(currentPage + 1); }
+function prevPage() { if (currentPage > 1) reloadPage(currentPage - 1); }
 
-function renderTableWithPagination() {
-  if (groupByMode) {
-    const dataToGroup = filteredData.length > 0 ? filteredData : tableData;
-    renderGroupedTable(dataToGroup);
-    displayedData = dataToGroup;
-    return;
-  }
-
-  const dataToPaginate = filteredData.length > 0 ? filteredData : tableData;
-  const pageData = getPageData(dataToPaginate);
-  renderTableData(pageData);
-  updatePaginationControls();
-  updateQuantitySummary(dataToPaginate);
-  displayedData = dataToPaginate;
-}
-
-// Tổng Số lượng (Kg) + số dòng theo toàn bộ dữ liệu đang lọc (tất cả các trang)
-function updateQuantitySummary(data) {
+// Tổng Số lượng (Kg) + số cuộn theo toàn bộ tồn kho đang lọc (server tính trên mọi trang)
+function updateQuantitySummary() {
   const valueEl = document.getElementById('totalQtyValue');
   const rowsEl = document.getElementById('totalQtyRows');
   if (!valueEl || !rowsEl) return;
-  const qtyIdx = data && data[0] ? data[0].indexOf('Số lượng (Kg)') : -1;
-  const rowCount = data && data.length > 1 ? data.length - 1 : 0;
-  let total = 0;
-  if (qtyIdx !== -1) {
-    for (let i = 1; i < data.length; i++) total += parseNumericInput(data[i][qtyIdx]) || 0;
-  }
+  const total = Number(pager.sums['Số lượng (Kg)']) || 0;
   valueEl.textContent = total.toLocaleString('vi-VN', { maximumFractionDigits: 3 });
-  rowsEl.textContent = rowCount.toLocaleString('vi-VN');
+  rowsEl.textContent = (pager.total || 0).toLocaleString('vi-VN');
 }
 
 
@@ -847,31 +621,25 @@ function updateQuantitySummary(data) {
    FILTERING
 ================================================================================ */
 
-const debouncedFilter = debounce(filterTable, 300);
+const debouncedFilter = debounce(() => filterTable(true), 300);
 
+// Tìm kiếm ở server trên toàn bộ tồn kho; resetPage = false giữ trang hiện tại
 function filterTable(resetPage = true) {
-  const searchVal = document.getElementById('searchInput')?.value?.trim().toLowerCase() || '';
-  const needsSearchFilter = searchVal !== '';
-
-  const filtered = [tableData[0]];
-  for (let i = 1; i < tableData.length; i++) {
-    const row = tableData[i];
-
-    if (needsSearchFilter) {
-      let matchFound = false;
-      for (let colIdx = 0; colIdx < row.length; colIdx++) {
-        let cellValue = row[colIdx];
-        if (cellValue !== undefined && cellValue !== null) {
-          if (typeof cellValue !== 'string') cellValue = String(cellValue);
-          if (cellValue.toLowerCase().includes(searchVal)) { matchFound = true; break; }
-        }
-      }
-      if (!matchFound) continue;
-    }
-    filtered.push(row);
-  }
-  renderTable(filtered, resetPage);
+  SQ.applyColumnFilters(pager, buildServerFilters(), DEFAULT_ORDER);
+  return reloadPage(resetPage ? 1 : currentPage);
 }
+
+// Bộ lọc / sắp xếp theo cột trên tiêu đề bảng (home.js) chạy ở server
+window.ddcServerAdapter = {
+  table: NHAP_TABLE_NAME,
+  column: (key) => SQ.headerColumn(COLUMN_HEADERS, key, {
+    date: ['Ngày nhập'],
+    number: ['id', 'Số lượng (Kg)'],
+    age: { 'Thời gian lưu kho': 'Ngày nhập' }
+  }),
+  baseFilters: buildServerFilters,
+  reload: () => filterTable(true)
+};
 
 
 /* =============================================================================
@@ -903,10 +671,8 @@ function showNoResultsMessage(message) {
 }
 
 function renderGroupedTable(data) {
-  updateQuantitySummary(data);
   if (!data || data.length < 2) {
     showNoResultsMessage('Không tìm thấy kết quả phù hợp');
-    displayedData = [];
     return;
   }
 
@@ -949,20 +715,15 @@ function renderGroupedTable(data) {
   }
 
   const fragment = document.createDocumentFragment();
-  for (let i = 0; i < groups.size; i++) {} // just a placeholder to preserve format or loop correctly
   for (const [key, groupRows] of groups) {
+    // Dòng tổng của nhóm lấy từ server: đúng cho cả nhóm kể cả khi nhóm trải qua nhiều trang
+    const groupInfo = groupTotals.get(key);
     const summaryRow = new Array(headers.length).fill('');
     for (let c = 0; c < headers.length; c++) {
-      if (c === 2) continue; // Skip 'Thời gian lưu kho' (index 2)
-
       if (c === GROUP_COL) {
         summaryRow[c] = groupRows[0][c] ?? '';
-      } else if (numericCols.includes(c)) {
-        let total = 0;
-        for (const r of groupRows) {
-          const v = parseNumericInput(r[c]);
-          if (v !== null) total += v;
-        }
+      } else if (QTY_COLUMNS.includes(headers[c])) {
+        const total = groupInfo ? Number(groupInfo.sums?.[headers[c]]) || 0 : 0;
         summaryRow[c] = Number.isInteger(total) ? total.toLocaleString('vi-VN') : total.toLocaleString('vi-VN', { maximumFractionDigits: 3 });
       }
     }
@@ -995,7 +756,7 @@ function renderGroupedTable(data) {
           td.textContent = formatDate(cell);
         } else if (colIndex === 7 && lockStatus.isLocked) { // 'Cuộn ID'
           const formatted = formatCellQuantityOrWeight(cell, headers[colIndex]);
-          td.innerHTML = `${formatted} <span class="badge bg-warning text-dark ms-1" style="font-size: 0.75rem;"><i class="bi bi-hourglass-split"></i> ${lockStatus.lockedBy} đang soạn</span>`;
+          td.innerHTML = `${escapeHtml(formatted)} <span class="badge bg-warning text-dark ms-1" style="font-size: 0.75rem;"><i class="bi bi-hourglass-split"></i> ${escapeHtml(lockStatus.lockedBy)} đang soạn</span>`;
         } else {
           td.textContent = formatCellQuantityOrWeight(cell, headers[colIndex]);
         }
@@ -1007,10 +768,10 @@ function renderGroupedTable(data) {
   }
   tbody.appendChild(fragment);
 
+  // Tồn kho phân trang ở server nên luôn hiện thanh chuyển trang
   const paginationDiv = document.querySelector('.d-flex.align-items-center.justify-content-end');
-  if (paginationDiv && data && data.length >= 2) paginationDiv.style.display = 'none';
+  if (paginationDiv) paginationDiv.style.display = '';
 
-  displayedData = data;
   if (data && data.length >= 2) {
     enableColumnResize(table);
     updateCellTitles(table);
@@ -1022,10 +783,22 @@ function renderGroupedTable(data) {
    EXPORT
 ================================================================================ */
 
-document.getElementById('btnExport').addEventListener('click', () => {
-  if (!displayedData || displayedData.length === 0) return;
+document.getElementById('btnExport').addEventListener('click', async () => {
+  const btnExport = document.getElementById('btnExport');
+  let allRows;
+  try {
+    if (btnExport) btnExport.disabled = true;
+    allRows = await SQ.exportRows({ table: NHAP_TABLE_NAME, filters: pager.filters });
+  } catch (err) {
+    alert(`Lỗi xuất Excel: ${err.message}`);
+    return;
+  } finally {
+    if (btnExport) btnExport.disabled = false;
+  }
+  if (!allRows) return;
 
-  const ws = XLSX.utils.aoa_to_sheet(displayedData);
+  const exportData = [COLUMN_HEADERS, ...allRows.map(toTonRow).map(rowToArray)];
+  const ws = XLSX.utils.aoa_to_sheet(exportData);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Dữ liệu");
 

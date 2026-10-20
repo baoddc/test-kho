@@ -115,10 +115,14 @@ const TABLE_COLUMNS = ['stt', 'ngay', 'kido', 'xuong', 'loai', 'soluong', 'ghich
 
 let currentPage = 1;
 let totalPages = 1;
-let tableData = [];           // lưu dữ liệu gốc từ Google Sheet
-let filteredData = [];         // dữ liệu sau khi lọc (chưa phân trang)
+let tableData = [];           // các dòng của trang đang xem (lọc / phân trang chạy ở server)
+let filteredData = [];         // = tableData (giữ tên cho home.js)
 let displayedData = [];        // dữ liệu đang hiển thị (trang hiện tại)
-let selectedRowIndex = -1;     // index theo tableData (không theo dữ liệu đã lọc)
+let selectedRowIndex = -1;     // id dòng đang chọn
+
+const QTY_DB_COLUMN = HAS_QTY_COLUMN ? 'Số lượng' : 'Số lượng (kg)';
+const DEFAULT_ORDER = [{ col: 'id', asc: true }];
+const pager = new SQ.ServerPager({ table: TABLE_NAME, pageSize: ROWS_PER_PAGE, order: DEFAULT_ORDER });
 let selectedRowIndexes = [];   // mảng các index đã chọn (cho xóa nhiều dòng)
 
 // Loại management for Add Data Modal
@@ -299,79 +303,42 @@ function parseNumber(value) {
    Các hàm tải dữ liệu từ Google Sheet
 ================================================================================ */
 
-// Fetch dữ liệu từ Supabase
+// Dòng Supabase → dòng hiển thị; stt = vị trí trong kết quả lọc (tính từ đầu trang)
+function toDisplayRow(row, index, offset) {
+  return {
+    id: row.id,
+    stt: offset + index + 1,
+    ngay: row['Ngày'] ? formatDate(row['Ngày']) : '',
+    kido: row['Kì đổ'] || '',
+    xuong: row['Xưởng'] || '',
+    loai: row['Loại phế liệu'] || '',
+    soluong: readQuantity(row),
+    ghichu: row['Ghi chú'] || '',
+    column8: row['Cột 8 (Kì đổ_Xưởng_Loại phế liệu)'] || '',
+    created_at: row.created_at || row.createdAt || row.created_Time,
+    _raw: row,
+    _rowIndex: row.id
+  };
+}
+
+// Tải lại dữ liệu từ Supabase (danh sách lọc + trang hiện tại); preservePage giữ trang đang xem
 async function fetchSheetData(preservePage = false) {
   const loadingEl = document.getElementById('loading');
+  if (loadingEl && (!tableData || tableData.length === 0)) {
+    loadingEl.innerHTML = 'Đang tải dữ liệu...';
+    loadingEl.style.display = '';
+  }
 
   try {
-    const cachedData = typeof getStoredTableCache === 'function' ? getStoredTableCache(TABLE_NAME) : null;
-
-    // 1. Instant render from cache if available (0ms delay)
-    if (cachedData && Array.isArray(cachedData) && cachedData.length > 0) {
-      tableData = cachedData.map((row, index) => ({
-        id: row.id,
-        stt: index + 1,
-        ngay: row['Ngày'] ? formatDate(row['Ngày']) : '',
-        kido: row['Kì đổ'] || '',
-        xuong: row['Xưởng'] || '',
-        loai: row['Loại phế liệu'] || '',
-        soluong: readQuantity(row),
-        ghichu: row['Ghi chú'] || '',
-        column8: row['Cột 8 (Kì đổ_Xưởng_Loại phế liệu)'] || '',
-        created_at: row.created_at || row.createdAt || row.created_Time,
-        _raw: row,
-        _rowIndex: row.id
-      }));
-
-      updateFilterValues();
-      await fetchLoaiPheLieuData();
-      const exportBtn = document.getElementById('btnExport');
-      if (exportBtn) exportBtn.disabled = false;
-      applyFilters(!preservePage);
-      if (loadingEl) loadingEl.style.display = 'none';
-    } else {
-      if (loadingEl) {
-        loadingEl.innerHTML = 'Đang tải dữ liệu...';
-        loadingEl.style.display = '';
-      }
-    }
-
-    // 2. Background fetch fresh data from Supabase with parallel batching
-    const rawData = typeof fetchAllFromSupabase === 'function'
-      ? await fetchAllFromSupabase(TABLE_NAME, '*', 'id', true)
-      : await (async () => {
-        const { data, error } = await supabase.from(TABLE_NAME).select('*').order('id', { ascending: true });
-        if (error) throw error;
-        return data || [];
-      })();
-
-    if (typeof setStoredTableCache === 'function') setStoredTableCache(TABLE_NAME, rawData);
-
-    tableData = (rawData || []).map((row, index) => ({
-      id: row.id,
-      stt: index + 1,
-      ngay: row['Ngày'] ? formatDate(row['Ngày']) : '',
-      kido: row['Kì đổ'] || '',
-      xuong: row['Xưởng'] || '',
-      loai: row['Loại phế liệu'] || '',
-      soluong: readQuantity(row),
-      ghichu: row['Ghi chú'] || '',
-      column8: row['Cột 8 (Kì đổ_Xưởng_Loại phế liệu)'] || '',
-      created_at: row.created_at || row.createdAt || row.created_Time,
-      _raw: row,
-      _rowIndex: row.id
-    }));
-
-    updateFilterValues();
-    await fetchLoaiPheLieuData();
+    await Promise.all([updateFilterValues(), fetchLoaiPheLieuData()]);
+    pager.invalidate();
+    await applyFilters(!preservePage);
     const exportBtn = document.getElementById('btnExport');
     if (exportBtn) exportBtn.disabled = false;
-    applyFilters(!preservePage);
-
   } catch (error) {
     console.error('Lỗi khi tải dữ liệu từ Supabase:', error);
     if (loadingEl && (!tableData || tableData.length === 0)) {
-      loadingEl.innerHTML = `<div class="alert alert-danger">Lỗi khi tải dữ liệu: ${error.message}</div>`;
+      loadingEl.innerHTML = `<div class="alert alert-danger">Lỗi khi tải dữ liệu: ${escapeHtml(error.message)}</div>`;
     }
   } finally {
     if (loadingEl && !loadingEl.querySelector('.alert-danger')) {
@@ -380,17 +347,16 @@ async function fetchSheetData(preservePage = false) {
   }
 }
 
-// Lấy danh sách Loại phế liệu duy nhất từ tableData để làm gợi ý dropdown
+// Lấy danh sách Loại phế liệu duy nhất (từ server) để làm gợi ý dropdown
 async function fetchLoaiPheLieuData() {
   try {
     loaiPheLieuError = null;
     loaiPheLieuLoaded = false;
 
     const loaiSet = new Set();
-    tableData.forEach(row => {
-      if (row.loai) {
-        loaiSet.add(row.loai.trim());
-      }
+    const values = await SQ.distinct({ table: TABLE_NAME, col: 'Loại phế liệu', fresh: true });
+    values.forEach(v => {
+      if (v) loaiSet.add(String(v).trim());
     });
 
     // Fallback danh mục mặc định nếu chưa có dữ liệu
@@ -417,22 +383,14 @@ async function fetchLoaiPheLieuData() {
   }
 }
 
-// Update filter dropdown values
-function updateFilterValues() {
-  // Extract unique xưởng values
-  const xuongSet = new Set();
-  // Extract unique kì đổ values
-  const kiDoSet = new Set();
-  tableData.forEach(row => {
-    if (row.xuong) {
-      xuongSet.add(row.xuong);
-    }
-    if (row.kido) {
-      kiDoSet.add(row.kido);
-    }
-  });
-  xuongList = Array.from(xuongSet).sort();
-  kiDoList = Array.from(kiDoSet).sort();
+// Update filter dropdown values (giá trị khác nhau lấy từ server)
+async function updateFilterValues() {
+  const [xuongValues, kiDoValues] = await Promise.all([
+    SQ.distinct({ table: TABLE_NAME, col: 'Xưởng', fresh: true }),
+    SQ.distinct({ table: TABLE_NAME, col: 'Kì đổ', fresh: true })
+  ]);
+  xuongList = Array.from(new Set(xuongValues.filter(Boolean))).sort();
+  kiDoList = Array.from(new Set(kiDoValues.filter(Boolean))).sort();
 
   // Render xưởng filter
   renderXuongFilter();
@@ -617,74 +575,72 @@ function updateKiDoFilterCount() {
    Các hàm lọc dữ liệu và phân trang
 ================================================================================ */
 
-// Apply all filters
-function applyFilters(resetPage = true) {
-  const searchInput = document.getElementById('searchInput');
-  const fromDateInput = document.getElementById('fromDate');
-  const toDateInput = document.getElementById('toDate');
-
-  const searchTerm = searchInput?.value?.toLowerCase() || '';
-  const fromDate = fromDateInput?.value;
-  const toDate = toDateInput?.value;
-  const checkedXuongs = Array.from(document.querySelectorAll('.xuong-filter-checkbox:checked')).map(cb => cb.value);
-  const checkedKiDos = Array.from(document.querySelectorAll('.kido-filter-checkbox:checked')).map(cb => cb.value);
-
-  filteredData = tableData.filter(row => {
-    // Search filter
-    if (searchTerm) {
-      const searchFields = [row.xuong, row.loai, row.ghichu].filter(f => f).join(' ').toLowerCase();
-      if (!searchFields.includes(searchTerm)) {
-        return false;
-      }
+// Bộ lọc hiện tại trên giao diện → bộ lọc gửi lên server
+function buildServerFilters() {
+  const fromDate = document.getElementById('fromDate')?.value || '';
+  const toDate = document.getElementById('toDate')?.value || '';
+  const filters = {
+    search: document.getElementById('searchInput')?.value?.trim() || '',
+    in: {
+      'Xưởng': Array.from(document.querySelectorAll('.xuong-filter-checkbox:checked')).map(cb => cb.value),
+      'Kì đổ': Array.from(document.querySelectorAll('.kido-filter-checkbox:checked')).map(cb => cb.value)
     }
-
-    // Date filter
-    if (fromDate || toDate) {
-      const rowDate = parseRowDate(row.ngay);
-      if (rowDate) {
-        // Use local date components to avoid timezone issues with toISOString()
-        const rowYear = rowDate.getFullYear();
-        const rowMonth = String(rowDate.getMonth() + 1).padStart(2, '0');
-        const rowDay = String(rowDate.getDate()).padStart(2, '0');
-        const rowDateStr = `${rowYear}-${rowMonth}-${rowDay}`;
-
-        if (fromDate && rowDateStr < fromDate) return false;
-        if (toDate && rowDateStr > toDate) return false;
-      } else {
-        return false; // Skip rows with invalid dates when filter is applied
-      }
+  };
+  if (fromDate || toDate) {
+    if (HAS_QTY_COLUMN) {
+      // Bảng chưa thu không có cột Ngày: như trước, lọc theo ngày thì không còn dòng nào
+      filters.one_of = [{ col: 'id', values: [] }];
+    } else {
+      filters.range = [{ col: 'Ngày', gte: fromDate, lte: toDate }];
     }
-
-    // Xưởng filter
-    if (checkedXuongs.length > 0) {
-      if (!row.xuong || !checkedXuongs.includes(row.xuong)) {
-        return false;
-      }
-    }
-
-    // Kì đổ filter
-    if (checkedKiDos.length > 0) {
-      if (!row.kido || !checkedKiDos.includes(row.kido)) {
-        return false;
-      }
-    }
-
-    return true;
-  });
-
-  if (resetPage) {
-    currentPage = 1;
   }
-
-  // Calculate pagination
-  totalPages = Math.ceil(filteredData.length / ROWS_PER_PAGE) || 1;
-  if (currentPage > totalPages) currentPage = totalPages;
-  if (currentPage < 1) currentPage = 1;
-
-  // Update display
-  updatePagination();
-  renderTable();
+  return filters;
 }
+
+// Apply all filters (lọc + phân trang ở server)
+async function applyFilters(resetPage = true) {
+  SQ.applyColumnFilters(pager, buildServerFilters(), DEFAULT_ORDER);
+  await loadPage(resetPage === false ? currentPage : 1);
+}
+
+async function loadPage(page) {
+  try {
+    const result = await pager.load(page);
+    if (!result) return;  // đã có yêu cầu mới hơn
+    currentPage = result.page;
+    totalPages = result.totalPages;
+    const offset = (currentPage - 1) * ROWS_PER_PAGE;
+    tableData = result.rows.map((row, index) => toDisplayRow(row, index, offset));
+    filteredData = tableData;
+    updatePagination();
+    renderTable();
+  } catch (error) {
+    console.error('Lỗi khi tải dữ liệu từ Supabase:', error);
+    alert('Lỗi khi tải dữ liệu: ' + error.message);
+  }
+}
+
+// Bộ lọc / sắp xếp theo cột trên tiêu đề bảng (home.js) chạy ở server
+const DDC_COLUMN_MAP = {
+  ngay: { name: 'Ngày', type: 'date' },
+  kido: { name: 'Kì đổ', type: 'text' },
+  xuong: { name: 'Xưởng', type: 'text' },
+  loai: { name: 'Loại phế liệu', type: 'text' },
+  soluong: { name: QTY_DB_COLUMN, type: 'number' },
+  ghichu: { name: 'Ghi chú', type: 'text' },
+  column8: { name: 'Cột 8 (Kì đổ_Xưởng_Loại phế liệu)', type: 'text' }
+};
+window.ddcServerAdapter = {
+  table: TABLE_NAME,
+  column: (key) => {
+    const col = DDC_COLUMN_MAP[key];
+    if (!col) return null;
+    if (HAS_QTY_COLUMN && (key === 'ngay' || key === 'ghichu')) return null;  // view chưa thu không có các cột này
+    return col;
+  },
+  baseFilters: buildServerFilters,
+  reload: () => applyFilters(true)
+};
 
 // Update pagination controls
 function updatePagination() {
@@ -710,12 +666,9 @@ function updatePagination() {
   if (nextBtn) nextBtn.disabled = currentPage === totalPages;
 }
 
-// Render table with pagination
+// Render table (trang hiện tại đã tải từ server)
 function renderTable() {
-  const startIndex = (currentPage - 1) * ROWS_PER_PAGE;
-  const endIndex = startIndex + ROWS_PER_PAGE;
-  displayedData = filteredData.slice(startIndex, endIndex);
-
+  displayedData = tableData;
   renderTableBody();
 }
 
@@ -1747,19 +1700,31 @@ async function handleConfirmDelete() {
   }
 }
 
-// Handle export
-function handleExport() {
+// Handle export: tải toàn bộ dòng khớp bộ lọc từ server theo lô
+async function handleExport() {
   if (typeof XLSX === 'undefined') {
     alert('Thư viện XLSX chưa tải xong, vui lòng thử lại sau giây lát.');
     return;
   }
-  if (!filteredData || filteredData.length === 0) {
+  if (!pager.total) {
     alert('Không có dữ liệu để xuất file Excel');
     return;
   }
 
+  let allRows;
+  try {
+    showLoadingOverlay('Đang tải dữ liệu để xuất Excel...');
+    allRows = await SQ.exportRows({ table: TABLE_NAME, filters: pager.filters });
+  } catch (error) {
+    alert('Lỗi xuất Excel: ' + error.message);
+    return;
+  } finally {
+    hideLoadingOverlay();
+  }
+  if (!allRows) return;
+
   const exportHeaders = ['STT', 'Ngày', 'Kì đổ', 'Xưởng', 'Loại phế liệu', 'Số lượng (kg)', 'Ghi chú', 'Cột phụ'];
-  const exportRows = filteredData.map((row, idx) => [
+  const exportRows = allRows.map((raw, idx) => toDisplayRow(raw, idx, 0)).map((row, idx) => [
     idx + 1,
     row.ngay || '',
     row.kido || '',
@@ -1883,25 +1848,15 @@ function startApp() {
 
   // Pagination
   document.getElementById('pageSelect')?.addEventListener('change', (e) => {
-    currentPage = parseInt(e.target.value, 10);
-    renderTable();
-    updatePagination();
+    loadPage(parseInt(e.target.value, 10));
   });
 
   document.getElementById('prevPage')?.addEventListener('click', () => {
-    if (currentPage > 1) {
-      currentPage--;
-      renderTable();
-      updatePagination();
-    }
+    if (currentPage > 1) loadPage(currentPage - 1);
   });
 
   document.getElementById('nextPage')?.addEventListener('click', () => {
-    if (currentPage < totalPages) {
-      currentPage++;
-      renderTable();
-      updatePagination();
-    }
+    if (currentPage < totalPages) loadPage(currentPage + 1);
   });
 
   // Select all checkbox

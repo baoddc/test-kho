@@ -136,14 +136,18 @@ function restoreFilterState(state) {
 
 let currentPage = 1;
 let totalPages = 1;
-let tableData = [];         // duoi dang 2D array [header, ...rows]
-let filteredData = [];
-let displayedData = [];
+let tableData = [];         // trang hiện tại dạng 2D array [header, ...rows]
 let selectedRowIndex = -1;
 let selectedRowIndexes = [];
 
 let rollCount = 0;
 let editRollCount = 0;
+
+// Lọc / phân trang / tính tổng chạy ở server, trình duyệt chỉ giữ 1 trang
+const DEFAULT_ORDER = [{ col: 'id', asc: true }];
+const pager = new SQ.ServerPager({ table: TABLE_NAME, pageSize: ROWS_PER_PAGE, sumCols: ['Số lượng (Kg)'], order: DEFAULT_ORDER });
+const PAGE1_CACHE_KEY = TABLE_NAME + '_page1';
+let voucherOptions = [];    // danh sách Mã chứng từ cho form thêm / sửa
 
 const toleChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('tole_sync_channel') : null;
 
@@ -183,6 +187,11 @@ function showLoadingOverlay(message) {
 function hideLoadingOverlay() {
   const overlay = document.getElementById('loadingOverlay');
   if (overlay) overlay.remove();
+}
+
+function updateLoadingOverlay(message) {
+  const box = document.getElementById('loadingOverlay')?.firstElementChild?.firstElementChild;
+  if (box && box.lastChild) box.lastChild.textContent = message;
 }
 
 
@@ -341,74 +350,71 @@ window.addEventListener('load', () => {
 ================================================================================ */
 
 async function loadSupabaseData() {
-  try {
+  setupFilterEventListeners();
+
+  SQ.applyColumnFilters(pager, buildServerFilters(), DEFAULT_ORDER);
+
+  // Hiển thị ngay trang 1 đã lưu của lần mở trước (khi không có bộ lọc), rồi tải mới từ server
+  const cached = typeof getStoredTableCache === 'function' ? getStoredTableCache(PAGE1_CACHE_KEY) : null;
+  if (cached && Array.isArray(cached.rows) && Object.keys(pager.filters).length === 0 && pager.order === DEFAULT_ORDER) {
+    pager.total = cached.total || 0;
+    pager.sums = cached.sums || {};
+    applyPageResult({ rows: cached.rows, page: 1, totalPages: pager.totalPages, total: pager.total, sums: pager.sums });
+  } else {
     const loadingEl = document.getElementById('loading');
-    const cachedRaw = typeof getStoredTableCache === 'function' ? getStoredTableCache(TABLE_NAME) : null;
-
-    // 1. Instant render from SWR cache (0ms delay)
-    if (cachedRaw && Array.isArray(cachedRaw) && cachedRaw.length > 0) {
-      window._rawSupabaseData = cachedRaw;
-      tableData = [COLUMN_HEADERS, ...cachedRaw.map((row, idx) => {
-        const arr = rowToArray(row);
-        arr.originalIndex = idx + 1;
-        return arr;
-      })];
-      populateTypeDropdown('Loại nhập', 'typeFilterMenu', 'typeFilterBtn', 'typeFilterCount', tableData);
-      populateTypeDropdown('Mã chứng từ', 'voucherFilterMenu', 'voucherFilterBtn', 'voucherFilterCount', tableData);
-      renderTable(tableData, false);
-      if (loadingEl) loadingEl.style.display = 'none';
-      const btnExport = document.getElementById('btnExport');
-      if (btnExport) btnExport.disabled = false;
-      setupFilterEventListeners();
-    } else {
-      if (loadingEl) {
-        loadingEl.style.display = '';
-        loadingEl.textContent = 'Đang tải dữ liệu...';
-      }
+    if (loadingEl) {
+      loadingEl.style.display = '';
+      loadingEl.textContent = 'Đang tải dữ liệu...';
     }
-
-    // 2. Fetch fresh data in background with parallel batching
-    let allData;
-    if (typeof fetchAllFromSupabase === 'function') {
-      allData = await fetchAllFromSupabase(TABLE_NAME, '*', 'id', true);
-    } else {
-      let rows = [], from = 0, batchSize = 1000, hasMore = true;
-      while (hasMore) {
-        const { data, error } = await supabase.from(TABLE_NAME).select('*').order('id', { ascending: true }).range(from, from + batchSize - 1);
-        if (error) throw error;
-        if (data && data.length > 0) { rows = rows.concat(data); if (data.length < batchSize) hasMore = false; else from += batchSize; } else hasMore = false;
-      }
-      allData = rows;
-    }
-
-    if (typeof setStoredTableCache === 'function') setStoredTableCache(TABLE_NAME, allData);
-    window._rawSupabaseData = allData;
-
-    tableData = [COLUMN_HEADERS, ...allData.map((row, idx) => {
-      const arr = rowToArray(row);
-      arr.originalIndex = idx + 1;
-      return arr;
-    })];
-
-    populateTypeDropdown('Loại nhập', 'typeFilterMenu', 'typeFilterBtn', 'typeFilterCount', tableData);
-    populateTypeDropdown('Mã chứng từ', 'voucherFilterMenu', 'voucherFilterBtn', 'voucherFilterCount', tableData);
-
-    renderTable(tableData, false);
-
-    if (loadingEl) loadingEl.style.display = 'none';
-    const btnExport = document.getElementById('btnExport');
-    if (btnExport) btnExport.disabled = false;
-
-    setupFilterEventListeners();
-
-  } catch (error) {
-    const loadingEl = document.getElementById('loading');
-    if (loadingEl && (!tableData || tableData.length === 0)) {
-      loadingEl.innerHTML =
-        `Lỗi kết nối Supabase: ${error.message}<br>Kiểm tra URL và anon key trong supabase-config.js`;
-    }
-    console.error('Supabase error:', error);
   }
+
+  await Promise.all([populateDistinctFilterDropdowns(), reloadPage(1)]);
+}
+
+// Tải lại sau khi thêm / sửa / xóa: đếm lại tổng và giữ trang hiện tại
+async function fetchDataFromSupabase(targetPage = 1) {
+  pager.invalidate();
+  rollNumberCache.clear();
+  await reloadPage(targetPage);
+}
+
+async function reloadPage(page) {
+  const loadingEl = document.getElementById('loading');
+  try {
+    const result = await pager.load(page);
+    if (!result) return;  // đã có yêu cầu mới hơn
+    applyPageResult(result);
+    if (result.page === 1 && Object.keys(pager.filters).length === 0 && pager.order === DEFAULT_ORDER && typeof setStoredTableCache === 'function') {
+      setStoredTableCache(PAGE1_CACHE_KEY, { rows: result.rows, total: result.total, sums: result.sums });
+    }
+  } catch (error) {
+    console.error('Supabase error in reloadPage:', error);
+    if (loadingEl && (!tableData || tableData.length <= 1)) {
+      loadingEl.style.display = '';
+      loadingEl.textContent = `Lỗi kết nối Supabase: ${error.message}`;
+    } else {
+      (window.showWarningModal || alert)(`Không tải được dữ liệu: ${error.message}`);
+    }
+  }
+}
+
+function applyPageResult(result) {
+  currentPage = result.page;
+  totalPages = result.totalPages;
+  window._rawSupabaseData = result.rows;
+  tableData = [COLUMN_HEADERS, ...result.rows.map((row, idx) => {
+    const arr = rowToArray(row);
+    arr.originalIndex = idx + 1;
+    return arr;
+  })];
+  renderTableData(tableData);
+  updatePaginationControls();
+  updateQuantitySummary();
+
+  const loadingEl = document.getElementById('loading');
+  if (loadingEl) loadingEl.style.display = 'none';
+  const btnExport = document.getElementById('btnExport');
+  if (btnExport) btnExport.disabled = false;
 }
 
 function setupFilterEventListeners() {
@@ -431,12 +437,12 @@ function setupFilterEventListeners() {
           if (count) count.textContent = '0';
         }
       });
-      renderTable(tableData);
+      filterTable(true);
     });
   }
 
-  if (fromInput) fromInput.addEventListener('change', filterTable);
-  if (toInput) toInput.addEventListener('change', filterTable);
+  if (fromInput) fromInput.addEventListener('change', () => filterTable(true));
+  if (toInput) toInput.addEventListener('change', () => filterTable(true));
   if (searchInput) searchInput.addEventListener('input', debouncedFilter);
 }
 
@@ -444,12 +450,6 @@ function setupFilterEventListeners() {
 /* =============================================================================
    TABLE RENDERING
 ================================================================================ */
-
-function renderTable(data, resetPage = true) {
-  filteredData = data;
-  if (resetPage) currentPage = 1;
-  renderTableWithPagination();
-}
 
 function renderTableData(data) {
   const table = document.getElementById('dataTable');
@@ -640,20 +640,6 @@ function enableColumnResize(table) {
    PAGINATION
 ================================================================================ */
 
-function calculatePagination(data) {
-  totalPages = Math.max(1, Math.ceil((data.length - 1) / ROWS_PER_PAGE));
-  if (currentPage > totalPages) currentPage = totalPages;
-  if (currentPage < 1) currentPage = 1;
-}
-
-function getPageData(data) {
-  if (!data || data.length === 0) return [];
-  calculatePagination(data);
-  const startRow = (currentPage - 1) * ROWS_PER_PAGE + 1;
-  const endRow = Math.min(startRow + ROWS_PER_PAGE, data.length);
-  return data.slice(0, 1).concat(data.slice(startRow, endRow));
-}
-
 function updatePaginationControls() {
   const pageInfo = document.getElementById('pageInfo');
   const prevBtn = document.getElementById('prevPage');
@@ -680,34 +666,20 @@ function updatePaginationControls() {
 
 function goToPage(page) {
   const newPage = parseInt(page, 10);
-  if (newPage >= 1 && newPage <= totalPages) { currentPage = newPage; renderTableWithPagination(); }
+  if (newPage >= 1 && newPage <= totalPages) reloadPage(newPage);
 }
 
-function nextPage() { if (currentPage < totalPages) { currentPage++; renderTableWithPagination(); } }
-function prevPage() { if (currentPage > 1) { currentPage--; renderTableWithPagination(); } }
+function nextPage() { if (currentPage < totalPages) reloadPage(currentPage + 1); }
+function prevPage() { if (currentPage > 1) reloadPage(currentPage - 1); }
 
-function renderTableWithPagination() {
-  const dataToPaginate = filteredData.length > 0 ? filteredData : tableData;
-  const pageData = getPageData(dataToPaginate);
-  renderTableData(pageData);
-  updatePaginationControls();
-  updateQuantitySummary(dataToPaginate);
-  displayedData = dataToPaginate;
-}
-
-// Tổng Số lượng (Kg) + số dòng theo toàn bộ dữ liệu đang lọc (tất cả các trang)
-function updateQuantitySummary(data) {
+// Tổng Số lượng (Kg) + số dòng theo toàn bộ dữ liệu đang lọc (server tính trên mọi trang)
+function updateQuantitySummary() {
   const valueEl = document.getElementById('totalQtyValue');
   const rowsEl = document.getElementById('totalQtyRows');
   if (!valueEl || !rowsEl) return;
-  const qtyIdx = data && data[0] ? data[0].indexOf('Số lượng (Kg)') : -1;
-  const rowCount = data && data.length > 1 ? data.length - 1 : 0;
-  let total = 0;
-  if (qtyIdx !== -1) {
-    for (let i = 1; i < data.length; i++) total += parseNumericInput(data[i][qtyIdx]) || 0;
-  }
+  const total = Number(pager.sums['Số lượng (Kg)']) || 0;
   valueEl.textContent = total.toLocaleString('vi-VN', { maximumFractionDigits: 3 });
-  rowsEl.textContent = rowCount.toLocaleString('vi-VN');
+  rowsEl.textContent = (pager.total || 0).toLocaleString('vi-VN');
 }
 
 
@@ -715,91 +687,67 @@ function updateQuantitySummary(data) {
    FILTERING
 ================================================================================ */
 
-const debouncedFilter = debounce(filterTable, 300);
+const debouncedFilter = debounce(() => filterTable(true), 300);
 
-function filterTable(resetPage = true) {
-  const fromVal = document.getElementById('fromDate')?.value || '';
-  const toVal = document.getElementById('toDate')?.value || '';
-  const searchVal = document.getElementById('searchInput')?.value?.trim().toLowerCase() || '';
-
-  const typeMenu = document.getElementById('typeFilterMenu');
-  const typeSelected = typeMenu ? Array.from(typeMenu.querySelectorAll('input[type="checkbox"]:checked')).map(i => String(i.value).trim()).filter(Boolean) : [];
-  const typeColIndex = typeMenu?.dataset?.colIndex ? parseInt(typeMenu.dataset.colIndex, 10) : -1;
-
-  const voucherMenu = document.getElementById('voucherFilterMenu');
-  const voucherSelected = voucherMenu ? Array.from(voucherMenu.querySelectorAll('input[type="checkbox"]:checked')).map(i => String(i.value).trim()).filter(Boolean) : [];
-  const voucherColIndex = voucherMenu?.dataset?.colIndex ? parseInt(voucherMenu.dataset.colIndex, 10) : -1;
-
-  const from = fromVal ? new Date(fromVal) : null;
-  const to = toVal ? new Date(toVal) : null;
-  if (from) from.setHours(0, 0, 0, 0);
-  if (to) to.setHours(23, 59, 59, 999);
-  const dateColIndex = COLUMN_HEADERS.indexOf('Ngày nhập');
-
-  const filtered = [tableData[0]];
-  for (let i = 1; i < tableData.length; i++) {
-    const row = tableData[i];
-
-    if ((from || to) && dateColIndex >= 0) {
-      const d = parseRowDate(row[dateColIndex]);
-      if (!d) continue;
-      if (from && d < from) continue;
-      if (to && d > to) continue;
+// Bộ lọc hiện tại trên giao diện → bộ lọc gửi lên server
+function buildServerFilters() {
+  const checkedValues = (menuId) => {
+    const menu = document.getElementById(menuId);
+    return menu ? Array.from(menu.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value) : [];
+  };
+  return {
+    search: document.getElementById('searchInput')?.value?.trim() || '',
+    range: [{
+      col: 'Ngày nhập',
+      gte: document.getElementById('fromDate')?.value || '',
+      lte: document.getElementById('toDate')?.value || ''
+    }],
+    in: {
+      'Loại nhập': checkedValues('typeFilterMenu'),
+      'Mã chứng từ': checkedValues('voucherFilterMenu')
     }
-
-    if (typeSelected.length > 0 && typeColIndex >= 0) {
-      let tv = row[typeColIndex];
-      if (tv === undefined || tv === null) continue;
-      if (!typeSelected.includes(String(tv).trim())) continue;
-    }
-
-    if (voucherSelected.length > 0 && voucherColIndex >= 0) {
-      let vv = row[voucherColIndex];
-      if (vv === undefined || vv === null) continue;
-      if (!voucherSelected.includes(String(vv).trim())) continue;
-    }
-
-    if (searchVal) {
-      let matchFound = false;
-      for (let colIdx = 0; colIdx < row.length; colIdx++) {
-        let cellValue = row[colIdx];
-        if (cellValue !== undefined && cellValue !== null) {
-          if (typeof cellValue !== 'string') cellValue = String(cellValue);
-          if (cellValue.toLowerCase().includes(searchVal)) { matchFound = true; break; }
-        }
-      }
-      if (!matchFound) continue;
-    }
-
-    filtered.push(row);
-  }
-
-  renderTable(filtered, resetPage);
+  };
 }
 
-function populateTypeDropdown(headerName, menuId, btnId, countId, data) {
-  if (!data || data.length === 0) return;
-  const header = data[0] || [];
-  const idx = header.findIndex(h => String(h ?? '').trim().toLowerCase() === String(headerName).trim().toLowerCase());
+// Lọc ở server; resetPage = false giữ trang hiện tại (vd: sau khi sửa dữ liệu)
+function filterTable(resetPage = true) {
+  SQ.applyColumnFilters(pager, buildServerFilters(), DEFAULT_ORDER);
+  return reloadPage(resetPage ? 1 : currentPage);
+}
+
+// Bộ lọc / sắp xếp theo cột trên tiêu đề bảng (home.js) chạy ở server
+window.ddcServerAdapter = {
+  table: TABLE_NAME,
+  column: (key) => SQ.headerColumn(COLUMN_HEADERS, key, { date: ['Ngày nhập'], number: ['id', 'Số lượng (Kg)', 'Số lượng (m)'] }),
+  baseFilters: buildServerFilters,
+  reload: () => filterTable(true)
+};
+
+async function populateDistinctFilterDropdowns() {
+  try {
+    const [types, vouchers] = await Promise.all([
+      SQ.distinct({ table: TABLE_NAME, col: 'Loại nhập', fresh: true }),
+      SQ.distinct({ table: TABLE_NAME, col: 'Mã chứng từ', fresh: true })
+    ]);
+    voucherOptions = vouchers.map(v => String(v).trim()).filter(Boolean);
+    populateTypeDropdown('Loại nhập', 'typeFilterMenu', 'typeFilterBtn', 'typeFilterCount', types);
+    populateTypeDropdown('Mã chứng từ', 'voucherFilterMenu', 'voucherFilterBtn', 'voucherFilterCount', vouchers);
+  } catch (e) {
+    console.warn('Could not populate distinct filter dropdowns:', e);
+  }
+}
+
+// Dựng menu checkbox lọc từ danh sách giá trị (lấy từ server); giữ lại các ô đang chọn
+function populateTypeDropdown(headerName, menuId, btnId, countId, values) {
   const menu = document.getElementById(menuId);
   const countEl = document.getElementById(countId);
   if (!menu) return;
+  const currentlyChecked = new Set(
+    Array.from(menu.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value)
+  );
   menu.innerHTML = '';
 
-  if (idx === -1) {
-    menu.innerHTML = '<div class="text-muted small">Không tìm thấy cột</div>';
-    if (countEl) countEl.textContent = '0';
-    return;
-  }
-
-  const set = new Set();
-  for (let i = 1; i < data.length; i++) {
-    let v = data[i][idx];
-    if (v === undefined || v === null || v === '') continue;
-    set.add(String(v).trim());
-  }
-
-  const arr = Array.from(set).sort((a, b) => a.localeCompare(b, 'vi'));
+  const arr = Array.from(new Set(values || [])).sort((a, b) => String(a).localeCompare(String(b), 'vi'));
   const ctrl = document.createElement('div');
   ctrl.className = 'd-flex gap-1 mb-2';
   const selAll = document.createElement('button');
@@ -827,6 +775,7 @@ function populateTypeDropdown(headerName, menuId, btnId, countId, data) {
     const wrap = document.createElement('div'); wrap.className = 'form-check';
     const input = document.createElement('input');
     input.className = 'form-check-input'; input.type = 'checkbox'; input.value = v; input.id = id;
+    if (currentlyChecked.has(v)) input.checked = true;
     const label = document.createElement('label');
     label.className = 'form-check-label'; label.htmlFor = id; label.textContent = v;
     wrap.appendChild(input); wrap.appendChild(label); menu.appendChild(wrap);
@@ -836,8 +785,9 @@ function populateTypeDropdown(headerName, menuId, btnId, countId, data) {
     });
   });
 
-  if (countEl) countEl.textContent = '0';
-  menu.dataset.colIndex = String(idx);
+  if (countEl) countEl.textContent = String(menu.querySelectorAll('input[type="checkbox"]:checked').length);
+  const idx = COLUMN_HEADERS.indexOf(headerName);
+  if (idx !== -1) menu.dataset.colIndex = String(idx);
 }
 
 
@@ -845,10 +795,27 @@ function populateTypeDropdown(headerName, menuId, btnId, countId, data) {
    EXPORT
 ================================================================================ */
 
-document.getElementById('btnExport').addEventListener('click', () => {
-  if (!displayedData || displayedData.length === 0) return;
+document.getElementById('btnExport').addEventListener('click', async () => {
+  const btnExport = document.getElementById('btnExport');
+  let allRows;
+  try {
+    if (btnExport) btnExport.disabled = true;
+    showLoadingOverlay('Đang tải dữ liệu để xuất Excel...');
+    allRows = await SQ.exportRows({
+      table: TABLE_NAME,
+      filters: pager.filters,
+      onProgress: (n, total) => updateLoadingOverlay(`Đang tải ${n.toLocaleString('vi-VN')} / ${(total || n).toLocaleString('vi-VN')} dòng...`)
+    });
+  } catch (err) {
+    alert(`Lỗi xuất Excel: ${err.message}`);
+    return;
+  } finally {
+    hideLoadingOverlay();
+    if (btnExport) btnExport.disabled = false;
+  }
+  if (!allRows) return;
 
-  const exportData = displayedData.map(row =>
+  const exportData = [COLUMN_HEADERS, ...allRows.map(rowToArray)].map(row =>
     row.filter((_, colIdx) => !HIDDEN_COLUMNS.includes(COLUMN_HEADERS[colIdx]))
   );
 
@@ -926,11 +893,8 @@ function buildFormField(colName, colIdx, currentVal, container, namePrefix) {
   const fieldName = namePrefix + colIdx;
 
   if (colName === 'Mã chứng từ') {
-    const voucherSet = new Set();
-    for (let i = 1; i < tableData.length; i++) {
-      const v = String(tableData[i][colIdx] || '').trim();
-      if (v) voucherSet.add(v);
-    }
+    const voucherSet = new Set(voucherOptions);
+    if (currentVal !== undefined && String(currentVal).trim()) voucherSet.add(String(currentVal).trim());
     const select = document.createElement('select');
     select.className = 'form-select form-select-sm fw-bold';
     select.name = fieldName;
@@ -1065,9 +1029,7 @@ function openAddDataModal() {
 
   const maVatTuInput = commonFieldsContainer.querySelector('input[name="col_5"]');
   if (maVatTuInput) {
-    maVatTuInput.addEventListener('input', () => {
-      updateRollCuonIds();
-    });
+    maVatTuInput.addEventListener('input', debounce(updateRollCuonIds, 250));
   }
 
   // Cột sau Số lượng: Vị trí(10), Mã CT(11), Tên CT(12), Ghi chú(13) - Vị trí ở bảng cuộn
@@ -1160,9 +1122,7 @@ function openEditDataModal() {
 
   const maVatTuInput = commonFieldsContainer.querySelector('input[name="col_5"]');
   if (maVatTuInput) {
-    maVatTuInput.addEventListener('input', () => {
-      updateEditRollCuonIds();
-    });
+    maVatTuInput.addEventListener('input', debounce(updateEditRollCuonIds, 250));
   }
 
   // Existing roll data
@@ -1235,46 +1195,50 @@ function extractRollIndex(cuonId) {
   return match ? parseInt(match[1], 10) : null;
 }
 
-function getNextRollNumber(maVatTu, rawData = [], excludeRowId = null, extraCuonIds = []) {
-  if (!maVatTu) return 0;
-  const cleanMa = String(maVatTu).trim().toLowerCase();
-  const existingNumbers = [];
+// Số cuộn kế tiếp của 1 mã vật tư tính ở server trên toàn bảng (không chỉ trang đang xem).
+// Cache theo mã để gõ phím / thêm dòng không gọi server lặp lại; xóa cache sau mỗi lần ghi.
+const rollNumberCache = new Map();
+let rollIdRequestToken = 0;
+let editRollIdRequestToken = 0;
 
-  if (Array.isArray(rawData)) {
-    rawData.forEach(row => {
-      if (excludeRowId && String(row['id']) === String(excludeRowId)) return;
-      if (String(row['Mã vật tư'] || '').trim().toLowerCase() === cleanMa) {
-        const num = extractRollIndex(row['Cuộn ID']);
-        if (num !== null && !isNaN(num)) {
-          existingNumbers.push(num);
-        }
-      }
-    });
+function fetchNextRollNumber(maVatTu, excludeRowId = null) {
+  const key = `${String(maVatTu).trim().toLowerCase()}|${excludeRowId || ''}`;
+  if (!rollNumberCache.has(key)) {
+    rollNumberCache.set(key, SQ.nextRollNumber(TABLE_NAME, maVatTu, excludeRowId).catch(err => {
+      rollNumberCache.delete(key);
+      throw err;
+    }));
   }
-
-  if (Array.isArray(extraCuonIds)) {
-    extraCuonIds.forEach(cid => {
-      const num = extractRollIndex(cid);
-      if (num !== null && !isNaN(num)) {
-        existingNumbers.push(num);
-      }
-    });
-  }
-
-  if (existingNumbers.length === 0) return 0;
-  return Math.max(...existingNumbers) + 1;
+  return rollNumberCache.get(key);
 }
 
-function updateRollCuonIds() {
+// Như cũ: lớn nhất trong (các cuộn đã có của mã vật tư + các Cuộn ID thêm vào) rồi + 1; chưa có thì 0
+async function getNextRollNumber(maVatTu, excludeRowId = null, extraCuonIds = []) {
+  if (!maVatTu) return 0;
+  const serverNext = await fetchNextRollNumber(maVatTu, excludeRowId);
+  const extraNumbers = (extraCuonIds || []).map(extractRollIndex).filter(num => num !== null && !isNaN(num));
+  const extraNext = extraNumbers.length ? Math.max(...extraNumbers) + 1 : 0;
+  return Math.max(serverNext, extraNext);
+}
+
+async function updateRollCuonIds() {
   const maVatTuInput = document.querySelector('#addDataCommonFields input[name="col_5"]');
   if (!maVatTuInput) return;
   const maVatTu = maVatTuInput.value.trim();
+  const token = ++rollIdRequestToken;
   if (!maVatTu) {
     document.querySelectorAll('#rollsTableBody .roll-cuon-id').forEach(input => { input.value = ''; });
     return;
   }
 
-  const startNum = getNextRollNumber(maVatTu, window._rawSupabaseData || []);
+  let startNum;
+  try {
+    startNum = await getNextRollNumber(maVatTu);
+  } catch (err) {
+    console.warn('[tole-nhap] Không lấy được số cuộn kế tiếp:', err);
+    return;
+  }
+  if (token !== rollIdRequestToken || maVatTuInput.value.trim() !== maVatTu) return;
 
   document.querySelectorAll('#rollsTableBody tr').forEach((row, index) => {
     const cuonIdInput = row.querySelector('.roll-cuon-id');
@@ -1284,10 +1248,11 @@ function updateRollCuonIds() {
   });
 }
 
-function updateEditRollCuonIds() {
+async function updateEditRollCuonIds() {
   const maVatTuInput = document.querySelector('#editDataCommonFields input[name="col_5"]');
   if (!maVatTuInput) return;
   const maVatTu = maVatTuInput.value.trim();
+  const token = ++editRollIdRequestToken;
   if (!maVatTu) {
     document.querySelectorAll('#editRollsTableBody .edit-roll-cuon-id').forEach(input => { input.value = ''; });
     return;
@@ -1307,9 +1272,16 @@ function updateEditRollCuonIds() {
     }
   });
 
-  let nextNum = getNextRollNumber(maVatTu, window._rawSupabaseData || [], rowId, existingModalCuonIds);
+  let nextNum;
+  try {
+    nextNum = await getNextRollNumber(maVatTu, rowId, existingModalCuonIds);
+  } catch (err) {
+    console.warn('[tole-nhap] Không lấy được số cuộn kế tiếp:', err);
+    return;
+  }
+  if (token !== editRollIdRequestToken || maVatTuInput.value.trim() !== maVatTu) return;
 
-  rows.forEach((row, index) => {
+  Array.from(document.querySelectorAll('#editRollsTableBody tr')).forEach((row, index) => {
     const cuonIdInput = row.querySelector('.edit-roll-cuon-id');
     if (!cuonIdInput) return;
     
@@ -1648,28 +1620,15 @@ document.addEventListener('submit', async (e) => {
         throw error;
       }
 
-      if (insertedData) {
-        insertedData.forEach(row => {
-          if (!window._rawSupabaseData) window._rawSupabaseData = [];
-          window._rawSupabaseData.push(row);
-          const arr = rowToArray(row);
-          arr.originalIndex = tableData.length;
-          tableData.push(arr);
-        });
-
-        if (typeof setStoredTableCache === 'function') {
-          setStoredTableCache(TABLE_NAME, window._rawSupabaseData);
-        }
-        if (typeof clearStoredTableCache === 'function') {
-          clearStoredTableCache('tole-ton');
-        }
-
-        broadcastToleEvent('TOLE_NHAP_INSERT', {
-          records: insertedData || []
-        });
+      if (typeof clearStoredTableCache === 'function') {
+        clearStoredTableCache('tole-ton');
       }
+      broadcastToleEvent('TOLE_NHAP_INSERT', {
+        records: insertedData || []
+      });
 
-      renderTable(tableData, false);
+      await populateDistinctFilterDropdowns();
+      await fetchDataFromSupabase(currentPage);
 
       bootstrap.Modal.getInstance(document.getElementById('addDataModal'))?.hide();
       form.reset();
@@ -1750,28 +1709,15 @@ document.addEventListener('submit', async (e) => {
 
       if (error) throw error;
 
-      if (updatedData && updatedData[0]) {
-        const arr = rowToArray(updatedData[0]);
-        arr.originalIndex = selectedRowIndex;
-        tableData[selectedRowIndex] = arr;
-        if (window._rawSupabaseData) {
-          const rawIdx = window._rawSupabaseData.findIndex(r => String(r.id) === String(rowId));
-          if (rawIdx >= 0) window._rawSupabaseData[rawIdx] = updatedData[0];
-        }
-
-        if (typeof setStoredTableCache === 'function') {
-          setStoredTableCache(TABLE_NAME, window._rawSupabaseData);
-        }
-        if (typeof clearStoredTableCache === 'function') {
-          clearStoredTableCache('tole-ton');
-        }
-
-        broadcastToleEvent('TOLE_NHAP_UPDATE', {
-          record: updatedData[0]
-        });
+      if (typeof clearStoredTableCache === 'function') {
+        clearStoredTableCache('tole-ton');
       }
+      broadcastToleEvent('TOLE_NHAP_UPDATE', {
+        record: updatedData ? updatedData[0] : null
+      });
 
-      renderTable(tableData, false);
+      await populateDistinctFilterDropdowns();
+      await fetchDataFromSupabase(currentPage);
       selectedRowIndex = -1;
       document.getElementById('btnEditData').disabled = true;
       document.getElementById('btnDeleteData').disabled = true;
@@ -1840,30 +1786,18 @@ document.addEventListener('click', async (e) => {
         if (error) throw error;
       }
 
-      sortedIndexes.forEach(rowIndex => {
-        if (rowIndex <= 0 || rowIndex >= tableData.length) return;
-        const rowId = tableData[rowIndex][0];
-        tableData.splice(rowIndex, 1);
-        if (window._rawSupabaseData) {
-          const rawIdx = window._rawSupabaseData.findIndex(r => String(r.id) === String(rowId));
-          if (rawIdx >= 0) window._rawSupabaseData.splice(rawIdx, 1);
-        }
-      });
-
-      if (typeof setStoredTableCache === 'function') {
-        setStoredTableCache(TABLE_NAME, window._rawSupabaseData);
-      }
       if (typeof clearStoredTableCache === 'function') {
         clearStoredTableCache('tole-ton');
       }
-
       broadcastToleEvent('TOLE_NHAP_DELETE', {
         ids: idsToDelete
       });
 
+      await populateDistinctFilterDropdowns();
+      await fetchDataFromSupabase(currentPage);
+
       bootstrap.Modal.getInstance(document.getElementById('deleteDataModal'))?.hide();
       selectedRowIndexes = []; selectedRowIndex = -1;
-      renderTable(tableData, false);
       document.getElementById('btnEditData').disabled = true;
       document.getElementById('btnDeleteData').disabled = true;
 

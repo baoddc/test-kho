@@ -234,51 +234,16 @@ function initKiemKeApp() {
         }
       }
 
-      const fetchFunc = async (tbl) => {
-        if (typeof window.fetchAllFromSupabase === 'function') {
-          return await window.fetchAllFromSupabase(tbl);
-        }
-        if (!client || typeof client.from !== 'function') {
-          console.warn(`Supabase client chưa sẵn sàng khi truy vấn ${tbl}`);
-          return [];
-        }
-        let rows = [], from = 0, batchSize = 1000, hasMore = true;
-        while (hasMore) {
-          const { data, error } = await client.from(tbl).select('*').order('id', { ascending: true }).range(from, from + batchSize - 1);
-          if (error) {
-            console.error(`Lỗi truy vấn bảng ${tbl}:`, error);
-            throw error;
-          }
-          if (data && data.length > 0) {
-            rows = rows.concat(data);
-            if (data.length < batchSize) hasMore = false;
-            else from += batchSize;
-          } else {
-            hasMore = false;
-          }
-        }
-        return rows;
-      };
+      if (!window.SQ) throw new Error('Thiếu thư viện server-query.js');
 
-      const [xgNhap, xgXuat, toleNhap, toleXuat] = await Promise.all([
-        fetchFunc('xg-nhap').catch(e => { console.warn('Lỗi xg-nhap:', e); return []; }),
-        fetchFunc('xg-xuat').catch(e => { console.warn('Lỗi xg-xuat:', e); return []; }),
-        fetchFunc('tole-nhap').catch(e => { console.warn('Lỗi tole-nhap:', e); return []; }),
-        fetchFunc('tole-xuat').catch(e => { console.warn('Lỗi tole-xuat:', e); return []; })
+      // Chỉ tải các cuộn còn tồn (cờ con_ton do server duy trì)
+      const [xgTon, toleTon] = await Promise.all([
+        window.SQ.fetchTon('xg-nhap').catch(e => { console.warn('Lỗi xg-nhap:', e); return []; }),
+        window.SQ.fetchTon('tole-nhap').catch(e => { console.warn('Lỗi tole-nhap:', e); return []; })
       ]);
 
-      const xgExportedIds = new Set(xgXuat.map(r => String(r['Cuộn ID'] || '').trim().toLowerCase()).filter(Boolean));
-      const toleExportedIds = new Set(toleXuat.map(r => String(r['Cuộn ID'] || '').trim().toLowerCase()).filter(Boolean));
-
-      const activeXg = xgNhap.filter(r => {
-        const cid = String(r['Cuộn ID'] || '').trim().toLowerCase();
-        return cid && !xgExportedIds.has(cid);
-      }).map(r => ({ ...r, _wh: 'Xà gồ' }));
-
-      const activeTole = toleNhap.filter(r => {
-        const cid = String(r['Cuộn ID'] || '').trim().toLowerCase();
-        return cid && !toleExportedIds.has(cid);
-      }).map(r => ({ ...r, _wh: 'Tole' }));
+      const activeXg = xgTon.map(r => ({ ...r, _wh: 'Xà gồ' }));
+      const activeTole = toleTon.map(r => ({ ...r, _wh: 'Tole' }));
 
       activeSystemRolls = [...activeXg, ...activeTole];
       systemMap = window.KiemKeEngine ? window.KiemKeEngine.aggregateSystemStock(activeSystemRolls) : new Map();

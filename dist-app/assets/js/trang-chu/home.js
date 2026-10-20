@@ -608,16 +608,79 @@ window.addEventListener('load', () => {
 
   let isPatched = false;
 
+  // Trang dữ liệu lớn phân trang ở server khai báo window.ddcServerAdapter:
+  //   { table, column(colKeyOrIdx) → { name, type: 'text'|'number'|'date'|'age' } | null,
+  //     baseFilters() → bộ lọc hiện tại của trang, reload() → tải lại trang 1 }
+  // Khi đó bộ lọc / sắp xếp theo cột được gửi lên server thay vì lọc dữ liệu trong trình duyệt.
+  const DDC_BLANK = '\u0000blank';
+  const DDC_SERVER_VALUE_LIMIT = 500;
+  let ddcStateLoaded = false;
+
+  function ddcAdapter() {
+    return window.ddcServerAdapter || null;
+  }
+
+  function ddcCriteriaKey() {
+    return (ddcAdapter() ? 'ddc_filter_criteria_srv_' : 'ddc_filter_criteria_') + window.location.pathname;
+  }
+
+  function ddcEnsureStateLoaded() {
+    if (ddcStateLoaded) return;
+    ddcLoadFilterStateFromStorage();
+    ddcStateLoaded = true;
+  }
+
+  // Bộ lọc server sinh từ bộ lọc cột (bỏ qua cột exceptKey — dùng khi liệt kê giá trị của chính cột đó)
+  function ddcServerFilterParts(exceptKey) {
+    const adapter = ddcAdapter();
+    if (!adapter) return [];
+    const parts = [];
+    Object.keys(ddcFilterState.columnFilters).forEach(key => {
+      if (exceptKey !== undefined && key === String(exceptKey)) return;
+      const col = adapter.column(key);
+      if (!col) return;
+      const keys = Array.from(ddcFilterState.columnFilters[key] || []);
+      parts.push({ one_of: [{ col: col.name, values: keys.filter(v => v !== DDC_BLANK), blank: keys.includes(DDC_BLANK) }] });
+    });
+    Object.keys(ddcFilterState.dateFilters).forEach(key => {
+      if (exceptKey !== undefined && key === String(exceptKey)) return;
+      const col = adapter.column(key);
+      const range = ddcFilterState.dateFilters[key];
+      if (!col || !range) return;
+      parts.push({ range: [{ col: col.name, gte: range.startStr || '', lte: range.endStr || '' }] });
+    });
+    return parts;
+  }
+
+  window.ddcMergeServerFilters = function (filters) {
+    ddcEnsureStateLoaded();
+    const parts = ddcServerFilterParts();
+    if (!parts.length) return filters;
+    return Object.assign({}, filters, { and: (filters.and || []).concat(parts) });
+  };
+
+  window.ddcServerOrder = function (defaultOrder) {
+    ddcEnsureStateLoaded();
+    const adapter = ddcAdapter();
+    if (!adapter || ddcFilterState.sortCol === null || !ddcFilterState.sortDir) return defaultOrder;
+    const col = adapter.column(ddcFilterState.sortCol);
+    if (!col) return defaultOrder;
+    let asc = ddcFilterState.sortDir === 'asc';
+    if (col.type === 'age') asc = !asc;  // tuổi tồn tăng dần = ngày nhập giảm dần
+    return [{ col: col.name, asc }].concat(defaultOrder.filter(o => o.col !== col.name));
+  };
+
   function ddcInitMonkeyPatches() {
     const table = document.getElementById('dataTable');
     if (!table) return;
 
     const isPL = (typeof TABLE_COLUMNS !== 'undefined' && typeof COLUMN_DEFINITIONS !== 'undefined');
     const isXG = (typeof tableData !== 'undefined' && !isPL);
+    const adapter = ddcAdapter();
 
     if (!isPL && !isXG) return; // not on a data page yet or globals not ready
 
-    if (isXG && typeof window.renderTable === 'function' && !window.renderTable.isWrapped) {
+    if (!adapter && isXG && typeof window.renderTable === 'function' && !window.renderTable.isWrapped) {
       if (typeof tableData !== 'undefined' && tableData && tableData.length > 0) {
         ddcFilterState.lastRenderInput = tableData;
       }
@@ -650,7 +713,7 @@ window.addEventListener('load', () => {
       console.log("Wrapped renderTable for XG/Tole successfully.");
     }
     
-    if (isPL && typeof window.renderTable === 'function' && !window.renderTable.isWrapped) {
+    if (!adapter && isPL && typeof window.renderTable === 'function' && !window.renderTable.isWrapped) {
       if (typeof filteredData !== 'undefined' && filteredData && filteredData.length > 0) {
         ddcFilterState.lastRenderInput = filteredData;
       }
@@ -732,12 +795,15 @@ window.addEventListener('load', () => {
         table.classList.add('filters-hidden');
       }
 
-      // Load saved filter criteria
-      ddcLoadFilterStateFromStorage();
+      // Load saved filter criteria (trang server đã nạp sẵn khi dựng truy vấn đầu tiên)
+      const loadedByServerQuery = ddcStateLoaded;
+      ddcEnsureStateLoaded();
 
       table.isFiltersInitialized = true;
 
-      if (ddcIsFilterActive() && ddcFilterState.lastRenderInput) {
+      if (adapter) {
+        if (ddcIsFilterActive() && !loadedByServerQuery) adapter.reload();
+      } else if (ddcIsFilterActive() && ddcFilterState.lastRenderInput) {
         ddcTriggerReRender(isPL);
       }
     }
@@ -753,8 +819,7 @@ window.addEventListener('load', () => {
         ddcCloseDropdowns();
 
         // Clear saved filter criteria from localStorage
-        const path = window.location.pathname;
-        localStorage.removeItem('ddc_filter_criteria_' + path);
+        localStorage.removeItem(ddcCriteriaKey());
 
         // Re-render table with cleared filters
         ddcTriggerReRender(isPL);
@@ -1281,6 +1346,11 @@ window.addEventListener('load', () => {
   function ddcOpenFilterDropdown(btn, colIndex, isPL) {
     ddcCloseDropdowns();
 
+    if (ddcAdapter()) {
+      ddcOpenServerFilterDropdown(btn, colIndex, isPL, ddcAdapter());
+      return;
+    }
+
     if (!ddcFilterState.lastRenderInput || ddcFilterState.lastRenderInput.length === 0) return;
 
     const colKeyOrIdx = isPL ? TABLE_COLUMNS[colIndex] : String(colIndex);
@@ -1514,9 +1584,227 @@ window.addEventListener('load', () => {
     });
   }
 
+  // Phiên bản server của dropdown lọc cột: danh sách giá trị, tìm kiếm và lọc đều chạy ở Supabase
+  function ddcOpenServerFilterDropdown(btn, colIndex, isPL, adapter) {
+    const colKeyOrIdx = isPL ? TABLE_COLUMNS[colIndex] : String(colIndex);
+    const col = adapter.column(colKeyOrIdx);
+    if (!col) {
+      ddcShowAlert('Cột này không hỗ trợ lọc / sắp xếp.');
+      return;
+    }
+    const isDateCol = col.type === 'date';
+
+    const displayValue = (v) => {
+      if (v === DDC_BLANK) return '(Trống)';
+      if (col.type === 'date' && typeof formatDate === 'function') return formatDate(v);
+      if (col.type === 'age') {
+        const d = ddcParseLocalISO(String(v).slice(0, 10));
+        if (!d) return String(v);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return String(Math.max(0, Math.floor((today - d) / 86400000)));
+      }
+      return String(v);
+    };
+
+    const rect = btn.getBoundingClientRect();
+    const dropdown = document.createElement('div');
+    dropdown.className = 'ddc-table-filter-dropdown' + (isDateCol ? ' ddc-date-dropdown' : '');
+    const dropdownWidth = isDateCol ? 320 : 250;
+    let left = window.scrollX + rect.left - (dropdownWidth - 30) + rect.width;
+    if (left < 10) left = 10;
+    if (left + dropdownWidth > window.innerWidth) left = window.innerWidth - (dropdownWidth + 10);
+    dropdown.style.left = `${left}px`;
+    dropdown.style.top = `${window.scrollY + rect.bottom + 6}px`;
+
+    dropdown.innerHTML = `
+      <div class="ddc-filter-sort-option" id="ddcSortAsc">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <polyline points="19 12 12 19 5 12"></polyline>
+        </svg>
+        Sắp xếp từ A đến Z
+      </div>
+      <div class="ddc-filter-sort-option" id="ddcSortDesc">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="19" x2="12" y2="5"></line>
+          <polyline points="5 12 12 5 19 12"></polyline>
+        </svg>
+        Sắp xếp từ Z đến A
+      </div>
+      ${isDateCol ? `
+        <hr class="ddc-filter-divider">
+        <div class="ddc-date-range-container" style="display: flex; flex-direction: column; gap: 6px; padding: 4px 0;">
+          <div style="font-size: 12px; font-weight: 600; color: #94a3b8; text-align: left; margin-bottom: 2px;">Lọc theo khoảng ngày:</div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <input type="date" class="ddc-filter-date-input" id="ddcStartDate" style="flex: 1; min-width: 0; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 6px; padding: 4px 8px; font-size: 12px; color: #fff; outline: none; box-sizing: border-box;">
+            <span style="font-size: 12px; color: #94a3b8; flex-shrink: 0;">đến</span>
+            <input type="date" class="ddc-filter-date-input" id="ddcEndDate" style="flex: 1; min-width: 0; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 6px; padding: 4px 8px; font-size: 12px; color: #fff; outline: none; box-sizing: border-box;">
+          </div>
+        </div>` : ''}
+      <hr class="ddc-filter-divider">
+      <div class="ddc-filter-search-container">
+        <input type="text" class="ddc-filter-search-input" id="ddcSearchInput" placeholder="Tìm kiếm...">
+      </div>
+      <div class="ddc-filter-actions">
+        <button type="button" class="ddc-filter-action-btn" id="ddcSelectAll">Chọn tất cả</button>
+        <button type="button" class="ddc-filter-action-btn clear-btn" id="ddcClearAll">Xóa</button>
+      </div>
+      <div class="ddc-filter-list-container" id="ddcListContainer"></div>
+      <hr class="ddc-filter-divider">
+      <div class="ddc-filter-footer">
+        <button type="button" class="ddc-btn-cancel" id="ddcCancel">Hủy</button>
+        <button type="button" class="ddc-btn-ok" id="ddcOk">OK</button>
+      </div>
+    `;
+    document.body.appendChild(dropdown);
+
+    const listContainer = dropdown.querySelector('#ddcListContainer');
+    const searchInput = dropdown.querySelector('#ddcSearchInput');
+    if (isDateCol) {
+      const activeDateFilter = ddcFilterState.dateFilters[colKeyOrIdx];
+      if (activeDateFilter) {
+        dropdown.querySelector('#ddcStartDate').value = activeDateFilter.startStr || '';
+        dropdown.querySelector('#ddcEndDate').value = activeDateFilter.endStr || '';
+      }
+    }
+
+    // null = chưa chạm vào → "chọn tất cả" (không lọc cột này)
+    const activeFilterSet = ddcFilterState.columnFilters[colKeyOrIdx];
+    let tempCheckedSet = activeFilterSet ? new Set(activeFilterSet) : null;
+    let listedKeys = [];
+    let capped = false;
+    let searchText = '';
+    let loadSeq = 0;
+
+    function isChecked(key) {
+      return tempCheckedSet === null || tempCheckedSet.has(key);
+    }
+
+    function renderList() {
+      listContainer.innerHTML = '';
+      listedKeys.forEach(key => {
+        const label = displayValue(key);
+        const item = document.createElement('label');
+        item.className = 'ddc-filter-item';
+        item.innerHTML = `
+          <input type="checkbox" ${isChecked(key) ? 'checked' : ''}>
+          <span class="ddc-filter-item-label" title="${escapeHtml(label)}">${escapeHtml(label)}</span>
+        `;
+        const cb = item.querySelector('input[type="checkbox"]');
+        cb.addEventListener('change', () => {
+          if (tempCheckedSet === null) tempCheckedSet = new Set(listedKeys);
+          if (cb.checked) tempCheckedSet.add(key); else tempCheckedSet.delete(key);
+        });
+        listContainer.appendChild(item);
+      });
+      if (capped) {
+        const note = document.createElement('div');
+        note.style.cssText = 'font-size: 11px; color: #94a3b8; padding: 6px 4px;';
+        note.textContent = `Chỉ hiện ${DDC_SERVER_VALUE_LIMIT} giá trị đầu — gõ vào ô tìm kiếm để thu hẹp.`;
+        listContainer.appendChild(note);
+      }
+      if (listedKeys.length === 0) {
+        listContainer.innerHTML = '<div style="font-size: 12px; color: #94a3b8; text-align: center; padding: 10px;">Không có kết quả</div>';
+      }
+    }
+
+    async function loadValues() {
+      const seq = ++loadSeq;
+      listContainer.innerHTML = '<div style="font-size: 12px; color: #94a3b8; text-align: center; padding: 10px;">Đang tải...</div>';
+      try {
+        const base = adapter.baseFilters();
+        const filters = Object.assign({}, base, { and: (base.and || []).concat(ddcServerFilterParts(colKeyOrIdx)) });
+        const canSearchOnServer = col.type === 'text' || col.type === 'number';
+        if (searchText && canSearchOnServer) filters.and = filters.and.concat([{ ilike: { [col.name]: searchText } }]);
+        let values = await SQ.distinct({ table: adapter.table, col: col.name, filters, limit: DDC_SERVER_VALUE_LIMIT + 1, fresh: true });
+        if (seq !== loadSeq) return;
+        values = values.map(v => String(v));
+        if (searchText && !canSearchOnServer) {
+          const s = searchText.toLowerCase();
+          values = values.filter(v => displayValue(v).toLowerCase().includes(s));
+        }
+        if (col.type === 'age') values.reverse();
+        capped = values.length > DDC_SERVER_VALUE_LIMIT;
+        listedKeys = values.slice(0, DDC_SERVER_VALUE_LIMIT);
+        if (!searchText) listedKeys.push(DDC_BLANK);
+        renderList();
+      } catch (err) {
+        if (seq !== loadSeq) return;
+        listContainer.innerHTML = `<div style="font-size: 12px; color: #f87171; text-align: center; padding: 10px;">${escapeHtml(err.message || 'Lỗi tải dữ liệu')}</div>`;
+      }
+    }
+
+    loadValues();
+
+    let searchTimer = null;
+    searchInput.addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => { searchText = searchInput.value.trim(); loadValues(); }, 300);
+    });
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        dropdown.querySelector('#ddcOk').click();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        ddcCloseDropdowns();
+      }
+    });
+
+    dropdown.querySelector('#ddcSortAsc').addEventListener('click', () => {
+      ddcFilterState.sortCol = colKeyOrIdx;
+      ddcFilterState.sortDir = 'asc';
+      ddcCloseDropdowns();
+      ddcTriggerReRender(isPL);
+    });
+    dropdown.querySelector('#ddcSortDesc').addEventListener('click', () => {
+      ddcFilterState.sortCol = colKeyOrIdx;
+      ddcFilterState.sortDir = 'desc';
+      ddcCloseDropdowns();
+      ddcTriggerReRender(isPL);
+    });
+    dropdown.querySelector('#ddcSelectAll').addEventListener('click', () => {
+      if (tempCheckedSet === null) tempCheckedSet = new Set(listedKeys);
+      listedKeys.forEach(k => tempCheckedSet.add(k));
+      renderList();
+    });
+    dropdown.querySelector('#ddcClearAll').addEventListener('click', () => {
+      if (tempCheckedSet === null) tempCheckedSet = new Set(listedKeys);
+      listedKeys.forEach(k => tempCheckedSet.delete(k));
+      renderList();
+    });
+    dropdown.querySelector('#ddcCancel').addEventListener('click', () => ddcCloseDropdowns());
+
+    dropdown.querySelector('#ddcOk').addEventListener('click', () => {
+      if (isDateCol) {
+        const startStr = dropdown.querySelector('#ddcStartDate').value;
+        const endStr = dropdown.querySelector('#ddcEndDate').value;
+        if (startStr || endStr) {
+          ddcFilterState.dateFilters[colKeyOrIdx] = { startStr, endStr };
+        } else {
+          delete ddcFilterState.dateFilters[colKeyOrIdx];
+        }
+      }
+
+      if (tempCheckedSet !== null) {
+        const allListedChecked = listedKeys.every(k => tempCheckedSet.has(k));
+        if (allListedChecked && !capped && !searchText) {
+          // Mọi giá trị đều được chọn = không lọc cột này
+          delete ddcFilterState.columnFilters[colKeyOrIdx];
+        } else {
+          // Chỉ giữ các giá trị đang hiện trong danh sách (đúng ý "chọn những gì tôi thấy")
+          ddcFilterState.columnFilters[colKeyOrIdx] = new Set(listedKeys.filter(k => tempCheckedSet.has(k)));
+        }
+      }
+
+      ddcCloseDropdowns();
+      ddcTriggerReRender(isPL);
+    });
+  }
+
   function ddcSaveFilterStateToStorage() {
-    const path = window.location.pathname;
-    const criteriaKey = 'ddc_filter_criteria_' + path;
+    const criteriaKey = ddcCriteriaKey();
     const serializedColumnFilters = {};
     Object.keys(ddcFilterState.columnFilters).forEach(key => {
       const setVal = ddcFilterState.columnFilters[key];
@@ -1536,8 +1824,7 @@ window.addEventListener('load', () => {
   }
 
   function ddcLoadFilterStateFromStorage() {
-    const path = window.location.pathname;
-    const criteriaKey = 'ddc_filter_criteria_' + path;
+    const criteriaKey = ddcCriteriaKey();
     const saved = localStorage.getItem(criteriaKey);
     if (!saved) return;
     try {
@@ -1563,6 +1850,11 @@ window.addEventListener('load', () => {
 
   function ddcTriggerReRender(isPL) {
     ddcSaveFilterStateToStorage();
+    const adapter = ddcAdapter();
+    if (adapter) {
+      adapter.reload();
+      return;
+    }
     if (isPL) {
       if (typeof renderTable === 'function') {
         renderTable();

@@ -135,6 +135,31 @@
   }
 
   /**
+   * Các dòng trong bảng nhập / xuất khớp chính xác (trim, không phân biệt hoa thường) mọi cột cho trước
+   * @param {string} tableName
+   * @param {Object<string, string>} exact - { tên cột: giá trị }
+   * @returns {Promise<Array>}
+   */
+  async function queryProcessedRows(tableName, exact) {
+    try {
+      if (window.SQ) {
+        const res = await window.SQ.fetchAll({ table: tableName, filters: { ieq: exact }, maxRows: 5000 });
+        return res.rows;
+      }
+      // Trang chưa nạp server-query.js: truy vấn trực tiếp rồi lọc chính xác
+      let query = window.supabase.from(tableName).select('*');
+      Object.keys(exact).forEach(col => { query = query.ilike(col, exact[col]); });
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data || []).filter(r => Object.keys(exact).every(col =>
+        String(r[col] || '').trim().toLowerCase() === String(exact[col]).trim().toLowerCase()));
+    } catch (err) {
+      console.warn(`[XgSapLookup] Không thể truy vấn Supabase cho bảng ${tableName}:`, err);
+      return [];
+    }
+  }
+
+  /**
    * Kiểm tra xem một số phiếu (chứng từ) đã từng được nhập hoặc xuất trong kho hay chưa
    * @param {string} docNo - Số phiếu cần kiểm tra
    * @param {string} [pageContext] - 'xg-nhap' | 'xg-xuat' | 'tole-nhap' | 'tole-xuat'
@@ -161,32 +186,9 @@
     const colName = rule.docColumnName;
     const tableName = rule.tableName;
 
-    let matchedRows = [];
-
-    // Tầng 1: Tra cứu tức thì từ Local Cache (window._rawSupabaseData)
-    if (typeof window !== 'undefined' && Array.isArray(window._rawSupabaseData) && window._rawSupabaseData.length > 0) {
-      matchedRows = window._rawSupabaseData.filter(r => {
-        if (!r) return false;
-        const val = String(r[colName] || '').trim();
-        return val.toLowerCase() === cleanDoc.toLowerCase();
-      });
-    }
-
-    // Tầng 2: Nếu không thấy trong local cache hoặc local cache rỗng, query Supabase
-    if (matchedRows.length === 0 && typeof window !== 'undefined' && window.supabase) {
-      try {
-        const { data, error } = await window.supabase
-          .from(tableName)
-          .select('*')
-          .ilike(colName, cleanDoc);
-        if (!error && Array.isArray(data) && data.length > 0) {
-          // Lọc chính xác không phân biệt hoa thường
-          matchedRows = data.filter(r => String(r[colName] || '').trim().toLowerCase() === cleanDoc.toLowerCase());
-        }
-      } catch (err) {
-        console.warn(`[XgSapLookup] Không thể truy vấn Supabase cho bảng ${tableName}:`, err);
-      }
-    }
+    // Tra cứu ở server (so khớp không phân biệt hoa thường, có index) — trình duyệt
+    // chỉ giữ 1 trang dữ liệu nên không dùng dữ liệu cục bộ để kết luận.
+    const matchedRows = await queryProcessedRows(tableName, { [colName]: cleanDoc });
 
     if (matchedRows.length === 0) return emptyResult;
 
@@ -276,49 +278,10 @@
     const batchCol = 'Batch';
     const tableName = rule.tableName;
 
-    let matchedRows = [];
-
-    // Tầng 1: Tra cứu từ Local Cache window._rawSupabaseData
-    if (typeof window !== 'undefined' && Array.isArray(window._rawSupabaseData) && window._rawSupabaseData.length > 0) {
-      matchedRows = window._rawSupabaseData.filter(r => {
-        if (!r) return false;
-        const rDoc = String(r[docCol] || '').trim().toLowerCase();
-        if (rDoc !== cleanDoc.toLowerCase()) return false;
-
-        if (cleanMat) {
-          const rMat = String(r[matCol] || '').trim().toLowerCase();
-          if (rMat !== cleanMat.toLowerCase()) return false;
-        }
-        if (cleanBatch) {
-          const rBatch = String(r[batchCol] || '').trim().toLowerCase();
-          if (rBatch !== cleanBatch.toLowerCase()) return false;
-        }
-        return true;
-      });
-    }
-
-    // Tầng 2: Nếu không thấy trong local cache hoặc rỗng, query Supabase
-    if (matchedRows.length === 0 && typeof window !== 'undefined' && window.supabase) {
-      try {
-        let query = window.supabase.from(tableName).select('*').ilike(docCol, cleanDoc);
-        if (cleanMat) query = query.ilike(matCol, cleanMat);
-        if (cleanBatch) query = query.ilike(batchCol, cleanBatch);
-        const { data, error } = await query;
-        if (!error && Array.isArray(data) && data.length > 0) {
-          matchedRows = data.filter(r => {
-            const rDoc = String(r[docCol] || '').trim().toLowerCase();
-            const rMat = String(r[matCol] || '').trim().toLowerCase();
-            const rBatch = String(r[batchCol] || '').trim().toLowerCase();
-            const matchDoc = rDoc === cleanDoc.toLowerCase();
-            const matchMat = !cleanMat || rMat === cleanMat.toLowerCase();
-            const matchBatch = !cleanBatch || rBatch === cleanBatch.toLowerCase();
-            return matchDoc && matchMat && matchBatch;
-          });
-        }
-      } catch (err) {
-        console.warn(`[XgSapLookup] Không thể truy vấn Supabase cho bảng ${tableName}:`, err);
-      }
-    }
+    const exact = { [docCol]: cleanDoc };
+    if (cleanMat) exact[matCol] = cleanMat;
+    if (cleanBatch) exact[batchCol] = cleanBatch;
+    const matchedRows = await queryProcessedRows(tableName, exact);
 
     if (matchedRows.length === 0) return emptyResult;
 
