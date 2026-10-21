@@ -3219,39 +3219,8 @@ document.addEventListener('submit', async (e) => {
       updateData['Số lượng (m)'] = rollMValues.reduce((sum, m) => sum + m, 0);
       delete updateData['id'];
 
-      // Kiểm tra đối chiếu với SAP MB51 khi cập nhật
-      const editPhieuXuat = (form.querySelector('input[name="col_3"]')?.value || '').trim();
-      const editMaVatTu = (form.querySelector('input[name="col_5"]')?.value || '').trim();
-      const editTenVatTu = (form.querySelector('input[name="col_6"]')?.value || '').trim();
-      const editBatch = (form.querySelector('input[name="col_7"]')?.value || '').trim();
-
-      if (editPhieuXuat && window.XgSapLookup && typeof window.XgSapLookup.validateExportReceiptAgainstMb51 === 'function') {
-        const singleItemData = [{
-          maVatTu: editMaVatTu,
-          tenVatTu: editTenVatTu,
-          batch: editBatch,
-          rolls: rollKgValues.map((kg, rIdx) => ({
-            id: `edit_${rIdx}`,
-            kg: kg,
-            m: rollMValues[rIdx] || 0,
-            maVatTu: editMaVatTu,
-            batch: editBatch
-          }))
-        }];
-        const checkResult = await window.XgSapLookup.validateExportReceiptAgainstMb51(editPhieuXuat, singleItemData, 'tole-xuat');
-        if (!checkResult.isValid) {
-          if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = originalText; }
-          hideLoadingOverlay();
-          window.XgSapLookup.showExportReceiptMismatchModal(checkResult, 'tole-xuat', () => {
-            if (typeof handleSyncSapData === 'function') {
-              handleSyncSapData();
-            } else if (typeof window.syncSapData === 'function') {
-              window.syncSapData();
-            }
-          });
-          return;
-        }
-      }
+      // Không đối chiếu SAP MB51 khi sửa: 1 dòng chỉ là 1 cuộn của phiếu nên không thể khớp tổng phiếu.
+      // Việc chặn lệch số lượng chỉ áp dụng lúc thêm mới phiếu xuất.
 
       const { data: updatedData, error } = await supabase
         .from(TABLE_NAME).update(updateData).eq('id', rowId).select();
