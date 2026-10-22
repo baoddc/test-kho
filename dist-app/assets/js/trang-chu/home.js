@@ -670,6 +670,13 @@ window.addEventListener('load', () => {
     return [{ col: col.name, asc }].concat(defaultOrder.filter(o => o.col !== col.name));
   };
 
+  // Trang tự vẽ bảng bằng hàm riêng (vd: bảng nhóm ở xg-ton / tole-ton) gọi hàm này sau khi vẽ
+  // để gắn lại nút lọc trên tiêu đề cột
+  window.ddcRefreshFilterIcons = function () {
+    const table = document.getElementById('dataTable');
+    if (table && table.querySelector('thead th')) ddcInjectFilterIcons(table, false);
+  };
+
   function ddcInitMonkeyPatches() {
     const table = document.getElementById('dataTable');
     if (!table) return;
