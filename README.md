@@ -2,6 +2,9 @@
 
 Hệ thống quản lý kho phôi cuộn cho Đại Dũng Corporation (DDC), tích hợp Supabase backend và giao diện web tĩnh responsive.
 
+## Cấu trúc dự án
+![Sơ đồ cấu trúc Repo](./diagram.svg)
+
 ## 🚀 Tính năng chính
 
 - **Quản lý Đăng nhập & Xác thực**: Tích hợp với hệ thống Supabase.
