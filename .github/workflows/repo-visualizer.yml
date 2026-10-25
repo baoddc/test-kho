@@ -1,1 +1,23 @@
+name: Vẽ sơ đồ Repo tự động
 
+on:
+  push:
+    branches:
+      - main # Đổi thành 'master' nếu nhánh chính của ní tên là master
+
+permissions:
+  contents: write # Cấp quyền để Action tự động lưu file ảnh vào repo
+
+jobs:
+  visualize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate diagram
+        uses: githubocto/repo-visualization@0.7.1
+        with:
+          output_file: "diagram.svg" # Tên file ảnh sẽ xuất ra
+          excluded_paths: "node_modules,dist,build,.git,.vscode" # Bỏ qua các thư mục rác
+          max_depth: 9 # Độ sâu thư mục tối đa muốn vẽ
