@@ -35,7 +35,7 @@ Hệ thống quản lý kho phôi cuộn cho Đại Dũng Corporation (DDC), tí
 │       ├── migrations/  # Thay đổi một lần trên DB đang chạy (fix_*, migrate_*, lock_*, ...)
 │       └── schema/      # Định nghĩa bảng theo module (pl, tole)
 ├── scripts/           # Script tiện ích (build/sync, backup, PWA icons, local server)
-│   └── bat/           # Launcher 1-click: sao lưu, đặt/hủy lịch 17h, đồng bộ Google Sheets
+│   └── bat/           # Launcher 1-click: sao lưu, đặt/hủy lịch 17h, Đồng bộ dữ liệu
 ├── tests/             # Test tự động & script kiểm thử
 ├── docs/              # Tài liệu: versioning.md, superpowers/ (plans, specs)
 ├── cloudflare-r2/     # Cloudflare Worker lưu ảnh HSE (R2)
