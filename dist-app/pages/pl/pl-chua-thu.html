@@ -16,7 +16,7 @@
   <!-- Sidebar CSS -->
   <link rel="stylesheet" href="/assets/css/sidebar.css">
   <link rel="stylesheet" href="/assets/css/trang-chu/home.css">
-  <link rel="stylesheet" href="/assets/css/pl/pl-thu.css">
+  <link rel="stylesheet" href="/assets/css/pl/pl-thu.css?v=3.1.0">
 
   <!-- XLSX Library -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -110,7 +110,7 @@
       </div>
     </div>
 
-    <!-- Add Data Modal -->
+    <!-- Add Data Modal: 1 ngày + 1 kì đổ, nhiều xưởng, mỗi xưởng nhiều loại phế liệu -->
     <div class="modal fade" id="addDataModal" tabindex="-1" aria-labelledby="addDataModalLabel" aria-hidden="true">
       <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
         <div class="modal-content">
@@ -118,97 +118,45 @@
             <h5 class="modal-title" id="addDataModalLabel">Thêm dữ liệu - Thu hồi từ xưởng</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
-          <form id="addDataForm">
+          <form id="addDataForm" novalidate>
             <div class="modal-body">
-              <!-- Common fields section -->
+              <!-- Thông tin chung cho mọi dòng -->
               <div class="card mb-3">
                 <div class="card-header bg-primary text-white py-2">
                   <h6 class="mb-0">Thông tin chung</h6>
                 </div>
                 <div class="card-body">
                   <div id="addDataCommonFields" class="row g-2">
-                    <!-- Ngày -->
-                    <div class="col-md-4 col-6">
-                      <label class="form-label">Ngày <span class="text-danger">*</span></label>
-                      <input type="date" class="form-control" name="ngay" required>
+                    <div class="col-md-6 col-6">
+                      <label class="form-label" for="addNgay">Ngày <span class="text-danger">*</span></label>
+                      <input type="date" class="form-control" id="addNgay" name="ngay" required>
                     </div>
-                    <!-- Kì đổ -->
-                    <div class="col-md-4 col-6">
-                      <label class="form-label">Kì đổ <span class="text-danger">*</span></label>
-                      <select class="form-select" name="kido" required>
+                    <div class="col-md-6 col-6">
+                      <label class="form-label" for="addKido">Kì đổ <span class="text-danger">*</span></label>
+                      <select class="form-select" id="addKido" name="kido" required>
                         <option value="">Chọn kì đổ</option>
                       </select>
                     </div>
-                    <!-- Xưởng -->
-                    <div class="col-md-4 col-6">
-                      <label class="form-label">Xưởng <span class="text-danger">*</span></label>
-                      <select class="form-select" name="xuong" required>
-                        <option value="">Chọn xưởng</option>
-                      </select>
-                    </div>
                   </div>
                 </div>
               </div>
 
-              <!-- Loại phế liệu section -->
-              <div class="card mb-3">
-                <div class="card-header bg-success text-white py-2 d-flex justify-content-between align-items-center">
-                  <h6 class="mb-0">Danh sách loại phế liệu</h6>
-                  <button type="button" id="btnAddLoai" class="btn btn-sm btn-light">+ Thêm loại</button>
-                </div>
-                <div class="card-body p-0">
-                  <div id="loaiContainer" class="table-responsive" style="max-height: 300px;">
-                    <table class="table table-bordered table-sm mb-0" id="loaiTable">
-                      <thead class="table-light">
-                        <tr>
-                          <th style="width: 50px;">STT</th>
-                          <th>Loại phế liệu</th>
-                          <th>Số lượng (kg)</th>
-                          <th style="width: 80px;">Thao tác</th>
-                        </tr>
-                      </thead>
-                      <tbody id="loaiTableBody">
-                        <!-- Loại rows will be added here -->
-                      </tbody>
-                      <tfoot>
-                        <tr class="table-info">
-                          <td class="text-end fw-bold">Tổng số loại:</td>
-                          <td class="fw-bold" id="totalLoaiCount">0</td>
-                          <td class="fw-bold" id="totalKg">0</td>
-                          <td></td>
-                        </tr>
-                      </tfoot>
-                    </table>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Additional fields section -->
+              <!-- Phế liệu theo xưởng: mỗi khối là 1 xưởng -->
               <div class="card">
-                <div class="card-header bg-secondary text-white py-2">
-                  <h6 class="mb-0">Thông tin bổ sung</h6>
+                <div class="card-header bg-success text-white py-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                  <h6 class="mb-0">Phế liệu theo xưởng</h6>
+                  <span id="addSummary" class="pl-add-summary">0 xưởng, 0 dòng, 0 kg</span>
                 </div>
                 <div class="card-body">
-                  <div id="addDataAdditionalFields" class="row g-2">
-                    <!-- Ghi chú -->
-                    <div class="col-12">
-                      <label class="form-label">Ghi chú</label>
-                      <textarea class="form-control" name="ghichu" rows="2"
-                        placeholder="Nhập ghi chú (nếu có)"></textarea>
-                    </div>
-
-                    <!-- Thông tin tính toán cho cột 8 -->
-                    <div class="col-12">
-                      <label class="form-label">Giá trị cột 8 (Kì đổ_Xưởng_Loại phế liệu)</label>
-                      <input type="text" class="form-control-plaintext" id="column8Value" readonly>
-                    </div>
-                  </div>
+                  <div id="xuongBlocks" class="pl-xuong-blocks"></div>
+                  <button type="button" id="btnAddXuong" class="btn btn-sm btn-outline-success mt-2">+ Thêm xưởng</button>
+                  <div class="form-text mt-2">Nhấn Enter ở ô số lượng để thêm loại tiếp theo cho cùng xưởng.</div>
                 </div>
               </div>
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-              <button data-perm="add" type="submit" class="btn btn-primary">Thêm</button>
+              <button data-perm="add" type="submit" class="btn btn-primary" id="btnSubmitAdd">Thêm</button>
             </div>
           </form>
         </div>
@@ -331,12 +279,12 @@
   <!-- Custom JS -->
   <!-- Sidebar JS (auto-injects sidebar + topbar) -->
   <script src="/assets/js/components/sidebar.js?v=2.1.0"></script>
-  <script src="/assets/js/trang-chu/home.js?v=3.0.0"></script>
+  <script src="/assets/js/trang-chu/home.js?v=3.0.1"></script>
 
   <!-- Supabase config (URL + anon key) -->
   <script src="/assets/js/core/supabase-config.js"></script>
   <script src="/assets/js/core/server-query.js?v=3.0.0"></script>
-  <script src="/assets/js/pl/pl-thu.js?v=3.0.0" data-table="pl-chua-thu"></script>
+  <script src="/assets/js/pl/pl-thu.js?v=3.1.0" data-table="pl-chua-thu"></script>
 </body>
 
 </html>

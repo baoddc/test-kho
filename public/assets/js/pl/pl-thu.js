@@ -126,7 +126,6 @@ const pager = new SQ.ServerPager({ table: TABLE_NAME, pageSize: ROWS_PER_PAGE, o
 let selectedRowIndexes = [];   // mảng các index đã chọn (cho xóa nhiều dòng)
 
 // Loại management for Add Data Modal
-let loaiCount = 0;
 
 // Edit Loại management for Edit Data Modal
 let editLoaiCount = 0;
@@ -918,7 +917,7 @@ function setupModalPermissions(modalEl) {
   }
 
   // Nút thêm/xóa loại trong form luôn dùng được
-  const btnAddLoai = modalEl.querySelector('#btnAddLoai, #btnEditAddLoai');
+  const btnAddLoai = modalEl.querySelector('#btnAddXuong, #btnEditAddLoai');
   if (btnAddLoai) {
     btnAddLoai.style.display = '';
   }
@@ -947,32 +946,20 @@ function showAddDataModal() {
   // Thiết lập quyền cho modal
   setupModalPermissions(modalEl);
 
-  const modal = new bootstrap.Modal(modalEl);
+  const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
 
   // Reset form
   const form = document.getElementById('addDataForm');
   if (form) form.reset();
 
-  // Reset loại table
-  loaiCount = 0;
-  const loaiTableBody = document.getElementById('loaiTableBody');
-  if (loaiTableBody) loaiTableBody.innerHTML = '';
-  updateLoaiTotals();
-
-  // Add first loại row
-  addLoaiRow();
-
-  // Set default date to today
-  const today = new Date().toISOString().split('T')[0];
-  const ngayInput = document.querySelector('#addDataForm input[name="ngay"]');
-  if (ngayInput) ngayInput.value = today;
+  // Ngày mặc định: hôm nay theo giờ máy (toISOString lệch ngày trước 7h sáng)
+  const ngayInput = document.getElementById('addNgay');
+  if (ngayInput) ngayInput.value = SQ.localToday();
 
   // Populate kì đổ dropdown
-  const kidoSelect = document.querySelector('#addDataForm select[name="kido"]');
+  const kidoSelect = document.getElementById('addKido');
   if (kidoSelect) {
-    // Clear existing options except the placeholder
     kidoSelect.innerHTML = '<option value="">Chọn kì đổ</option>';
-    // Add unique kì đổ values
     kiDoList.forEach(kido => {
       const option = document.createElement('option');
       option.value = kido;
@@ -981,29 +968,192 @@ function showAddDataModal() {
     });
   }
 
-  // Populate xưởng dropdown
-  const xuongSelect = document.querySelector('#addDataForm select[name="xuong"]');
-  if (xuongSelect) {
-    // Clear existing options except the placeholder
-    xuongSelect.innerHTML = '<option value="">Chọn xưởng</option>';
-    // Add unique xưởng values
-    xuongList.forEach(xuong => {
-      const option = document.createElement('option');
-      option.value = xuong;
-      option.textContent = xuong;
-      xuongSelect.appendChild(option);
-    });
-  }
-
-  // Add event listeners for column 8 calculation
-  if (kidoSelect) {
-    kidoSelect.addEventListener('change', updateColumn8Value);
-  }
-  if (xuongSelect) {
-    xuongSelect.addEventListener('change', updateColumn8Value);
-  }
+  // Bắt đầu với 1 khối xưởng trống
+  const blocks = document.getElementById('xuongBlocks');
+  if (blocks) blocks.innerHTML = '';
+  addXuongBlock();
 
   modal.show();
+}
+
+/* =============================================================================
+   MODAL THÊM: 1 ngày + 1 kì đổ, nhiều xưởng, mỗi xưởng nhiều loại phế liệu
+   Mỗi dòng (xưởng × loại) lưu thành 1 bản ghi.
+================================================================================ */
+
+let addRowSeq = 0;
+
+function xuongOptionsHtml() {
+  return '<option value="">Chọn xưởng</option>' +
+    xuongList.map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
+}
+
+function addXuongBlock(xuong = '') {
+  const container = document.getElementById('xuongBlocks');
+  if (!container) return null;
+
+  const blockId = ++addRowSeq;
+  const block = document.createElement('div');
+  block.className = 'pl-xuong-block';
+  block.innerHTML = `
+    <div class="pl-xuong-head">
+      <label class="pl-xuong-label" for="addXuong_${blockId}">Xưởng</label>
+      <select class="form-select form-select-sm pl-xuong-select" id="addXuong_${blockId}">${xuongOptionsHtml()}</select>
+      <span class="pl-xuong-subtotal">0 kg</span>
+      <button type="button" class="btn btn-sm btn-outline-danger btn-remove-xuong">Bỏ xưởng</button>
+    </div>
+    <table class="table table-sm table-bordered mb-1 pl-loai-table">
+      <thead>
+        <tr>
+          <th class="loai-stt">STT</th>
+          <th class="pl-col-loai">Loại phế liệu</th>
+          <th class="pl-col-kg">Số lượng (kg)</th>
+          <th>Ghi chú</th>
+          <th class="pl-col-act"><span class="visually-hidden">Xóa dòng</span></th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <button type="button" class="btn btn-sm btn-link px-0 btn-add-loai-row">+ Thêm loại cho xưởng này</button>
+  `;
+  container.appendChild(block);
+  block.querySelector('.pl-xuong-select').value = xuong;
+
+  addLoaiRowToBlock(block);
+  updateAddSummary();
+  return block;
+}
+
+function addLoaiRowToBlock(block, loaiValue = '', kgValue = '', noteValue = '') {
+  const tbody = block.querySelector('tbody');
+  const rowId = ++addRowSeq;
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td class="loai-stt"></td>
+    <td><div id="addLoai_${rowId}" class="loai-dropdown-cell"></div></td>
+    <td><input type="number" class="form-control form-control-sm loai-input kg-input" placeholder="Số kg"
+               step="0.01" min="0" inputmode="decimal" aria-label="Số lượng (kg)"></td>
+    <td><input type="text" class="form-control form-control-sm loai-input note-input" placeholder="Ghi chú (nếu có)"
+               aria-label="Ghi chú"></td>
+    <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger btn-remove-loai"
+               title="Xóa dòng" aria-label="Xóa dòng">✕</button></td>
+  `;
+  tbody.appendChild(tr);
+  tr.querySelector('.kg-input').value = kgValue;
+  tr.querySelector('.note-input').value = noteValue;
+  createLoaiDropdown(`addLoai_${rowId}`, loaiValue);
+  renumberBlock(block);
+  return tr;
+}
+
+function renumberBlock(block) {
+  block.querySelectorAll('tbody tr').forEach((tr, i) => {
+    tr.querySelector('.loai-stt').textContent = i + 1;
+  });
+}
+
+// Đọc toàn bộ dữ liệu đang nhập: [{ block, xuong, rows: [{ stt, loai, kgRaw, kg, note }] }]
+function readAddBlocks() {
+  return Array.from(document.querySelectorAll('#xuongBlocks .pl-xuong-block')).map(block => ({
+    block,
+    xuong: (block.querySelector('.pl-xuong-select')?.value || '').trim(),
+    rows: Array.from(block.querySelectorAll('tbody tr')).map((tr, i) => {
+      const kgRaw = (tr.querySelector('.kg-input')?.value || '').trim();
+      return {
+        stt: i + 1,
+        loai: (tr.querySelector('.loai-dropdown-selected')?.dataset?.value || '').trim(),
+        kgRaw,
+        kg: parseFloat(kgRaw) || 0,
+        note: (tr.querySelector('.note-input')?.value || '').trim()
+      };
+    })
+  }));
+}
+
+function updateAddSummary() {
+  let xuongCount = 0, rowCount = 0, totalKg = 0;
+  readAddBlocks().forEach(({ block, xuong, rows }) => {
+    const done = rows.filter(r => r.loai && r.kg > 0);
+    const subtotal = done.reduce((sum, r) => sum + r.kg, 0);
+    const subtotalEl = block.querySelector('.pl-xuong-subtotal');
+    if (subtotalEl) subtotalEl.textContent = `${formatNumber(subtotal)} kg`;
+    if (xuong && done.length) xuongCount++;
+    rowCount += done.length;
+    totalKg += subtotal;
+  });
+  const summaryEl = document.getElementById('addSummary');
+  if (summaryEl) summaryEl.textContent = `${xuongCount} xưởng, ${rowCount} dòng, ${formatNumber(totalKg)} kg`;
+}
+
+function focusLoaiDropdown(tr) {
+  const selected = tr?.querySelector('.loai-dropdown-selected');
+  if (selected) selected.focus();
+}
+
+// Gắn 1 lần cho vùng chứa các khối xưởng (các khối được tạo lại mỗi lần mở modal)
+function setupAddBlocksEvents() {
+  const container = document.getElementById('xuongBlocks');
+  if (!container) return;
+
+  container.addEventListener('click', (e) => {
+    const block = e.target.closest('.pl-xuong-block');
+    if (!block) return;
+
+    if (e.target.closest('.btn-add-loai-row')) {
+      focusLoaiDropdown(addLoaiRowToBlock(block));
+    } else if (e.target.closest('.btn-remove-loai')) {
+      e.target.closest('tr').remove();
+      if (!block.querySelector('tbody tr')) addLoaiRowToBlock(block);
+      renumberBlock(block);
+      updateAddSummary();
+    } else if (e.target.closest('.btn-remove-xuong')) {
+      const hasData = readAddBlocks().some(b => b.block === block && b.rows.some(r => r.loai || r.kgRaw || r.note));
+      const name = block.querySelector('.pl-xuong-select')?.value || 'này';
+      if (hasData && !confirm(`Bỏ xưởng ${name} cùng các dòng đã nhập?`)) return;
+      block.remove();
+      if (!container.querySelector('.pl-xuong-block')) addXuongBlock();
+      updateAddSummary();
+    } else if (e.target.closest('.loai-dropdown-option')) {
+      // Chọn loại trong dropdown không phát sự kiện change → cập nhật tổng sau khi dropdown xử lý xong
+      setTimeout(updateAddSummary, 0);
+    }
+  });
+
+  container.addEventListener('change', (e) => {
+    const select = e.target.closest('.pl-xuong-select');
+    if (!select) return;
+    const value = select.value.trim();
+    const duplicated = value && Array.from(container.querySelectorAll('.pl-xuong-select'))
+      .some(other => other !== select && other.value.trim() === value);
+    if (duplicated) {
+      alert(`Xưởng "${value}" đã có ở trên. Hãy thêm loại phế liệu vào khối của xưởng đó.`);
+      select.value = '';
+    }
+    updateAddSummary();
+  });
+
+  container.addEventListener('input', (e) => {
+    if (e.target.classList.contains('kg-input')) updateAddSummary();
+  });
+
+  // Enter ở ô số lượng / ghi chú: thêm loại tiếp theo cho cùng xưởng thay vì gửi form
+  container.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || !e.target.matches('.kg-input, .note-input')) return;
+    e.preventDefault();
+    const block = e.target.closest('.pl-xuong-block');
+    const tr = e.target.closest('tr');
+    const next = tr.nextElementSibling;
+    focusLoaiDropdown(next || addLoaiRowToBlock(block));
+  });
+
+  document.getElementById('btnAddXuong')?.addEventListener('click', () => {
+    const block = addXuongBlock();
+    block?.querySelector('.pl-xuong-select')?.focus();
+  });
+
+  document.getElementById('addDataModal')?.addEventListener('shown.bs.modal', () => {
+    document.querySelector('#xuongBlocks .pl-xuong-select')?.focus();
+  });
 }
 
 // Show edit data modal
@@ -1293,36 +1443,6 @@ function getLoaiDropdownValue(containerId) {
   return selected?.dataset?.value || '';
 }
 
-// Add loại row in add modal
-function addLoaiRow(loaiValue = '', kgValue = '') {
-  loaiCount++;
-  const tbody = document.getElementById('loaiTableBody');
-  if (!tbody) return;
-
-  const tr = document.createElement('tr');
-  tr.dataset.loaiId = loaiCount;
-  tr.innerHTML = `
-    <td class="text-center loai-stt">${loaiCount}</td>
-    <td>
-      <div id="loaiDropdown_${loaiCount}" class="loai-dropdown-cell"></div>
-    </td>
-    <td>
-      <input type="number" class="form-control form-control-sm loai-input kg-input"
-             placeholder="Số kg" step="0.01" min="0" value="${kgValue}">
-    </td>
-    <td class="text-center">
-      <button type="button" class="btn btn-sm btn-outline-danger btn-remove-loai"
-              onclick="removeLoaiRow(${loaiCount})">✕</button>
-    </td>
-  `;
-  tbody.appendChild(tr);
-
-  // Create dropdown for this row
-  createLoaiDropdown(`loaiDropdown_${loaiCount}`, loaiValue);
-
-  updateLoaiTotals();
-}
-
 // Add loại row in edit modal
 function addEditLoaiRow(loaiValue = '', kgValue = '') {
   editLoaiCount++;
@@ -1353,16 +1473,6 @@ function addEditLoaiRow(loaiValue = '', kgValue = '') {
   updateEditLoaiTotals();
 }
 
-// Remove loại row from add modal
-function removeLoaiRow(loaiId) {
-  const row = document.querySelector(`#loaiTableBody tr[data-loai-id="${loaiId}"]`);
-  if (row) {
-    row.remove();
-    updateLoaiRowNumbers();
-    updateLoaiTotals();
-  }
-}
-
 // Remove loại row from edit modal
 function removeEditLoaiRow(loaiId) {
   const row = document.querySelector(`#editLoaiTableBody tr[data-loai-id="${loaiId}"]`);
@@ -1373,15 +1483,6 @@ function removeEditLoaiRow(loaiId) {
   }
 }
 
-// Update loại row numbers
-function updateLoaiRowNumbers() {
-  let num = 1;
-  document.querySelectorAll('#loaiTableBody tr').forEach(tr => {
-    tr.querySelector('.loai-stt').textContent = num++;
-  });
-  loaiCount = num - 1;
-}
-
 // Update edit loại row numbers
 function updateEditLoaiRowNumbers() {
   let num = 1;
@@ -1389,25 +1490,6 @@ function updateEditLoaiRowNumbers() {
     tr.querySelector('.loai-stt').textContent = num++;
   });
   editLoaiCount = num - 1;
-}
-
-// Update loại totals
-function updateLoaiTotals() {
-  const rows = document.querySelectorAll('#loaiTableBody tr');
-  let totalKg = 0;
-
-  rows.forEach(tr => {
-    const kgInput = tr.querySelector('.kg-input');
-    if (kgInput && kgInput.value) {
-      totalKg += parseFloat(kgInput.value) || 0;
-    }
-  });
-
-  const totalLoaiCountEl = document.getElementById('totalLoaiCount');
-  const totalKgEl = document.getElementById('totalKg');
-
-  if (totalLoaiCountEl) totalLoaiCountEl.textContent = rows.length;
-  if (totalKgEl) totalKgEl.textContent = formatNumber(totalKg);
 }
 
 // Update edit loại totals
@@ -1433,57 +1515,70 @@ function updateEditLoaiTotals() {
 async function handleAddSubmit(e) {
   e.preventDefault();
 
-  const xuongInput = document.querySelector('#addDataForm select[name="xuong"]');
-  const ngayInput = document.querySelector('#addDataForm input[name="ngay"]');
-  const kidoInput = document.querySelector('#addDataForm select[name="kido"]');
-  const ghichuInput = document.querySelector('#addDataForm textarea[name="ghichu"]');
+  const ngay = document.getElementById('addNgay')?.value || '';
+  const kido = document.getElementById('addKido')?.value || '';
 
-  const xuong = xuongInput?.value?.trim();
-  const ngay = ngayInput?.value;
-  const kido = kidoInput?.value;
-  const ghichu = ghichuInput?.value?.trim() || '';
+  if (!ngay) {
+    alert('Vui lòng chọn ngày');
+    return;
+  }
+  if (!kido) {
+    alert('Vui lòng chọn kì đổ');
+    return;
+  }
 
-  // Get all loại rows
-  const loaiRows = [];
-  document.querySelectorAll('#loaiTableBody tr').forEach(tr => {
-    const loaiDropdown = tr.querySelector('.loai-dropdown-selected');
-    const kgInput = tr.querySelector('.kg-input');
-    const loai = loaiDropdown?.dataset?.value?.trim() || '';
-    const kg = parseFloat(kgInput?.value) || 0;
-    if (loai && kg > 0) {
-      loaiRows.push({ loai, kg });
+  // Mỗi dòng (xưởng × loại) là 1 bản ghi; khối / dòng để trống hoàn toàn được bỏ qua
+  const records = [];
+  const problems = [];
+  readAddBlocks().forEach(({ xuong, rows }, blockIndex) => {
+    const filled = rows.filter(r => r.loai || r.kgRaw || r.note);
+    if (!filled.length) return;
+    if (!xuong) {
+      problems.push(`Khối xưởng thứ ${blockIndex + 1}: chưa chọn xưởng`);
+      return;
     }
+    const seenLoai = new Set();
+    filled.forEach(r => {
+      const where = `${xuong}, dòng ${r.stt}`;
+      if (!r.loai) {
+        problems.push(`${where}: chưa chọn loại phế liệu`);
+      } else if (!(r.kg > 0)) {
+        problems.push(`${where}: số lượng phải lớn hơn 0`);
+      } else if (seenLoai.has(r.loai)) {
+        problems.push(`${where}: loại "${r.loai}" đã nhập ở dòng khác của xưởng này`);
+      } else {
+        seenLoai.add(r.loai);
+        records.push({
+          'Ngày': ngay,
+          'Kì đổ': kido,
+          'Xưởng': xuong,
+          'Loại phế liệu': r.loai,
+          ...(HAS_QTY_COLUMN && { 'Số lượng': r.kg }),
+          'Số lượng (kg)': r.kg,
+          'Ghi chú': r.note,
+          'Cột 8 (Kì đổ_Xưởng_Loại phế liệu)': `${kido}_${xuong}_${r.loai}`
+        });
+      }
+    });
   });
 
-  if (!xuong) {
-    alert('Vui lòng nhập tên xưởng');
+  if (problems.length) {
+    const shown = problems.slice(0, 10).join('\n• ');
+    const more = problems.length > 10 ? `\n… và ${problems.length - 10} lỗi khác` : '';
+    alert(`Chưa lưu được, cần sửa:\n• ${shown}${more}`);
+    return;
+  }
+  if (records.length === 0) {
+    alert('Vui lòng nhập ít nhất một loại phế liệu cho một xưởng');
     return;
   }
 
-  if (loaiRows.length === 0) {
-    alert('Vui lòng thêm ít nhất một loại phế liệu');
-    return;
-  }
-
-  // Show loading overlay
-  showLoadingOverlay('Đang thêm dữ liệu...');
+  const submitBtn = document.getElementById('btnSubmitAdd');
+  if (submitBtn) submitBtn.disabled = true;
+  showLoadingOverlay(`Đang thêm ${records.length} dòng...`);
 
   try {
-    // Create multiple records (one for each loại)
-    const records = loaiRows.map(item => {
-      const column8Value = `${kido}_${xuong}_${item.loai}`;
-      return {
-        'Ngày': ngay || null,
-        'Kì đổ': kido || '',
-        'Xưởng': xuong || '',
-        'Loại phế liệu': item.loai || '',
-        ...(HAS_QTY_COLUMN && { 'Số lượng': item.kg || 0 }),
-        'Số lượng (kg)': item.kg || 0,
-        'Ghi chú': ghichu || '',
-        'Cột 8 (Kì đổ_Xưởng_Loại phế liệu)': column8Value
-      };
-    });
-
+    // Gửi 1 lần: hoặc lưu đủ tất cả các dòng, hoặc không lưu dòng nào
     const { error } = await supabase
       .from(TABLE_NAME)
       .insert(records);
@@ -1510,8 +1605,9 @@ async function handleAddSubmit(e) {
 
   } catch (error) {
     console.error('Lỗi khi thêm dữ liệu vào Supabase:', error);
-    alert('Lỗi khi thêm dữ liệu: ' + error.message);
+    alert('Lỗi khi thêm dữ liệu (chưa dòng nào được lưu): ' + error.message);
   } finally {
+    if (submitBtn) submitBtn.disabled = false;
     hideLoadingOverlay();
   }
 }
@@ -1832,8 +1928,8 @@ function startApp() {
   document.getElementById('addDataForm')?.addEventListener('submit', handleAddSubmit);
   document.getElementById('editDataForm')?.addEventListener('submit', handleEditSubmit);
 
-  // Add loại button
-  document.getElementById('btnAddLoai')?.addEventListener('click', () => addLoaiRow());
+  // Modal thêm: các khối xưởng; modal sửa: nút thêm loại
+  setupAddBlocksEvents();
   document.getElementById('btnEditAddLoai')?.addEventListener('click', () => addEditLoaiRow());
 
   // Search input with debounce
@@ -1893,24 +1989,11 @@ function startApp() {
     });
   });
 
-  // Kì đổ & Xưởng select handlers to update column 8
-  const kidoSelect = document.querySelector('#addDataForm select[name="kido"]');
-  const xuongSelect = document.querySelector('#addDataForm select[name="xuong"]');
-  if (kidoSelect) kidoSelect.addEventListener('change', updateColumn8Value);
-  if (xuongSelect) xuongSelect.addEventListener('change', updateColumn8Value);
-
   // Edit modal Kì đổ & Xưởng select handlers
   const editKidoSelect = document.querySelector('#editDataForm select[name="kido"]');
   const editXuongSelect = document.querySelector('#editDataForm select[name="xuong"]');
   if (editKidoSelect) editKidoSelect.addEventListener('change', updateEditColumn8Value);
   if (editXuongSelect) editXuongSelect.addEventListener('change', updateEditColumn8Value);
-
-  // Add input event listeners for live total update (add modal)
-  document.getElementById('loaiTableBody')?.addEventListener('input', (e) => {
-    if (e.target.classList.contains('kg-input')) {
-      updateLoaiTotals();
-    }
-  });
 
   // Add input event listeners for live total update (edit modal)
   document.getElementById('editLoaiTableBody')?.addEventListener('input', (e) => {
@@ -1942,25 +2025,6 @@ function initApp() {
     document.addEventListener('DOMContentLoaded', startApp);
   } else {
     startApp();
-  }
-}
-
-// Update column 8 value (Kì đổ_Xưởng_Loại phế liệu)
-function updateColumn8Value() {
-  const kidoSelect = document.querySelector('#addDataForm select[name="kido"]');
-  const xuongSelect = document.querySelector('#addDataForm select[name="xuong"]');
-  const column8ValueInput = document.getElementById('column8Value');
-
-  if (kidoSelect && xuongSelect && column8ValueInput) {
-    const kido = kidoSelect.value;
-    const xuong = xuongSelect.value;
-
-    // Get the first Loại dropdown value
-    const firstLoaiDropdown = document.querySelector('.loai-dropdown-selected');
-    const loaiValue = firstLoaiDropdown ? firstLoaiDropdown.dataset.value : '';
-
-    const parts = [kido, xuong, loaiValue].filter(part => part !== '');
-    column8ValueInput.value = parts.join('_');
   }
 }
 

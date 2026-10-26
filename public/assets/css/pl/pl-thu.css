@@ -1498,3 +1498,88 @@ header+.container .dropdown-menu,
 body[data-pl-table="pl-chua-thu"] .filters h5 {
   font-size: 0.98rem;
 }
+
+/* ==================== Modal thêm: khối xưởng (nhiều xưởng × nhiều loại) ==================== */
+.pl-xuong-block {
+  --pl-block-border: #3f4769;
+  --pl-block-bg: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--pl-block-border);
+  border-left: 4px solid #198754;
+  border-radius: 6px;
+  padding: 10px 12px 6px;
+  margin-bottom: 12px;
+  background: var(--pl-block-bg);
+}
+
+[data-bs-theme="light"] .pl-xuong-block {
+  --pl-block-border: #ced4da;
+  --pl-block-bg: #f8f9fa;
+}
+
+.pl-xuong-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.pl-xuong-label {
+  font-weight: 600;
+  margin: 0;
+}
+
+.pl-xuong-select {
+  flex: 1 1 200px;
+  max-width: 300px;
+}
+
+.pl-xuong-subtotal {
+  margin-left: auto;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.pl-loai-table {
+  font-size: 13px;
+  table-layout: fixed;  /* các khối xưởng thẳng cột với nhau */
+}
+
+.pl-loai-table th {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.pl-loai-table td {
+  vertical-align: middle;
+}
+
+.pl-col-loai { width: 38%; }
+.pl-col-kg { width: 150px; }
+.pl-col-act { width: 48px; }
+
+.pl-add-summary {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+@media (max-width: 767.98px) {
+  .pl-loai-table { table-layout: auto; }
+  .pl-loai-table thead { display: none; }
+
+  .pl-loai-table tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 6px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--pl-block-border);
+  }
+
+  .pl-loai-table td {
+    border: 0;
+    padding: 0;
+  }
+
+  .pl-loai-table td.loai-stt { display: none; }
+  .pl-loai-table td:nth-child(2) { grid-column: 1 / -1; }
+}
