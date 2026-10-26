@@ -955,7 +955,7 @@
     header.href = '/';
     header.setAttribute('title', 'DDC Kho');
     header.innerHTML = `
-      <img src="/assets/images/logos/Logo-DDC.png" alt="DDC Logo" class="sidebar-logo-img" style="height: 36px; width: auto; object-fit: contain;">
+      <img src="/assets/images/logos/Logo-DDC.png" alt="Kho Phôi Cuộn Đại Dũng" class="sidebar-logo-img" style="height: 36px; width: auto; object-fit: contain;">
     `;
     sidebar.appendChild(header);
 

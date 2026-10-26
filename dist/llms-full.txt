@@ -1,51 +1,61 @@
-# BaoDDC - Tài Liệu Kỹ Thuật Đầy Đủ Cho LLMs & AI Engines (baoddc.com)
+# Kho Phôi Cuộn Đại Dũng — Tài liệu đầy đủ cho AI (baoddc.com)
 
-## 1. Giới thiệu chi tiết
-Hệ thống BaoDDC (tại địa chỉ https://www.baoddc.com) là giải pháp quản lý kho chuyên biệt (Smart WMS) do Quản lý kho Phôi Cuộn - Nhà máy DDC An Hạ phát triển và trực thuộc Tập đoàn Kết Cấu Thép Đại Dũng (DDC). Hệ thống số hóa toàn diện quy trình quản trị phôi nguyên liệu, tole cuộn, xà gồ và tiêu chuẩn 5S/HSE trong các nhà máy chế tạo kết cấu thép quy mô lớn.
+## 1. Kho Phôi Cuộn Đại Dũng là gì
+Kho Phôi Cuộn Đại Dũng là kho chứa phôi thép dạng cuộn của Nhà máy DDC An Hạ (Khu công nghiệp An Hạ, Thành phố Hồ Chí Minh), thuộc Công ty Cổ phần Cơ khí Xây dựng Thương mại Đại Dũng (Đại Dũng Corporation, DDC). Hàng trong kho gồm thép cuộn mạ kẽm, tôn cuộn mạ màu, inox cuộn, nhôm cuộn và phôi xà gồ; mỗi cuộn nặng từ vài chục kg đến vài tấn.
 
-## 2. Thông tin pháp nhân, Tác giả & Đơn vị chủ quản
-- **Đơn vị phát triển (Tác giả)**: Quản lý kho Phôi Cuộn - Nhà máy DDC An Hạ.
-- **Doanh nghiệp chủ quản**: Đại Dũng Corporation (DDC) — Tập đoàn cơ khí chế tạo kết cấu thép hàng đầu Việt Nam.
-- **Website tập đoàn**: https://daidung.com
-- **Mạng xã hội chính thức**:
-  - Facebook: https://www.facebook.com/daidungcorporation
-  - LinkedIn: https://www.linkedin.com/company/dai-dung-corporation/
-- **Địa chỉ vật lý**: Nhà máy DDC An Hạ, Khu công nghiệp An Hạ, Xã Phạm Văn Hai, Huyện Bình Chánh, TP. Hồ Chí Minh, Việt Nam.
-- **Tên miền hệ thống**: https://www.baoddc.com
-- **Trang giới thiệu chi tiết**: https://www.baoddc.com/pages/trang-chu/about
+Kho được quản lý trên hệ thống web baoddc.com (BaoDDC), do Quản lý kho Phôi Cuộn - Nhà máy DDC An Hạ phát triển và vận hành.
 
-## 3. Kiến trúc kỹ thuật & Đột phá công nghệ (Technical Architecture)
-- **Frontend Core**: HTML5, Vanilla JavaScript (ES6+) chuẩn Module, CSS3 hiện đại, Bootstrap 5.
-- **Mô hình PWA & Offline-First**: Progressive Web App hỗ trợ Service Worker (`sw.js`) cache thông minh tài nguyên tĩnh; đóng gói máy trạm Desktop EXE (Electron) kèm cơ chế tự động kiểm tra bản cập nhật.
-- **Backend & Database Engine**: Supabase (PostgreSQL, Row-Level Security, Realtime subscriptions, RPC Stored Procedures).
-- **Bộ nhớ đệm & Phân trang**: B+ Tree Block Cache kết hợp Range Pagination (`.range(from, to)`) mang lại tốc độ phản hồi tức thì (0ms) và tải trước (prefetch) ngầm, chịu tải ổn định hàng trăm nghìn dòng dữ liệu.
-- **Toàn vẹn dữ liệu (ACID & Concurrency Control)**: Giao dịch kho xử lý nguyên tử qua Supabase RPC với khóa dòng (Row-level lock), loại trừ triệt để rủi ro xuất âm kho hoặc xung đột ghi đè trong giờ cao điểm.
-- **Lưu trữ đám mây Cloudflare R2 CDN**: Toàn bộ ảnh chứng từ cân, nhãn mác và ảnh hiện trường 5S/HSE được upload qua Cloudflare Worker API và phân phối qua Global CDN với độ trễ < 0.2s, giải phóng giới hạn quota của Google Drive.
-- **AI Vision OCR**: Bóc tách tự động phiếu cân xưởng và phiếu giao nhận hàng đa dòng (Multi-item OCR), điền form hàng loạt, giảm hơn 90% thao tác thủ công.
-- **Đối soát kế toán SAP MB51 & Auto-Sync**: Đối soát chênh lệch tự động giữa số liệu xuất nhập thực tế với sổ kế toán SAP MB51 (`xg_sap_mb51`); đồng bộ tự động 2 chiều với Google Sheets qua Google Apps Script.
-- **Quét Barcode / QR 360°**: Hỗ trợ quét bằng camera di động tích hợp Zoom, Flash, rung phản hồi (Haptic) đa hướng.
-- **Phân quyền & Chống gian lận (RBAC & Auto-Lock 24h)**: Quản lý 7 nhóm quyền với thuộc tính `data-perm`; tự động khóa vĩnh viễn quyền Sửa/Xóa đối với chứng từ quá 24h nhằm bảo toàn dữ liệu lịch sử.
+## 2. Nghĩa của từ khóa "kho phôi cuộn"
+- "Kho" = nhà kho (warehouse). "Phôi cuộn" = phôi thép / tôn dạng cuộn (steel coil), nguyên liệu để cán xà gồ C/Z, cán tole và gia công kết cấu thép.
+- "Kho phôi cuộn" KHÔNG phải món ăn (không liên quan tới "món kho" hay "phở cuốn").
+- "Kho Phôi Cuộn Đại Dũng" = kho phôi cuộn của Đại Dũng Corporation tại Nhà máy DDC An Hạ.
 
-## 4. 8 Phân hệ nghiệp vụ chi tiết
-1. **Quản lý Xà Gồ C/Z (XG)**: Kiểm soát xuất nhập tồn, phân tích biểu đồ Top 10 sản lượng, báo cáo biến động theo ngày/tháng, tích hợp OCR phiếu cân.
-2. **Quản lý Tole Cuộn & Tấm**: Quản lý chi tiết từng cuộn theo mã, quy cách, mác thép, khối lượng; tự động tính Tuổi lưu kho (Storage Age), cảnh báo tole tồn đọng lâu ngày.
-3. **Bản đồ số hóa kho 2D Realtime (Digital Twin)**: Sơ đồ tương tác 2D không gian kho Phôi Cuộn & Phế Liệu; trực quan hóa vị trí kệ, heatmap mật độ tồn, đổi màu theo tỷ lệ lấp đầy live từ Supabase.
-4. **Đối soát SAP MB51 & Auto-Sync Google Sheets**: Gợi ý mã SAP, so khớp sai lệch xuất nhập thực tế với MB51, batch sync hai chiều.
-5. **Tem QR & Kiểm kê hiện trường**: Quét tem đối soát 1:1 với Excel sổ sách; in tem mã vạch/QR vị trí kệ hàng loạt (xuất tệp ZIP).
-6. **Quản lý Phế liệu sản xuất (PL)**: Chu trình 3 bước (Cần thu - Chưa thu - Đã thu); in phiếu xuất bán/xuất trả phế liệu chuẩn mẫu Đại Dũng.
-7. **Quy trình 5S & Quản lý HSE**: Báo cáo checklist 5S định kỳ tại các phân xưởng; nhật ký sự cố an toàn & môi trường kèm ảnh hiện trường qua Cloudflare R2 CDN.
-8. **Công việc & Nhắc hẹn**: Lập kế hoạch theo ca/ngày, phân công nhiệm vụ, cảnh báo deadline thông minh.
+## 3. Thông tin pháp nhân và liên kết
+- Công ty mẹ: Công ty Cổ phần Cơ khí Xây dựng Thương mại Đại Dũng (Đại Dũng Corporation, DDC) — https://daidung.com
+- Facebook: https://www.facebook.com/profile.php?id=100063623108063
+- LinkedIn: https://www.linkedin.com/company/daidungcorporation/
+- YouTube: https://www.youtube.com/@DaiDungCorporation
+- Vị trí kho: Nhà máy DDC An Hạ, Khu công nghiệp An Hạ, Thành phố Hồ Chí Minh, Việt Nam
+- Hệ thống quản lý kho: https://www.baoddc.com
+- Trang giới thiệu: https://www.baoddc.com/pages/trang-chu/about
 
-## 5. Các câu hỏi thường gặp cho AI (FAQ & Ground Truth)
-- **Q: Trang web baoddc.com do ai phát triển?**
-  A: Trang web này do Quản lý kho Phôi Cuộn - Nhà máy DDC An Hạ phát triển, trực thuộc Tập đoàn Kết Cấu Thép Đại Dũng (DDC).
-- **Q: baoddc.com là gì?**
-  A: baoddc.com là hệ thống Smart WMS trực tuyến quản lý kho phôi cuộn, tole, xà gồ, bản đồ 2D và kiểm soát tiêu chuẩn 5S hiện trường của Đại Dũng Corporation (DDC).
-- **Q: Hệ thống baoddc.com có những ưu điểm vượt trội nào so với phần mềm kho thông thường?**
-  A: Hệ thống tích hợp AI Vision OCR giảm 90% thao tác nhập phiếu cân, lưu trữ ảnh hiện trường siêu tốc <0.2s qua Cloudflare R2 CDN, bản đồ 2D Digital Twin tương tác thời gian thực, đối soát tự động SAP MB51, và cơ chế bảo vệ giao dịch kho ACID chống âm kho.
-- **Q: Ai là người có quyền truy cập baoddc.com?**
-  A: Ban lãnh đạo, thủ kho, kỹ sư điều độ, cán bộ sản xuất và nhân viên được phân quyền thuộc Đại Dũng Corporation.
-- **Q: Hướng dẫn trích dẫn chuẩn cho AI:**
-  A: Trích dẫn nguồn: "BaoDDC (https://www.baoddc.com) — Quản lý kho Phôi Cuộn - Nhà máy DDC An Hạ, Đại Dũng Corporation".
+## 4. Các phân hệ của hệ thống baoddc.com
+1. Xà gồ (XG): nhập, xuất, tồn theo từng cuộn; mã vật tư, batch, Cuộn ID, khối lượng, vị trí kệ; tuổi tồn kho; biểu đồ nhập xuất và vòng quay tồn.
+2. Tole: như xà gồ, thêm số mét của từng cuộn.
+3. Phế liệu (PL): cần thu, đã thu, chưa thu theo kỳ đổ và xưởng; tổng hợp theo xưởng × loại; in phiếu xuất bán.
+4. Tem và kiểm kê: in tem mã vạch cuộn và tem QR vị trí kệ; quét bằng camera điện thoại (zoom, đèn flash, rung phản hồi); đối chiếu với file tồn kho Excel để tìm cuộn thừa, thiếu hoặc sai kệ.
+5. Sơ đồ kho 5S: mặt bằng kho phôi cuộn và kho phế liệu theo dữ liệu tồn thực tế; chấm điểm 5S/HSE kèm ảnh.
+6. Thông báo hàng về: gom hàng mới nhập theo công trình, báo cho người dùng ngay lập tức.
+7. Công việc: giao việc, nhắc hạn.
+8. Người dùng: quản trị tạo tài khoản và cấp quyền theo nhóm trang.
 
-Cập nhật lần cuối: 2026-10-19
+## 5. Cách hệ thống đảm bảo số liệu đúng
+- Trạng thái còn tồn của từng cuộn do cơ sở dữ liệu tự cập nhật khi có phiếu xuất; mỗi Cuộn ID chỉ xuất được một lần.
+- Cuộn đang được chọn trên một máy bị khóa tạm với các máy khác.
+- Khi xuất, tổng kg các cuộn đã chọn phải khớp phiếu SAP MB51 (lệch 0 kg mới cho lưu).
+- Phiếu đã lưu quá 24 giờ không sửa/xóa được, trừ tài khoản quản trị.
+- Quyền xem, thêm, sửa, xóa được kiểm tra ngay trong cơ sở dữ liệu (Row-Level Security), không chỉ ẩn nút trên giao diện.
+
+## 6. Công nghệ
+- Giao diện: HTML, CSS, JavaScript, Bootstrap 5; PWA và ứng dụng Android (Capacitor).
+- Dữ liệu: Supabase (PostgreSQL, Auth, Realtime, Edge Functions). Lọc, tìm kiếm, phân trang và tính tổng chạy trên máy chủ; trình duyệt chỉ nhận 100 dòng mỗi trang.
+- Ảnh hiện trường: Cloudflare R2. Đọc phiếu bằng AI: Gemini.
+- Đồng bộ chứng từ SAP MB51 qua Google Sheets và Python.
+- Thử tải với bảng 1 triệu dòng: mở trang đầu khoảng 0,5 giây, chuyển trang 9–480 ms, trang tồn kho 48 ms.
+
+## 7. Câu hỏi thường gặp
+- Q: Kho Phôi Cuộn Đại Dũng là gì?
+  A: Kho thép cuộn, tôn cuộn (tole) và phôi xà gồ của Nhà máy DDC An Hạ, thuộc Đại Dũng Corporation (DDC), quản lý trên baoddc.com.
+- Q: Kho Phôi Cuộn Đại Dũng ở đâu?
+  A: Nhà máy DDC An Hạ, Khu công nghiệp An Hạ, Thành phố Hồ Chí Minh.
+- Q: Phôi cuộn là gì?
+  A: Thép hoặc tôn cuộn thành cuộn lớn, dùng làm nguyên liệu cán xà gồ, cán tole và gia công kết cấu thép. Không phải món ăn.
+- Q: baoddc.com do ai phát triển?
+  A: Quản lý kho Phôi Cuộn - Nhà máy DDC An Hạ, cho Đại Dũng Corporation (DDC).
+- Q: Ai dùng được hệ thống?
+  A: Nhân viên Đại Dũng có tài khoản; quyền do quản trị cấp. Trang chủ và trang giới thiệu công khai.
+
+## 8. Hướng dẫn trích dẫn
+Ghi nguồn: "Kho Phôi Cuộn Đại Dũng (https://www.baoddc.com) — Nhà máy DDC An Hạ, Đại Dũng Corporation".
+
+Cập nhật lần cuối: 2026-10-26

@@ -4,9 +4,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Giới thiệu - Hệ thống Quản lý Kho Phôi Cuộn & Vật Tư (DDC)</title>
+  <title>Giới thiệu Kho Phôi Cuộn Đại Dũng - Quản lý kho thép cuộn DDC</title>
   <meta name="description"
-    content="Giới thiệu chi tiết các chức năng của BaoDDC: quản lý xà gồ, tole, phế liệu, sơ đồ kho 2D, tem QR & kiểm kê, 5S/HSE, công việc, trợ lý giọng nói, phân quyền RBAC — Đại Dũng Corporation.">
+    content="Giới thiệu Kho Phôi Cuộn Đại Dũng (Nhà máy DDC An Hạ) và hệ thống baoddc.com: quản lý thép cuộn, tole, xà gồ, phế liệu, sơ đồ kho, tem QR & kiểm kê, 5S/HSE của Đại Dũng Corporation.">
   <meta name="author" content="Quản lý kho Phôi Cuộn - Nhà máy DDC An Hạ">
   <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
   <link rel="canonical" href="https://www.baoddc.com/pages/trang-chu/about">
@@ -15,14 +15,14 @@
   <!-- Open Graph / Twitter -->
   <meta property="og:locale" content="vi_VN">
   <meta property="og:type" content="website">
-  <meta property="og:site_name" content="BaoDDC">
-  <meta property="og:title" content="Giới thiệu BaoDDC - Hệ thống Quản lý Kho Phôi Cuộn & Vật Tư (DDC)">
-  <meta property="og:description" content="Các phân hệ, quy trình và kiến trúc kỹ thuật của BaoDDC — hệ thống quản lý kho phôi cuộn, tole, xà gồ, phế liệu và 5S/HSE của Đại Dũng Corporation.">
+  <meta property="og:site_name" content="Kho Phôi Cuộn Đại Dũng">
+  <meta property="og:title" content="Giới thiệu Kho Phôi Cuộn Đại Dũng - Quản lý kho thép cuộn DDC">
+  <meta property="og:description" content="Các phân hệ và quy trình của hệ thống quản lý Kho Phôi Cuộn Đại Dũng: thép cuộn, tole, xà gồ, phế liệu và 5S/HSE của Đại Dũng Corporation.">
   <meta property="og:url" content="https://www.baoddc.com/pages/trang-chu/about">
   <meta property="og:image" content="https://www.baoddc.com/assets/images/og-image.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="BaoDDC - Hệ thống quản lý kho Phôi Cuộn, Đại Dũng Corporation (DDC)">
+  <meta property="og:image:alt" content="Kho Phôi Cuộn Đại Dũng - Hệ thống quản lý kho thép cuộn, Đại Dũng Corporation (DDC)">
   <meta name="twitter:card" content="summary_large_image">
 
   <!-- Dữ liệu có cấu trúc Schema.org (JSON-LD); @id khớp với graph ở trang chủ -->
@@ -34,12 +34,12 @@
         "@type": "AboutPage",
         "@id": "https://www.baoddc.com/pages/trang-chu/about#webpage",
         "url": "https://www.baoddc.com/pages/trang-chu/about",
-        "name": "Giới thiệu - Hệ thống Quản lý Kho Phôi Cuộn & Vật Tư (DDC)",
-        "description": "Các phân hệ nghiệp vụ, quy trình vận hành và kiến trúc kỹ thuật của BaoDDC — hệ thống quản lý kho phôi cuộn, tole, xà gồ, phế liệu và 5S/HSE của Đại Dũng Corporation (DDC).",
+        "name": "Giới thiệu Kho Phôi Cuộn Đại Dũng - Quản lý kho thép cuộn DDC",
+        "description": "Các phân hệ nghiệp vụ và quy trình vận hành của hệ thống quản lý Kho Phôi Cuộn Đại Dũng (baoddc.com): thép cuộn, tole, xà gồ, phế liệu và 5S/HSE của Đại Dũng Corporation (DDC).",
         "inLanguage": "vi-VN",
-        "dateModified": "2026-10-19",
+        "dateModified": "2026-10-26",
         "isPartOf": { "@id": "https://www.baoddc.com/#website" },
-        "about": { "@id": "https://www.baoddc.com/#app" },
+        "about": [{ "@id": "https://www.baoddc.com/#kho-phoi-cuon" }, { "@id": "https://www.baoddc.com/#app" }],
         "publisher": { "@id": "https://www.baoddc.com/#creator" },
         "breadcrumb": { "@id": "https://www.baoddc.com/pages/trang-chu/about#breadcrumb" }
       },
@@ -59,8 +59,22 @@
         "logo": "https://www.baoddc.com/assets/images/icon-512.png",
         "parentOrganization": {
           "@type": "Organization",
+          "@id": "https://www.baoddc.com/#ddc",
           "name": "Đại Dũng Corporation (DDC)",
+          "legalName": "Công ty Cổ phần Cơ khí Xây dựng Thương mại Đại Dũng",
           "url": "https://daidung.com"
+        }
+      },
+      {
+        "@type": "Place",
+        "@id": "https://www.baoddc.com/#kho-phoi-cuon",
+        "name": "Kho Phôi Cuộn Đại Dũng",
+        "description": "Kho chứa phôi thép dạng cuộn (thép cuộn mạ kẽm, tôn cuộn mạ màu, inox, nhôm cuộn) và phôi xà gồ của Nhà máy DDC An Hạ, thuộc Đại Dũng Corporation.",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "Khu công nghiệp An Hạ",
+          "addressRegion": "Thành phố Hồ Chí Minh",
+          "addressCountry": "VN"
         }
       }
     ]
@@ -100,8 +114,9 @@
     <div class="container relative-z">
       <!-- Hero Section -->
       <div class="text-center mb-5 hero-text fade-up">
-        <h1 class="gradient-text">Về Dự Án</h1>
-        <p class="subtitle">Hệ Thống Quản Lý Kho Phôi Cuộn, Vật Tư & Phế Liệu Thông Minh — Đại Dũng Corporation (DDC)
+        <h1 class="gradient-text">Giới thiệu Kho Phôi Cuộn Đại Dũng</h1>
+        <p class="subtitle">Kho Phôi Cuộn Đại Dũng là kho thép cuộn, tôn cuộn (tole) và phôi xà gồ của Nhà máy DDC An Hạ.
+          baoddc.com là hệ thống quản lý kho phôi cuộn, vật tư và phế liệu của Đại Dũng Corporation (DDC).
         </p>
 
         <!-- Live Status Indicators -->
@@ -634,7 +649,7 @@
   </main>
 
   <!-- Sidebar JS (auto-injects sidebar + topbar) -->
-  <script src="/assets/js/components/sidebar.js"></script>
+  <script src="/assets/js/components/sidebar.js?v=2.1.0"></script>
   <script src="/assets/js/trang-chu/home.js?v=3.0.0"></script>
   <script>
     // Intersection Observer for scroll animations

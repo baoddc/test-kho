@@ -1,8 +1,8 @@
 {
   "id": "/index.html",
-  "name": "Hệ thống Quản lý Kho Phôi Cuộn",
+  "name": "Kho Phôi Cuộn Đại Dũng",
   "short_name": "Kho Phôi cuộn",
-  "description": "Ứng dụng quản lý kho Phôi cuộn DDC",
+  "description": "Hệ thống quản lý Kho Phôi Cuộn Đại Dũng - thép cuộn, tole, xà gồ Nhà máy DDC An Hạ",
   "start_url": "/index.html",
   "scope": "/",
   "display": "standalone",
