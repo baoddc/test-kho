@@ -654,6 +654,15 @@ function showNoResultsMessage(message) {
   thead.innerHTML = '';
   tbody.innerHTML = '';
 
+  // Giữ dòng tiêu đề để vẫn bấm được nút lọc cột khi bộ lọc không còn dòng nào
+  const headerRow = document.createElement('tr');
+  COLUMN_HEADERS.forEach(header => {
+    const th = document.createElement('th');
+    th.textContent = header;
+    headerRow.appendChild(th);
+  });
+  thead.appendChild(headerRow);
+
   const tr = document.createElement('tr');
   const td = document.createElement('td');
   td.colSpan = COLUMN_HEADERS.length;
@@ -668,6 +677,8 @@ function showNoResultsMessage(message) {
 
   const paginationDiv = document.querySelector('.d-flex.align-items-center.justify-content-end');
   if (paginationDiv) paginationDiv.style.display = 'none';
+
+  if (typeof window.ddcRefreshFilterIcons === 'function') window.ddcRefreshFilterIcons();
 }
 
 function renderGroupedTable(data) {
@@ -776,6 +787,9 @@ function renderGroupedTable(data) {
     enableColumnResize(table);
     updateCellTitles(table);
   }
+
+  // Nút lọc / sắp xếp kiểu Excel trên tiêu đề cột (home.js, lọc ở server qua ddcServerAdapter)
+  if (typeof window.ddcRefreshFilterIcons === 'function') window.ddcRefreshFilterIcons();
 }
 
 
