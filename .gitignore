@@ -25,6 +25,7 @@ Thumbs.db
 .agents/
 .temp_baoddc/
 supabase/.temp/
+.archify/
 
 # Vercel build output
 .vercel/
