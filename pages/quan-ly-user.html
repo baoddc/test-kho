@@ -255,6 +255,26 @@
                                 </div>
                             </div>
 
+                            <!-- Nhóm GRATING -->
+                            <div class="mb-2 p-2 rounded border border-secondary bg-opacity-10 bg-secondary">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="fw-bold text-light small"><i class="fa-solid fa-table-cells text-warning me-1"></i>Nhóm GRATING</span>
+                                    <input type="checkbox" class="form-check-input group-select-all" data-group="grating" title="Chọn toàn bộ nhóm">
+                                </div>
+                                <div class="row g-1 ps-2 mb-2 pb-1 border-bottom border-secondary border-opacity-50">
+                                    <div class="col-3"><div class="form-check small"><input class="form-check-input group-perm-action group-perm-grating" type="checkbox" data-group="grating" data-action="view" id="perm_grating_view"><label class="form-check-label text-muted" for="perm_grating_view">👁️ Xem</label></div></div>
+                                    <div class="col-3"><div class="form-check small"><input class="form-check-input group-perm-action group-perm-grating" type="checkbox" data-group="grating" data-action="add" id="perm_grating_add"><label class="form-check-label text-muted" for="perm_grating_add">➕ Thêm</label></div></div>
+                                    <div class="col-3"><div class="form-check small"><input class="form-check-input group-perm-action group-perm-grating" type="checkbox" data-group="grating" data-action="edit" id="perm_grating_edit"><label class="form-check-label text-muted" for="perm_grating_edit">✏️ Sửa</label></div></div>
+                                    <div class="col-3"><div class="form-check small"><input class="form-check-input group-perm-action group-perm-grating" type="checkbox" data-group="grating" data-action="delete" id="perm_grating_delete"><label class="form-check-label text-muted" for="perm_grating_delete">🗑️ Xóa</label></div></div>
+                                </div>
+                                <div class="row g-1 ps-2">
+                                    <div class="col-6"><div class="form-check small"><input class="form-check-input page-checkbox group-page-grating" type="checkbox" value="/pages/grating/grating-nhap.html" id="p_grating_nhap"><label class="form-check-label text-muted" for="p_grating_nhap">Nhập - Grating</label></div></div>
+                                    <div class="col-6"><div class="form-check small"><input class="form-check-input page-checkbox group-page-grating" type="checkbox" value="/pages/grating/grating-xuat.html" id="p_grating_xuat"><label class="form-check-label text-muted" for="p_grating_xuat">Xuất - Grating</label></div></div>
+                                    <div class="col-6"><div class="form-check small"><input class="form-check-input page-checkbox group-page-grating" type="checkbox" value="/pages/grating/grating-ton.html" id="p_grating_ton"><label class="form-check-label text-muted" for="p_grating_ton">Tồn - Grating</label></div></div>
+                                    <div class="col-6"><div class="form-check small"><input class="form-check-input page-checkbox group-page-grating" type="checkbox" value="/pages/grating/grating-bieu-do.html" id="p_grating_bieu_do"><label class="form-check-label text-muted" for="p_grating_bieu_do">Biểu đồ - Grating</label></div></div>
+                                </div>
+                            </div>
+
                             <!-- Nhóm PHẾ LIỆU -->
                             <div class="mb-2 p-2 rounded border border-secondary bg-opacity-10 bg-secondary">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
@@ -345,7 +365,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="/assets/js/core/supabase-config.js"></script>
-    <script src="/assets/js/components/sidebar.js?v=2.1.0"></script>
-    <script src="/assets/js/quan-ly-user.js"></script>
+    <script src="/assets/js/components/sidebar.js?v=2.2.0"></script>
+    <script src="/assets/js/quan-ly-user.js?v=3.1.0"></script>
 </body>
 </html>

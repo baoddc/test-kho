@@ -279,7 +279,7 @@ function openEditUserModal(userId) {
     // Nếu chưa có cấu hình group riêng, lấy theo quyền tổng hợp cũ để so sánh chuẩn xác
     if (!groupsObj) {
         groupsObj = {};
-        ['chung', '5s', 'xg', 'tole', 'pl', 'tem_qr', 'admin'].forEach(grp => {
+        ['chung', '5s', 'xg', 'tole', 'grating', 'pl', 'tem_qr', 'admin'].forEach(grp => {
             groupsObj[grp] = {
                 canView: !!user.can_view,
                 canAdd: !!user.can_add,
@@ -307,7 +307,7 @@ function openEditUserModal(userId) {
     });
 
     // Tick chọn các quyền thao tác theo nhóm
-    const groupNames = ['chung', '5s', 'xg', 'tole', 'pl', 'tem_qr', 'admin'];
+    const groupNames = ['chung', '5s', 'xg', 'tole', 'grating', 'pl', 'tem_qr', 'admin'];
     groupNames.forEach(grp => {
         ['view', 'add', 'edit', 'delete'].forEach(act => {
             const cb = document.getElementById(`perm_${grp}_${act}`);
@@ -386,7 +386,13 @@ function computePermissionDiff(username, oldPerms, newAllowedPagesPayload) {
         '/pages/tole/tole-xuat.html': 'Xuất - Tole',
         '/pages/tole/tole-ton.html': 'Tồn - Tole',
         '/pages/tole/tole-bieu-do.html': 'Biểu đồ - Tole',
-        
+
+        // Nhóm GRATING
+        '/pages/grating/grating-nhap.html': 'Nhập - Grating',
+        '/pages/grating/grating-xuat.html': 'Xuất - Grating',
+        '/pages/grating/grating-ton.html': 'Tồn - Grating',
+        '/pages/grating/grating-bieu-do.html': 'Biểu đồ - Grating',
+
         // Nhóm PHẾ LIỆU
         '/pages/pl/pl-can-thu.html': 'PL - Cần thu',
         '/pages/pl/pl-da-thu.html': 'PL - Đã thu',
@@ -433,13 +439,14 @@ function computePermissionDiff(username, oldPerms, newAllowedPagesPayload) {
         '5s': '5S',
         xg: 'XÀ GỒ',
         tole: 'TOLE',
-        pl: 'PHẾ LIỆU',
+        grating: 'GRATING',
+        pl:'PHẾ LIỆU',
         tem_qr: 'TEM QR, KIỂM KÊ',
         admin: 'Quản trị'
     };
     const actionLabels = { canView: 'Xem', canAdd: 'Thêm', canEdit: 'Sửa', canDelete: 'Xóa' };
 
-    ['chung', '5s', 'xg', 'tole', 'pl', 'tem_qr', 'admin'].forEach(grp => {
+    ['chung', '5s', 'xg', 'tole', 'grating', 'pl', 'tem_qr', 'admin'].forEach(grp => {
         const oldG = oldGroups[grp] || {};
         const newG = newGroups[grp] || {};
         ['canView', 'canAdd', 'canEdit', 'canDelete'].forEach(act => {
@@ -512,7 +519,7 @@ async function handleSaveUser() {
     }
 
     // Thu thập quyền thao tác theo từng nhóm
-    const groupNames = ['chung', '5s', 'xg', 'tole', 'pl', 'tem_qr', 'admin'];
+    const groupNames = ['chung', '5s', 'xg', 'tole', 'grating', 'pl', 'tem_qr', 'admin'];
     const groupsObj = {};
 
     groupNames.forEach(grp => {

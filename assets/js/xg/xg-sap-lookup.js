@@ -63,6 +63,32 @@
       docFieldPlaceholder: 'Gõ số phiếu xuất để tìm SAP...',
       tableName: 'tole-xuat',
       docColumnName: 'Phiếu xuất'
+    },
+    'grating-nhap': {
+      debitCredit: ['S'],
+      allowedPrefixes: ['10060'],
+      allowedGroups: ['10060-Grating'],
+      warehouse: 'grating',
+      direction: 'nhap',
+      label: 'Grating - Nhập kho',
+      pageUrl: '/pages/grating/grating-nhap.html',
+      defaultDocType: 'MN',
+      docFieldPlaceholder: 'Gõ số phiếu nhập để tìm SAP...',
+      tableName: 'grating-nhap',
+      docColumnName: 'Phiếu nhập'
+    },
+    'grating-xuat': {
+      debitCredit: ['H'],
+      allowedPrefixes: ['10060'],
+      allowedGroups: ['10060-Grating'],
+      warehouse: 'grating',
+      direction: 'xuat',
+      label: 'Grating - Xuất kho',
+      pageUrl: '/pages/grating/grating-xuat.html',
+      defaultDocType: 'PX',
+      docFieldPlaceholder: 'Gõ số phiếu xuất để tìm SAP...',
+      tableName: 'grating-xuat',
+      docColumnName: 'Phiếu xuất'
     }
   };
 
@@ -87,6 +113,8 @@
     if (path.includes('xg-nhap')) return 'xg-nhap';
     if (path.includes('tole-xuat')) return 'tole-xuat';
     if (path.includes('tole-nhap')) return 'tole-nhap';
+    if (path.includes('grating-xuat')) return 'grating-xuat';
+    if (path.includes('grating-nhap')) return 'grating-nhap';
     return 'xg-nhap';
   }
 
@@ -865,8 +893,9 @@
         const dc = String(sample.debit_credit_ind || '').toUpperCase().trim();
         const isXgGroup = matGroup.startsWith('10040') || matGroup.startsWith('10041');
         const isToleGroup = ['10030', '10031', '10022', '10091'].some(p => matGroup.startsWith(p));
+        const isGratingGroup = matGroup.startsWith('10060');
 
-        let targetWarehouse = isXgGroup ? 'xg' : (isToleGroup ? 'tole' : null);
+        let targetWarehouse = isXgGroup ? 'xg' : (isToleGroup ? 'tole' : (isGratingGroup ? 'grating' : null));
         let targetDir = dc === 'S' ? 'nhap' : (dc === 'H' ? 'xuat' : null);
         let suggestedPage = null;
         if (targetWarehouse && targetDir) {

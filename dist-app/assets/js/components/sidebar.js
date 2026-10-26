@@ -442,6 +442,7 @@
     if (rawAllowedStorage === null) {
       if (normHref.includes('/xg/')) return !!(groupPerms.xg && groupPerms.xg.canView);
       if (normHref.includes('/tole/')) return !!(groupPerms.tole && groupPerms.tole.canView);
+      if (normHref.includes('/grating/')) return !!(groupPerms.grating && groupPerms.grating.canView);
       if (normHref.includes('/5s/')) return !!(groupPerms['5s'] && groupPerms['5s'].canView);
       if (normHref.includes('/pl/')) return !!(groupPerms.pl && groupPerms.pl.canView);
       if (hrefFile === 'cong-viec') return !!(groupPerms.chung && groupPerms.chung.canView);
@@ -702,8 +703,13 @@
     {
       id: 'nav-grating',
       label: 'GRATING',
-      href: '#grating',
       icon: `<svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="8" y2="18"/><line x1="12" y1="6" x2="12" y2="18"/><line x1="16" y1="6" x2="16" y2="18"/><line x1="4" y1="10" x2="20" y2="10"/><line x1="4" y1="14" x2="20" y2="14"/></svg>`,
+      children: [
+        { label: 'Nhập - Grating', href: '/pages/grating/grating-nhap.html' },
+        { label: 'Xuất - Grating', href: '/pages/grating/grating-xuat.html' },
+        { label: 'Tồn - Grating', href: '/pages/grating/grating-ton.html' },
+        { label: 'Biểu đồ - Grating', href: '/pages/grating/grating-bieu-do.html' },
+      ]
     },
     {
       id: 'nav-pl',
