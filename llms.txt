@@ -13,7 +13,7 @@
 ## 8 Phân hệ & Tính năng cốt lõi (Core Business Modules)
 1. **Quản lý Xà Gồ C/Z (XG)**: Quản lý toàn diện Nhập - Xuất - Tồn, trực quan hóa biểu đồ Top 10 sản lượng, biến động ngày/tháng, tích hợp bóc tách phiếu cân tự động bằng AI Vision OCR.
 2. **Quản lý Tole Cuộn & Tấm**: Giám sát cuộn theo mã, quy cách, nguồn gốc; tự động tính toán Tuổi lưu kho (Storage Age), cảnh báo sớm cuộn tồn lâu ngày để tối ưu vòng quay vốn.
-3. **Bản đồ số hóa kho 2D Realtime (Digital Twin)**: Sơ đồ tương tác 2D cho kho Phôi Cuộn & Phế Liệu; kết nối live Supabase, heatmap mật độ tồn kho, đổi màu theo tỷ lệ lấp đầy.
+3. **Bản đồ số hóa kho 2D Realtime (Digital Twin)**: Sơ đồ tương tác 2D cho kho Phôi Cuộn & Phế Liệu; kết nối dữ liệu live, heatmap mật độ tồn kho, đổi màu theo tỷ lệ lấp đầy.
 4. **Đối soát SAP MB51 & Auto-Sync**: Tự động đối soát sai lệch giữa xuất nhập thực tế với sổ sách kế toán SAP MB51 (`xg_sap_mb51`); đồng bộ dữ liệu 2 chiều.
 5. **Tem QR & Kiểm kê hiện trường**: Quét mã vạch/QR bằng camera smartphone đối soát 1:1 với Excel sổ sách; in tem mã vạch/QR vị trí kệ hàng loạt (hỗ trợ xuất ZIP).
 6. **Quản lý Phế liệu sản xuất (PL)**: Chu trình thu hồi 3 bước Cần thu - Chưa thu - Đã thu; lưu trữ phiếu cân xưởng thực tế, in phiếu xuất bán/xuất trả chuẩn mẫu DDC.
@@ -23,7 +23,7 @@
 ## Đột phá công nghệ & Số liệu định lượng (Performance & Metrics)
 - **AI Vision OCR**: Bóc tách tự động phiếu cân xưởng và phiếu xuất hàng đa dòng, giảm hơn **90%** thời gian nhập liệu thủ công.
 - **Tốc độ tải ảnh siêu tốc**: Lưu trữ qua Cloudflare R2 CDN đạt độ trễ **< 0.2s** (so với 3-5s qua Google Drive cũ), triệt tiêu nguy cơ nghẽn băng thông.
-- **Tốc độ phản hồi dữ liệu**: B+ Tree Block Cache và Range Pagination trên Supabase PostgreSQL mang lại phản hồi tức thì (**0ms**), chịu tải hàng trăm nghìn bản ghi.
+- **Tốc độ phản hồi dữ liệu**: B+ Tree Block Cache và Range Pagination trên PostgreSQL mang lại phản hồi tức thì (**0ms**), chịu tải hàng trăm nghìn bản ghi.
 - **Kiểm soát giao dịch kho ACID**: Thực thi atomic transactions qua RPC Stored Procedures với Row-level lock, loại trừ 100% rủi ro âm kho trong giờ cao điểm.
 - **Chống gian lận & Toàn vẹn lịch sử**: Tự động khóa quyền Sửa/Xóa chứng từ kho sau **24 giờ**; kiểm soát phân quyền RBAC đa tầng (`data-perm`).
 - **Hoạt động ngoại tuyến (Offline-First)**: Hỗ trợ PWA với Service Worker thông minh và bản Desktop EXE cho máy trạm nhà xưởng.

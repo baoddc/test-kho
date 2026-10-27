@@ -83,7 +83,7 @@ async function loadUserList() {
         tableBody.innerHTML = `
             <tr>
                 <td colspan="7" class="text-center py-4 text-danger">
-                    Không thể kết nối với Supabase. Vui lòng kiểm tra lại cấu hình!
+                    Không thể kết nối với máy chủ. Vui lòng kiểm tra lại cấu hình!
                 </td>
             </tr>
         `;
@@ -98,7 +98,7 @@ async function loadUserList() {
             tableBody.innerHTML = `
                 <tr>
                     <td colspan="7" class="text-center py-4 text-danger">
-                        Lỗi khi lấy dữ liệu: ${error.message}. Bạn đã chạy script SQL RPC trên Supabase chưa?
+                        Lỗi khi lấy dữ liệu: ${error.message}. Bạn đã chạy script SQL RPC trên hệ thống chưa?
                     </td>
                 </tr>
             `;
@@ -585,7 +585,7 @@ async function handleSaveUser() {
                     window.supabase.from('system_announcements').insert([notifPayload]).then(({ error: notifErr }) => {
                         if (notifErr) {
                             console.warn('Lỗi gửi thông báo phân quyền (thử lại dạng fallback):', notifErr);
-                            // Nếu DB trên Supabase chưa chạy script migration cột target_user -> Fallback chèn thông báo kèm tag username trong tiêu đề
+                            // Nếu DB trên hệ thống chưa chạy script migration cột target_user -> Fallback chèn thông báo kèm tag username trong tiêu đề
                             if (notifErr.message && notifErr.message.includes('target_user')) {
                                 const fallbackPayload = { ...notifPayload };
                                 delete fallbackPayload.target_user;

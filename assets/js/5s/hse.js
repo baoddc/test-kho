@@ -2043,7 +2043,7 @@ class DashboardManager {
 
     async callScorecardOcr(base64Data, mimeType) {
         if (!window.supabase || typeof window.supabase.functions?.invoke !== 'function') {
-            throw new Error('Supabase client chưa được khởi tạo đầy đủ.');
+            throw new Error('Kết nối máy chủ chưa được khởi tạo đầy đủ.');
         }
         const { data, error } = await window.supabase.functions.invoke('ocr-scorecard-5s', {
             body: { base64Data, mimeType }
@@ -2118,7 +2118,7 @@ class DashboardManager {
                 return;
             } catch (err) {
                 console.error('Lỗi lưu điểm 5S:', err);
-                ocrError = `${err.message || err}. Nếu lỗi báo thiếu bảng hse_5s_scores, hãy chạy supabase/sql/setup/setup_hse_5s_scores.sql trong Supabase SQL Editor`;
+                ocrError = `${err.message || err}. Nếu lỗi báo thiếu bảng hse_5s_scores, hãy chạy supabase/sql/setup/setup_hse_5s_scores.sql trong SQL Editor`;
             }
         }
 
@@ -2268,7 +2268,7 @@ class DashboardManager {
                 modal.remove();
             } catch (err) {
                 console.error('Lỗi lưu điểm 5S:', err);
-                msg.textContent = `Không lưu được: ${err.message || err}. Nếu lỗi báo thiếu bảng hse_5s_scores, hãy chạy supabase/sql/setup/setup_hse_5s_scores.sql trong Supabase SQL Editor.`;
+                msg.textContent = `Không lưu được: ${err.message || err}. Nếu lỗi báo thiếu bảng hse_5s_scores, hãy chạy supabase/sql/setup/setup_hse_5s_scores.sql trong SQL Editor.`;
                 btn.disabled = false;
                 btn.textContent = 'Xác nhận & cập nhật xếp hạng';
             }

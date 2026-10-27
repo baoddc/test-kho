@@ -314,7 +314,7 @@ async function reloadPage(page) {
     console.error('Supabase error:', error);
     if (loadingEl && (!tableData || tableData.length <= 1)) {
       loadingEl.style.display = '';
-      loadingEl.textContent = `Lỗi kết nối Supabase: ${error.message}`;
+      loadingEl.textContent = `Lỗi kết nối máy chủ: ${error.message}`;
     }
   }
 }

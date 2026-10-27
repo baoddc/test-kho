@@ -38,7 +38,7 @@ Kho được quản lý trên hệ thống web baoddc.com (BaoDDC), do Quản l�
 
 ## 6. Công nghệ
 - Giao diện: HTML, CSS, JavaScript, Bootstrap 5; PWA và ứng dụng Android (Capacitor).
-- Dữ liệu: Supabase (PostgreSQL, Auth, Realtime, Edge Functions). Lọc, tìm kiếm, phân trang và tính tổng chạy trên máy chủ; trình duyệt chỉ nhận 100 dòng mỗi trang.
+- Dữ liệu: PostgreSQL (Auth, Realtime, Edge Functions). Lọc, tìm kiếm, phân trang và tính tổng chạy trên máy chủ; trình duyệt chỉ nhận 100 dòng mỗi trang.
 - Ảnh hiện trường: Cloudflare R2. Đọc phiếu bằng AI: Gemini.
 - Đồng bộ chứng từ SAP MB51 tự động bằng Python.
 - Thử tải với bảng 1 triệu dòng: mở trang đầu khoảng 0,5 giây, chuyển trang 9–480 ms, trang tồn kho 48 ms.

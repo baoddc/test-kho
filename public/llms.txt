@@ -28,7 +28,7 @@
 
 ## Số liệu kỹ thuật (đo trong thử tải, bảng 1 triệu dòng)
 - Mở trang đầu khoảng 0,5 giây; chuyển trang 9–480 ms; trang tồn kho 48 ms.
-- Lọc, tìm kiếm, tính tổng thực hiện trên máy chủ PostgreSQL (Supabase), trình duyệt chỉ nhận 100 dòng mỗi trang.
+- Lọc, tìm kiếm, tính tổng thực hiện trên máy chủ PostgreSQL, trình duyệt chỉ nhận 100 dòng mỗi trang.
 
 ## Liên kết
 - [Trang chủ](https://www.baoddc.com/): giới thiệu Kho Phôi Cuộn Đại Dũng và câu hỏi thường gặp.

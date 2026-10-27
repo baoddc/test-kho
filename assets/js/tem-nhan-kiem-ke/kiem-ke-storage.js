@@ -76,7 +76,7 @@
   // ==================== SUPABASE CLOUD OPERATIONS ====================
 
   /**
-   * Tải toàn bộ cuộn đã quét từ bảng kiem_ke_scans trên Supabase
+   * Tải toàn bộ cuộn đã quét từ bảng kiem_ke_scans trên hệ thống
    * Sắp xếp mới nhất lên đầu
    */
   async function fetchScannedRollsFromSupabase() {
@@ -211,7 +211,7 @@
   }
 
   /**
-   * Xóa 1 cuộn trên Supabase kiem_ke_scans theo ID (chỉ bao.lt được RLS cho phép)
+   * Xóa 1 cuộn trên hệ thống kiem_ke_scans theo ID (chỉ bao.lt được RLS cho phép)
    */
   async function deleteScannedRollFromSupabase(id) {
     const client = getSupabaseClient();
@@ -224,7 +224,7 @@
         .eq('id', id);
 
       if (error) {
-        console.error('Lỗi xóa cuộn trên Supabase:', error);
+        console.error('Lỗi xóa cuộn trên hệ thống:', error);
         throw error;
       }
       return true;
@@ -235,7 +235,7 @@
   }
 
   /**
-   * Xóa toàn bộ cuộn đã quét trên Supabase (chỉ bao.lt được RLS cho phép)
+   * Xóa toàn bộ cuộn đã quét trên hệ thống (chỉ bao.lt được RLS cho phép)
    */
   async function clearAllScannedFromSupabase() {
     const client = getSupabaseClient();
@@ -248,7 +248,7 @@
         .neq('id', 0); // Xóa tất cả các bản ghi có ID khác 0
 
       if (error) {
-        console.error('Lỗi xóa toàn bộ trên Supabase:', error);
+        console.error('Lỗi xóa toàn bộ trên hệ thống:', error);
         throw error;
       }
       return true;

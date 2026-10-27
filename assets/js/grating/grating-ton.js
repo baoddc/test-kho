@@ -146,7 +146,7 @@ async function reloadPage(page) {
     console.error('Supabase error in reloadPage:', error);
     if (loadingEl) {
       loadingEl.style.display = '';
-      loadingEl.textContent = `Lỗi kết nối Supabase: ${error.message}`;
+      loadingEl.textContent = `Lỗi kết nối máy chủ: ${error.message}`;
     }
   }
 }

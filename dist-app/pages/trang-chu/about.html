@@ -123,7 +123,7 @@
         <div class="status-pills-wrapper">
           <div class="status-pill">
             <span class="status-dot green"></span>
-            <span>Supabase Cloud: B+ Tree & Realtime Sync</span>
+            <span>Cloud Database: B+ Tree & Realtime Sync</span>
           </div>
           <div class="status-pill">
             <span class="status-dot" style="background-color: #f38020; color: #f38020;"></span>
@@ -191,7 +191,7 @@
               <div class="card-icon"><i class="fa-solid fa-map-location-dot"></i></div>
               <h3>Bản Đồ Số Hóa Kho 2D</h3>
               <p>Sơ đồ tương tác trực quan 2D cho kho Phôi Cuộn và Kho Phế Liệu; kết nối trực tiếp dữ liệu live
-                Supabase, heatmap tỷ lệ lấp đầy kệ, lọc chu kỳ và xem chi tiết tức thì từng cuộn/mặt hàng theo vị trí
+                từ máy chủ, heatmap tỷ lệ lấp đầy kệ, lọc chu kỳ và xem chi tiết tức thì từng cuộn/mặt hàng theo vị trí
                 kệ.</p>
             </div>
           </div>
@@ -201,7 +201,7 @@
             <div class="glass-card">
               <div class="card-icon"><i class="fa-solid fa-arrows-rotate"></i></div>
               <h3>Đồng Bộ & Đối Soát SAP</h3>
-              <p>Pipeline đồng bộ dữ liệu tự động từ SAP MB51 vào Supabase; tự động Autocomplete &amp; điền sẵn 8
+              <p>Pipeline đồng bộ dữ liệu tự động từ SAP MB51 vào cơ sở dữ liệu; tự động Autocomplete &amp; điền sẵn 8
                 trường thông tin, kiểm soát chiều Nhập (S) / Xuất (H) và đối soát chéo khối lượng thực tế chống lệch sổ
                 sách kế toán.</p>
             </div>
@@ -263,7 +263,7 @@
               <div class="card-icon"><i class="fa-solid fa-truck-ramp-box"></i></div>
               <h3>Thông Báo Hàng Về Kho</h3>
               <p>Tự động gom nhóm hàng nhập từ Xà gồ và Tole theo tên công trình &amp; tồn trơn, đẩy thông báo lên
-                Supabase để toàn bộ người dùng nắm hàng mới về theo thời gian thực.</p>
+                hệ thống để toàn bộ người dùng nắm hàng mới về theo thời gian thực.</p>
             </div>
           </div>
 
@@ -336,7 +336,7 @@
           </div>
           <div class="tech-item">
             <div class="tech-logo gas-logo"><i class="fa-solid fa-database"></i></div>
-            <span class="tech-name">Supabase (Postgres)</span>
+            <span class="tech-name">PostgreSQL</span>
           </div>
           <div class="tech-item">
             <div class="tech-logo r2-logo"><i class="fa-solid fa-cloud-bolt"></i></div>
@@ -375,7 +375,7 @@
         <div class="col-md-6 col-lg-4 mb-4">
           <div class="spotlight-card">
             <div class="spotlight-icon icon-cyan"><i class="fa-solid fa-bolt"></i></div>
-            <h4 class="icon-cyan">Supabase Data Engine</h4>
+            <h4 class="icon-cyan">Cloud Data Engine</h4>
             <p>Thuật toán B+ Tree Block Cache kết hợp Range Pagination (<code>.range(from, to)</code>) phản hồi dữ liệu
               tức thì (0ms) và prefetch trang tiếp theo ở nền, chịu tải hàng trăm nghìn bản ghi.</p>
           </div>
@@ -386,7 +386,7 @@
           <div class="spotlight-card">
             <div class="spotlight-icon icon-emerald"><i class="fa-solid fa-scale-balanced"></i></div>
             <h4 class="icon-emerald">ACID & Concurrency Control</h4>
-            <p>Xử lý giao dịch kho nguyên tử (Atomic) qua Supabase RPC / Stored Procedures với khóa dòng (Row-level
+            <p>Xử lý giao dịch kho nguyên tử (Atomic) qua RPC / Stored Procedures với khóa dòng (Row-level
               Lock). Kiểm tra tồn kho khả dụng thời gian thực, triệt tiêu nguy cơ âm kho và xung đột đồng thời.</p>
           </div>
         </div>
@@ -407,7 +407,7 @@
             <div class="spotlight-icon icon-blue"><i class="fa-solid fa-map"></i></div>
             <h4 class="icon-blue">Sơ Đồ Kho 2D & Heatmap Live</h4>
             <p>Mô phỏng không gian kho bãi 2D thời gian thực; trực quan hóa vị trí kệ, heatmap mật độ tồn, tự động đổi
-              màu theo tỷ lệ lấp đầy dựa trên dữ liệu tồn kho Supabase và truy xuất nguồn gốc từng cuộn hàng.</p>
+              màu theo tỷ lệ lấp đầy dựa trên dữ liệu tồn kho trên máy chủ và truy xuất nguồn gốc từng cuộn hàng.</p>
           </div>
         </div>
 
@@ -515,7 +515,7 @@
                 <div class="step-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
                 <h5>ETL Pipeline Sync</h5>
                 <p>Script tự động (Python &amp; Batch) nạp hàng ngàn dòng dữ liệu SAP MB51 vào bảng
-                  <code>xg_sap_mb51</code> trên Supabase, tự động khử trùng lặp và đồng bộ tức thời.</p>
+                  <code>xg_sap_mb51</code> trên hệ thống, tự động khử trùng lặp và đồng bộ tức thời.</p>
               </div>
             </div>
 
@@ -566,7 +566,7 @@
             <div class="perf-card warning">
               <div class="perf-status"><i class="fa-solid fa-database"></i> MỞ RỘNG (SERVER ENGINE)</div>
               <div class="perf-value">&gt; 20.000 đến hàng triệu dòng</div>
-              <p>Chuyển giao truy vấn sang phân trang SQL Supabase Server-side, duy trì tốc độ phản hồi &lt; 0.5s.</p>
+              <p>Chuyển giao truy vấn sang phân trang SQL Server-side, duy trì tốc độ phản hồi &lt; 0.5s.</p>
             </div>
           </div>
         </div>
@@ -587,7 +587,7 @@
                   <td>Tốc độ truy vấn dữ liệu kho</td>
                   <td>2 - 5 giây (truy vấn chậm)</td>
                   <td>&lt; 1 giây</td>
-                  <td>&lt; 0.5 giây (Supabase Server Cache B+ Tree)</td>
+                  <td>&lt; 0.5 giây (Server Cache B+ Tree)</td>
                 </tr>
                 <tr>
                   <td>Tải ảnh sự cố HSE & chứng từ</td>
@@ -625,7 +625,7 @@
 
           <!-- Supabase Optimization Note Card -->
           <div class="supabase-note-card">
-            <h5><i class="fa-solid fa-lightbulb me-2"></i>Tối Ưu Hóa Toàn Diện với Supabase Data Engine, Cloudflare R2 &
+            <h5><i class="fa-solid fa-lightbulb me-2"></i>Tối Ưu Hóa Toàn Diện với Cloud Data Engine, Cloudflare R2 &
               Bản Đồ Số Hóa 2D</h5>
             <p>Khi quy mô dữ liệu kho phôi cuộn và xà gồ vượt qua hàng chục nghìn chứng từ, trình duyệt web sẽ gặp giới
               hạn về bộ nhớ render DOM. Ứng dụng giải quyết triệt để bài toán này bằng việc kết hợp <strong>Server-side
@@ -649,7 +649,7 @@
   </main>
 
   <!-- Sidebar JS (auto-injects sidebar + topbar) -->
-  <script src="/assets/js/components/sidebar.js?v=2.2.0"></script>
+  <script src="/assets/js/components/sidebar.js?v=2.2.1"></script>
   <script src="/assets/js/trang-chu/home.js?v=3.0.1"></script>
   <script>
     // Intersection Observer for scroll animations

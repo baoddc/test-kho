@@ -254,7 +254,7 @@ if (typeof document !== 'undefined') {
       applyFilters();
     } catch (err) {
       console.error('Lỗi khi tải dữ liệu tồn:', err);
-      alert('Không thể nạp dữ liệu tồn từ CSDL Supabase: ' + (err.message || err));
+      alert('Không thể nạp dữ liệu tồn từ CSDL: ' + (err.message || err));
     } finally {
       showLoading(false);
     }

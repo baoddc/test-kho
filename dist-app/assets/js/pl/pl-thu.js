@@ -1659,7 +1659,7 @@ async function handleEditSubmit(e) {
   }
 
   // Show loading overlay
-  showLoadingOverlay('Đang cập nhật dữ liệu lên Supabase...');
+  showLoadingOverlay('Đang cập nhật dữ liệu...');
 
   try {
     const rowId = originalRow.id;
@@ -1702,7 +1702,7 @@ async function handleEditSubmit(e) {
     }
 
   } catch (error) {
-    console.error('Lỗi khi cập nhật dữ liệu trên Supabase:', error);
+    console.error('Lỗi khi cập nhật dữ liệu trên hệ thống:', error);
     alert('Lỗi khi cập nhật dữ liệu: ' + error.message);
   } finally {
     hideLoadingOverlay();
@@ -1756,7 +1756,7 @@ async function handleConfirmDelete() {
   }
 
   // Show loading overlay
-  showLoadingOverlay('Đang xóa dữ liệu trên Supabase...');
+  showLoadingOverlay('Đang xóa dữ liệu...');
 
   try {
     const idsToDelete = selectedRowIndexes;
@@ -1789,7 +1789,7 @@ async function handleConfirmDelete() {
     }
 
   } catch (error) {
-    console.error('Lỗi khi xóa dữ liệu trên Supabase:', error);
+    console.error('Lỗi khi xóa dữ liệu trên hệ thống:', error);
     alert('Lỗi khi xóa dữ liệu: ' + error.message);
   } finally {
     hideLoadingOverlay();

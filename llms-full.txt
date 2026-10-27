@@ -16,9 +16,9 @@ Hệ thống BaoDDC (tại địa chỉ https://baoddc.com) là giải pháp qu�
 ## 3. Kiến trúc kỹ thuật & Đột phá công nghệ (Technical Architecture)
 - **Frontend Core**: HTML5, Vanilla JavaScript (ES6+) chuẩn Module, CSS3 hiện đại, Bootstrap 5.
 - **Mô hình PWA & Offline-First**: Progressive Web App hỗ trợ Service Worker (`sw.js`) cache thông minh tài nguyên tĩnh; đóng gói máy trạm Desktop EXE (Electron) kèm cơ chế tự động kiểm tra bản cập nhật.
-- **Backend & Database Engine**: Supabase (PostgreSQL, Row-Level Security, Realtime subscriptions, RPC Stored Procedures).
+- **Backend & Database Engine**: PostgreSQL (Row-Level Security, Realtime subscriptions, RPC Stored Procedures).
 - **Bộ nhớ đệm & Phân trang**: B+ Tree Block Cache kết hợp Range Pagination (`.range(from, to)`) mang lại tốc độ phản hồi tức thì (0ms) và tải trước (prefetch) ngầm, chịu tải ổn định hàng trăm nghìn dòng dữ liệu.
-- **Toàn vẹn dữ liệu (ACID & Concurrency Control)**: Giao dịch kho xử lý nguyên tử qua Supabase RPC với khóa dòng (Row-level lock), loại trừ triệt để rủi ro xuất âm kho hoặc xung đột ghi đè trong giờ cao điểm.
+- **Toàn vẹn dữ liệu (ACID & Concurrency Control)**: Giao dịch kho xử lý nguyên tử qua RPC với khóa dòng (Row-level lock), loại trừ triệt để rủi ro xuất âm kho hoặc xung đột ghi đè trong giờ cao điểm.
 - **Lưu trữ đám mây Cloudflare R2 CDN**: Toàn bộ ảnh chứng từ cân, nhãn mác và ảnh hiện trường 5S/HSE được upload qua Cloudflare Worker API và phân phối qua Global CDN với độ trễ < 0.2s, giải phóng giới hạn quota của Google Drive.
 - **AI Vision OCR**: Bóc tách tự động phiếu cân xưởng và phiếu giao nhận hàng đa dòng (Multi-item OCR), điền form hàng loạt, giảm hơn 90% thao tác thủ công.
 - **Đối soát kế toán SAP MB51 & Auto-Sync**: Đối soát chênh lệch tự động giữa số liệu xuất nhập thực tế với sổ kế toán SAP MB51 (`xg_sap_mb51`); đồng bộ tự động 2 chiều.
@@ -28,7 +28,7 @@ Hệ thống BaoDDC (tại địa chỉ https://baoddc.com) là giải pháp qu�
 ## 4. 8 Phân hệ nghiệp vụ chi tiết
 1. **Quản lý Xà Gồ C/Z (XG)**: Kiểm soát xuất nhập tồn, phân tích biểu đồ Top 10 sản lượng, báo cáo biến động theo ngày/tháng, tích hợp OCR phiếu cân.
 2. **Quản lý Tole Cuộn & Tấm**: Quản lý chi tiết từng cuộn theo mã, quy cách, mác thép, khối lượng; tự động tính Tuổi lưu kho (Storage Age), cảnh báo tole tồn đọng lâu ngày.
-3. **Bản đồ số hóa kho 2D Realtime (Digital Twin)**: Sơ đồ tương tác 2D không gian kho Phôi Cuộn & Phế Liệu; trực quan hóa vị trí kệ, heatmap mật độ tồn, đổi màu theo tỷ lệ lấp đầy live từ Supabase.
+3. **Bản đồ số hóa kho 2D Realtime (Digital Twin)**: Sơ đồ tương tác 2D không gian kho Phôi Cuộn & Phế Liệu; trực quan hóa vị trí kệ, heatmap mật độ tồn, đổi màu theo tỷ lệ lấp đầy live từ máy chủ.
 4. **Đối soát SAP MB51 & Auto-Sync**: Gợi ý mã SAP, so khớp sai lệch xuất nhập thực tế với MB51, batch sync hai chiều.
 5. **Tem QR & Kiểm kê hiện trường**: Quét tem đối soát 1:1 với Excel sổ sách; in tem mã vạch/QR vị trí kệ hàng loạt (xuất tệp ZIP).
 6. **Quản lý Phế liệu sản xuất (PL)**: Chu trình 3 bước (Cần thu - Chưa thu - Đã thu); in phiếu xuất bán/xuất trả phế liệu chuẩn mẫu Đại Dũng.

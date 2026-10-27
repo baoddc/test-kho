@@ -2,7 +2,7 @@
  * =============================================================================
  * GOODS ARRIVAL NOTICE COMPONENT (Thông báo hàng về kho)
  * Gom nhóm hàng nhập từ xg-nhap và tole-nhap theo Tên công trình & Tồn trơn
- * Đẩy hoặc cập nhật thông báo lên system_announcements trên Supabase
+ * Đẩy hoặc cập nhật thông báo lên system_announcements trên hệ thống
  * =============================================================================
  */
 
@@ -398,7 +398,7 @@
     existingAnnouncementId = null;
 
     if (!supabase) {
-      tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-3">Không kết nối được với Supabase!</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-3">Không kết nối được với máy chủ!</td></tr>`;
       return;
     }
 
@@ -609,7 +609,7 @@
   async function publishNotice() {
     const supabase = getSupabaseClient();
     if (!supabase) {
-      alert('Lỗi: Chưa kết nối Supabase SDK!');
+      alert('Lỗi: Chưa kết nối máy chủ!');
       return;
     }
 

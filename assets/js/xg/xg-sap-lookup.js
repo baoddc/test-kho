@@ -2001,12 +2001,12 @@
     if (!window.supabase) {
       if (!silentOnError) {
         if (typeof alert === 'function') {
-          alert('Kết nối Supabase chưa sẵn sàng. Vui lòng tải lại trang.');
+          alert('Kết nối máy chủ chưa sẵn sàng. Vui lòng tải lại trang.');
         } else {
-          console.warn('[XgSapLookup] Kết nối Supabase chưa sẵn sàng. Vui lòng tải lại trang.');
+          console.warn('[XgSapLookup] Kết nối máy chủ chưa sẵn sàng. Vui lòng tải lại trang.');
         }
       } else {
-        console.warn('[XgSapLookup] Kết nối Supabase chưa sẵn sàng khi tự động đồng bộ.');
+        console.warn('[XgSapLookup] Kết nối máy chủ chưa sẵn sàng khi tự động đồng bộ.');
       }
       return Promise.resolve();
     }
@@ -2186,10 +2186,10 @@
         }
 
         if (btnEl) {
-          btnEl.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status"></span> Đang cập nhật Supabase...`;
+          btnEl.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status"></span> Đang cập nhật hệ thống...`;
         }
 
-        // 3. Làm sạch bảng cũ trên Supabase để khớp chính xác dữ liệu Google Sheets
+        // 3. Làm sạch bảng cũ trên hệ thống để khớp chính xác dữ liệu Google Sheets
         const { error: delErr } = await window.supabase.from('xg_sap_mb51').delete().gt('id', 0);
         if (delErr) {
           console.warn('[XgSapLookup] Cảnh báo khi xóa bảng cũ:', delErr);
@@ -2197,7 +2197,7 @@
 
         // Trường hợp Google Sheet không có dòng dữ liệu nào
         if (records.length === 0) {
-          showAutofillToast('✓ Nguồn dữ liệu hiện không có dòng nào. Đã xóa sạch toàn bộ dữ liệu trên Supabase (0 dòng)!');
+          showAutofillToast('✓ Nguồn dữ liệu hiện không có dòng nào. Đã xóa sạch toàn bộ dữ liệu trên hệ thống (0 dòng)!');
           return;
         }
 
@@ -2265,7 +2265,7 @@
     const cleanDoc = String(docNo || '').trim();
     const empty = { found: false, groups: [], otherContextGroups: [] };
     if (!cleanDoc) return empty;
-    if (!window.supabase) return { ...empty, error: 'Supabase chưa sẵn sàng' };
+    if (!window.supabase) return { ...empty, error: 'Máy chủ chưa sẵn sàng' };
 
     const currentContext = detectCurrentPageContext(pageContext);
     const likeExact = cleanDoc.replace(/[\\%_]/g, ch => '\\' + ch);

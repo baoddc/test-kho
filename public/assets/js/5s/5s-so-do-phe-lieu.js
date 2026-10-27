@@ -369,7 +369,7 @@
     } catch (err) {
       if (seq !== loadSeq) return;
       console.error('Lỗi tải dữ liệu kho phế liệu:', err);
-      errorMessage = err.message || 'Không thể kết nối cơ sở dữ liệu Supabase';
+      errorMessage = err.message || 'Không thể kết nối cơ sở dữ liệu';
       isLoading = false;
       render();
     }
@@ -619,7 +619,7 @@
               <i data-lucide="recycle" class="w-3.5 h-3.5 me-1"></i> Quản Lý Kho 5S
             </span>
             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 dark:bg-[#064e3b] text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 me-1.5 animate-ping"></span> Realtime Supabase
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 me-1.5 animate-ping"></span> Realtime
             </span>
           </div>
           <h1 class="text-xl sm:text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">

@@ -32,10 +32,10 @@
             window.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
             resolve(window.supabase);
           } else {
-            reject(new Error('Supabase SDK loaded but createClient not found'));
+            reject(new Error('Client SDK loaded but createClient not found'));
           }
         };
-        script.onerror = () => reject(new Error('Failed to load Supabase SDK from CDN'));
+        script.onerror = () => reject(new Error('Failed to load client SDK from CDN'));
         document.head.appendChild(script);
       });
     }
@@ -971,7 +971,7 @@
 
         try {
           const client = await ensureSupabaseClient();
-          if (!client) throw new Error('Không thể kết nối Supabase SDK. Vui lòng kiểm tra kết nối mạng.');
+          if (!client) throw new Error('Không thể kết nối máy chủ. Vui lòng kiểm tra kết nối mạng.');
 
           const { error } = await client.from('system_announcements').insert([{
             title,
@@ -1009,7 +1009,7 @@
 
         try {
           const client = await ensureSupabaseClient();
-          if (!client) throw new Error('Không thể kết nối Supabase SDK.');
+          if (!client) throw new Error('Không thể kết nối máy chủ.');
 
           await client.from('system_announcements').update({ is_active: !currentActive }).eq('id', id);
           await fetchAnnouncements();
@@ -1028,7 +1028,7 @@
 
         try {
           const client = await ensureSupabaseClient();
-          if (!client) throw new Error('Không thể kết nối Supabase SDK.');
+          if (!client) throw new Error('Không thể kết nối máy chủ.');
 
           await client.from('system_announcements').delete().eq('id', id);
           await fetchAnnouncements();
@@ -1279,7 +1279,7 @@
 
     try {
       const client = await ensureSupabaseClient();
-      if (!client) throw new Error('Không thể kết nối Supabase SDK.');
+      if (!client) throw new Error('Không thể kết nối máy chủ.');
 
       const isoDate = normalizeToISODate(dateStr);
       if (!isoDate) {
@@ -1449,7 +1449,7 @@
 
         try {
           const client = await ensureSupabaseClient();
-          if (!client) throw new Error('Không thể kết nối Supabase SDK.');
+          if (!client) throw new Error('Không thể kết nối máy chủ.');
 
           const currentUser = localStorage.getItem('currentUser') || 'Kho';
 

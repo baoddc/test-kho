@@ -268,7 +268,7 @@
      */
     callEdgeFunctionVision: async function (base64Data, mimeType) {
       if (!window.supabase || typeof window.supabase.functions?.invoke !== 'function') {
-        throw new Error('Supabase client chưa được khởi tạo đầy đủ.');
+        throw new Error('Kết nối máy chủ chưa được khởi tạo đầy đủ.');
       }
 
       const { data, error } = await window.supabase.functions.invoke('ocr-receipt', {
@@ -296,7 +296,7 @@
           detailedMsg = 'Hệ thống AI đang tạm thời vượt hạn mức yêu cầu. Vui lòng thử lại sau 30 giây.';
         }
 
-        throw new Error(detailedMsg || 'Lỗi kết nối máy chủ Supabase Edge Function.');
+        throw new Error(detailedMsg || 'Lỗi kết nối máy chủ.');
       }
 
       if (!data || !data.success) {

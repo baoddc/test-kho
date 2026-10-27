@@ -125,7 +125,7 @@ function initKiemKeApp() {
     excelMap = new Map(savedSession.excelMetadata.items);
   }
 
-  // Tải danh sách cuộn quét từ bảng kiem_ke_scans trên Supabase
+  // Tải danh sách cuộn quét từ bảng kiem_ke_scans trên hệ thống
   async function loadSupabaseScannedRolls() {
     if (!window.KiemKeStorage || typeof window.KiemKeStorage.fetchScannedRollsFromSupabase !== 'function') return;
     try {
@@ -252,7 +252,7 @@ function initKiemKeApp() {
       recalculateAndRender();
     } catch (err) {
       console.error('Lỗi nạp tồn Supabase:', err);
-      showToast('Không thể kết nối CSDL Supabase để tải tồn.', 'danger');
+      showToast('Không thể kết nối CSDL để tải tồn.', 'danger');
     } finally {
       if (btnRefreshSystemData) {
         btnRefreshSystemData.disabled = false;
@@ -703,7 +703,7 @@ function initKiemKeApp() {
         recalculateAndRender();
         keepFocusOnScanner();
       } catch (err) {
-        showToast('Lỗi khi xóa cuộn trên Supabase: ' + (err.message || 'Không có quyền'), 'danger');
+        showToast('Lỗi khi xóa cuộn trên hệ thống: ' + (err.message || 'Không có quyền'), 'danger');
       }
     }
   }
@@ -742,11 +742,11 @@ function initKiemKeApp() {
         window.KiemKeStorage.broadcastResetSession('all');
       }
       hideResetModal();
-      showToast('Đã làm lại toàn bộ phiên kiểm kê (đã xóa trên Supabase).', 'info');
+      showToast('Đã làm lại toàn bộ phiên kiểm kê (đã xóa trên hệ thống).', 'info');
       recalculateAndRender();
       keepFocusOnScanner();
     } catch (err) {
-      showToast('Lỗi khi xóa trên Supabase: ' + (err.message || 'Không có quyền'), 'danger');
+      showToast('Lỗi khi xóa trên hệ thống: ' + (err.message || 'Không có quyền'), 'danger');
     }
   }
 
@@ -770,11 +770,11 @@ function initKiemKeApp() {
         window.KiemKeStorage.broadcastResetSession('scanned_only');
       }
       hideResetModal();
-      showToast('Đã xóa toàn bộ cuộn đã quét trên Supabase (Giữ lại file Excel cơ sở).', 'info');
+      showToast('Đã xóa toàn bộ cuộn đã quét trên hệ thống (Giữ lại file Excel cơ sở).', 'info');
       recalculateAndRender();
       keepFocusOnScanner();
     } catch (err) {
-      showToast('Lỗi khi xóa trên Supabase: ' + (err.message || 'Không có quyền'), 'danger');
+      showToast('Lỗi khi xóa trên hệ thống: ' + (err.message || 'Không có quyền'), 'danger');
     }
   }
 

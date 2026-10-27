@@ -27,7 +27,7 @@
   function client() {
     const c = window.supabase;
     if (!c || typeof c.rpc !== 'function') {
-      throw new Error('Supabase client chưa sẵn sàng');
+      throw new Error('Kết nối máy chủ chưa sẵn sàng');
     }
     return c;
   }

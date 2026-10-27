@@ -220,7 +220,7 @@
       if (allActiveRolls.length > 0) {
         finishLoadingAndRender();
       } else {
-        renderErrorState(err.message || 'Không thể kết nối với cơ sở dữ liệu Supabase.');
+        renderErrorState(err.message || 'Không thể kết nối với cơ sở dữ liệu.');
       }
     }
   }

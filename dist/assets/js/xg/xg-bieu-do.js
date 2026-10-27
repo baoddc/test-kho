@@ -125,7 +125,7 @@ async function loadAllData() {
     setupDashboardRealtime();
   } catch (error) {
     loadingEl.innerHTML =
-      `Lỗi kết nối database: ${error.message}<br>Kiểm tra kết nối hoặc cấu hình Supabase.`;
+      `Lỗi kết nối database: ${error.message}<br>Kiểm tra kết nối hoặc cấu hình hệ thống.`;
     console.error(error);
   }
 }

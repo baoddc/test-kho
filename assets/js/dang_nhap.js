@@ -70,7 +70,7 @@ function initLoginForm() {
 
       // Xác thực an toàn qua Supabase Auth chính thức (JWT Session)
       if (!window.supabase) {
-         errorMessage.textContent = 'Không thể kết nối đến máy chủ Supabase. Vui lòng kiểm tra kết nối mạng!';
+         errorMessage.textContent = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng!';
          errorMessage.style.display = 'block';
          return;
       }
@@ -137,7 +137,7 @@ function initLoginForm() {
          }
       } catch (err) {
          console.error('Supabase connection exception:', err);
-         errorMessage.textContent = 'Không thể kết nối đến máy chủ Supabase. Vui lòng kiểm tra lại!';
+         errorMessage.textContent = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại!';
          errorMessage.style.display = 'block';
          return;
       }
