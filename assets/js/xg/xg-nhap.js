@@ -1497,11 +1497,32 @@ document.addEventListener('submit', async (e) => {
       const totalRollKg = rollDataList.reduce((sum, r) => sum + (r.kg || 0), 0);
       if (window.XgSapLookup) {
         const phieuNhapVal = (form.querySelector('input[name="col_3"]')?.value || '').trim();
+
+        // Phiếu nhập phải có trên Google Sheets (dữ liệu SAP MB51 đã đồng bộ, đúng phân hệ) mới được nhập
+        let sapReceiptGroups = null;
+        if (typeof window.XgSapLookup.findReceiptInSap === 'function') {
+          const sapReceipt = await window.XgSapLookup.findReceiptInSap(phieuNhapVal, 'xg-nhap');
+          if (!sapReceipt.found) {
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = originalText; }
+            hideLoadingOverlay();
+            window.XgSapLookup.showExportReceiptMismatchModal({
+              docNo: phieuNhapVal || '(chưa nhập)',
+              notFoundInSap: true,
+              lookupError: sapReceipt.error,
+              otherContextGroups: sapReceipt.otherContextGroups
+            }, 'xg-nhap', () => window.XgSapLookup.syncFromGoogleSheets(document.getElementById('btnSyncGgSheet')));
+            return;
+          }
+          sapReceiptGroups = sapReceipt.groups;
+          // Đã sửa ô Phiếu nhập sau khi chọn gợi ý SAP → bỏ bản ghi cũ, tra lại theo phiếu hiện tại
+          const selectedDoc = String(window._currentSelectedSapRecord?.material_document || '').trim().toLowerCase();
+          if (selectedDoc && selectedDoc !== phieuNhapVal.toLowerCase()) window._currentSelectedSapRecord = null;
+        }
+
         if (!window._currentSelectedSapRecord && phieuNhapVal) {
           try {
-            const rawSap = await window.XgSapLookup.querySapMb51(phieuNhapVal);
-            const sapGroups = window.XgSapLookup.groupSapMb51Rows(rawSap);
-            const exact = sapGroups.filter(g => String(g.material_document || '').toLowerCase() === phieuNhapVal.toLowerCase());
+            const exact = sapReceiptGroups || window.XgSapLookup.groupSapMb51Rows(await window.XgSapLookup.querySapMb51(phieuNhapVal))
+              .filter(g => String(g.material_document || '').toLowerCase() === phieuNhapVal.toLowerCase());
             if (exact.length > 0) {
               const maVatTuVal = (form.querySelector('input[name="col_5"]')?.value || '').trim().toLowerCase();
               const matchedGroup = exact.find(g => !maVatTuVal || String(g.material || '').toLowerCase() === maVatTuVal) || exact[0];

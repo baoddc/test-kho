@@ -1955,8 +1955,25 @@ async function handleReceiptImageProcess(file, label = '') {
       }
     }
 
-    // Kiểm tra trạng thái xuất kho của các mặt hàng trong phiếu xuất
     const scannedDocNo = String(result.data.phieuXuat || '').trim();
+
+    // Phiếu quét được phải có trên Google Sheets (SAP MB51 đã đồng bộ) mới cho điền & xuất
+    if (window.XgSapLookup && typeof window.XgSapLookup.findReceiptInSap === 'function') {
+      const sapReceipt = await window.XgSapLookup.findReceiptInSap(scannedDocNo, 'tole-xuat');
+      if (!sapReceipt.found) {
+        if (loadingOverlay) loadingOverlay.style.display = 'none';
+        resetOcrDropzoneUI();
+        window.XgSapLookup.showExportReceiptMismatchModal({
+          docNo: scannedDocNo || '(không đọc được số phiếu trên ảnh)',
+          notFoundInSap: true,
+          lookupError: sapReceipt.error,
+          otherContextGroups: sapReceipt.otherContextGroups
+        }, 'tole-xuat', () => window.XgSapLookup.syncFromGoogleSheets(document.getElementById('btnSyncGgSheet')));
+        return;
+      }
+    }
+
+    // Kiểm tra trạng thái xuất kho của các mặt hàng trong phiếu xuất
     let scannedItems = Array.isArray(result.data.items) && result.data.items.length > 0
       ? result.data.items
       : [{ maVatTu: result.data.maVatTu || '', tenVatTu: result.data.tenVatTu || '', batch: result.data.batch || '' }];

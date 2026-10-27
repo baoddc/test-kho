@@ -2250,8 +2250,36 @@
     return _activeSyncPromise;
   }
 
+  /**
+   * Tìm số phiếu trong dữ liệu SAP MB51 đã đồng bộ từ Google Sheets (so khớp chính xác,
+   * không phân biệt hoa thường) và chỉ giữ các dòng đúng phân hệ của trang.
+   * @param {string} docNo
+   * @param {string} [pageContext]
+   * @returns {Promise<{ found: boolean, groups: Array, otherContextGroups: Array, error?: string }>}
+   */
+  async function findReceiptInSap(docNo, pageContext) {
+    const cleanDoc = String(docNo || '').trim();
+    const empty = { found: false, groups: [], otherContextGroups: [] };
+    if (!cleanDoc) return empty;
+    if (!window.supabase) return { ...empty, error: 'Supabase chưa sẵn sàng' };
+
+    const currentContext = detectCurrentPageContext(pageContext);
+    const likeExact = cleanDoc.replace(/[\\%_]/g, ch => '\\' + ch);
+    const { data, error } = await window.supabase
+      .from('xg_sap_mb51')
+      .select('*')
+      .ilike('material_document', likeExact);
+    if (error) return { ...empty, error: error.message || String(error) };
+
+    const exactRows = (data || []).filter(r => String(r.material_document || '').trim().toLowerCase() === cleanDoc.toLowerCase());
+    const groups = groupSapMb51Rows(exactRows);
+    const valid = groups.filter(g => validateSapRecordAgainstContext(g, currentContext).isValid);
+    return { found: valid.length > 0, groups: valid, otherContextGroups: groups.filter(g => !valid.includes(g)) };
+  }
+
   // Export các hàm và quy tắc ra window
   window.XgSapLookup = {
+    findReceiptInSap,
     SAP_PAGE_RULES,
     detectCurrentPageContext,
     extractSapRowAttributes,
@@ -2319,6 +2347,7 @@
         isValid: false,
         docNo: cleanDoc,
         notFoundInSap: true,
+        otherContextGroups: groupSapMb51Rows(exactRows),
         message: `Số phiếu xuất "${cleanDoc}" chưa tồn tại trong dữ liệu SAP MB51 hoặc không thuộc phân hệ xuất kho này.`,
         errors: [{ reason: `Phiếu xuất "${cleanDoc}" không tìm thấy trong SAP MB51 (${SAP_PAGE_RULES[currentContext]?.label || ''}).` }],
         sapSummary: { totalSapKg: 0, totalActualKg: 0, totalDiff: 0 }
@@ -2459,6 +2488,18 @@
     const docNo = validationResult?.docNo || 'Chưa rõ';
     const isNotFound = Boolean(validationResult?.notFoundInSap);
     const errors = validationResult?.errors || [];
+    // Dùng chung cho trang nhập và trang xuất
+    const pageRules = SAP_PAGE_RULES[detectCurrentPageContext(pageContext)] || SAP_PAGE_RULES['xg-xuat'];
+    const dirText = pageRules.direction === 'nhap' ? 'nhập' : 'xuất';
+    const DirText = dirText.toUpperCase();
+    const otherGroups = Array.isArray(validationResult?.otherContextGroups) ? validationResult.otherContextGroups : [];
+    const otherInfo = otherGroups.length
+      ? `<li class="text-warning">Phiếu có trên Google Sheets nhưng thuộc phân hệ / chiều khác: ${otherGroups.slice(0, 3).map(g =>
+          `${escapeHtml(g.material_group || g.material || '?')} (${g.debit_credit_ind === 'S' ? 'Nhập kho' : (g.debit_credit_ind === 'H' ? 'Xuất kho' : '?')})`).join(', ')} — không dùng được ở trang ${escapeHtml(pageRules.label)}.</li>`
+      : '';
+    const lookupError = validationResult?.lookupError
+      ? `<li class="text-danger">Không kiểm tra được Google Sheets: ${escapeHtml(validationResult.lookupError)}</li>`
+      : '';
 
     let bodyContent = '';
 
@@ -2467,15 +2508,17 @@
         <div class="alert alert-danger border-0 d-flex align-items-center gap-3 py-3 px-3 rounded-3 mb-3" style="background: rgba(220, 53, 69, 0.2);">
           <i class="bi bi-x-octagon-fill fs-2 text-danger flex-shrink-0"></i>
           <div>
-            <div class="fw-bold fs-5 text-white">SỐ PHIẾU XUẤT CHƯA CÓ TRONG SAP MB51</div>
-            <div class="text-white-50 small">Số phiếu <strong>${escapeHtml(docNo)}</strong> không tìm thấy trong dữ liệu SAP MB51 đã đồng bộ.</div>
+            <div class="fw-bold fs-5 text-white">KHÔNG TÌM THẤY PHIẾU ${DirText} TRÊN GOOGLE SHEETS</div>
+            <div class="text-white-50 small">Số phiếu <strong>${escapeHtml(docNo)}</strong> không có trong dữ liệu SAP MB51 đã đồng bộ từ Google Sheets, nên không được ${dirText} kho.</div>
           </div>
         </div>
         <div class="p-3 rounded-3 text-start mb-3" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
           <p class="mb-2 text-white"><strong>Nguyên nhân có thể do:</strong></p>
           <ul class="mb-0 text-white-50 small ps-3">
-            <li>Phiếu xuất vừa được tạo trên SAP / Google Sheets nhưng chưa đồng bộ về phần mềm.</li>
-            <li>Nhập sai số phiếu xuất hoặc phiếu này thuộc phân hệ / kho khác.</li>
+            ${lookupError}
+            ${otherInfo}
+            <li>Phiếu ${dirText} vừa được tạo trên SAP / Google Sheets nhưng chưa đồng bộ về phần mềm.</li>
+            <li>Nhập sai số phiếu ${dirText} hoặc phiếu này thuộc phân hệ / kho khác.</li>
           </ul>
         </div>
         <div class="p-3 rounded-3 text-warning small d-flex align-items-center gap-2 mb-2" style="background: rgba(255, 193, 7, 0.12); border: 1px solid rgba(255, 193, 7, 0.25);">
@@ -2552,8 +2595,8 @@
                 <i class="bi bi-shield-lock-fill"></i>
               </span>
               <div>
-                <h5 class="modal-title fw-bold mb-0 text-white">NGĂN CHẶN XUẤT KHO</h5>
-                <small class="text-white-50">Số phiếu xuất: <strong class="text-white">${escapeHtml(docNo)}</strong></small>
+                <h5 class="modal-title fw-bold mb-0 text-white">NGĂN CHẶN ${DirText} KHO</h5>
+                <small class="text-white-50">Số phiếu ${dirText}: <strong class="text-white">${escapeHtml(docNo)}</strong></small>
               </div>
             </div>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
