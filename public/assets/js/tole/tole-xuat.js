@@ -301,7 +301,7 @@ window.addEventListener('load', () => {
           if (r.cuonId) formRolls.add(String(r.cuonId).trim().toLowerCase());
         });
       });
-      document.querySelectorAll('#editRollsTableBody .roll-cuon-id').forEach(inp => {
+      document.querySelectorAll(EDIT_ROLL_CUON_ID_SELECTOR).forEach(inp => {
         const v = inp.value.trim().toLowerCase();
         if (v) formRolls.add(v);
       });
@@ -2447,6 +2447,8 @@ const searchInventoryOnServer = debounce(async (searchVal) => {
   }
 }, 300);
 
+const EDIT_ROLL_CUON_ID_SELECTOR = '#editRollsTableBody .roll-cuon-id, #editRollsTableBody .edit-roll-cuon-id';
+
 async function openInventoryModal(target, maVatTu = '', batch = '') {
   currentModalTarget = target;
   currentMaVatTuFilter = (maVatTu || '').trim();
@@ -2496,7 +2498,7 @@ async function openInventoryModal(target, maVatTu = '', batch = '') {
       });
     });
     if (currentModalTarget === 'edit') {
-      document.querySelectorAll('#editRollsTableBody .roll-cuon-id').forEach(inp => {
+      document.querySelectorAll(EDIT_ROLL_CUON_ID_SELECTOR).forEach(inp => {
         if (inp.value.trim()) currentFormRolls.push(inp.value.trim());
       });
     }
@@ -2531,7 +2533,8 @@ function updateInventoryTableLockStates() {
     const lockStatus = window.inventoryLockService ? window.inventoryLockService.getLockStatus(cuonId) : { isLocked: false };
     const isLockedByOther = lockStatus.isLocked && !lockStatus.isMe;
 
-    cb.disabled = isLockedByOther;
+    const isBlocked = tr.dataset.blocked === '1';
+    cb.disabled = isLockedByOther || isBlocked;
     if (cb.checked) {
       countChecked++;
       const kg = parseNumericInput(cb.dataset.tonKg) || 0;
@@ -2571,7 +2574,9 @@ function updateInventoryTableLockStates() {
       } else {
         tr.classList.remove('table-warning');
         tr.style.opacity = '1';
-        if (cb.checked || (lockStatus.isLocked && lockStatus.isMe)) {
+        if (isBlocked) {
+          // giữ nguyên nhãn "Không khớp MB51" / "Đã chọn ở Mục #"
+        } else if (cb.checked) {
           tr.classList.add('table-primary');
           badgeContainer.innerHTML = `<span class="badge bg-primary px-2 py-1 shadow-sm" style="font-size: 0.78rem;"><i class="bi bi-check2-circle me-1"></i>Bạn đang giữ</span>`;
         } else {
@@ -2606,14 +2611,19 @@ function renderInventoryTable(data, searchVal = '') {
   tbody.innerHTML = '';
 
   const formRolls = new Set();
+  const otherItemRolls = new Map(); // cuộn đã chọn ở mục khác của phiếu -> số thứ tự mục
   if (currentModalTarget === 'add_item' || currentModalTarget === 'add') {
-    multiItemsData.forEach(item => {
+    const targetIdx = multiItemsData[currentItemTargetIndex] ? currentItemTargetIndex : 0;
+    multiItemsData.forEach((item, idx) => {
       (item.rolls || []).forEach(r => {
-        if (r.cuonId) formRolls.add(String(r.cuonId).trim().toLowerCase());
+        if (!r.cuonId) return;
+        const key = String(r.cuonId).trim().toLowerCase();
+        if (idx === targetIdx) formRolls.add(key);
+        else otherItemRolls.set(key, idx + 1);
       });
     });
   } else if (currentModalTarget === 'edit') {
-    document.querySelectorAll('#editRollsTableBody .roll-cuon-id').forEach(inp => {
+    document.querySelectorAll(EDIT_ROLL_CUON_ID_SELECTOR).forEach(inp => {
       const v = inp.value.trim().toLowerCase();
       if (v) formRolls.add(v);
     });
@@ -2665,6 +2675,7 @@ function renderInventoryTable(data, searchVal = '') {
     const tonKg = row['Tồn cuối (Kg)'] || 0;
     const tonM = row['Tồn cuối (m)'] || 0;
     const isAlreadyInForm = formRolls.has(cuonId.trim().toLowerCase());
+    const otherItemNo = otherItemRolls.get(cuonId.trim().toLowerCase());
 
     const lockStatus = window.inventoryLockService ? window.inventoryLockService.getLockStatus(cuonId) : { isLocked: false };
     const isLockedByOther = lockStatus.isLocked && !lockStatus.isMe;
@@ -2674,14 +2685,17 @@ function renderInventoryTable(data, searchVal = '') {
       (lockedMaVatTu && maVatTu.toLowerCase() !== lockedMaVatTu.toLowerCase()) ||
       (lockedBatch && batch.toLowerCase() !== lockedBatch.toLowerCase())
     );
+    const isBlocked = isMismatched || Boolean(otherItemNo);
+    const isMine = !otherItemNo && (isAlreadyInForm || (lockStatus.isLocked && lockStatus.isMe));
 
     const tr = document.createElement('tr');
-    if (isAlreadyInForm || (lockStatus.isLocked && lockStatus.isMe)) {
+    if (isBlocked) tr.dataset.blocked = '1';
+    if (isMine) {
       tr.classList.add('table-primary');
     } else if (isLockedByOther) {
       tr.classList.add('table-warning');
       tr.style.opacity = '0.75';
-    } else if (isMismatched) {
+    } else if (isBlocked) {
       tr.classList.add('table-light');
       tr.style.opacity = '0.55';
     }
@@ -2701,8 +2715,10 @@ function renderInventoryTable(data, searchVal = '') {
           </button>
         ` : ''}
       `;
-    } else if (isAlreadyInForm || (lockStatus.isLocked && lockStatus.isMe)) {
+    } else if (isMine) {
       statusContent = `<span class="badge bg-primary px-2 py-1 shadow-sm" style="font-size: 0.78rem;"><i class="bi bi-check2-circle me-1"></i>Bạn đang giữ</span>`;
+    } else if (otherItemNo) {
+      statusContent = `<span class="badge bg-info text-dark px-2 py-1 shadow-sm" style="font-size: 0.78rem;" title="Cuộn đã được chọn ở mục khác của phiếu này"><i class="bi bi-link-45deg me-1"></i>Đã chọn ở Mục #${otherItemNo}</span>`;
     } else if (isMismatched) {
       statusContent = `<span class="badge bg-secondary px-2 py-1 shadow-sm" style="font-size: 0.78rem;" title="Cuộn không khớp Mã VT hoặc Lô của mặt hàng trên phiếu MB51"><i class="bi bi-x-circle me-1"></i>Không khớp MB51</span>`;
     } else {
@@ -2718,8 +2734,8 @@ function renderInventoryTable(data, searchVal = '') {
           data-batch="${escapeHtml(batch)}"
           data-ton-kg="${escapeHtml(tonKg)}"
           data-ton-m="${escapeHtml(tonM)}"
-          ${(isAlreadyInForm || (lockStatus.isLocked && lockStatus.isMe)) ? 'checked' : ''}
-          ${(isLockedByOther || isMismatched) ? 'disabled' : ''}>
+          ${isMine ? 'checked' : ''}
+          ${(isLockedByOther || isBlocked) ? 'disabled' : ''}>
       </td>
       <td class="fw-bold">${escapeHtml(maVatTu)}</td>
       <td>${escapeHtml(tenVatTu)}</td>
@@ -2809,7 +2825,19 @@ document.addEventListener('input', (e) => {
 document.addEventListener('click', (e) => {
   if (e.target && e.target.id === 'btnConfirmInventorySelection') {
     const selectedCheckboxes = document.querySelectorAll('#inventoryTableBody .inventory-checkbox:checked');
-    if (selectedCheckboxes.length === 0) {
+    const target = currentModalTarget;
+
+    // Cuộn đã có trên phiếu, đang hiện trong bảng nhưng bị bỏ tick -> bỏ khỏi phiếu
+    const normCuonId = v => String(v || '').trim().toLowerCase();
+    const tableCuonIds = new Set(Array.from(document.querySelectorAll('#inventoryTableBody .inventory-checkbox')).map(cb => normCuonId(cb.dataset.cuonId)).filter(Boolean));
+    const selectedCuonIds = new Set(Array.from(selectedCheckboxes).map(cb => normCuonId(cb.dataset.cuonId)));
+    const isDeselected = cuonId => { const k = normCuonId(cuonId); return Boolean(k) && tableCuonIds.has(k) && !selectedCuonIds.has(k); };
+    const targetItem = (target === 'add_item' || target === 'add') ? (multiItemsData[currentItemTargetIndex] || multiItemsData[0]) : null;
+    const hasDeselected = target === 'edit'
+      ? Array.from(document.querySelectorAll(EDIT_ROLL_CUON_ID_SELECTOR)).some(inp => isDeselected(inp.value))
+      : Boolean(targetItem && (targetItem.rolls || []).some(r => isDeselected(r.cuonId)));
+
+    if (selectedCheckboxes.length === 0 && !hasDeselected) {
       alert('Vui lòng chọn ít nhất một cuộn'); return;
     }
 
@@ -2827,12 +2855,10 @@ document.addEventListener('click', (e) => {
       }
     }
 
-    const target = currentModalTarget;
-
     if (target === 'add_item' || target === 'add') {
-      const item = multiItemsData[currentItemTargetIndex] || multiItemsData[0];
+      const item = targetItem;
       if (item) {
-        if (!item.rolls) item.rolls = [];
+        item.rolls = (item.rolls || []).filter(r => !isDeselected(r.cuonId));
         const existingCuonIds = new Set(
           item.rolls.map(r => String(r.cuonId || '').trim().toLowerCase()).filter(Boolean)
         );
@@ -2867,8 +2893,15 @@ document.addEventListener('click', (e) => {
         renderItemCards();
       }
     } else if (target === 'edit') {
+      if (hasDeselected) {
+        document.querySelectorAll(EDIT_ROLL_CUON_ID_SELECTOR).forEach(inp => {
+          if (isDeselected(inp.value)) inp.closest('tr')?.remove();
+        });
+        updateEditRollNumbers();
+        updateEditRollTotals();
+      }
       const existingCuonIds = new Set(
-        Array.from(document.querySelectorAll('#editRollsTableBody .roll-cuon-id'))
+        Array.from(document.querySelectorAll(EDIT_ROLL_CUON_ID_SELECTOR))
           .map(inp => inp.value.trim().toLowerCase())
           .filter(Boolean)
       );
