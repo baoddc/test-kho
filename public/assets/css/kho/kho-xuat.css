@@ -1125,6 +1125,19 @@ thead th:hover .col-resizer {
   border-bottom-color: rgba(255, 255, 255, 0.1);
 }
 
+/* Chế độ tối: .bg-light của Bootstrap luôn nền trắng trong khi chữ đổi sang màu sáng -> mất chữ.
+   Áp cho khung tổng phiếu, thanh đối chiếu SAP từng mục và vùng lọc chọn cuộn trong modal. */
+[data-bs-theme="dark"] .modal .bg-light:not(input) {
+  background-color: #1e2440 !important;
+  color: #e2e8f0;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+[data-bs-theme="dark"] .modal .bg-light .text-secondary,
+[data-bs-theme="dark"] .modal .bg-light .text-muted {
+  color: #94a3b8 !important;
+}
+
 .item-card-badge {
   background: #3b82f6;
   color: #fff;
