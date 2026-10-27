@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { formatValueForCsv, convertJsonToCsv, extractSupabaseCredentials } = require('../scripts/csv-exporter.js');
+const { formatValueForCsv, convertJsonToCsv, extractSupabaseCredentials } = require('../scripts/backup/csv-exporter.js');
 
 test('formatValueForCsv escapes commas, quotes, and newlines correctly', () => {
   assert.equal(formatValueForCsv('Hello, World'), '"Hello, World"');

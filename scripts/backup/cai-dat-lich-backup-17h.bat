@@ -8,7 +8,7 @@ echo =====================================================================
 echo.
 
 pushd "%~dp0..\.."
-powershell -NoProfile -ExecutionPolicy Bypass -File "%CD%\scripts\register-task.ps1"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%CD%\scripts\backup\register-task.ps1"
 
 if %ERRORLEVEL% equ 0 (
     echo.

@@ -85,9 +85,9 @@ function extractSupabaseCredentials() {
 
 function readConfigFile() {
   const candidates = [
-    path.join(__dirname, '..', 'assets', 'js', 'core', 'supabase-config.js'),
-    path.join(__dirname, '..', 'assets', 'js', 'supabase-config.js'),
-    path.join(__dirname, '..', 'public', 'assets', 'js', 'core', 'supabase-config.js')
+    path.join(__dirname, '..', '..', 'assets', 'js', 'core', 'supabase-config.js'),
+    path.join(__dirname, '..', '..', 'assets', 'js', 'supabase-config.js'),
+    path.join(__dirname, '..', '..', 'public', 'assets', 'js', 'core', 'supabase-config.js')
   ];
 
   for (const p of candidates) {

@@ -133,7 +133,7 @@ function sendWindowsNotification(title, message) {
  */
 async function executeBackup(options = {}) {
   const startTime = Date.now();
-  const baseDir = options.baseDir || path.join(__dirname, '..', 'backups');
+  const baseDir = options.baseDir || path.join(__dirname, '..', '..', 'backups');
   const tables = options.tables || DEFAULT_TABLES;
   const isSilent = !!options.silent;
   const fetcher = options.fetcher || ((url, key, table) => fetchTableAllRows(url, key, table, options));

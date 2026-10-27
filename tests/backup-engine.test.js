@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { fetchTableAllRows, executeBackup } = require('../scripts/backup-supabase-to-csv.js');
+const { fetchTableAllRows, executeBackup } = require('../scripts/backup/backup-supabase-to-csv.js');
 
 test('fetchTableAllRows paginates across multiple batches when records > 1000', async () => {
   // Tạo server HTTP mock trả về 1050 dòng (đợt 1: 1000 dòng, đợt 2: 50 dòng)

@@ -8,7 +8,7 @@ echo =====================================================================
 echo.
 
 pushd "%~dp0..\.."
-node "%CD%\scripts\backup-supabase-to-csv.js"
+node "%CD%\scripts\backup\backup-supabase-to-csv.js"
 
 echo.
 echo =====================================================================

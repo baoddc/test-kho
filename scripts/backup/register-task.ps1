@@ -1,7 +1,7 @@
 # Script dang ky Windows Task Scheduler tu dong chay luc 17:00 hang ngay
 $ErrorActionPreference = 'Stop'
 $taskName = 'DDC_Supabase_Daily_Backup_17h'
-$projectDir = Split-Path -Parent $PSScriptRoot
+$projectDir = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $vbsPath = Join-Path $PSScriptRoot 'run-backup-silent.vbs'
 
 if (-not (Test-Path $vbsPath)) {

@@ -7,7 +7,7 @@ echo =====================================================================
 echo.
 
 pushd "%~dp0..\.."
-powershell -NoProfile -ExecutionPolicy Bypass -File "%CD%\scripts\unregister-task.ps1"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%CD%\scripts\backup\unregister-task.ps1"
 
 echo.
 echo Nhấn phím bất kỳ để đóng cửa sổ...
