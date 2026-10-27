@@ -979,16 +979,20 @@ function newExportItem(data = {}) {
     tenVatTu: data.tenVatTu || '',
     batch: data.batch || '',
     kg: data.kg ?? '',
+    ghiChu: data.ghiChu || '',
     sapKg: data.sapKg ?? null,
     tonKg: data.tonKg ?? null
   };
 }
 
-function additionalColIndices() {
+// skipItemLevel: modal Thêm nhập Ghi chú theo từng mặt hàng trong bảng nên bỏ khỏi khung công trình
+function additionalColIndices(skipItemLevel = false) {
   const quantityColIndex = findQuantityColumnIndex();
   const list = [];
   for (let i = quantityColIndex + 1; i < COLUMN_HEADERS.length; i++) {
-    if (!HIDDEN_COLUMNS.includes(COLUMN_HEADERS[i])) list.push(i);
+    if (HIDDEN_COLUMNS.includes(COLUMN_HEADERS[i])) continue;
+    if (skipItemLevel && COLUMN_HEADERS[i] === 'Ghi chú') continue;
+    list.push(i);
   }
   return list;
 }
@@ -1047,6 +1051,7 @@ function renderExportItems() {
         ${over ? '<div class="invalid-feedback d-block">Vượt tồn</div>' : ''}
         ${sapDiff !== null && Math.abs(sapDiff) >= 0.05 ? `<div class="small text-warning">Lệch SAP ${sapDiff > 0 ? '+' : ''}${formatCellQuantityOrWeight(sapDiff, 'Số lượng (Kg)')} kg</div>` : ''}
       </td>
+      <td><input type="text" class="form-control form-control-sm item-ghi-chu" placeholder="Ghi chú" value="${escapeHtml(it.ghiChu)}"></td>
       <td class="text-center">
         <button type="button" class="btn btn-sm btn-outline-danger btn-remove-item" title="Bỏ mặt hàng" ${exportItems.length <= 1 ? 'disabled' : ''}>✕</button>
       </td>
@@ -1131,7 +1136,7 @@ function openAddDataModal() {
   COMMON_COL_INDICES.forEach(colIdx => {
     buildFormField(COLUMN_HEADERS[colIdx], colIdx, undefined, commonFieldsContainer, 'col_');
   });
-  additionalColIndices().forEach(colIdx => {
+  additionalColIndices(true).forEach(colIdx => {
     buildFormField(COLUMN_HEADERS[colIdx], colIdx, undefined, additionalFieldsContainer, 'add_ext_');
   });
 
@@ -1166,6 +1171,7 @@ document.addEventListener('input', (e) => {
   if (e.target.classList.contains('item-ten')) it.tenVatTu = e.target.value;
   if (e.target.classList.contains('item-ma')) it.maVatTu = e.target.value;
   if (e.target.classList.contains('item-batch')) it.batch = e.target.value;
+  if (e.target.classList.contains('item-ghi-chu')) it.ghiChu = e.target.value;
 });
 
 document.addEventListener('change', (e) => {
@@ -1452,7 +1458,8 @@ document.addEventListener('submit', async (e) => {
         'Mã vật tư': it.maVatTu,
         'Tên vật tư': String(it.tenVatTu || '').trim() || null,
         'Batch': it.batch || null,
-        'Số lượng (Kg)': it.kg
+        'Số lượng (Kg)': it.kg,
+        'Ghi chú': String(it.ghiChu || '').trim() || null
       }));
 
       // Gửi 1 lần: database kiểm tra tồn từng mã, thiếu tồn thì không lưu dòng nào

@@ -31,6 +31,9 @@ const COLUMN_HEADERS = [
 // Cột ẩn khỏi bảng hiển thị (nhưng vẫn dùng trong form)
 const HIDDEN_COLUMNS = [];
 
+// Cột nhập theo từng cuộn trong bảng "Danh sách cuộn" (không nằm ở Thông tin bổ sung)
+const ROLL_LEVEL_COLUMNS = ['Vị trí', 'Ghi chú'];
+
 // Escape dữ liệu từ DB/URL/QR trước khi chèn vào innerHTML (chống XSS)
 function escapeHtml(str) {
   if (str === null || str === undefined) return '';
@@ -1034,11 +1037,11 @@ function openAddDataModal() {
     if (window.XgSapLookup.initReceiptGate) window.XgSapLookup.initReceiptGate(formEl, phieuNhapInput, 'xg-nhap');
   }
 
-  // Cột sau Số lượng: Vị trí(10), Mã CT(11), Tên CT(12), Ghi chú(13) - Vị trí ở bảng cuộn
-  // Chỉ render Mã công trình, Tên công trình, Ghi chú trong additional
+  // Cột sau Số lượng: Vị trí(10), Mã CT(11), Tên CT(12), Ghi chú(13) - Vị trí & Ghi chú ở bảng cuộn
+  // Chỉ render Mã công trình, Tên công trình trong additional
   const additionalColIndices = [];
   for (let i = quantityColIndex + 1; i < COLUMN_HEADERS.length; i++) {
-    if (!HIDDEN_COLUMNS.includes(COLUMN_HEADERS[i]) && COLUMN_HEADERS[i] !== 'Vị trí') {
+    if (!HIDDEN_COLUMNS.includes(COLUMN_HEADERS[i]) && !ROLL_LEVEL_COLUMNS.includes(COLUMN_HEADERS[i])) {
       additionalColIndices.push(i);
     }
   }
@@ -1133,11 +1136,13 @@ function openEditDataModal() {
   const viTriIdx = COLUMN_HEADERS.indexOf('Vị trí');
   const existingCuonId = cuonIdIdx >= 0 ? String(rowData[cuonIdIdx] || '').trim() : '';
   const existingViTri = viTriIdx >= 0 ? String(rowData[viTriIdx] || '').trim() : '';
-  addEditRollRow(existingCuonId, existingKg, existingViTri);
+  const ghiChuIdx = COLUMN_HEADERS.indexOf('Ghi chú');
+  const existingGhiChu = ghiChuIdx >= 0 ? String(rowData[ghiChuIdx] || '').trim() : '';
+  addEditRollRow(existingCuonId, existingKg, existingViTri, existingGhiChu);
 
   const additionalColIndices = [];
   for (let i = quantityColIndex + 1; i < COLUMN_HEADERS.length; i++) {
-    if (!HIDDEN_COLUMNS.includes(COLUMN_HEADERS[i]) && COLUMN_HEADERS[i] !== 'Vị trí') {
+    if (!HIDDEN_COLUMNS.includes(COLUMN_HEADERS[i]) && !ROLL_LEVEL_COLUMNS.includes(COLUMN_HEADERS[i])) {
       additionalColIndices.push(i);
     }
   }
@@ -1310,7 +1315,7 @@ async function updateEditRollCuonIds() {
   });
 }
 
-function addRollRow(cuonId = '', kgValue = '', viTri = '') {
+function addRollRow(cuonId = '', kgValue = '', viTri = '', ghiChu = '') {
   rollCount++;
   const tbody = document.getElementById('rollsTableBody');
   const tr = document.createElement('tr');
@@ -1334,6 +1339,7 @@ function addRollRow(cuonId = '', kgValue = '', viTri = '') {
         <button type="button" class="btn btn-outline-secondary btn-scan-row-loc" title="Quét mã QR vị trí"><i class="bi bi-qr-code-scan"></i></button>
       </div>
     </td>
+    <td><input type="text" class="form-control form-control-sm roll-ghi-chu" placeholder="Ghi chú" value="${escapeHtml(ghiChu)}"></td>
     <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger btn-remove-roll">X</button></td>
   `;
   tbody.appendChild(tr);
@@ -1388,7 +1394,7 @@ function updateRollTotals() {
   }
 }
 
-function addEditRollRow(cuonId = '', kgValue = '', viTri = '') {
+function addEditRollRow(cuonId = '', kgValue = '', viTri = '', ghiChu = '') {
   editRollCount++;
   const tbody = document.getElementById('editRollsTableBody');
   const tr = document.createElement('tr');
@@ -1403,6 +1409,7 @@ function addEditRollRow(cuonId = '', kgValue = '', viTri = '') {
         <button type="button" class="btn btn-outline-secondary btn-scan-edit-row-loc" title="Quét mã QR vị trí"><i class="bi bi-qr-code-scan"></i></button>
       </div>
     </td>
+    <td><input type="text" class="form-control form-control-sm edit-roll-ghi-chu" placeholder="Ghi chú" value="${escapeHtml(ghiChu)}"></td>
     <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger btn-remove-edit-roll">X</button></td>
   `;
   tbody.appendChild(tr);
@@ -1483,7 +1490,8 @@ document.addEventListener('submit', async (e) => {
             rollDataList.push({
               kg: parsed,
               cuonId: row.querySelector('.roll-cuon-id')?.value.trim() || '',
-              viTri: row.querySelector('.roll-vi-tri')?.value.trim() || ''
+              viTri: row.querySelector('.roll-vi-tri')?.value.trim() || '',
+              ghiChu: row.querySelector('.roll-ghi-chu')?.value.trim() || ''
             });
           }
         }
@@ -1613,7 +1621,8 @@ document.addEventListener('submit', async (e) => {
         ...extData,
         'Cuộn ID': roll.cuonId || null,
         'Số lượng (Kg)': roll.kg,
-        'Vị trí': roll.viTri || null
+        'Vị trí': roll.viTri || null,
+        'Ghi chú': roll.ghiChu || null
       }));
 
       const { data: insertedData, error } = await supabase
@@ -1670,7 +1679,7 @@ document.addEventListener('submit', async (e) => {
       }
 
       // Lấy dữ liệu cuộn
-      const rollKgValues = [], rollCuonIds = [], rollViTris = [];
+      const rollKgValues = [], rollCuonIds = [], rollViTris = [], rollGhiChus = [];
       document.querySelectorAll('#editRollsTableBody tr').forEach(row => {
         const kgInput = row.querySelector('.edit-roll-kg');
         if (kgInput && kgInput.value) {
@@ -1679,6 +1688,7 @@ document.addEventListener('submit', async (e) => {
             rollKgValues.push(parsed);
             rollCuonIds.push(row.querySelector('.edit-roll-cuon-id')?.value.trim() || '');
             rollViTris.push(row.querySelector('.edit-roll-vi-tri')?.value.trim() || '');
+            rollGhiChus.push(row.querySelector('.edit-roll-ghi-chu')?.value.trim() || '');
           }
         }
       });
@@ -1703,6 +1713,7 @@ document.addEventListener('submit', async (e) => {
       updateData['Số lượng (Kg)'] = totalKg;
       updateData['Cuộn ID'] = rollCuonIds.filter(Boolean).join(', ') || null;
       updateData['Vị trí'] = rollViTris.filter(Boolean).join(', ') || null;
+      updateData['Ghi chú'] = rollGhiChus.filter(Boolean).join('; ') || null;
       delete updateData['id'];
 
       const { data: updatedData, error } = await supabase

@@ -1263,9 +1263,9 @@ function generateItemCardHTML(item, index, totalItems) {
   let rollsRowsHTML = '';
   if (rolls.length === 0) {
     if (isLocked) {
-      rollsRowsHTML = `<tr><td colspan="5" class="text-center text-danger py-2 small" style="background: rgba(239, 68, 68, 0.08);"><i class="bi bi-shield-lock-fill me-1"></i>Mặt hàng này đã xuất kho trước đó (${lockKg} kg, ${lockCount} cuộn). Đã khóa để chống xuất trùng.</td></tr>`;
+      rollsRowsHTML = `<tr><td colspan="6" class="text-center text-danger py-2 small" style="background: rgba(239, 68, 68, 0.08);"><i class="bi bi-shield-lock-fill me-1"></i>Mặt hàng này đã xuất kho trước đó (${lockKg} kg, ${lockCount} cuộn). Đã khóa để chống xuất trùng.</td></tr>`;
     } else {
-      rollsRowsHTML = `<tr><td colspan="5" class="text-center text-muted py-2 fst-italic" style="font-size: 0.75rem;">Chưa có cuộn nào. Vui lòng bấm "+ Chọn cuộn từ kho"</td></tr>`;
+      rollsRowsHTML = `<tr><td colspan="6" class="text-center text-muted py-2 fst-italic" style="font-size: 0.75rem;">Chưa có cuộn nào. Vui lòng bấm "+ Chọn cuộn từ kho"</td></tr>`;
     }
   } else {
     rolls.forEach((r, rIdx) => {
@@ -1280,6 +1280,9 @@ function generateItemCardHTML(item, index, totalItems) {
           </td>
           <td>
             <input type="text" class="form-control form-control-sm item-roll-m text-end bg-light" value="${r.m ? formatNumericValue(r.m) : ''}" placeholder="Số mét" readonly data-item-idx="${index}" data-roll-idx="${rIdx}" style="cursor: not-allowed;">
+          </td>
+          <td>
+            <input type="text" class="form-control form-control-sm item-roll-ghi-chu" value="${escapeHtml(r.ghiChu || '')}" placeholder="Ghi chú" data-item-idx="${index}" data-roll-idx="${rIdx}" ${isLocked ? 'readonly' : ''}>
           </td>
           <td class="text-center">
             ${isLocked ? `
@@ -1360,6 +1363,7 @@ function generateItemCardHTML(item, index, totalItems) {
                 <th>Cuộn ID</th>
                 <th style="width: 140px;" class="text-end">Số lượng (Kg) <span class="text-danger">*</span></th>
                 <th style="width: 120px;" class="text-end">Số lượng (m)</th>
+                <th>Ghi chú</th>
                 <th style="width: 60px;">Xóa</th>
               </tr>
             </thead>
@@ -1493,6 +1497,13 @@ function renderItemCards() {
             item.rolls[rIdx].m = e.target.value;
             updateMultiItemTotals();
           }
+        });
+      });
+
+      cardEl.querySelectorAll('.item-roll-ghi-chu').forEach(inp => {
+        inp.addEventListener('input', (e) => {
+          const rIdx = parseInt(e.target.dataset.rollIdx, 10);
+          if (item.rolls && item.rolls[rIdx]) item.rolls[rIdx].ghiChu = e.target.value;
         });
       });
 
@@ -2166,8 +2177,8 @@ function openAddDataModal() {
     maChungTuSelect.value = 'PX';
   }
 
-  // Additional: Ghi chú(13)
-  const additionalColIndices = [13];
+  // Ghi chú(13) nhập theo từng cuộn trong thẻ mặt hàng, không còn ở Thông tin bổ sung
+  const additionalColIndices = [];
   additionalColIndices.forEach(colIdx => {
     buildFormField(COLUMN_HEADERS[colIdx], colIdx, undefined, additionalFieldsContainer, 'add_ext_');
   });
@@ -3064,7 +3075,8 @@ document.addEventListener('submit', async (e) => {
               'Batch': batch || null,
               'Cuộn ID': roll.cuonId || null,
               'Số lượng (Kg)': parsedKg,
-              'Số lượng (m)': parsedM
+              'Số lượng (m)': parsedM,
+              'Ghi chú': (roll.ghiChu || '').trim() || null
             });
           }
         });
