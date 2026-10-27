@@ -1011,6 +1011,8 @@ function openAddDataModal() {
     phieuNhapInput.placeholder = 'Gõ số phiếu nhập để tìm SAP...';
     phieuNhapInput.autocomplete = 'off';
     window.XgSapLookup.initSapDocumentAutocomplete(phieuNhapInput, formEl);
+    // Khóa mọi trường cho tới khi số phiếu có trên Google Sheets (SAP MB51 đã đồng bộ)
+    if (window.XgSapLookup.initReceiptGate) window.XgSapLookup.initReceiptGate(formEl, phieuNhapInput, 'tole-nhap');
   }
 
   // Tích hợp nút Đồng bộ Google Sheets

@@ -2029,6 +2029,8 @@ async function handleReceiptImageProcess(file, label = '') {
 
     // Điền dữ liệu vào form nếu hợp lệ cho Kho Xà Gồ
     populateFieldsFromOcr(result.data);
+    // Số phiếu vừa điền từ ảnh → kiểm tra lại khóa form
+    if (window.XgSapLookup && window.XgSapLookup.refreshReceiptGate) window.XgSapLookup.refreshReceiptGate(document.getElementById('addDataForm'));
 
     // Hiển thị preview
     if (previewContainer && previewThumb) {
@@ -2210,6 +2212,8 @@ function openAddDataModal() {
     phieuXuatInput.placeholder = 'Gõ số phiếu xuất để tìm SAP...';
     phieuXuatInput.autocomplete = 'off';
     window.XgSapLookup.initSapDocumentAutocomplete(phieuXuatInput, formEl, 'xg-xuat');
+    // Khóa mọi trường cho tới khi số phiếu có trên Google Sheets (SAP MB51 đã đồng bộ)
+    if (window.XgSapLookup.initReceiptGate) window.XgSapLookup.initReceiptGate(formEl, phieuXuatInput, 'xg-xuat');
   }
 
   // Tích hợp nút Đồng bộ Google Sheets

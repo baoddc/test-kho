@@ -688,7 +688,7 @@
       console.error(err);
       let errMsg = "Rất tiếc, đã xảy ra lỗi trong quá trình xử lý truy vấn dữ liệu: " + err.message;
       if (window.location.protocol === 'file:') {
-        errMsg += "\n\nCảnh báo: Bạn đang mở trang bằng giao thức file://. Trình duyệt chặn CORS không thể tải dữ liệu từ Google Sheets. Vui lòng chạy trang web thông qua Live Server hoặc Máy chủ Web cục bộ (ví dụ: localhost) để tính năng hoạt động chính xác.";
+        errMsg += "\n\nCảnh báo: Bạn đang mở trang bằng giao thức file://. Trình duyệt chặn CORS không thể tải dữ liệu. Vui lòng chạy trang web thông qua Live Server hoặc Máy chủ Web cục bộ (ví dụ: localhost) để tính năng hoạt động chính xác.";
       }
       addBotMessage(errMsg);
       speak("Đã xảy ra lỗi truy vấn dữ liệu.");
@@ -799,7 +799,7 @@
     } catch (err) {
       console.error(err);
       if (!suppressNoResultsMessage) {
-        addBotMessage("Không thể kết nối đến dữ liệu Google Sheets để tra cứu: " + err.message);
+        addBotMessage("Không thể kết nối đến dữ liệu để tra cứu: " + err.message);
       }
       resetStatus();
       return 0;
@@ -987,7 +987,7 @@
     } catch (err) {
       console.error(err);
       if (!suppressNoResultsMessage) {
-        addBotMessage(`Không thể kết nối đến dữ liệu Google Sheets để tra cứu lịch sử ${typeLabel}: ` + err.message);
+        addBotMessage(`Không thể kết nối đến dữ liệu để tra cứu lịch sử ${typeLabel}: ` + err.message);
       }
       resetStatus();
       return 0;
@@ -1137,7 +1137,7 @@
       }
     } catch (err) {
       console.error("Lỗi khi tải dữ liệu cho Tìm tất cả:", err);
-      addBotMessage("Không thể tải dữ liệu từ Google Sheets: " + err.message);
+      addBotMessage("Không thể tải dữ liệu: " + err.message);
       resetStatus();
       return;
     }

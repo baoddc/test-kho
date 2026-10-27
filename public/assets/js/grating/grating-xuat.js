@@ -1140,6 +1140,8 @@ function openAddDataModal() {
   if (phieuXuatInput && window.XgSapLookup && window.XgSapLookup.initSapDocumentAutocomplete) {
     phieuXuatInput.setAttribute('autocomplete', 'off');
     window.XgSapLookup.initSapDocumentAutocomplete(phieuXuatInput, document.getElementById('addDataForm'), 'grating-xuat');
+    // Khóa mọi trường cho tới khi số phiếu có trên Google Sheets (SAP MB51 đã đồng bộ)
+    if (window.XgSapLookup.initReceiptGate) window.XgSapLookup.initReceiptGate(document.getElementById('addDataForm'), phieuXuatInput, 'grating-xuat');
   }
 
   exportItems = [newExportItem()];

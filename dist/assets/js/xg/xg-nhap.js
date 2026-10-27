@@ -1030,6 +1030,8 @@ function openAddDataModal() {
     phieuNhapInput.setAttribute('autocomplete', 'off');
     const formEl = document.getElementById('addDataForm');
     window.XgSapLookup.initSapDocumentAutocomplete(phieuNhapInput, formEl);
+    // Khóa mọi trường cho tới khi số phiếu có trên Google Sheets (SAP MB51 đã đồng bộ)
+    if (window.XgSapLookup.initReceiptGate) window.XgSapLookup.initReceiptGate(formEl, phieuNhapInput, 'xg-nhap');
   }
 
   // Cột sau Số lượng: Vị trí(10), Mã CT(11), Tên CT(12), Ghi chú(13) - Vị trí ở bảng cuộn

@@ -146,7 +146,7 @@
   function validateSapRecordAgainstContext(rowOrGroup, contextKey) {
     const rules = SAP_PAGE_RULES[contextKey] || SAP_PAGE_RULES['xg-nhap'];
     const { dc, group } = extractSapRowAttributes(rowOrGroup);
-    
+
     // Nếu có dc thì phải khớp S hoặc H
     const isDcMatch = !dc || rules.debitCredit.includes(dc);
     // Nếu có group thì phải bắt đầu bằng prefix cho phép
@@ -1252,22 +1252,22 @@
 
       // 8. Mã công trình: Project ID
       const maCongTrinhInput = findInputByLabel('Mã công trình') ||
-                               findInputByLabel('Mã dự án') ||
-                               formEl.querySelector('input[name="add_ext_11"]') ||
-                               formEl.querySelector('input[name="edit_ext_11"]') ||
-                               formEl.querySelector('input[name="add_ext_12"]') ||
-                               formEl.querySelector('input[name="edit_ext_12"]');
+        findInputByLabel('Mã dự án') ||
+        formEl.querySelector('input[name="add_ext_11"]') ||
+        formEl.querySelector('input[name="edit_ext_11"]') ||
+        formEl.querySelector('input[name="add_ext_12"]') ||
+        formEl.querySelector('input[name="edit_ext_12"]');
       if (maCongTrinhInput) {
         maCongTrinhInput.value = sapRecord.project_id || '';
       }
 
       // 9. Tên công trình: Project name
       const tenCongTrinhInput = findInputByLabel('Tên công trình') ||
-                                findInputByLabel('Tên dự án') ||
-                                formEl.querySelector('input[name="add_ext_12"]') ||
-                                formEl.querySelector('input[name="edit_ext_12"]') ||
-                                formEl.querySelector('input[name="add_ext_13"]') ||
-                                formEl.querySelector('input[name="edit_ext_13"]');
+        findInputByLabel('Tên dự án') ||
+        formEl.querySelector('input[name="add_ext_12"]') ||
+        formEl.querySelector('input[name="edit_ext_12"]') ||
+        formEl.querySelector('input[name="add_ext_13"]') ||
+        formEl.querySelector('input[name="edit_ext_13"]');
       if (tenCongTrinhInput) {
         tenCongTrinhInput.value = sapRecord.project_name || '';
       }
@@ -1276,17 +1276,17 @@
     } else {
       // Hướng Xuất kho (xg-xuat, tole-xuat)
       const maCtInput = findInputByLabel('Mã công trình') ||
-                        findInputByLabel('Mã CT') ||
-                        formEl.querySelector('input[name="col_11"]') ||
-                        formEl.querySelector('input[name="col_10"]');
+        findInputByLabel('Mã CT') ||
+        formEl.querySelector('input[name="col_11"]') ||
+        formEl.querySelector('input[name="col_10"]');
       if (maCtInput && sapRecord.project_id) {
         maCtInput.value = sapRecord.project_id;
       }
 
       const tenCtInput = findInputByLabel('Tên công trình') ||
-                         findInputByLabel('Tên CT') ||
-                         formEl.querySelector('input[name="col_12"]') ||
-                         formEl.querySelector('input[name="col_11"]');
+        findInputByLabel('Tên CT') ||
+        formEl.querySelector('input[name="col_12"]') ||
+        formEl.querySelector('input[name="col_11"]');
       if (tenCtInput && sapRecord.project_name) {
         tenCtInput.value = sapRecord.project_name;
       }
@@ -1383,6 +1383,9 @@
         showAutofillToast(`Đã tự động điền thông tin phiếu SAP: ${sapRecord.material_document} (${sapRecord.material || ''})`);
       }
     }
+
+    // Số phiếu vừa điền từ gợi ý SAP → kiểm tra lại khóa form Thêm dữ liệu
+    if (receiptGates.has(formEl)) refreshReceiptGate(formEl);
 
     // Cập nhật lại đối chiếu khối lượng cuộn vs SAP nếu có
     if (typeof window.updateRollTotals === 'function') {
@@ -2010,7 +2013,7 @@
 
     // Cơ chế chống gọi trùng (Concurrency Guard)
     if (_isSyncing) {
-      console.log('[XgSapLookup] Quá trình đồng bộ Google Sheets đang diễn ra, tái sử dụng tiến trình hiện tại.');
+      console.log('[XgSapLookup] Quá trình đồng bộ dữ liệu đang diễn ra, tái sử dụng tiến trình hiện tại.');
       if (btnEl) {
         if (isAuto) {
           triggerButtonPulse3x(btnEl);
@@ -2038,26 +2041,26 @@
         triggerButtonPulse3x(btnEl);
       } else {
         btnEl.disabled = true;
-        btnEl.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Đang tải Google Sheets...';
+        btnEl.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Đang tải dữ liệu...';
       }
     }
 
     _activeSyncPromise = (async () => {
       try {
         if (!isAuto) {
-          showAutofillToast('Đang tải dữ liệu mới nhất từ Google Sheets...');
+          showAutofillToast('Đang tải dữ liệu mới nhất từ hệ thống...');
         }
 
         const GVIZ_URL = 'https://docs.google.com/spreadsheets/d/1BPY6k2bQuDu-RNpkRc3BhS57CuM1Ol__FYXvY8ezRjs/gviz/tq?tqx=out:json&sheet=mb51';
         const response = await fetch(GVIZ_URL);
         if (!response.ok) {
-          throw new Error(`Không thể kết nối Google Sheets (Mã HTTP ${response.status}).`);
+          throw new Error(`Không thể kết nối nguồn dữ liệu (Mã HTTP ${response.status}).`);
         }
         const rawText = await response.text();
         const start = rawText.indexOf('{');
         const end = rawText.lastIndexOf('}');
         if (start === -1 || end === -1) {
-          throw new Error('Định dạng dữ liệu Google Sheets trả về không hợp lệ.');
+          throw new Error('Định dạng dữ liệu trả về không hợp lệ.');
         }
         const data = JSON.parse(rawText.substring(start, end + 1));
         const gvizRows = (data.table && Array.isArray(data.table.rows)) ? data.table.rows : [];
@@ -2194,7 +2197,7 @@
 
         // Trường hợp Google Sheet không có dòng dữ liệu nào
         if (records.length === 0) {
-          showAutofillToast('✓ Google Sheet hiện không có dữ liệu. Đã xóa sạch toàn bộ dữ liệu trên Supabase (0 dòng)!');
+          showAutofillToast('✓ Nguồn dữ liệu hiện không có dòng nào. Đã xóa sạch toàn bộ dữ liệu trên Supabase (0 dòng)!');
           return;
         }
 
@@ -2210,35 +2213,36 @@
           if (insertErr) throw insertErr;
         }
 
-        showAutofillToast(`✓ Đã đồng bộ thành công ${records.length.toLocaleString('vi-VN')} dòng từ Google Sheets sang Supabase!`);
+        showAutofillToast(`✓ Đã đồng bộ thành công ${records.length.toLocaleString('vi-VN')} dòng dữ liệu!`);
 
         // Kích hoạt tìm kiếm lại nếu ô Phiếu nhập đang có chữ
         const activeInput = document.querySelector('#addDataForm input[name="col_3"]') ||
-                            document.querySelector('#editDataForm input[name="col_3"]');
+          document.querySelector('#editDataForm input[name="col_3"]');
         if (activeInput && activeInput.value.trim().length >= 2) {
           activeInput.dispatchEvent(new Event('input'));
         }
 
       } catch (err) {
-        console.error('[XgSapLookup] Lỗi khi đồng bộ Google Sheets:', err);
+        console.error('[XgSapLookup] Lỗi khi đồng bộ dữ liệu:', err);
         if (silentOnError) {
-          showAutofillToast('⚠️ Tự động đồng bộ GgSheet không thành công: ' + (err.message || err));
+          showAutofillToast('⚠️ Tự động đồng bộ không thành công: ' + (err.message || err));
         } else {
           if (typeof alert === 'function') {
-            alert(`Lỗi khi đồng bộ Google Sheets: ${err.message || err}`);
+            alert(`Lỗi khi đồng bộ dữ liệu: ${err.message || err}`);
           } else {
-            console.error(`Lỗi khi đồng bộ Google Sheets: ${err.message || err}`);
+            console.error(`Lỗi khi đồng bộ dữ liệu: ${err.message || err}`);
           }
         }
       } finally {
         _isSyncing = false;
         _activeSyncPromise = null;
+        refreshAllReceiptGates();
         const buttonsToRestore = _syncingButtons;
         _syncingButtons = [];
         buttonsToRestore.forEach(item => {
           if (item && item.el) {
             item.el.disabled = false;
-            item.el.innerHTML = item.originalHtml || '<i class="bi bi-arrow-repeat me-1"></i> Đồng bộ Google Sheets';
+            item.el.innerHTML = item.originalHtml || '<i class="bi bi-arrow-repeat me-1"></i> Đồng bộ';
             if (item.el.classList && typeof item.el.classList.remove === 'function') {
               item.el.classList.remove('btn-sync-pulsing-3x');
             }
@@ -2277,9 +2281,123 @@
     return { found: valid.length > 0, groups: valid, otherContextGroups: groups.filter(g => !valid.includes(g)) };
   }
 
+  /* ===========================================================================
+     KHÓA MODAL THÊM DỮ LIỆU CHO TỚI KHI SỐ PHIẾU CÓ TRÊN GOOGLE SHEETS
+     Mọi trường (kể cả dòng thêm sau) bị khóa bằng thuộc tính inert, chỉ còn ô Số phiếu,
+     nút Đồng bộ Google Sheets và ô quét ảnh phiếu. Tìm thấy phiếu (đúng phân hệ) thì mở khóa.
+  =========================================================================== */
+  const receiptGates = new Map();   // formEl → trạng thái khóa
+
+  function receiptGateTargets(formEl, docInput) {
+    const targets = [];
+    const body = formEl.querySelector('.modal-body') || formEl;
+    Array.from(body.children).forEach(child => {
+      if (child.contains(docInput)) {
+        // Thẻ chứa ô Số phiếu: chỉ khóa các ô cùng hàng, giữ tiêu đề thẻ (nút đồng bộ)
+        const row = docInput.closest('.row');
+        if (row) Array.from(row.children).forEach(col => { if (!col.contains(docInput)) targets.push(col); });
+      } else if (!child.querySelector('#imageOcrDropzone')) {
+        targets.push(child);
+      }
+    });
+    formEl.querySelectorAll('button[type="submit"]').forEach(btn => targets.push(btn));
+    return targets;
+  }
+
+  function setReceiptGateLocked(state, locked) {
+    state.locked = locked;
+    state.targets.forEach(el => {
+      if (locked) {
+        el.setAttribute('inert', '');
+        el.style.opacity = '0.45';
+      } else {
+        el.removeAttribute('inert');
+        el.style.opacity = '';
+      }
+    });
+  }
+
+  function setReceiptGateStatus(state, html, cls) {
+    state.status.className = `receipt-gate-status small mt-1 ${cls}`;
+    state.status.innerHTML = html;
+  }
+
+  async function refreshReceiptGate(formEl) {
+    const state = receiptGates.get(formEl);
+    if (!state || !state.docInput.isConnected) return;
+    const doc = state.docInput.value.trim();
+    const seq = ++state.seq;
+    if (!doc) {
+      setReceiptGateLocked(state, true);
+      setReceiptGateStatus(state, `<i class="bi bi-lock-fill me-1"></i>Nhập số phiếu ${state.dirText} có trên hệ thống để mở khóa các trường khác.`, 'text-muted');
+      return;
+    }
+    setReceiptGateLocked(state, true);
+    setReceiptGateStatus(state, '<span class="spinner-border spinner-border-sm me-1"></span>Đang kiểm tra phiếu trên hệ thống...', 'text-muted');
+
+    const res = await findReceiptInSap(doc, state.ctx);
+    if (seq !== state.seq || state.docInput.value.trim() !== doc) return;  // đã gõ phiếu khác
+
+    if (res.found) {
+      setReceiptGateLocked(state, false);
+      setReceiptGateStatus(state, `<i class="bi bi-check-circle-fill me-1"></i>Có phiếu ${escapeHtml(doc)} trên hệ thống.`, 'text-success');
+      return;
+    }
+    const other = (res.otherContextGroups || []).length
+      ? ` Phiếu có trên hệ thống nhưng thuộc phân hệ / chiều khác (${escapeHtml(res.otherContextGroups[0].material_group || res.otherContextGroups[0].material || '?')}).`
+      : '';
+    const reason = res.error
+      ? `Không kiểm tra được phiếu trên hệ thống: ${escapeHtml(res.error)}.`
+      : `Không tìm thấy phiếu ${state.dirText} ${escapeHtml(doc)} trên hệ thống.${other}`;
+    setReceiptGateStatus(state, `<i class="bi bi-x-octagon-fill me-1"></i>${reason} Không thể ${state.dirText} dữ liệu. Nếu phiếu vừa tạo, bấm "Đồng bộ" rồi thử lại.`, 'text-danger fw-semibold');
+  }
+
+  function initReceiptGate(formEl, docInput, pageContext) {
+    if (!formEl || !docInput) return;
+    const ctx = detectCurrentPageContext(pageContext);
+    const rules = SAP_PAGE_RULES[ctx] || SAP_PAGE_RULES['xg-nhap'];
+
+    formEl.querySelectorAll('.receipt-gate-status').forEach(el => el.remove());
+    const status = document.createElement('div');
+    docInput.insertAdjacentElement('afterend', status);
+
+    const prev = receiptGates.get(formEl);
+    if (prev) setReceiptGateLocked(prev, false);  // bỏ khóa của lần mở trước (các ô cũ đã bị dựng lại)
+
+    const state = {
+      ctx,
+      dirText: rules.direction === 'nhap' ? 'nhập' : 'xuất',
+      docInput,
+      status,
+      seq: 0,
+      locked: true,
+      targets: receiptGateTargets(formEl, docInput)
+    };
+    receiptGates.set(formEl, state);
+
+    let timer = null;
+    docInput.addEventListener('input', () => {
+      clearTimeout(timer);
+      setReceiptGateLocked(state, true);
+      timer = setTimeout(() => refreshReceiptGate(formEl), 400);
+    });
+    docInput.addEventListener('change', () => { clearTimeout(timer); refreshReceiptGate(formEl); });
+    refreshReceiptGate(formEl);
+  }
+
+  // Sau khi đồng bộ Google Sheets: kiểm tra lại các form đang khóa
+  function refreshAllReceiptGates() {
+    receiptGates.forEach((state, formEl) => {
+      if (state.docInput.isConnected) refreshReceiptGate(formEl);
+      else receiptGates.delete(formEl);
+    });
+  }
+
   // Export các hàm và quy tắc ra window
   window.XgSapLookup = {
     findReceiptInSap,
+    initReceiptGate,
+    refreshReceiptGate,
     SAP_PAGE_RULES,
     detectCurrentPageContext,
     extractSapRowAttributes,
@@ -2494,11 +2612,11 @@
     const DirText = dirText.toUpperCase();
     const otherGroups = Array.isArray(validationResult?.otherContextGroups) ? validationResult.otherContextGroups : [];
     const otherInfo = otherGroups.length
-      ? `<li class="text-warning">Phiếu có trên Google Sheets nhưng thuộc phân hệ / chiều khác: ${otherGroups.slice(0, 3).map(g =>
-          `${escapeHtml(g.material_group || g.material || '?')} (${g.debit_credit_ind === 'S' ? 'Nhập kho' : (g.debit_credit_ind === 'H' ? 'Xuất kho' : '?')})`).join(', ')} — không dùng được ở trang ${escapeHtml(pageRules.label)}.</li>`
+      ? `<li class="text-warning">Phiếu có trên hệ thống nhưng thuộc phân hệ / chiều khác: ${otherGroups.slice(0, 3).map(g =>
+        `${escapeHtml(g.material_group || g.material || '?')} (${g.debit_credit_ind === 'S' ? 'Nhập kho' : (g.debit_credit_ind === 'H' ? 'Xuất kho' : '?')})`).join(', ')} — không dùng được ở trang ${escapeHtml(pageRules.label)}.</li>`
       : '';
     const lookupError = validationResult?.lookupError
-      ? `<li class="text-danger">Không kiểm tra được Google Sheets: ${escapeHtml(validationResult.lookupError)}</li>`
+      ? `<li class="text-danger">Không kiểm tra được phiếu trên hệ thống: ${escapeHtml(validationResult.lookupError)}</li>`
       : '';
 
     let bodyContent = '';
@@ -2508,8 +2626,8 @@
         <div class="alert alert-danger border-0 d-flex align-items-center gap-3 py-3 px-3 rounded-3 mb-3" style="background: rgba(220, 53, 69, 0.2);">
           <i class="bi bi-x-octagon-fill fs-2 text-danger flex-shrink-0"></i>
           <div>
-            <div class="fw-bold fs-5 text-white">KHÔNG TÌM THẤY PHIẾU ${DirText} TRÊN GOOGLE SHEETS</div>
-            <div class="text-white-50 small">Số phiếu <strong>${escapeHtml(docNo)}</strong> không có trong dữ liệu SAP MB51 đã đồng bộ từ Google Sheets, nên không được ${dirText} kho.</div>
+            <div class="fw-bold fs-5 text-white">KHÔNG TÌM THẤY PHIẾU ${DirText} TRÊN HỆ THỐNG</div>
+            <div class="text-white-50 small">Số phiếu <strong>${escapeHtml(docNo)}</strong> không có trong dữ liệu SAP MB51 đã đồng bộ, nên không được ${dirText} kho.</div>
           </div>
         </div>
         <div class="p-3 rounded-3 text-start mb-3" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
@@ -2517,14 +2635,14 @@
           <ul class="mb-0 text-white-50 small ps-3">
             ${lookupError}
             ${otherInfo}
-            <li>Phiếu ${dirText} vừa được tạo trên SAP / Google Sheets nhưng chưa đồng bộ về phần mềm.</li>
+            <li>Phiếu ${dirText} vừa được tạo trên SAP  nhưng chưa đồng bộ về phần mềm.</li>
             <li>Nhập sai số phiếu ${dirText} hoặc phiếu này thuộc phân hệ / kho khác.</li>
           </ul>
         </div>
         <div class="p-3 rounded-3 text-warning small d-flex align-items-center gap-2 mb-2" style="background: rgba(255, 193, 7, 0.12); border: 1px solid rgba(255, 193, 7, 0.25);">
           <i class="bi bi-lightbulb-fill fs-4 flex-shrink-0 text-warning"></i>
           <div>
-            <strong>Hướng xử lý:</strong> Vui lòng nhấn nút <strong>"Đồng bộ Google Sheets"</strong> bên dưới để cập nhật lại dữ liệu mới nhất từ SAP MB51, hoặc kiểm tra lại số phiếu.
+            <strong>Hướng xử lý:</strong> Vui lòng nhấn nút <strong>"Đồng bộ"</strong> bên dưới để cập nhật lại dữ liệu mới nhất từ SAP MB51, hoặc kiểm tra lại số phiếu.
           </div>
         </div>
       `;
@@ -2610,7 +2728,7 @@
             <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Đóng &amp; Điều chỉnh</button>
             ${isNotFound ? `
               <button type="button" class="btn btn-primary px-4 fw-bold shadow" id="btnMismatchSyncGgSheet">
-                <i class="bi bi-arrow-repeat me-1"></i> Đồng bộ Google Sheets ngay
+                <i class="bi bi-arrow-repeat me-1"></i> Đồng bộ ngay
               </button>
             ` : ''}
           </div>

@@ -2853,7 +2853,7 @@ class DashboardManager {
             // 2. Ghi nhận thông tin vào Google Sheets qua Apps Script
             if (el) {
                 const statusP = el.querySelector('.upload-status-text');
-                if (statusP) statusP.textContent = 'Đang lưu vào Google Sheet...';
+                if (statusP) statusP.textContent = 'Đang lưu dữ liệu...';
             }
 
             if (CONFIG.APPS_SCRIPT_URL_HSE) {
@@ -2895,7 +2895,7 @@ class DashboardManager {
 
                 const result = await response.json();
                 if (result.status !== 'success') {
-                    throw new Error(result.message || 'Lỗi ghi nhận vào Google Sheet');
+                    throw new Error(result.message || 'Lỗi ghi nhận dữ liệu');
                 }
                 if (!finalImageUrl && result.fileUrl) {
                     finalImageUrl = result.fileUrl;
@@ -3606,7 +3606,7 @@ class DashboardManager {
             }
 
             if (statusEl) {
-                statusEl.textContent = `Đang cập nhật vào Google Sheet (dòng ${row}, cột ${column})...`;
+                statusEl.textContent = `Đang cập nhật dữ liệu (dòng ${row}, cột ${column})...`;
             }
 
             // 2. Ghi nhận link vào Google Sheet
@@ -3922,7 +3922,7 @@ class DashboardManager {
 
                     <div class="chk-form-actions">
                         <div style="font-size: 0.82rem; color: var(--text-muted);">
-                            * Dữ liệu đồng bộ trực tiếp với Google Sheet "Checklist kiểm tra thiết bị".
+                            * Dữ liệu đồng bộ trực tiếp với bảng "Checklist kiểm tra thiết bị".
                         </div>
                         <button type="submit" class="btn-chk-save" id="btnSaveChecklist">
                             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
