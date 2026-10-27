@@ -97,6 +97,52 @@ if (typeof window !== 'undefined' && window.supabase?.auth) {
   });
 }
 
+// Lỗi mạng khi làm mới phiên (offline, máy chủ chậm): không coi là mất phiên để khỏi đăng xuất nhầm
+function isAuthNetworkError(error) {
+  return Boolean(error) && /fetch|network|timeout|retryable/i.test(`${error.name || ''} ${error.message || ''}`);
+}
+
+/**
+ * Có phiên Supabase Auth hợp lệ không. Không có phiên thì mọi lệnh đọc/ghi chạy dưới quyền anon
+ * và bị từ chối ("permission denied for table ...").
+ * @returns {Promise<boolean|null>} true có phiên, false đã mất phiên, null không kiểm tra được (lỗi mạng)
+ */
+async function hasAuthSession() {
+  if (!window.supabase?.auth) return null;
+  try {
+    const { data, error } = await window.supabase.auth.getSession();
+    if (data?.session?.user) return true;
+    return isAuthNetworkError(error) ? null : false;
+  } catch (e) {
+    return isAuthNetworkError(e) ? null : false;
+  }
+}
+
+// Giao diện còn nhớ tài khoản (currentUser) nhưng phiên Auth đã hết hạn / bị thu hồi:
+// xóa trạng thái cũ và đưa về trang đăng nhập thay vì để mọi thao tác báo lỗi quyền.
+async function verifyAuthSession() {
+  if (!localStorage.getItem('currentUser')) return;
+  const path = window.location.pathname;
+  if (path === '/' || /\/(pages\/)?index\.html$/.test(path)) return;  // đang ở trang đăng nhập
+  if (await hasAuthSession() !== false) return;
+  sessionStorage.removeItem('supabase_user_profile');
+  localStorage.removeItem('currentUser');
+  localStorage.removeItem('userPermissions');
+
+  // Trang mở trong tab (iframe) cùng origin: chỉ cửa sổ ngoài cùng báo 1 lần rồi chuyển trang
+  let topWin = window;
+  try {
+    if (window.top && window.top.location.origin === window.location.origin) topWin = window.top;
+  } catch (e) {}
+  if (topWin.__ddcAuthExpiredHandled) return;
+  topWin.__ddcAuthExpiredHandled = true;
+  topWin.alert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+  topWin.location.href = '/pages/index.html';
+}
+
+window.hasAuthSession = hasAuthSession;
+if (typeof window !== 'undefined' && window.supabase?.auth) verifyAuthSession();
+
 /**
  * Checks if a Supabase data record was created over 24 hours ago.
  * Thực thi kiểm tra trên UI (Database RLS đã bảo vệ cứng tầng dưới).

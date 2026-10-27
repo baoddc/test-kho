@@ -2189,6 +2189,11 @@
           btnEl.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status"></span> Đang cập nhật hệ thống...`;
         }
 
+        // Mất phiên đăng nhập thì lệnh xóa / ghi chạy dưới quyền anon và bị từ chối: dừng sớm, báo rõ
+        if (typeof window.hasAuthSession === 'function' && await window.hasAuthSession() === false) {
+          throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng xuất rồi đăng nhập lại để đồng bộ.');
+        }
+
         // 3. Làm sạch bảng cũ trên hệ thống để khớp chính xác dữ liệu Google Sheets
         const { error: delErr } = await window.supabase.from('xg_sap_mb51').delete().gt('id', 0);
         if (delErr) {
