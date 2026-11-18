@@ -122,7 +122,7 @@ let selectedRowIndex = -1;     // id dòng đang chọn
 
 const QTY_DB_COLUMN = HAS_QTY_COLUMN ? 'Số lượng' : 'Số lượng (kg)';
 const DEFAULT_ORDER = [{ col: 'id', asc: true }];
-const pager = new SQ.ServerPager({ table: TABLE_NAME, pageSize: ROWS_PER_PAGE, order: DEFAULT_ORDER });
+const pager = new SQ.ServerPager({ table: TABLE_NAME, pageSize: ROWS_PER_PAGE, sumCols: [QTY_DB_COLUMN], order: DEFAULT_ORDER });
 let selectedRowIndexes = [];   // mảng các index đã chọn (cho xóa nhiều dòng)
 
 // Loại management for Add Data Modal
@@ -612,6 +612,7 @@ async function loadPage(page) {
     tableData = result.rows.map((row, index) => toDisplayRow(row, index, offset));
     filteredData = tableData;
     updatePagination();
+    updateQuantitySummary();
     renderTable();
   } catch (error) {
     console.error('Lỗi khi tải dữ liệu từ Supabase:', error);
@@ -640,6 +641,16 @@ window.ddcServerAdapter = {
   baseFilters: buildServerFilters,
   reload: () => applyFilters(true)
 };
+
+// Tổng số lượng (kg) + số dòng theo toàn bộ dữ liệu đang lọc (server tính trên mọi trang)
+function updateQuantitySummary() {
+  const valueEl = document.getElementById('totalQtyValue');
+  const rowsEl = document.getElementById('totalQtyRows');
+  if (!valueEl || !rowsEl) return;
+  const total = Number(pager.sums[QTY_DB_COLUMN]) || 0;
+  valueEl.textContent = total.toLocaleString('vi-VN', { maximumFractionDigits: 3 });
+  rowsEl.textContent = (pager.total || 0).toLocaleString('vi-VN');
+}
 
 // Update pagination controls
 function updatePagination() {
